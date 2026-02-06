@@ -1,0 +1,87 @@
+# Environment
+.env
+.env.*
+!.env.example
+.venv
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Data (keep structure via .gitkeep, ignore contents)
+data/training/*
+data/evaluation/*
+data/memory/*
+data/executive_traces/*
+data/learned_knowledge/*
+data/telemetry/*
+data/feedback/*
+data/prompts.txt
+!data/**/.gitkeep
+
+# ML artifacts / model files
+models/
+checkpoints/
+outputs/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.pth
+*.onnx
+*.npz
+*.npy
+*.h5
+*.ckpt
+*.pkl
+*.joblib
+
+# Caches
+.cache/
+**/.cache/
+hf_cache/
+huggingface_hub/
+wandb/
+
+# Logs
+*.log
+logs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+.claude/

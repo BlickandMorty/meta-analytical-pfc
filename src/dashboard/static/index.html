@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meta-Analytical PFC Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Space+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg1: #0b0f1a;
+      --bg2: #12203a;
+      --accent: #64ffda;
+      --accent2: #ff6b6b;
+      --accent3: #f7c948;
+      --text: #e6eefc;
+      --muted: #8aa0c8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 20% 10%, #1a2b52 0%, var(--bg1) 50%, #080b14 100%);
+      overflow: hidden;
+    }
+    header {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(10, 14, 24, 0.6);
+      backdrop-filter: blur(10px);
+    }
+    header h1 {
+      font-size: 18px;
+      margin: 0;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    header .status {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    main {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      grid-template-rows: 120px 220px 340px 1fr;
+      gap: 12px;
+      padding: 12px;
+      height: calc(100vh - 56px);
+    }
+    .panel {
+      background: rgba(10, 14, 24, 0.7);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .panel h2 {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    #spiral {
+      width: 100%;
+      height: 100%;
+    }
+    #topology {
+      width: 100%;
+      height: 100%;
+    }
+    #spectrogram {
+      width: 100%;
+      height: 100%;
+    }
+    .health-meter {
+      width: 100%;
+      height: 160px;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .btn {
+      background: var(--accent);
+      color: #002b2b;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      background: rgba(255,255,255,0.08);
+      padding: 3px 6px;
+      border-radius: 6px;
+    }
+    .learned-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .learned-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      background: rgba(255,255,255,0.08);
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Universal Characteristic Engine</h1>
+    <div class="status">
+      <span class="badge" id="mode">mode: idle</span>
+      <span class="badge" id="safety">safety: GREEN</span>
+      <span class="badge" id="health">health: 0.00</span>
+      <span class="badge" id="entropy">entropy: 0.00</span>
+      <span class="badge" id="learned">learned: none</span>
+      <button class="btn" id="reset">Reset State</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" style="grid-column: span 3;">
+      <h2>Learned Skills</h2>
+      <div class="small" id="learnedDetail">No learned skills injected.</div>
+      <div class="learned-list" id="learnedList"></div>
+    </section>
+    <section class="panel">
+      <h2>Homeostasis Meter</h2>
+      <canvas id="healthMeter" class="health-meter"></canvas>
+      <div class="small" id="healthDetail">Awaiting telemetry…</div>
+    </section>
+    <section class="panel">
+      <h2>Master Chord</h2>
+      <canvas id="chordBars"></canvas>
+      <div class="small" id="chordDetail">No chord yet</div>
+    </section>
+    <section class="panel">
+      <h2>Entropy Oscilloscope</h2>
+      <canvas id="oscilloscope"></canvas>
+    </section>
+
+    <section class="panel" style="grid-column: span 2;">
+      <h2>Continued Fraction Spiral</h2>
+      <div id="spiral"></div>
+    </section>
+    <section class="panel">
+      <h2>Topological Mapper</h2>
+      <div id="topology"></div>
+    </section>
+
+    <section class="panel" style="grid-column: span 3;">
+      <h2>Leibnizian Spectrogram</h2>
+      <canvas id="spectrogram"></canvas>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.min.js"></script>
+  <script>
+    const state = {
+      health: 0,
+      entropy: 0,
+      dissonance: 0,
+      focusDepth: 0,
+      chordFrequencies: [],
+      chordProduct: 0,
+      topology: { nodes: [], edges: [], points: [] },
+      ghostDepth: null,
+      history: []
+    };
+
+    const modeEl = document.getElementById('mode');
+    const healthEl = document.getElementById('health');
+    const entropyEl = document.getElementById('entropy');
+    const learnedEl = document.getElementById('learned');
+    const learnedList = document.getElementById('learnedList');
+    const learnedDetail = document.getElementById('learnedDetail');
+    const safetyEl = document.getElementById('safety');
+    const chordDetail = document.getElementById('chordDetail');
+    const healthDetail = document.getElementById('healthDetail');
+
+    const resetBtn = document.getElementById('reset');
+    resetBtn.addEventListener('click', () => {
+      state.history = [];
+      state.ghostDepth = state.focusDepth;
+      drawSpectrogram();
+      drawOscilloscope();
+      drawHealth();
+      drawChordBars();
+    });
+
+    let lastPayloadTs = 0;
+    let lastLine = "";
+
+    function connectWS() {
+      const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+      const ws = new WebSocket(`${protocol}://${location.host}/ws`);
+      ws.onmessage = (event) => {
+        lastPayloadTs = Date.now();
+        lastLine = event.data;
+        const data = JSON.parse(event.data);
+        updateState(data);
+      };
+      ws.onclose = () => setTimeout(connectWS, 1000);
+    }
+
+    async function pollLatest() {
+      try {
+        const res = await fetch('/latest', { cache: 'no-store' });
+        if (!res.ok) return;
+        const text = await res.text();
+        if (!text || text === lastLine) return;
+        lastLine = text;
+        lastPayloadTs = Date.now();
+        const data = JSON.parse(text);
+        updateState(data);
+      } catch (err) {
+        // ignore transient errors
+      }
+    }
+
+    function updateState(data) {
+      state.health = data.metrics?.health_score ?? state.health;
+      state.entropy = data.metrics?.entropy_score ?? state.entropy;
+      state.dissonance = data.metrics?.dissonance_score ?? state.dissonance;
+      state.focusDepth = data.focus?.depth ?? state.focusDepth;
+      state.chordFrequencies = data.chord?.frequencies ?? state.chordFrequencies;
+      state.chordProduct = data.chord?.product ?? state.chordProduct;
+      state.topology = {
+        points: data.tda?.point_cloud ?? state.topology.points,
+        nodes: data.tda?.topology_graph?.nodes ?? state.topology.nodes,
+        edges: data.tda?.topology_graph?.edges ?? state.topology.edges
+      };
+
+      if (data.stage === 'self_check') {
+        state.ghostDepth = state.focusDepth;
+      }
+
+      state.history.push({
+        freqs: state.chordFrequencies,
+        dissonance: state.dissonance
+      });
+      if (state.history.length > 80) state.history.shift();
+
+      const learnedSkills = data.metrics?.learned_skills ?? [];
+      const learnedText = learnedSkills.length ? learnedSkills.join(', ') : 'none';
+
+      modeEl.textContent = `mode: ${data.mode}`;
+      safetyEl.textContent = `safety: ${data.metrics?.safety_state ?? 'GREEN'}`;
+      healthEl.textContent = `health: ${state.health.toFixed(2)}`;
+      entropyEl.textContent = `entropy: ${state.entropy.toFixed(2)}`;
+      learnedEl.textContent = `learned: ${learnedText.length > 40 ? learnedText.slice(0, 40) + '…' : learnedText}`;
+      if (learnedList && learnedDetail) {
+        learnedList.innerHTML = '';
+        if (learnedSkills.length) {
+          learnedDetail.textContent = `Injected ${learnedSkills.length} skill${learnedSkills.length > 1 ? 's' : ''} for this query.`;
+          learnedSkills.forEach((skill) => {
+            const pill = document.createElement('span');
+            pill.className = 'learned-pill';
+            pill.textContent = skill;
+            learnedList.appendChild(pill);
+          });
+        } else {
+          learnedDetail.textContent = 'No learned skills injected for this query.';
+          const pill = document.createElement('span');
+          pill.className = 'learned-pill';
+          pill.textContent = 'none';
+          learnedList.appendChild(pill);
+        }
+      }
+      healthDetail.textContent = `Dissonance ${state.dissonance.toFixed(2)} | Focus depth ${state.focusDepth}`;
+      chordDetail.textContent = `Chord product ${state.chordProduct} | ${state.chordFrequencies.length} tones`;
+
+      drawHealth();
+      drawChordBars();
+      drawOscilloscope();
+      drawSpectrogram();
+      updateTopology();
+    }
+
+    // Health meter
+    const healthCanvas = document.getElementById('healthMeter');
+    const healthCtx = healthCanvas.getContext('2d');
+    function resizeHealth() {
+      healthCanvas.width = healthCanvas.clientWidth * devicePixelRatio;
+      healthCanvas.height = healthCanvas.clientHeight * devicePixelRatio;
+    }
+    function drawHealth() {
+      resizeHealth();
+      const w = healthCanvas.width;
+      const h = healthCanvas.height;
+      const ctx = healthCtx;
+      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(w / 2, h * 0.9);
+      const radius = Math.min(w, h) * 0.45;
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, Math.PI, 2 * Math.PI);
+      ctx.stroke();
+      const angle = Math.PI + Math.PI * state.health;
+      ctx.strokeStyle = state.health < 0.4 ? '#ff6b6b' : '#64ffda';
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, Math.PI, angle);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Chord bar
+    const chordCanvas = document.getElementById('chordBars');
+    const chordCtx = chordCanvas.getContext('2d');
+    function resizeChord() {
+      chordCanvas.width = chordCanvas.clientWidth * devicePixelRatio;
+      chordCanvas.height = chordCanvas.clientHeight * devicePixelRatio;
+    }
+    function drawChordBars() {
+      resizeChord();
+      const ctx = chordCtx;
+      const w = chordCanvas.width;
+      const h = chordCanvas.height;
+      ctx.clearRect(0, 0, w, h);
+      const freqs = state.chordFrequencies || [];
+      const barWidth = w / Math.max(1, freqs.length);
+      freqs.forEach((f, i) => {
+        const height = (f % 520) / 520 * h;
+        ctx.fillStyle = state.dissonance > 0.4 ? '#ff6b6b' : '#64ffda';
+        ctx.fillRect(i * barWidth + 2, h - height, barWidth - 4, height);
+      });
+    }
+
+    // Oscilloscope
+    const oscCanvas = document.getElementById('oscilloscope');
+    const oscCtx = oscCanvas.getContext('2d');
+    function resizeOsc() {
+      oscCanvas.width = oscCanvas.clientWidth * devicePixelRatio;
+      oscCanvas.height = oscCanvas.clientHeight * devicePixelRatio;
+    }
+    function drawOscilloscope() {
+      resizeOsc();
+      const ctx = oscCtx;
+      const w = oscCanvas.width;
+      const h = oscCanvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = '#64ffda';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = 0; x < w; x++) {
+        const t = x / w * Math.PI * 4;
+        const noise = (Math.random() - 0.5) * state.entropy * h * 0.2;
+        const y = h / 2 + Math.sin(t) * h * 0.2 + noise;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Spectrogram
+    const specCanvas = document.getElementById('spectrogram');
+    const specCtx = specCanvas.getContext('2d');
+    function resizeSpec() {
+      specCanvas.width = specCanvas.clientWidth * devicePixelRatio;
+      specCanvas.height = specCanvas.clientHeight * devicePixelRatio;
+    }
+    function drawSpectrogram() {
+      resizeSpec();
+      const ctx = specCtx;
+      const w = specCanvas.width;
+      const h = specCanvas.height;
+      ctx.clearRect(0, 0, w, h);
+      const rows = state.history.length;
+      if (!rows) return;
+      const rowHeight = h / rows;
+      const scaleX = d3.scaleLinear().domain([0, 520]).range([0, w]);
+      state.history.forEach((row, i) => {
+        const color = row.dissonance > 0.4 ? '#ff6b6b' : '#64ffda';
+        row.freqs.forEach((f) => {
+          const x = scaleX(f % 520);
+          ctx.fillStyle = color;
+          ctx.fillRect(x, h - (i + 1) * rowHeight, 2, rowHeight);
+        });
+      });
+    }
+
+    // Spiral (p5)
+    new p5((p) => {
+      p.setup = () => {
+        const container = document.getElementById('spiral');
+        const canvas = p.createCanvas(container.clientWidth, container.clientHeight);
+        canvas.parent(container);
+        p.noFill();
+      };
+      p.windowResized = () => {
+        const container = document.getElementById('spiral');
+        p.resizeCanvas(container.clientWidth, container.clientHeight);
+      };
+      p.draw = () => {
+        p.clear();
+        p.translate(p.width / 2, p.height / 2);
+        const depth = Math.max(1, state.focusDepth || 1);
+        const turns = depth * 6;
+        p.stroke(state.dissonance > 0.4 ? '#ff6b6b' : '#64ffda');
+        p.beginShape();
+        for (let i = 0; i < turns * 10; i++) {
+          const angle = i * 0.2;
+          const radius = 2 + i * 0.6;
+          p.vertex(Math.cos(angle) * radius, Math.sin(angle) * radius);
+        }
+        p.endShape();
+        if (state.ghostDepth) {
+          p.stroke(255, 255, 255, 80);
+          p.beginShape();
+          const ghostTurns = state.ghostDepth * 6;
+          for (let i = 0; i < ghostTurns * 10; i++) {
+            const angle = i * 0.2;
+            const radius = 2 + i * 0.6;
+            p.vertex(Math.cos(angle) * radius, Math.sin(angle) * radius);
+          }
+          p.endShape();
+        }
+      };
+    });
+
+    // Topology (three.js)
+    let scene, camera, renderer, pointMesh, edgeLines;
+    function initTopology() {
+      const container = document.getElementById('topology');
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera.position.z = 5;
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      container.appendChild(renderer.domElement);
+      animateTopology();
+    }
+    function updateTopology() {
+      if (!scene) return;
+      if (pointMesh) scene.remove(pointMesh);
+      if (edgeLines) scene.remove(edgeLines);
+
+      const points = state.topology.points || [];
+      const geometry = new THREE.BufferGeometry();
+      const vertices = new Float32Array(points.flat());
+      geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+      const material = new THREE.PointsMaterial({ color: state.dissonance > 0.4 ? 0xff6b6b : 0x64ffda, size: 0.05 });
+      pointMesh = new THREE.Points(geometry, material);
+      scene.add(pointMesh);
+
+      const edges = state.topology.edges || [];
+      if (edges.length) {
+        const edgeGeom = new THREE.BufferGeometry();
+        const edgeVerts = [];
+        edges.forEach(e => {
+          const a = state.topology.nodes.find(n => n.id === e.source);
+          const b = state.topology.nodes.find(n => n.id === e.target);
+          if (a && b) {
+            edgeVerts.push(a.x, a.y, a.z, b.x, b.y, b.z);
+          }
+        });
+        edgeGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(edgeVerts), 3));
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.2, transparent: true });
+        edgeLines = new THREE.LineSegments(edgeGeom, edgeMat);
+        scene.add(edgeLines);
+      }
+    }
+    function animateTopology() {
+      requestAnimationFrame(animateTopology);
+      if (pointMesh) pointMesh.rotation.y += 0.002;
+      renderer.render(scene, camera);
+    }
+
+    // Audio
+    const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+    let audioReady = false;
+    document.body.addEventListener('click', async () => {
+      if (!audioReady) {
+        await Tone.start();
+        audioReady = true;
+      }
+    });
+    function playChord() {
+      if (!audioReady) return;
+      const freqs = state.chordFrequencies || [];
+      if (!freqs.length) return;
+      synth.releaseAll();
+      const color = state.dissonance > 0.4 ? 'sawtooth' : 'sine';
+      synth.set({ oscillator: { type: color } });
+      synth.triggerAttackRelease(freqs, '8n');
+    }
+
+    setInterval(playChord, 1200);
+
+    initTopology();
+    connectWS();
+    setInterval(() => {
+      if (Date.now() - lastPayloadTs > 2500) {
+        pollLatest();
+      }
+    }, 2000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+runtime:
+  inference_mode: "local"  # "hybrid" or "local"
+  local_generation:
+    model_name: "Qwen/Qwen2.5-7B-Instruct"
+    revision: "main"
+    device: "cuda"
+    dtype: "float16"
+    load_in_4bit: true
+    max_new_tokens: 512
+    temperature: 0.3
+    top_p: 0.9
+    max_input_tokens: 1024

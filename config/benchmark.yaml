@@ -1,0 +1,9 @@
+benchmark:
+  model_name: "Qwen/Qwen2.5-7B-Instruct"
+  revision: "main"
+  device: "cuda"
+  dtype: "float16"
+  load_in_4bit: true
+  max_new_tokens: 64
+  prompt: "Explain the difference between correlation and causation."
+  runs: 3

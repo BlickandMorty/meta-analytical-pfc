@@ -1,0 +1,22 @@
+# Baseline model comparison config
+# Update model names if needed (HF repo IDs)
+
+baselines:
+  - name: "Qwen2.5-7B"
+    model_name: "Qwen/Qwen2.5-7B-Instruct"
+    revision: "main"
+    device: "cuda"
+    dtype: "float16"
+    load_in_4bit: true
+  - name: "Nemotron-1.5B"
+    model_name: "nvidia/OpenReasoning-Nemotron-1.5B"
+    revision: "main"
+    device: "cuda"
+    dtype: "float16"
+    load_in_4bit: true
+  - name: "Llama-3.1-8B"
+    model_name: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+    revision: "main"
+    device: "cuda"
+    dtype: "float16"
+    load_in_4bit: true

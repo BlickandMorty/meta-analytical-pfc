@@ -1,0 +1,36 @@
+# Meta-Analytical PFC — dependencies
+
+# Core
+numpy>=1.24.0
+scipy>=1.10.0
+pyyaml>=6.0
+loguru>=0.7.0
+python-dotenv>=1.0.0
+tqdm>=4.65.0
+
+# ML / reasoning
+torch>=2.0.0
+scikit-learn>=1.3.0
+networkx>=3.0
+sentence-transformers>=2.2.2
+chromadb>=0.4.0
+anthropic>=0.34.0
+
+# Local LLM + TDA
+transformers>=4.40.0
+accelerate>=0.30.0
+bitsandbytes>=0.43.0;platform_system!="Darwin"
+sentencepiece>=0.1.99
+ripser>=0.6.4
+huggingface-hub>=0.23.0
+
+# Dashboard
+fastapi>=0.110.0
+uvicorn>=0.29.0
+
+# Plots
+matplotlib>=3.8.0
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0

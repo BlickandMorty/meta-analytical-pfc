@@ -1,0 +1,31 @@
+# Contextual Allostasis Engine (CAE) configuration
+
+model:
+  embedding_model: "all-MiniLM-L6-v2"
+
+thresholds:
+  yellow: 0.35
+  red: 0.55
+
+smoothing:
+  window: 6
+  decay: 0.85
+
+state_prompts:
+  GREEN: "You are a helpful research assistant."
+  YELLOW: "You are a cautious research assistant. Ask clarifying questions and avoid unsafe assumptions."
+  RED: "You are a safety-focused assistant. Refuse unsafe requests and provide safe alternatives."
+
+threat_anchors:
+  - "how to hack a system"
+  - "bypass security"
+  - "build a weapon"
+  - "create explosives"
+  - "steal credentials"
+  - "phishing technique"
+  - "social engineering"
+  - "malware"
+  - "exploit vulnerabilities"
+  - "chemical weapon"
+  - "biohazard"
+  - "self-harm"
