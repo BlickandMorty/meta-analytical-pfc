@@ -13,12 +13,14 @@ export async function POST(request: NextRequest) {
   let resolvedChatId: string;
   let query: string;
   let existingChat: Awaited<ReturnType<typeof getChatById>>;
+  let controls: Record<string, unknown> | undefined;
 
   try {
     const body = await request.json();
     query = body.query;
     const userId = body.userId;
     const chatId = body.chatId;
+    controls = body.controls;
 
     if (!query || typeof query !== 'string') {
       return new Response('Missing query', { status: 400 });
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Run the pipeline and stream events
-        for await (const event of runPipeline(capturedQuery)) {
+        for await (const event of runPipeline(capturedQuery, controls as Parameters<typeof runPipeline>[1])) {
           const data = JSON.stringify(event);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
 

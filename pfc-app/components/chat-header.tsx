@@ -4,11 +4,11 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  LayersIcon,
   SparklesIcon,
   ActivityIcon,
   MenuIcon,
   PanelLeftIcon,
+  NetworkIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -19,14 +19,15 @@ import {
 } from '@/components/ui/tooltip';
 
 export function ChatHeader() {
-  const activeLayer = usePFCStore((s) => s.activeMessageLayer);
-  const toggleLayer = usePFCStore((s) => s.toggleMessageLayer);
   const toggleSynthesis = usePFCStore((s) => s.toggleSynthesisView);
   const isProcessing = usePFCStore((s) => s.isProcessing);
   const activeStage = usePFCStore((s) => s.activeStage);
   const toggleSidebar = usePFCStore((s) => s.toggleSidebar);
   const sidebarOpen = usePFCStore((s) => s.sidebarOpen);
   const messages = usePFCStore((s) => s.messages);
+  const toggleConceptHierarchy = usePFCStore((s) => s.toggleConceptHierarchy);
+  const conceptWeights = usePFCStore((s) => s.conceptWeights);
+  const conceptCount = Object.keys(conceptWeights).length;
 
   const hasMessages = messages.some((m) => m.role === 'system');
 
@@ -81,16 +82,21 @@ export function ChatHeader() {
       </div>
 
       <div className="flex items-center gap-1.5">
-        {/* Layer toggle */}
-        <Button
-          variant={activeLayer === 'layman' ? 'secondary' : 'outline'}
-          size="sm"
-          className="h-7 text-[11px] gap-1.5"
-          onClick={toggleLayer}
-        >
-          <LayersIcon className="h-3 w-3" />
-          {activeLayer === 'layman' ? 'Plain' : 'Research'}
-        </Button>
+        {/* Concept Hierarchy toggle */}
+        {conceptCount > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-[11px] gap-1.5 text-pfc-violet/80 border-pfc-violet/20 hover:bg-pfc-violet/10"
+            onClick={toggleConceptHierarchy}
+          >
+            <NetworkIcon className="h-3 w-3" />
+            <span className="hidden sm:inline">Concepts</span>
+            <Badge variant="secondary" className="h-4 px-1 text-[9px] font-mono bg-pfc-violet/10 text-pfc-violet">
+              {conceptCount}
+            </Badge>
+          </Button>
+        )}
 
         {/* Synthesize button */}
         {hasMessages && (

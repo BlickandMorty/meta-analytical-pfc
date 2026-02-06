@@ -17,7 +17,10 @@ import {
   MoonIcon,
   PanelLeftCloseIcon,
   XIcon,
-  PlusIcon,
+  SettingsIcon,
+  BrainIcon,
+  ArchiveIcon,
+  FlaskConicalIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,7 +34,11 @@ const NAV_ITEMS = [
   { href: '/pipeline', label: 'Pipeline', icon: NetworkIcon },
   { href: '/diagnostics', label: 'Diagnostics', icon: GaugeIcon },
   { href: '/visualizer', label: 'Visualizer', icon: BarChart3Icon },
+  { href: '/concept-atlas', label: 'Concept Atlas', icon: BrainIcon },
   { href: '/trainme', label: 'Train Me', icon: GraduationCapIcon },
+  { href: '/research-copilot', label: 'Research Copilot', icon: FlaskConicalIcon },
+  { href: '/cortex-archive', label: 'Cortex Archive', icon: ArchiveIcon },
+  { href: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 
 interface ChatHistoryItem {
@@ -134,43 +141,37 @@ export function AppSidebar() {
           </Button>
         </div>
 
-        {/* New Chat button — 3D brain bubble */}
-        <div className="p-3">
+        {/* New Chat — Material Design 3D raised button */}
+        <div className="px-3 pt-3 pb-2.5">
           <button
             onClick={handleNewChat}
             className={cn(
-              'group relative w-full flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-300 cursor-pointer',
-              // Light mode: deep distinctive dark gradient
-              'bg-gradient-to-r from-slate-800 to-indigo-950',
-              // Dark mode: subtle ember/violet
-              'dark:from-pfc-ember/20 dark:to-pfc-violet/15',
-              'text-white dark:text-sidebar-foreground',
-              // Shadow + 3D depth
-              'shadow-md shadow-slate-800/25 dark:shadow-pfc-ember/10',
-              'hover:shadow-xl hover:shadow-indigo-900/30 dark:hover:shadow-pfc-ember/15',
-              'hover:scale-[1.02] active:scale-[0.98]',
-              // Border for depth
-              'border border-white/5 dark:border-pfc-ember/20',
+              'group relative w-full cursor-pointer',
+              'flex items-center justify-center gap-2.5 h-10 rounded-xl',
+              'transition-all duration-200 ease-out',
+              'hover:translate-y-[-1px] active:translate-y-[1px]',
+              // Light mode: Material elevated surface
+              'bg-gradient-to-b from-indigo-600 to-indigo-700',
+              'dark:from-pfc-ember/80 dark:to-pfc-ember/60',
+              // 3D shadow layers — Material Design depth
+              'shadow-[0_2px_4px_rgba(0,0,0,0.15),0_4px_8px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.08)_inset]',
+              'hover:shadow-[0_4px_8px_rgba(0,0,0,0.2),0_8px_16px_rgba(0,0,0,0.12),0_1px_0_rgba(255,255,255,0.12)_inset]',
+              'active:shadow-[0_1px_2px_rgba(0,0,0,0.15),0_2px_4px_rgba(0,0,0,0.1),0_1px_0_rgba(255,255,255,0.06)_inset]',
+              'dark:shadow-[0_2px_4px_rgba(0,0,0,0.3),0_4px_12px_rgba(193,95,60,0.15),0_1px_0_rgba(255,255,255,0.06)_inset]',
+              'dark:hover:shadow-[0_4px_8px_rgba(0,0,0,0.35),0_8px_20px_rgba(193,95,60,0.2),0_1px_0_rgba(255,255,255,0.1)_inset]',
+              'dark:active:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_2px_6px_rgba(193,95,60,0.1),0_1px_0_rgba(255,255,255,0.04)_inset]',
             )}
           >
-            {/* Hover glow overlay */}
-            <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/0 via-white/8 to-violet-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-            {/* 3D Brain bubble icon */}
-            <span
-              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 dark:border-pfc-ember/30"
-              style={{
-                background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.2), rgba(255,255,255,0.02) 60%, rgba(0,0,0,0.1))',
-                boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.15), inset 0 -1px 3px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15)',
-              }}
-            >
-              <BrainCircuitIcon className="h-4.5 w-4.5 drop-shadow-sm" />
+            {/* Top highlight — gives 3D raised effect */}
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-white/15 rounded-t-xl" />
+            {/* Content */}
+            <BrainCircuitIcon className="h-4 w-4 text-white/90 drop-shadow-sm" />
+            <span className="text-sm font-semibold text-white drop-shadow-sm tracking-tight">
+              New Chat
             </span>
-
-            <div className="relative flex items-center gap-2">
-              <PlusIcon className="h-3.5 w-3.5 opacity-70" />
-              <span>New Chat</span>
-            </div>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-white text-[10px] font-bold transition-transform duration-200 group-hover:scale-110">
+              +
+            </span>
           </button>
         </div>
 
@@ -182,20 +183,25 @@ export function AppSidebar() {
             const isActive = pathname === item.href;
             const Icon = item.icon;
             return (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    'w-full justify-start gap-2 text-sm h-9',
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Button>
-              </Link>
+              <button
+                key={item.href}
+                onClick={() => {
+                  router.push(item.href);
+                  // Close sidebar on mobile after navigation
+                  if (window.innerWidth < 768) {
+                    setSidebarOpen(false);
+                  }
+                }}
+                className={cn(
+                  'flex w-full items-center gap-2 text-sm h-9 px-3 rounded-md transition-colors cursor-pointer',
+                  isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </button>
             );
           })}
         </nav>

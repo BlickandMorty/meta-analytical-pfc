@@ -1,22 +1,24 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { MessageLayman } from './message-layman';
 import { MessageResearch } from './message-research';
 import { TruthBotCard } from './truth-bot-card';
 import type { ChatMessage } from '@/lib/engine/types';
 import { cn } from '@/lib/utils';
-import { UserIcon, BrainCircuitIcon } from 'lucide-react';
+import { UserIcon, BrainCircuitIcon, SparklesIcon, BookOpenIcon } from 'lucide-react';
+import { ConceptMiniMap } from './concept-mini-map';
 
 interface MessageProps {
   message: ChatMessage;
 }
 
 export function Message({ message }: MessageProps) {
-  const activeLayer = usePFCStore((s) => s.activeMessageLayer);
   const showTruthBot = usePFCStore((s) => s.showTruthBot);
   const isUser = message.role === 'user';
+  const [showLayman, setShowLayman] = useState(false);
 
   return (
     <motion.div
@@ -45,10 +47,58 @@ export function Message({ message }: MessageProps) {
           <p className="text-[14px] leading-relaxed">{message.text}</p>
         ) : message.dualMessage ? (
           <div className="space-y-3">
-            {activeLayer === 'layman' ? (
-              <MessageLayman layman={message.dualMessage.laymanSummary} />
-            ) : (
-              <MessageResearch dualMessage={message.dualMessage} />
+            {/* Content layer with animated swap */}
+            <AnimatePresence mode="wait">
+              {showLayman ? (
+                <motion.div
+                  key="layman"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <MessageLayman layman={message.dualMessage.laymanSummary} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="research"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <MessageResearch dualMessage={message.dualMessage} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* "Here's what I really mean" toggle */}
+            <button
+              onClick={() => setShowLayman(!showLayman)}
+              className={cn(
+                'group flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all duration-300 cursor-pointer',
+                'border',
+                showLayman
+                  ? 'border-pfc-violet/30 text-pfc-violet hover:bg-pfc-violet/5'
+                  : 'border-pfc-ember/30 text-pfc-ember hover:bg-pfc-ember/5',
+              )}
+            >
+              {showLayman ? (
+                <>
+                  <BookOpenIcon className="h-3 w-3" />
+                  <span>Show full analysis</span>
+                </>
+              ) : (
+                <>
+                  <SparklesIcon className="h-3 w-3 animate-reveal-pulse" />
+                  <span>Here&apos;s what I really mean</span>
+                </>
+              )}
+            </button>
+
+            {/* Inline Concept Mini-Map */}
+            {message.concepts && message.concepts.length > 0 && (
+              <ConceptMiniMap messageConcepts={message.concepts} />
             )}
 
             {/* Confidence + Grade badge */}

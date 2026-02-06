@@ -24,7 +24,18 @@ export function SynthesisCard() {
   const entropy = usePFCStore((s) => s.entropy);
   const dissonance = usePFCStore((s) => s.dissonance);
   const healthScore = usePFCStore((s) => s.healthScore);
+  const safetyState = usePFCStore((s) => s.safetyState);
+  const riskScore = usePFCStore((s) => s.riskScore);
+  const tda = usePFCStore((s) => s.tda);
+  const focusDepth = usePFCStore((s) => s.focusDepth);
+  const temperatureScale = usePFCStore((s) => s.temperatureScale);
+  const activeConcepts = usePFCStore((s) => s.activeConcepts);
+  const activeChordProduct = usePFCStore((s) => s.activeChordProduct);
+  const harmonyKeyDistance = usePFCStore((s) => s.harmonyKeyDistance);
   const queriesProcessed = usePFCStore((s) => s.queriesProcessed);
+  const totalTraces = usePFCStore((s) => s.totalTraces);
+  const skillGapsDetected = usePFCStore((s) => s.skillGapsDetected);
+  const inferenceMode = usePFCStore((s) => s.inferenceMode);
 
   async function handleGenerate() {
     setLoading(true);
@@ -39,7 +50,18 @@ export function SynthesisCard() {
             entropy,
             dissonance,
             healthScore,
+            safetyState,
+            riskScore,
+            tda,
+            focusDepth,
+            temperatureScale,
+            activeConcepts,
+            activeChordProduct,
+            harmonyKeyDistance,
             queriesProcessed,
+            totalTraces,
+            skillGapsDetected,
+            inferenceMode,
           },
         }),
       });

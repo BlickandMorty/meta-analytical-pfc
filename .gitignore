@@ -18,7 +18,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
+!pfc-app/lib/
 lib64/
 parts/
 sdist/

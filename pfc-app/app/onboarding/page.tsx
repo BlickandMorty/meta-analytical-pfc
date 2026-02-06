@@ -13,6 +13,8 @@ import {
   EyeIcon,
   EyeOffIcon,
   CheckCircle2Icon,
+  MonitorIcon,
+  TerminalIcon,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -487,6 +489,29 @@ export default function OnboardingPage() {
 
                 <p className={cn('text-[10px] leading-relaxed', isDark ? 'text-white/20' : 'text-muted-foreground/50')}>
                   Stored locally in your browser. Without a key the engine runs in simulation mode.
+                </p>
+              </div>
+
+              {/* Cross-platform setup info */}
+              <div className={cn('rounded-lg border p-3 space-y-2.5', isDark ? 'border-white/[0.06] bg-white/[0.02]' : 'border-black/[0.06] bg-black/[0.01]')}>
+                <p className={cn('text-[10px] uppercase tracking-wider font-medium', isDark ? 'text-white/30' : 'text-muted-foreground/50')}>
+                  Works on all platforms
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'macOS', icon: TerminalIcon, cmd: 'brew install node' },
+                    { label: 'Linux', icon: TerminalIcon, cmd: 'apt install nodejs' },
+                    { label: 'Windows', icon: MonitorIcon, cmd: 'winget install Node' },
+                  ].map((platform) => (
+                    <div key={platform.label} className={cn('rounded-md p-2 text-center space-y-1', isDark ? 'bg-white/[0.03]' : 'bg-black/[0.02]')}>
+                      <platform.icon className={cn('h-3.5 w-3.5 mx-auto', isDark ? 'text-white/30' : 'text-muted-foreground/40')} />
+                      <p className={cn('text-[10px] font-medium', isDark ? 'text-white/50' : 'text-muted-foreground/70')}>{platform.label}</p>
+                      <p className={cn('text-[8px] font-mono', isDark ? 'text-pfc-violet/40' : 'text-pfc-violet/50')}>{platform.cmd}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className={cn('text-[9px] leading-relaxed', isDark ? 'text-white/15' : 'text-muted-foreground/40')}>
+                  Requires Node.js 18+. Run <span className="font-mono">npm run dev</span> to start. Tested on macOS, Ubuntu/Debian, and Windows 10/11.
                 </p>
               </div>
 

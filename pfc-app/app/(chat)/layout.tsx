@@ -23,13 +23,14 @@ export default function ChatLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="relative h-screen overflow-hidden">
       <AppSidebar />
+      {/* Main content — always full width, positioned to the right of sidebar when open */}
       <motion.main
-        className="flex-1 min-w-0 overflow-hidden"
+        className="absolute inset-0 overflow-hidden"
         initial={false}
         animate={{
-          marginLeft: sidebarOpen ? 0 : -280,
+          left: sidebarOpen ? 280 : 0,
         }}
         transition={{
           type: 'spring',

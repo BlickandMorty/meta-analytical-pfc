@@ -22,6 +22,31 @@ export function useChatStream() {
     store.submitQuery(query);
     store.startStreaming();
 
+    // Gather pipeline controls from store
+    const { controls, conceptWeights } = store;
+
+    // Compute effective concept weights (user × auto)
+    const effectiveWeights: Record<string, number> = {};
+    let hasConceptWeights = false;
+    for (const [key, cw] of Object.entries(conceptWeights)) {
+      const ew = cw.weight * cw.autoWeight;
+      if (Math.abs(ew - 0.65) > 0.01) hasConceptWeights = true;
+      effectiveWeights[key] = ew;
+    }
+
+    const hasOverrides =
+      controls.focusDepthOverride !== null ||
+      controls.temperatureOverride !== null ||
+      controls.complexityBias !== 0 ||
+      controls.adversarialIntensity !== 1.0 ||
+      controls.bayesianPriorStrength !== 1.0 ||
+      hasConceptWeights;
+
+    // Merge concept weights into controls for the API
+    const mergedControls = hasOverrides
+      ? { ...controls, ...(hasConceptWeights && { conceptWeights: effectiveWeights }) }
+      : undefined;
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -30,6 +55,7 @@ export function useChatStream() {
           chatId: chatId || store.currentChatId,
           query,
           userId: 'local-user',
+          ...(mergedControls && { controls: mergedControls }),
         }),
         signal: controller.signal,
       });

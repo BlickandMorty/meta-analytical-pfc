@@ -6,27 +6,77 @@ import { ChatHeader } from './chat-header';
 import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
 import { SynthesisCard } from './synthesis-card';
+import { LiveControls } from './live-controls';
+import { ConceptHierarchyPanel } from './concept-hierarchy-panel';
 import { EXAMPLE_QUERIES } from '@/lib/constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { PanelLeftIcon, MenuIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AnimatedDotGrid } from './animated-dot-grid';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function Chat() {
   const messages = usePFCStore((s) => s.messages);
   const isProcessing = usePFCStore((s) => s.isProcessing);
+  const sidebarOpen = usePFCStore((s) => s.sidebarOpen);
+  const toggleSidebar = usePFCStore((s) => s.toggleSidebar);
   const { sendQuery, abort } = useChatStream();
 
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
+      {/* Animated dot grid background — persistent across both states */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <AnimatedDotGrid />
+      </div>
+
       <AnimatePresence mode="wait">
         {isEmpty ? (
           <motion.div
             key="empty"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.25 } }}
-            className="flex flex-1 flex-col items-center justify-center px-6"
+            className="relative z-[1] flex flex-1 flex-col items-center justify-center px-6"
           >
+            {/* Floating sidebar toggle when sidebar is closed */}
+            {!sidebarOpen && (
+              <div className="absolute top-3 left-3 z-10 flex items-center gap-1">
+                {/* Mobile */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 md:hidden text-muted-foreground hover:text-foreground"
+                  onClick={toggleSidebar}
+                >
+                  <MenuIcon className="h-4 w-4" />
+                </Button>
+                {/* Desktop */}
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hidden md:flex text-muted-foreground hover:text-foreground"
+                        onClick={toggleSidebar}
+                      >
+                        <PanelLeftIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={8}>
+                      Open sidebar
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
             <div className="w-full max-w-xl space-y-6">
               {/* Title — clean Claude-style */}
               <motion.div
@@ -88,20 +138,26 @@ export function Chat() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
-            className="flex flex-1 flex-col min-h-0"
+            className="relative z-[1] flex flex-1 flex-col min-h-0"
           >
             <ChatHeader />
             <Messages />
-            <div className="mx-auto max-w-3xl w-full px-4">
-              <SynthesisCard />
-            </div>
-            <div className="shrink-0 border-t bg-background/80 backdrop-blur-sm p-4">
-              <div className="mx-auto max-w-3xl">
-                <MultimodalInput
-                  onSubmit={sendQuery}
-                  onStop={abort}
-                  isProcessing={isProcessing}
-                />
+            {/* Bottom section — synthesis, controls, input pinned to bottom */}
+            <div className="shrink-0 flex flex-col">
+              <div className="mx-auto max-w-3xl w-full px-4">
+                <SynthesisCard />
+              </div>
+              <LiveControls />
+              <ConceptHierarchyPanel />
+              <div className="border-t bg-background/80 backdrop-blur-sm p-4">
+                <div className="mx-auto max-w-3xl">
+                  <MultimodalInput
+                    onSubmit={sendQuery}
+                    onStop={abort}
+                    isProcessing={isProcessing}
+                    showControlsToggle
+                  />
+                </div>
               </div>
             </div>
           </motion.div>

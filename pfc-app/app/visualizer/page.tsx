@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -12,14 +12,18 @@ import {
   TargetIcon,
   BrainIcon,
   ActivityIcon,
+  RotateCcwIcon,
+  GripIcon,
 } from 'lucide-react';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -69,42 +73,113 @@ function seededRandom(seed: string) {
 }
 
 // ---------------------------------------------------------------------------
-// 1 - Signal Radar
+// 1 - Interactive Signal Radar (drag to edit)
 // ---------------------------------------------------------------------------
 
-function SignalRadar({
+const SIGNAL_KEYS = ['confidence', 'entropy', 'dissonance', 'healthScore'] as const;
+type SignalKey = typeof SIGNAL_KEYS[number];
+
+function InteractiveSignalRadar({
   confidence,
   entropy,
   dissonance,
   healthScore,
+  overrides,
+  onSignalChange,
 }: {
   confidence: number;
   entropy: number;
   dissonance: number;
   healthScore: number;
+  overrides: { confidence: number | null; entropy: number | null; dissonance: number | null; healthScore: number | null };
+  onSignalChange: (signal: SignalKey, value: number) => void;
 }) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
+
   const cx = 150;
   const cy = 150;
   const maxR = 120;
   const axes = [
-    { label: 'Confidence', value: confidence, angle: 0 },
-    { label: 'Entropy', value: Math.min(1, entropy), angle: 90 },
-    { label: 'Dissonance', value: Math.min(1, dissonance), angle: 180 },
-    { label: 'Health', value: healthScore, angle: 270 },
+    { label: 'Confidence', key: 'confidence' as SignalKey, value: overrides.confidence ?? confidence, autoValue: confidence, angle: 0, isOverridden: overrides.confidence !== null },
+    { label: 'Entropy', key: 'entropy' as SignalKey, value: Math.min(1, overrides.entropy ?? entropy), autoValue: Math.min(1, entropy), angle: 90, isOverridden: overrides.entropy !== null },
+    { label: 'Dissonance', key: 'dissonance' as SignalKey, value: Math.min(1, overrides.dissonance ?? dissonance), autoValue: Math.min(1, dissonance), angle: 180, isOverridden: overrides.dissonance !== null },
+    { label: 'Health', key: 'healthScore' as SignalKey, value: overrides.healthScore ?? healthScore, autoValue: healthScore, angle: 270, isOverridden: overrides.healthScore !== null },
   ];
 
+  // Auto (ghost) polygon
+  const autoPoints = axes.map((a) => {
+    const r = valToRadius(a.autoValue, maxR);
+    return polar(cx, cy, r, a.angle);
+  });
+  const autoPolygon = autoPoints.map((p) => `${p.x},${p.y}`).join(' ');
+
+  // Active (effective) polygon
   const points = axes.map((a) => {
     const r = valToRadius(a.value, maxR);
     return polar(cx, cy, r, a.angle);
   });
-
   const polygon = points.map((p) => `${p.x},${p.y}`).join(' ');
 
-  // Grid rings
   const rings = [0.25, 0.5, 0.75, 1];
 
+  const hasAnyOverride = axes.some((a) => a.isOverridden);
+
+  // Convert mouse/touch position to signal value
+  const getSvgPoint = useCallback((clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    // Map client coords to SVG viewBox coords (-50, -30, 400, 360)
+    const viewBoxX = -50;
+    const viewBoxY = -30;
+    const viewBoxW = 400;
+    const viewBoxH = 360;
+    const svgX = viewBoxX + ((clientX - rect.left) / rect.width) * viewBoxW;
+    const svgY = viewBoxY + ((clientY - rect.top) / rect.height) * viewBoxH;
+    return { x: svgX, y: svgY };
+  }, []);
+
+  const handlePointerDown = useCallback((index: number, e: React.PointerEvent) => {
+    e.preventDefault();
+    (e.target as SVGElement).setPointerCapture(e.pointerId);
+    setDragging(index);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (dragging === null) return;
+    const pt = getSvgPoint(e.clientX, e.clientY);
+    if (!pt) return;
+
+    const axis = axes[dragging];
+    // Calculate distance from center
+    const dx = pt.x - cx;
+    const dy = pt.y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Convert distance to 0-1 value (inverse of valToRadius)
+    const minR = 20;
+    const value = Math.max(0, Math.min(1, (dist - minR) / (maxR - minR)));
+
+    onSignalChange(axis.key, Math.round(value * 100) / 100);
+  }, [dragging, axes, cx, cy, maxR, getSvgPoint, onSignalChange]);
+
+  const handlePointerUp = useCallback(() => {
+    setDragging(null);
+  }, []);
+
   return (
-    <svg viewBox="-50 -30 400 360" overflow="visible" className="w-full max-w-md mx-auto">
+    <svg
+      ref={svgRef}
+      viewBox="-50 -30 400 360"
+      overflow="visible"
+      className={cn('w-full max-w-md mx-auto', dragging !== null ? 'cursor-grabbing' : '')}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      style={{ touchAction: 'none' }}
+    >
       {/* Grid rings */}
       {rings.map((r) => (
         <circle
@@ -117,6 +192,20 @@ function SignalRadar({
           strokeOpacity={0.1}
           strokeWidth={1}
         />
+      ))}
+
+      {/* Ring value labels */}
+      {rings.map((r) => (
+        <text
+          key={`ring-${r}`}
+          x={cx + 4}
+          y={cy - (20 + r * (maxR - 20)) + 3}
+          fontSize={7}
+          className="fill-muted-foreground"
+          fillOpacity={0.4}
+        >
+          {r.toFixed(2)}
+        </text>
       ))}
 
       {/* Axis lines */}
@@ -136,7 +225,19 @@ function SignalRadar({
         );
       })}
 
-      {/* Polygon fill */}
+      {/* Ghost polygon (auto values) — only show when there are overrides */}
+      {hasAnyOverride && (
+        <polygon
+          points={autoPolygon}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity={0.15}
+          strokeWidth={1.5}
+          strokeDasharray="4 3"
+        />
+      )}
+
+      {/* Active polygon fill */}
       <polygon
         points={polygon}
         fill={EMBER}
@@ -145,10 +246,70 @@ function SignalRadar({
         strokeWidth={2}
       />
 
-      {/* Data points */}
-      {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={4} fill={EMBER} />
+      {/* Ghost data points (auto values) — show when overridden */}
+      {hasAnyOverride && autoPoints.map((p, i) => (
+        axes[i].isOverridden ? (
+          <circle key={`ghost-${i}`} cx={p.x} cy={p.y} r={3} fill="currentColor" fillOpacity={0.2} />
+        ) : null
       ))}
+
+      {/* Draggable data points */}
+      {points.map((p, i) => {
+        const isHovered = hoveredPoint === i;
+        const isDragging = dragging === i;
+        const isOverridden = axes[i].isOverridden;
+
+        return (
+          <g key={i}>
+            {/* Larger invisible hit area for easier dragging */}
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={20}
+              fill="transparent"
+              className="cursor-grab"
+              onPointerDown={(e) => handlePointerDown(i, e)}
+              onPointerEnter={() => setHoveredPoint(i)}
+              onPointerLeave={() => setHoveredPoint(null)}
+              style={{ touchAction: 'none' }}
+            />
+            {/* Pulse ring when hovered or dragging */}
+            {(isHovered || isDragging) && (
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={isDragging ? 10 : 8}
+                fill={EMBER}
+                fillOpacity={0.15}
+                stroke={EMBER}
+                strokeOpacity={0.3}
+                strokeWidth={1}
+              />
+            )}
+            {/* Override indicator ring */}
+            {isOverridden && (
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={7}
+                fill="none"
+                stroke={VIOLET}
+                strokeWidth={1.5}
+                strokeDasharray="2 2"
+              />
+            )}
+            {/* Main point */}
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={isDragging ? 6 : isHovered ? 5.5 : 4}
+              fill={isOverridden ? VIOLET : EMBER}
+              className="cursor-grab transition-all"
+              style={{ filter: isDragging ? 'drop-shadow(0 0 6px rgba(107, 92, 231, 0.5))' : undefined }}
+            />
+          </g>
+        );
+      })}
 
       {/* Labels */}
       {axes.map((a) => {
@@ -166,6 +327,7 @@ function SignalRadar({
             fontWeight={500}
           >
             {a.label}
+            {a.isOverridden && ' ✎'}
           </text>
         );
       })}
@@ -177,16 +339,31 @@ function SignalRadar({
           <text
             key={`v-${a.label}`}
             x={pos.x}
-            y={pos.y - 10}
+            y={pos.y - 12}
             textAnchor="middle"
             fontSize={9}
-            fill={EMBER}
+            fill={a.isOverridden ? VIOLET : EMBER}
             fontWeight={600}
           >
             {a.value.toFixed(2)}
+            {a.isOverridden && (
+              <tspan fontSize={7} fillOpacity={0.6}>{` (auto: ${a.autoValue.toFixed(2)})`}</tspan>
+            )}
           </text>
         );
       })}
+
+      {/* Drag instruction hint */}
+      <text
+        x={cx}
+        y={cy + maxR + 55}
+        textAnchor="middle"
+        fontSize={9}
+        className="fill-muted-foreground"
+        fillOpacity={0.5}
+      >
+        Drag points to manually set signals
+      </text>
     </svg>
   );
 }
@@ -899,18 +1076,28 @@ const TAB_DEFS = [
 
 export default function VisualizerPage() {
   const ready = useSetupGuard();
-  const {
-    confidence,
-    entropy,
-    dissonance,
-    healthScore,
-    pipelineStages,
-    tda,
-    activeConcepts,
-    riskScore,
-    harmonyKeyDistance,
-    activeChordProduct,
-  } = usePFCStore();
+  const confidence = usePFCStore((s) => s.confidence);
+  const entropy = usePFCStore((s) => s.entropy);
+  const dissonance = usePFCStore((s) => s.dissonance);
+  const healthScore = usePFCStore((s) => s.healthScore);
+  const pipelineStages = usePFCStore((s) => s.pipelineStages);
+  const tda = usePFCStore((s) => s.tda);
+  const activeConcepts = usePFCStore((s) => s.activeConcepts);
+  const riskScore = usePFCStore((s) => s.riskScore);
+  const harmonyKeyDistance = usePFCStore((s) => s.harmonyKeyDistance);
+  const activeChordProduct = usePFCStore((s) => s.activeChordProduct);
+  const userSignalOverrides = usePFCStore((s) => s.userSignalOverrides);
+  const setSignalOverride = usePFCStore((s) => s.setSignalOverride);
+  const resetAllSignalOverrides = usePFCStore((s) => s.resetAllSignalOverrides);
+
+  const hasOverrides = userSignalOverrides.confidence !== null ||
+    userSignalOverrides.entropy !== null ||
+    userSignalOverrides.dissonance !== null ||
+    userSignalOverrides.healthScore !== null;
+
+  const handleSignalChange = useCallback((signal: SignalKey, value: number) => {
+    setSignalOverride(signal, value);
+  }, [setSignalOverride]);
 
   if (!ready) {
     return (
@@ -945,11 +1132,11 @@ export default function VisualizerPage() {
             </h1>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
-            <Badge variant="outline" className="text-xs font-mono">
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <Badge variant="outline" className="text-xs font-mono hidden sm:inline-flex">
               Confidence {confidence.toFixed(2)}
             </Badge>
-            <Badge variant="outline" className="text-xs font-mono">
+            <Badge variant="outline" className="text-xs font-mono hidden sm:inline-flex">
               Health {healthScore.toFixed(2)}
             </Badge>
             <ThemeToggle />
@@ -977,7 +1164,7 @@ export default function VisualizerPage() {
             })}
           </TabsList>
 
-          {/* 1 - Signal Radar */}
+          {/* 1 - Signal Radar (Interactive) */}
           <TabsContent value="radar">
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
@@ -986,21 +1173,69 @@ export default function VisualizerPage() {
             >
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <RadarIcon className="h-4 w-4 text-pfc-ember" />
-                    Signal Radar
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <RadarIcon className="h-4 w-4 text-pfc-ember" />
+                      Signal Radar
+                      {hasOverrides && (
+                        <Badge variant="outline" className="ml-2 text-[10px] border-pfc-violet/40 text-pfc-violet">
+                          Manual Override Active
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    {hasOverrides && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs border-pfc-violet/30 text-pfc-violet hover:bg-pfc-violet/10"
+                        onClick={resetAllSignalOverrides}
+                      >
+                        <RotateCcwIcon className="h-3 w-3" />
+                        Reset to Auto
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Core signal magnitudes mapped onto a radar chart. Each axis
-                    represents a normalised 0-1 signal from the PFC engine.
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Drag the data points to manually override signal values.
+                    Overridden signals are shown in purple. The dashed outline shows the auto-calculated values.
                   </p>
-                  <SignalRadar
+
+                  {/* Override status indicators */}
+                  {hasOverrides && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {SIGNAL_KEYS.map((key) => {
+                        const override = userSignalOverrides[key];
+                        if (override === null) return null;
+                        const autoVal = key === 'entropy' ? Math.min(1, entropy) : key === 'dissonance' ? Math.min(1, dissonance) : key === 'confidence' ? confidence : healthScore;
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => setSignalOverride(key, null)}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px]',
+                              'border border-pfc-violet/30 bg-pfc-violet/5 text-pfc-violet',
+                              'hover:bg-pfc-violet/15 transition-colors cursor-pointer',
+                            )}
+                          >
+                            <span className="font-medium capitalize">{key === 'healthScore' ? 'Health' : key}</span>
+                            <span className="font-mono">{override.toFixed(2)}</span>
+                            <span className="text-[9px] opacity-60">(auto: {autoVal.toFixed(2)})</span>
+                            <span className="ml-0.5 text-pfc-violet/60">✕</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <InteractiveSignalRadar
                     confidence={confidence}
                     entropy={entropy}
                     dissonance={dissonance}
                     healthScore={healthScore}
+                    overrides={userSignalOverrides}
+                    onSignalChange={handleSignalChange}
                   />
                 </CardContent>
               </Card>

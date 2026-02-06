@@ -316,3 +316,13 @@ select:focus-visible {
 .animate-code-glow {
   animation: code-fall-glow 3s ease-in-out infinite;
 }
+
+/* Reveal button pulse for "Here's what I really mean" */
+@keyframes reveal-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.animate-reveal-pulse {
+  animation: reveal-pulse 2s ease-in-out infinite;
+}
