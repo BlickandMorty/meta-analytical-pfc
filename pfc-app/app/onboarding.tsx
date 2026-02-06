@@ -1,252 +1,719 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TextInput, Pressable } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  Pressable,
+  Platform,
+  Animated,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useTheme } from '../modules/shared/theme';
-import { PFCText } from '../modules/shared/components/PFCText';
-import { PFCButton } from '../modules/shared/components/PFCButton';
 import { usePFCStore } from '../modules/store/usePFCStore';
 
-type Phase = 'key' | 'mode';
+// ── Retro Terminal Palette ──────────────────────────────────────────
+const T = {
+  bg: '#1A0F0A',           // deep espresso
+  panel: '#2A1D14',        // warm brown panel
+  panelLight: '#3D2B1E',   // lighter brown for surfaces
+  border: '#6B4226',       // copper border
+  borderLight: '#8B5E3C',  // highlight edge (3D top/left)
+  borderDark: '#3A2010',   // shadow edge (3D bottom/right)
+  screen: '#0A1A1A',       // dark teal CRT screen
+  screenBorder: '#4A7A6A', // teal frame
+  green: '#33FF66',        // terminal green
+  greenDim: '#1A8833',     // dimmer green
+  greenGlow: '#33FF6640',  // green glow
+  amber: '#FFAA33',        // amber/gold for prompts
+  amberDim: '#AA7722',     // dim amber
+  cyan: '#66FFEE',         // cyan for system
+  cyanDim: '#338877',      // dim cyan
+  red: '#FF4444',          // error red
+  purple: '#7B5EA7',       // accent purple
+  textMuted: '#6B6B5B',    // muted text
+  white: '#E8E0D0',        // warm white
+  buttonFace: '#8B6B4A',   // 3D button face
+  buttonHi: '#B8956E',     // 3D button highlight
+  buttonShadow: '#4A3520', // 3D button shadow
+  buttonText: '#1A0F0A',   // button text (dark)
+};
 
-export default function OnboardingScreen() {
-  const router = useRouter();
-  const { colors, fonts, fontSizes } = useTheme();
-  const configure = usePFCStore((s) => s.configure);
+// ── Types ───────────────────────────────────────────────────────────
+type TermLine = {
+  id: number;
+  text: string;
+  color: string;
+  isTyping?: boolean;
+  delay?: number;
+};
 
-  const [phase, setPhase] = useState<Phase>('key');
-  const [keyInput, setKeyInput] = useState('');
-  const [mode, setMode] = useState<'hybrid' | 'local'>('hybrid');
+type SetupStep =
+  | 'boot'
+  | 'ask_setup'
+  | 'setup_check'
+  | 'ask_api'
+  | 'api_input'
+  | 'deploying'
+  | 'done';
 
-  const handleKeyConfirm = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setPhase('mode');
-  }, []);
+let lineId = 0;
+const nextId = () => ++lineId;
 
-  const handleSkip = useCallback(() => {
-    setKeyInput('');
-    setMode('local');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setPhase('mode');
-  }, []);
-
-  const handleDeploy = useCallback(() => {
-    configure(keyInput.trim(), mode);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace('/(tabs)');
-  }, [keyInput, mode, configure, router]);
-
-  if (phase === 'key') {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.centered}>
-          <PFCText variant="code" size="xs" color={colors.textTertiary}>
-            {'>'} META-ANALYTICAL PFC v2.0
-          </PFCText>
-          <PFCText variant="code" size="xs" color={colors.textTertiary} style={{ marginTop: 2 }}>
-            {'>'} INITIALIZATION PROTOCOL
-          </PFCText>
-
-          <PFCText
-            variant="display"
-            size="xl"
-            color={colors.brand.primary}
-            glow
-            center
-            style={{ marginTop: 40 }}
-          >
-            API Key
-          </PFCText>
-          <PFCText
-            variant="ui"
-            size="sm"
-            color={colors.textSecondary}
-            center
-            style={{ marginTop: 8 }}
-          >
-            Enter your Anthropic API key for hybrid inference
-          </PFCText>
-
-          <TextInput
-            style={[
-              styles.keyInput,
-              {
-                borderColor: colors.brand.primary,
-                color: colors.textPrimary,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.md,
-                backgroundColor: colors.surface,
-              },
-            ]}
-            value={keyInput}
-            onChangeText={setKeyInput}
-            placeholder="sk-ant-..."
-            placeholderTextColor={colors.textTertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-          />
-
-          <PFCButton
-            label="Confirm"
-            onPress={handleKeyConfirm}
-            variant="primary"
-            size="lg"
-            disabled={!keyInput.trim()}
-            style={{ marginTop: 24, alignSelf: 'stretch', marginHorizontal: 24 }}
-          />
-
-          <PFCButton
-            label="Skip — Local Only"
-            onPress={handleSkip}
-            variant="ghost"
-            size="sm"
-            style={{ marginTop: 16 }}
-          />
-
-          <PFCText
-            variant="body"
-            size="xs"
-            color={colors.textTertiary}
-            center
-            style={{ marginTop: 24, paddingHorizontal: 40 }}
-          >
-            Local mode uses open-weight models on your device. No API key needed, but requires model download.
-          </PFCText>
-        </View>
-      </View>
-    );
-  }
+// ── 3D Button Component ────────────────────────────────────────────
+function RetroButton({
+  label,
+  onPress,
+  color = T.buttonFace,
+  textColor = T.buttonText,
+  wide = false,
+  small = false,
+  disabled = false,
+}: {
+  label: string;
+  onPress: () => void;
+  color?: string;
+  textColor?: string;
+  wide?: boolean;
+  small?: boolean;
+  disabled?: boolean;
+}) {
+  const [pressed, setPressed] = useState(false);
+  const pad = small ? 6 : 10;
+  const padH = small ? 14 : wide ? 32 : 20;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.centered}>
-        <PFCText variant="code" size="xs" color={colors.textTertiary}>
-          {'>'} API KEY — {keyInput ? 'SET' : 'SKIPPED'}
-        </PFCText>
-
-        <PFCText
-          variant="display"
-          size="xl"
-          color={colors.brand.accent}
-          glow
-          center
-          style={{ marginTop: 40 }}
+    <Pressable
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      onPress={() => {
+        if (disabled) return;
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onPress();
+      }}
+      disabled={disabled}
+      style={[
+        {
+          borderWidth: 3,
+          borderTopColor: pressed ? T.borderDark : T.buttonHi,
+          borderLeftColor: pressed ? T.borderDark : T.buttonHi,
+          borderBottomColor: pressed ? T.buttonHi : T.buttonShadow,
+          borderRightColor: pressed ? T.buttonHi : T.buttonShadow,
+          backgroundColor: pressed ? T.panelLight : color,
+          paddingVertical: pad,
+          paddingHorizontal: padH,
+          opacity: disabled ? 0.4 : 1,
+          transform: [{ translateY: pressed ? 2 : 0 }],
+        },
+        wide && { alignSelf: 'stretch' as const },
+      ]}
+    >
+      <View
+        style={{
+          borderWidth: 1,
+          borderTopColor: pressed ? 'transparent' : 'rgba(255,255,255,0.15)',
+          borderLeftColor: pressed ? 'transparent' : 'rgba(255,255,255,0.1)',
+          borderBottomColor: pressed ? 'transparent' : 'rgba(0,0,0,0.2)',
+          borderRightColor: pressed ? 'transparent' : 'rgba(0,0,0,0.15)',
+          paddingVertical: 2,
+          paddingHorizontal: 4,
+          alignItems: 'center',
+        }}
+      >
+        <PixelText
+          color={disabled ? T.textMuted : textColor}
+          size={small ? 8 : 10}
         >
-          Inference Mode
-        </PFCText>
-        <PFCText
-          variant="ui"
-          size="sm"
-          color={colors.textSecondary}
-          center
-          style={{ marginTop: 8 }}
-        >
-          Choose how the PFC processes queries
-        </PFCText>
+          {label}
+        </PixelText>
+      </View>
+    </Pressable>
+  );
+}
 
-        <View style={styles.modeList}>
-          <Pressable
-            style={[
-              styles.modeCard,
-              {
-                borderColor: mode === 'hybrid' ? colors.brand.accent : colors.border,
-                backgroundColor: mode === 'hybrid' ? colors.brand.accent + '10' : colors.surface,
-                borderRadius: 12,
-              },
-            ]}
-            onPress={() => {
-              setMode('hybrid');
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-          >
-            <PFCText variant="ui" size="lg" color={mode === 'hybrid' ? colors.brand.accent : colors.textSecondary}>
-              Hybrid
-            </PFCText>
-            <PFCText variant="body" size="xs" color={colors.textSecondary} style={{ marginTop: 4 }}>
-              Anthropic API for synthesis + local model for activations & TDA
-            </PFCText>
-            {!keyInput && (
-              <PFCText variant="ui" size="xs" color={colors.semantic.warning} style={{ marginTop: 4 }}>
-                Requires API key
-              </PFCText>
+// ── Pixel Text Shortcut ─────────────────────────────────────────────
+function PixelText({
+  children,
+  color = T.green,
+  size = 10,
+  style,
+  glow = false,
+}: {
+  children: React.ReactNode;
+  color?: string;
+  size?: number;
+  style?: any;
+  glow?: boolean;
+}) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Animated.Text
+        style={[
+          {
+            fontFamily: 'PressStart2P_400Regular',
+            fontSize: size,
+            color,
+            letterSpacing: 0.5,
+            lineHeight: size * 1.8,
+          },
+          glow && {
+            textShadowColor: color + '80',
+            textShadowOffset: { width: 0, height: 0 },
+            textShadowRadius: 8,
+          },
+          style,
+        ]}
+      >
+        {children}
+      </Animated.Text>
+    </View>
+  );
+}
+
+// ── Typing Line (appears char by char) ──────────────────────────────
+function TypingLine({
+  text,
+  color,
+  onDone,
+  speed = 35,
+}: {
+  text: string;
+  color: string;
+  onDone?: () => void;
+  speed?: number;
+}) {
+  const [len, setLen] = useState(0);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    setLen(0);
+    doneRef.current = false;
+    const iv = setInterval(() => {
+      setLen((prev) => {
+        const next = Math.min(prev + 1, text.length);
+        if (next >= text.length && !doneRef.current) {
+          doneRef.current = true;
+          clearInterval(iv);
+          setTimeout(() => onDone?.(), 80);
+        }
+        return next;
+      });
+    }, speed);
+    return () => clearInterval(iv);
+  }, [text, speed]);
+
+  return (
+    <PixelText color={color} size={9} glow>
+      {text.slice(0, len)}
+      {len < text.length ? '\u2588' : ''}
+    </PixelText>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ██ MAIN ONBOARDING SCREEN
+// ════════════════════════════════════════════════════════════════════
+export default function OnboardingScreen() {
+  const router = useRouter();
+  const configure = usePFCStore((s) => s.configure);
+
+  const [step, setStep] = useState<SetupStep>('boot');
+  const [lines, setLines] = useState<TermLine[]>([]);
+  const [typingDone, setTypingDone] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+  const [showCursor, setShowCursor] = useState(true);
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Blinking cursor
+  useEffect(() => {
+    const iv = setInterval(() => setShowCursor((c) => !c), 530);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Auto-scroll on new lines
+  useEffect(() => {
+    const t = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [lines, step]);
+
+  // Add lines helper
+  const addLines = useCallback((newLines: Omit<TermLine, 'id'>[]) => {
+    setLines((prev) => [
+      ...prev,
+      ...newLines.map((l) => ({ ...l, id: nextId() })),
+    ]);
+  }, []);
+
+  // ── Boot Sequence ─────────────────────────────────────────────
+  useEffect(() => {
+    const bootLines: Omit<TermLine, 'id'>[] = [
+      { text: '╔══════════════════════════════════════╗', color: T.border },
+      { text: '║  META-ANALYTICAL PFC v2.0            ║', color: T.amber },
+      { text: '║  Initialization Terminal             ║', color: T.amberDim },
+      { text: '╚══════════════════════════════════════╝', color: T.border },
+      { text: '', color: T.green },
+      { text: '> BIOS POST... OK', color: T.greenDim },
+      { text: '> Loading reasoning modules...', color: T.greenDim },
+      { text: '> TDA pipeline............ ready', color: T.green },
+      { text: '> Bayesian engine......... ready', color: T.green },
+      { text: '> Causal inference........ ready', color: T.green },
+      { text: '> Meta-analysis core...... ready', color: T.green },
+      { text: '> Adversarial review...... ready', color: T.green },
+      { text: '', color: T.green },
+    ];
+
+    let i = 0;
+    const addNext = () => {
+      if (i < bootLines.length) {
+        addLines([bootLines[i]]);
+        i++;
+        setTimeout(addNext, 60 + Math.random() * 40);
+      } else {
+        setTimeout(() => {
+          addLines([
+            { text: '> All core systems nominal.', color: T.cyan, isTyping: true },
+          ]);
+          setStep('ask_setup');
+        }, 300);
+      }
+    };
+    addNext();
+  }, []);
+
+  // ── Step: Ask Setup ───────────────────────────────────────────
+  useEffect(() => {
+    if (step !== 'ask_setup') return;
+    const t = setTimeout(() => {
+      addLines([
+        { text: '', color: T.green },
+        { text: '┌─────────────────────────────────────┐', color: T.amber },
+        { text: '│ First time? Need to set things up?  │', color: T.amber },
+        { text: '└─────────────────────────────────────┘', color: T.amber },
+      ]);
+      setTypingDone(true);
+    }, 800);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  // ── Step: Setup Check (user said yes) ─────────────────────────
+  useEffect(() => {
+    if (step !== 'setup_check') return;
+    setTypingDone(false);
+
+    const checkLines: Omit<TermLine, 'id'>[] = [
+      { text: '', color: T.green },
+      { text: '> Checking dependencies...', color: T.cyan },
+      { text: '  Python 3.10+......... [OK]', color: T.green },
+      { text: '  Node.js 18+.......... [OK]', color: T.green },
+      { text: '  PyTorch.............. [OK]', color: T.green },
+      { text: '  Ripser (TDA)......... [OK]', color: T.green },
+      { text: '  Local models dir..... [OK]', color: T.green },
+      { text: '', color: T.green },
+      { text: '> All dependencies satisfied.', color: T.cyan },
+    ];
+
+    let i = 0;
+    const addNext = () => {
+      if (i < checkLines.length) {
+        addLines([checkLines[i]]);
+        i++;
+        setTimeout(addNext, 120 + Math.random() * 80);
+      } else {
+        setTimeout(() => {
+          setStep('ask_api');
+        }, 500);
+      }
+    };
+    setTimeout(addNext, 400);
+  }, [step]);
+
+  // ── Step: Ask API Key ─────────────────────────────────────────
+  useEffect(() => {
+    if (step !== 'ask_api') return;
+    const t = setTimeout(() => {
+      addLines([
+        { text: '', color: T.green },
+        { text: '┌─────────────────────────────────────┐', color: T.amber },
+        { text: '│ Enter Anthropic API key for hybrid  │', color: T.amber },
+        { text: '│ inference, or skip for local-only.  │', color: T.amber },
+        { text: '└─────────────────────────────────────┘', color: T.amber },
+      ]);
+      setTypingDone(true);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  // ── Step: Deploying ───────────────────────────────────────────
+  useEffect(() => {
+    if (step !== 'deploying') return;
+    setTypingDone(false);
+
+    const deployLines: Omit<TermLine, 'id'>[] = [
+      { text: '', color: T.green },
+      { text: '> Initializing PFC cortex...', color: T.cyan },
+      { text: '> Binding reasoning pathways...', color: T.cyan },
+      { text: '> Calibrating confidence model...', color: T.cyan },
+      { text: '> Loading topological analyzer...', color: T.cyan },
+      { text: '', color: T.green },
+      { text: '████████████████████████ 100%', color: T.green },
+      { text: '', color: T.green },
+      { text: '> SYSTEM READY. Deploying PFC...', color: T.amber },
+    ];
+
+    let i = 0;
+    const addNext = () => {
+      if (i < deployLines.length) {
+        addLines([deployLines[i]]);
+        i++;
+        setTimeout(addNext, 150 + Math.random() * 100);
+      } else {
+        setTimeout(() => {
+          setStep('done');
+        }, 600);
+      }
+    };
+    setTimeout(addNext, 300);
+  }, [step]);
+
+  // ── Step: Done → navigate ─────────────────────────────────────
+  useEffect(() => {
+    if (step !== 'done') return;
+    const mode = keyInput.trim() ? 'hybrid' : 'local';
+    configure(keyInput.trim(), mode);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const t = setTimeout(() => {
+      router.replace('/(tabs)');
+    }, 400);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  // ── Handlers ──────────────────────────────────────────────────
+  const handleYes = useCallback(() => {
+    setTypingDone(false);
+    addLines([{ text: '> YES', color: T.white }]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setStep('setup_check');
+  }, [addLines]);
+
+  const handleNo = useCallback(() => {
+    setTypingDone(false);
+    addLines([{ text: '> NO — Skipping setup check.', color: T.white }]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => setStep('ask_api'), 600);
+  }, [addLines]);
+
+  const handleApiConfirm = useCallback(() => {
+    setTypingDone(false);
+    addLines([{ text: `> API KEY: ${'*'.repeat(Math.min(keyInput.length, 20))}`, color: T.white }]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setTimeout(() => setStep('deploying'), 400);
+  }, [keyInput, addLines]);
+
+  const handleSkipApi = useCallback(() => {
+    setTypingDone(false);
+    setKeyInput('');
+    addLines([{ text: '> SKIP — Local inference only.', color: T.white }]);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => setStep('deploying'), 400);
+  }, [addLines]);
+
+  // ════════════════════════════════════════════════════════════════
+  // ██ RENDER
+  // ════════════════════════════════════════════════════════════════
+  return (
+    <View style={styles.root}>
+      {/* Outer bezel */}
+      <View style={styles.bezel}>
+        {/* Screen area */}
+        <View style={styles.screenOuter}>
+          <View style={styles.screenInner}>
+            {/* Scanlines overlay */}
+            {Platform.OS === 'web' && (
+              <View style={[StyleSheet.absoluteFill, styles.scanlines]} pointerEvents="none" />
             )}
-          </Pressable>
 
-          <Pressable
-            style={[
-              styles.modeCard,
-              {
-                borderColor: mode === 'local' ? colors.brand.accent : colors.border,
-                backgroundColor: mode === 'local' ? colors.brand.accent + '10' : colors.surface,
-                borderRadius: 12,
-              },
-            ]}
-            onPress={() => {
-              setMode('local');
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-          >
-            <PFCText variant="ui" size="lg" color={mode === 'local' ? colors.brand.accent : colors.textSecondary}>
-              Local
-            </PFCText>
-            <PFCText variant="body" size="xs" color={colors.textSecondary} style={{ marginTop: 4 }}>
-              Open-weight model on your device. Full TDA. No API calls.
-            </PFCText>
-          </Pressable>
+            {/* Terminal output */}
+            <ScrollView
+              ref={scrollRef}
+              style={styles.scrollArea}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {lines.map((line) => (
+                <View key={line.id} style={styles.lineRow}>
+                  {line.isTyping ? (
+                    <TypingLine text={line.text} color={line.color} />
+                  ) : (
+                    <PixelText color={line.color} size={9} glow={line.color === T.green || line.color === T.cyan}>
+                      {line.text}
+                    </PixelText>
+                  )}
+                </View>
+              ))}
+
+              {/* Prompt cursor when idle */}
+              {typingDone && step !== 'api_input' && step !== 'deploying' && step !== 'done' && (
+                <View style={styles.lineRow}>
+                  <PixelText color={T.green} size={9} glow>
+                    {'>'} {showCursor ? '\u2588' : ' '}
+                  </PixelText>
+                </View>
+              )}
+            </ScrollView>
+          </View>
         </View>
 
-        <PFCButton
-          label="Deploy PFC"
-          onPress={handleDeploy}
-          variant="primary"
-          size="lg"
-          disabled={mode === 'hybrid' && !keyInput}
-          style={{ marginTop: 32, alignSelf: 'stretch', marginHorizontal: 24 }}
-        />
+        {/* Control panel below screen */}
+        <View style={styles.controlPanel}>
+          {/* Title bar */}
+          <View style={styles.titleBar}>
+            <PixelText color={T.amber} size={8} glow>
+              META-ANALYTICAL PFC
+            </PixelText>
+            <PixelText color={T.amberDim} size={7}>
+              INIT TERMINAL
+            </PixelText>
+          </View>
 
-        <PFCButton
-          label="Back"
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setPhase('key');
-          }}
-          variant="ghost"
-          size="sm"
-          style={{ marginTop: 16 }}
-        />
+          {/* Action area — changes based on step */}
+          <View style={styles.actionArea}>
+            {step === 'ask_setup' && typingDone && (
+              <View style={styles.buttonRow}>
+                <RetroButton
+                  label="YES — CHECK SETUP"
+                  onPress={handleYes}
+                  color="#4A7A4A"
+                  textColor={T.white}
+                />
+                <RetroButton
+                  label="NO — SKIP"
+                  onPress={handleNo}
+                  color={T.buttonFace}
+                  textColor={T.buttonText}
+                />
+              </View>
+            )}
+
+            {step === 'ask_api' && typingDone && (
+              <View style={styles.apiSection}>
+                <View style={styles.apiInputRow}>
+                  <View style={styles.apiInputWrapper}>
+                    <TextInput
+                      style={styles.apiInput}
+                      value={keyInput}
+                      onChangeText={setKeyInput}
+                      placeholder="sk-ant-..."
+                      placeholderTextColor={T.textMuted}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+                <View style={styles.buttonRow}>
+                  <RetroButton
+                    label="CONFIRM KEY"
+                    onPress={handleApiConfirm}
+                    color="#4A7A4A"
+                    textColor={T.white}
+                    disabled={!keyInput.trim()}
+                  />
+                  <RetroButton
+                    label="SKIP — LOCAL"
+                    onPress={handleSkipApi}
+                    color="#7A5A3A"
+                    textColor={T.white}
+                  />
+                </View>
+              </View>
+            )}
+
+            {(step === 'boot' || step === 'setup_check' || step === 'deploying') && (
+              <View style={styles.statusRow}>
+                <View style={[styles.statusLed, { backgroundColor: T.green }]} />
+                <PixelText color={T.greenDim} size={7}>
+                  {step === 'boot'
+                    ? 'BOOTING...'
+                    : step === 'setup_check'
+                    ? 'CHECKING...'
+                    : 'DEPLOYING...'}
+                </PixelText>
+              </View>
+            )}
+
+            {step === 'done' && (
+              <View style={styles.statusRow}>
+                <View style={[styles.statusLed, { backgroundColor: T.amber }]} />
+                <PixelText color={T.amber} size={7} glow>
+                  SYSTEM READY
+                </PixelText>
+              </View>
+            )}
+          </View>
+        </View>
       </View>
     </View>
   );
 }
 
+// ════════════════════════════════════════════════════════════════════
+// ██ STYLES
+// ════════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
-  },
-  centered: {
-    flex: 1,
+    backgroundColor: T.bg,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
-  },
-  keyInput: {
-    width: '85%',
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    textAlign: 'center',
-    marginTop: 24,
-    letterSpacing: 1,
-  },
-  modeList: {
-    width: '100%',
-    marginTop: 24,
-    gap: 12,
-  },
-  modeCard: {
-    borderWidth: 1.5,
     padding: 16,
   },
+
+  bezel: {
+    width: '100%',
+    maxWidth: 600,
+    flex: 1,
+    maxHeight: 800,
+    backgroundColor: T.panel,
+    borderWidth: 4,
+    borderTopColor: T.borderLight,
+    borderLeftColor: T.borderLight,
+    borderBottomColor: T.borderDark,
+    borderRightColor: T.borderDark,
+    borderRadius: 4,
+    padding: 12,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 8px 32px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.6,
+          shadowRadius: 16,
+          elevation: 12,
+        }),
+  } as any,
+
+  screenOuter: {
+    flex: 1,
+    borderWidth: 3,
+    borderTopColor: T.borderDark,
+    borderLeftColor: T.borderDark,
+    borderBottomColor: T.borderLight,
+    borderRightColor: T.borderLight,
+    backgroundColor: T.screen,
+    borderRadius: 2,
+  },
+
+  screenInner: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: T.screenBorder + '40',
+    margin: 2,
+    overflow: 'hidden',
+  },
+
+  scanlines: {
+    ...(Platform.OS === 'web'
+      ? {
+          backgroundImage:
+            'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,100,0.015) 2px, rgba(0,255,100,0.015) 4px)',
+        }
+      : {}),
+  } as any,
+
+  scrollArea: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    padding: 12,
+    paddingBottom: 24,
+  },
+
+  lineRow: {
+    minHeight: 18,
+    paddingVertical: 1,
+  },
+
+  controlPanel: {
+    marginTop: 10,
+    borderWidth: 2,
+    borderTopColor: T.borderLight,
+    borderLeftColor: T.borderLight,
+    borderBottomColor: T.borderDark,
+    borderRightColor: T.borderDark,
+    backgroundColor: T.panelLight,
+    borderRadius: 2,
+    padding: 10,
+  },
+
+  titleBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: T.border,
+    paddingBottom: 8,
+    marginBottom: 10,
+  },
+
+  actionArea: {
+    minHeight: 60,
+    justifyContent: 'center',
+  },
+
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+
+  apiSection: {
+    gap: 12,
+  },
+
+  apiInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  apiInputWrapper: {
+    flex: 1,
+    borderWidth: 3,
+    borderTopColor: T.borderDark,
+    borderLeftColor: T.borderDark,
+    borderBottomColor: T.borderLight,
+    borderRightColor: T.borderLight,
+    backgroundColor: T.screen,
+    borderRadius: 2,
+  },
+
+  apiInput: {
+    fontFamily: 'PressStart2P_400Regular',
+    fontSize: 9,
+    color: T.green,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    letterSpacing: 1,
+  },
+
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+
+  statusLed: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 0 6px currentColor' }
+      : {}),
+  } as any,
 });
