@@ -24,7 +24,6 @@ interface MessageLaymanProps {
 }
 
 export function MessageLayman({ layman }: MessageLaymanProps) {
-  // Filter to only sections that have content, then assign sequential icons
   const activeSections = SECTION_KEYS
     .map((key) => ({
       key,
@@ -33,21 +32,31 @@ export function MessageLayman({ layman }: MessageLaymanProps) {
     }))
     .filter((s) => s.text);
 
+  // Single section (trivial query or note) — render as clean paragraph
+  if (activeSections.length <= 1) {
+    const section = activeSections[0];
+    if (!section) return null;
+    return (
+      <p className="text-[13.5px] leading-[1.7] text-foreground/90">
+        {section.text}
+      </p>
+    );
+  }
+
+  // Multiple sections — render with subtle left accent borders, no numbered circles
   return (
-    <div className="space-y-3.5">
-      {activeSections.map((section, idx) => (
-        <div key={section.key} className="flex gap-3">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pfc-ember/10 text-pfc-ember text-[10px] font-semibold mt-[3px]">
-            {idx + 1}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider mb-0.5">
-              {section.label}
-            </p>
-            <p className="text-[13.5px] leading-[1.65] text-foreground/90">
-              {section.text}
-            </p>
-          </div>
+    <div className="space-y-3">
+      {activeSections.map((section) => (
+        <div
+          key={section.key}
+          className="border-l-2 border-pfc-ember/15 pl-3"
+        >
+          <p className="text-[9.5px] font-medium text-muted-foreground/50 tracking-wide mb-0.5">
+            {section.label}
+          </p>
+          <p className="text-[13.5px] leading-[1.65] text-foreground/90">
+            {section.text}
+          </p>
         </div>
       ))}
     </div>

@@ -104,7 +104,7 @@ function SignalRadar({
   const rings = [0.25, 0.5, 0.75, 1];
 
   return (
-    <svg viewBox="-10 -10 320 320" overflow="visible" className="w-full max-w-md mx-auto">
+    <svg viewBox="-50 -30 400 360" overflow="visible" className="w-full max-w-md mx-auto">
       {/* Grid rings */}
       {rings.map((r) => (
         <circle
@@ -152,7 +152,7 @@ function SignalRadar({
 
       {/* Labels */}
       {axes.map((a) => {
-        const labelR = maxR + 18;
+        const labelR = maxR + 30;
         const pos = polar(cx, cy, labelR, a.angle);
         return (
           <text
@@ -162,7 +162,7 @@ function SignalRadar({
             textAnchor="middle"
             dominantBaseline="central"
             className="fill-muted-foreground"
-            fontSize={10}
+            fontSize={11}
             fontWeight={500}
           >
             {a.label}

@@ -36,10 +36,9 @@ export function Message({ message }: MessageProps) {
 
       <div
         className={cn(
-          'max-w-[85%]',
           isUser
-            ? 'rounded-2xl rounded-br-md bg-pfc-ember text-white px-4 py-2.5'
-            : 'rounded-2xl rounded-bl-md bg-card/80 border border-border/40 px-4 py-3.5'
+            ? 'max-w-[80%] rounded-2xl rounded-br-md bg-pfc-ember text-white px-3.5 py-2'
+            : 'max-w-[75%] rounded-2xl rounded-bl-md bg-card/80 border border-border/40 px-4 py-3'
         )}
       >
         {isUser ? (

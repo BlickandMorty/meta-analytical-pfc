@@ -250,12 +250,40 @@ select:focus-visible {
   background-image:
     linear-gradient(var(--border) 0.5px, transparent 0.5px),
     linear-gradient(90deg, var(--border) 0.5px, transparent 0.5px);
-  background-size: 28px 28px;
-  opacity: 0.18;
+  background-size: 20px 20px;
+  opacity: 0.08;
 }
 
 .dark .chat-grid-bg {
-  opacity: 0.05;
+  opacity: 0.04;
+}
+
+/* Dot grid background for engineering pages */
+.dot-grid-bg {
+  background-image: radial-gradient(circle, var(--border) 0.5px, transparent 0.5px);
+  background-size: 16px 16px;
+  opacity: 0.25;
+}
+
+.dark .dot-grid-bg {
+  opacity: 0.08;
+}
+
+/* Shimmer animation for active elements */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.65 0.15 30 / 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
 }
 
 /* Falling code rain animation */

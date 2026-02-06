@@ -29,6 +29,7 @@ interface MultimodalInputProps {
   onStop?: () => void;
   isProcessing: boolean;
   className?: string;
+  hero?: boolean;
 }
 
 export function MultimodalInput({
@@ -36,6 +37,7 @@ export function MultimodalInput({
   onStop,
   isProcessing,
   className,
+  hero,
 }: MultimodalInputProps) {
   const [value, setValue] = useState('');
   const [focused, setFocused] = useState(false);
@@ -126,7 +128,8 @@ export function MultimodalInput({
       {/* Input container — no focus ring */}
       <div
         className={cn(
-          'relative flex w-full items-end gap-2 rounded-2xl border bg-card p-3 transition-all duration-200',
+          'relative flex w-full items-end gap-2 rounded-2xl border bg-card transition-all duration-200',
+          hero ? 'p-4' : 'p-3',
           focused
             ? 'border-border shadow-md'
             : 'border-border/50 shadow-sm',
@@ -145,7 +148,10 @@ export function MultimodalInput({
             setTimeout(() => setFocused(false), 150);
           }}
           placeholder="Ask a research question…"
-          className="flex-1 resize-none bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/60 outline-none ring-0 border-0 focus:outline-none focus:ring-0 focus:border-0 focus-visible:outline-none focus-visible:ring-0 min-h-[24px] max-h-[200px] p-0"
+          className={cn(
+            'flex-1 resize-none bg-transparent leading-relaxed text-foreground placeholder:text-muted-foreground/60 outline-none ring-0 border-0 focus:outline-none focus:ring-0 focus:border-0 focus-visible:outline-none focus-visible:ring-0 p-0',
+            hero ? 'text-base min-h-[32px] max-h-[200px]' : 'text-sm min-h-[24px] max-h-[200px]',
+          )}
           rows={1}
           disabled={isProcessing}
           style={{ boxShadow: 'none' }}

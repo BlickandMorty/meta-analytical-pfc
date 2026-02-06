@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { LiveBrief } from './live-brief';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,14 @@ import {
   MoonIcon,
   PanelLeftCloseIcon,
   XIcon,
+  PlusIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { formatDistanceToNow } from 'date-fns';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Chat', icon: BrainCircuitIcon },
@@ -41,33 +43,47 @@ interface ChatHistoryItem {
 export function AppSidebar() {
   const sidebarOpen = usePFCStore((s) => s.sidebarOpen);
   const setSidebarOpen = usePFCStore((s) => s.setSidebarOpen);
+  const queriesProcessed = usePFCStore((s) => s.queriesProcessed);
   const pathname = usePathname();
+  const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
-  // Avoid hydration mismatch — only render theme-dependent content after mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Fetch chat history
-  useEffect(() => {
-    async function loadHistory() {
-      try {
-        setHistoryLoading(true);
-        const res = await fetch('/api/history?userId=local-user');
-        const data = await res.json();
-        setChatHistory(data.chats || []);
-      } catch {
-        // Silently fail
-      } finally {
-        setHistoryLoading(false);
-      }
+  const loadHistory = useCallback(async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await fetch('/api/history?userId=local-user');
+      const data = await res.json();
+      setChatHistory(data.chats || []);
+    } catch {
+      // Silently fail
+    } finally {
+      setHistoryLoading(false);
     }
-    loadHistory();
   }, []);
+
+  // Fetch chat history on mount
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  // Refresh history when new queries are processed
+  useEffect(() => {
+    if (queriesProcessed > 0) {
+      loadHistory();
+    }
+  }, [queriesProcessed, loadHistory]);
+
+  const handleNewChat = () => {
+    usePFCStore.getState().reset();
+    router.push('/');
+  };
 
   return (
     <>
@@ -85,12 +101,10 @@ export function AppSidebar() {
         )}
       </AnimatePresence>
 
-      {/* Sidebar — always in DOM, slides in/out */}
+      {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{
-          x: sidebarOpen ? 0 : -280,
-        }}
+        animate={{ x: sidebarOpen ? 0 : -280 }}
         transition={{
           type: 'spring',
           stiffness: 500,
@@ -120,31 +134,44 @@ export function AppSidebar() {
           </Button>
         </div>
 
-        {/* New Chat button */}
+        {/* New Chat button — 3D brain bubble */}
         <div className="p-3">
-          <Link href="/">
-            <button
-              className={cn(
-                'group relative w-full flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-300',
-                'bg-gradient-to-r from-pfc-ember/90 to-pfc-violet/80',
-                'dark:from-pfc-ember/20 dark:to-pfc-violet/15',
-                'text-white dark:text-sidebar-foreground',
-                'hover:shadow-lg hover:shadow-pfc-ember/20 dark:hover:shadow-pfc-ember/10',
-                'hover:scale-[1.02] active:scale-[0.98]',
-                'border border-white/10 dark:border-pfc-ember/20',
-              )}
+          <button
+            onClick={handleNewChat}
+            className={cn(
+              'group relative w-full flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-300 cursor-pointer',
+              // Light mode: deep distinctive dark gradient
+              'bg-gradient-to-r from-slate-800 to-indigo-950',
+              // Dark mode: subtle ember/violet
+              'dark:from-pfc-ember/20 dark:to-pfc-violet/15',
+              'text-white dark:text-sidebar-foreground',
+              // Shadow + 3D depth
+              'shadow-md shadow-slate-800/25 dark:shadow-pfc-ember/10',
+              'hover:shadow-xl hover:shadow-indigo-900/30 dark:hover:shadow-pfc-ember/15',
+              'hover:scale-[1.02] active:scale-[0.98]',
+              // Border for depth
+              'border border-white/5 dark:border-pfc-ember/20',
+            )}
+          >
+            {/* Hover glow overlay */}
+            <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-500/0 via-white/8 to-violet-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            {/* 3D Brain bubble icon */}
+            <span
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 dark:border-pfc-ember/30"
+              style={{
+                background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.2), rgba(255,255,255,0.02) 60%, rgba(0,0,0,0.1))',
+                boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.15), inset 0 -1px 3px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.15)',
+              }}
             >
-              {/* Glow effect */}
-              <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pfc-ember/0 via-white/10 to-pfc-violet/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <BrainCircuitIcon className="h-4.5 w-4.5 drop-shadow-sm" />
+            </span>
 
-              {/* Brain bubble icon */}
-              <span className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 dark:bg-pfc-ember/25 backdrop-blur-sm shadow-inner">
-                <BrainCircuitIcon className="h-4 w-4" />
-              </span>
-
-              <span className="relative">New Chat</span>
-            </button>
-          </Link>
+            <div className="relative flex items-center gap-2">
+              <PlusIcon className="h-3.5 w-3.5 opacity-70" />
+              <span>New Chat</span>
+            </div>
+          </button>
         </div>
 
         <Separator className="bg-sidebar-border" />
@@ -177,10 +204,15 @@ export function AppSidebar() {
 
         {/* Chat History */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="px-3 py-2">
+          <div className="px-3 py-2 flex items-center justify-between">
             <p className="text-[10px] uppercase tracking-wider text-sidebar-foreground/40 font-medium">
               Recent
             </p>
+            {chatHistory.length > 0 && (
+              <span className="text-[9px] font-mono text-sidebar-foreground/30 bg-sidebar-accent/50 px-1.5 py-0.5 rounded">
+                {chatHistory.length}
+              </span>
+            )}
           </div>
           <ScrollArea className="flex-1 px-2">
             <div className="space-y-0.5 pb-4">
@@ -214,7 +246,6 @@ export function AppSidebar() {
               className="h-7 w-7 text-sidebar-foreground/50 hover:text-sidebar-foreground"
               onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
             >
-              {/* Only render theme icon after mount to avoid hydration mismatch */}
               {!mounted ? (
                 <span className="h-3.5 w-3.5" />
               ) : resolvedTheme === 'dark' ? (
@@ -236,8 +267,15 @@ function ChatHistoryRow({ chatItem }: { chatItem: ChatHistoryItem }) {
   const pathname = usePathname();
   const isActive = pathname === `/chat/${chatItem.id}`;
 
-  // Generate a mock summary from the title (in production this would come from the API)
-  const summary = `Analysis of "${chatItem.title.slice(0, 40)}" — processed through the 10-stage pipeline.`;
+  const summary = `Analyzed "${chatItem.title.slice(0, 40)}" through the reasoning pipeline.`;
+
+  const timeAgo = (() => {
+    try {
+      return formatDistanceToNow(new Date(chatItem.updatedAt), { addSuffix: true });
+    } catch {
+      return '';
+    }
+  })();
 
   // Typewriter effect on hover
   useEffect(() => {
@@ -267,12 +305,19 @@ function ChatHistoryRow({ chatItem }: { chatItem: ChatHistoryItem }) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <p className={cn(
-          'text-xs truncate',
-          isActive ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/70',
-        )}>
-          {chatItem.title}
-        </p>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className={cn(
+            'text-xs truncate flex-1',
+            isActive ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/70',
+          )}>
+            {chatItem.title}
+          </p>
+          {timeAgo && !hovered && (
+            <span className="text-[9px] text-sidebar-foreground/30 shrink-0 font-mono">
+              {timeAgo.replace('about ', '~')}
+            </span>
+          )}
+        </div>
 
         {/* Typewriter summary on hover */}
         <AnimatePresence>

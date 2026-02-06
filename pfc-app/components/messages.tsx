@@ -24,7 +24,7 @@ function MessagesInner() {
         ref={containerRef}
         className="relative h-full overflow-y-auto px-4 py-6"
       >
-        <div className="mx-auto max-w-3xl space-y-5">
+        <div className="mx-auto max-w-3xl space-y-4">
           <AnimatePresence initial={false}>
             {messages.map((message) => (
               <Message key={message.id} message={message} />

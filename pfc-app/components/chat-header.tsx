@@ -11,6 +11,12 @@ import {
   PanelLeftIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function ChatHeader() {
   const activeLayer = usePFCStore((s) => s.activeMessageLayer);
@@ -39,14 +45,23 @@ export function ChatHeader() {
 
         {/* Desktop sidebar toggle */}
         {!sidebarOpen && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hidden md:flex"
-            onClick={toggleSidebar}
-          >
-            <PanelLeftIcon className="h-4 w-4" />
-          </Button>
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 hidden md:flex text-muted-foreground hover:text-foreground"
+                  onClick={toggleSidebar}
+                >
+                  <PanelLeftIcon className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                Open sidebar
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
 
         <h1 className="text-sm font-semibold tracking-tight">

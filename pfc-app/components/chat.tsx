@@ -8,7 +8,6 @@ import { MultimodalInput } from './multimodal-input';
 import { SynthesisCard } from './synthesis-card';
 import { EXAMPLE_QUERIES } from '@/lib/constants';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrainCircuitIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Chat() {
@@ -25,53 +24,42 @@ export function Chat() {
           <motion.div
             key="empty"
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -20, transition: { duration: 0.3 } }}
-            className="flex flex-1 flex-col items-center justify-center p-6"
+            exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.25 } }}
+            className="flex flex-1 flex-col items-center justify-center px-6"
           >
-            <div className="w-full max-w-2xl space-y-8">
-              {/* Brain icon + title */}
+            <div className="w-full max-w-xl space-y-6">
+              {/* Title — clean Claude-style */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-center space-y-2"
+                transition={{ duration: 0.4 }}
+                className="text-center"
               >
-                <div className="flex justify-center mb-4">
-                  <div className="relative">
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-pfc-ember/20 to-pfc-violet/15 flex items-center justify-center border border-pfc-ember/10">
-                      <BrainCircuitIcon className="h-7 w-7 text-pfc-ember" />
-                    </div>
-                    {/* Subtle pulse ring */}
-                    <div className="absolute inset-0 rounded-2xl bg-pfc-ember/5 animate-ping" style={{ animationDuration: '3s' }} />
-                  </div>
-                </div>
                 <h1 className="text-2xl font-semibold tracking-tight">
                   What would you like to analyze?
                 </h1>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Ask any research question. The 10-stage pipeline will stress-test it through statistical, causal, Bayesian, and adversarial reasoning.
-                </p>
               </motion.div>
 
-              {/* Large centered input */}
+              {/* Hero input — large and prominent */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
+                transition={{ duration: 0.4, delay: 0.08 }}
               >
                 <MultimodalInput
                   onSubmit={sendQuery}
                   onStop={abort}
                   isProcessing={isProcessing}
                   className="shadow-lg border-border"
+                  hero
                 />
               </motion.div>
 
-              {/* Example query chips */}
+              {/* Example query chips — subtle */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.16 }}
                 className="flex flex-wrap justify-center gap-2"
               >
                 {EXAMPLE_QUERIES.map((example) => (
@@ -79,15 +67,15 @@ export function Chat() {
                     key={example.query}
                     onClick={() => sendQuery(example.query)}
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs',
-                      'bg-card/80 backdrop-blur-sm',
-                      'text-muted-foreground hover:text-foreground',
-                      'border-border/60 hover:border-pfc-ember/30',
-                      'hover:bg-pfc-ember/5 hover:shadow-sm',
+                      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px]',
+                      'bg-card/60 backdrop-blur-sm',
+                      'text-muted-foreground/80 hover:text-foreground',
+                      'border-border/50 hover:border-pfc-ember/30',
+                      'hover:bg-pfc-ember/5',
                       'transition-all duration-200 cursor-pointer',
                     )}
                   >
-                    <span>{example.icon}</span>
+                    <span className="text-[10px]">{example.icon}</span>
                     <span>{example.title}</span>
                   </button>
                 ))}
@@ -97,9 +85,9 @@ export function Chat() {
         ) : (
           <motion.div
             key="chat"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
             className="flex flex-1 flex-col min-h-0"
           >
             <ChatHeader />
