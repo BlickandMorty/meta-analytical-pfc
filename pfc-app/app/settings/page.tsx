@@ -18,7 +18,15 @@ import {
   XCircleIcon,
   Loader2Icon,
   ExternalLinkIcon,
+  HardDriveIcon,
+  RefreshCwIcon,
+  CopyIcon,
+  GaugeIcon,
+  WrenchIcon,
+  CircleIcon,
 } from 'lucide-react';
+import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
+import { formatBytes } from '@/lib/engine/llm/ollama';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 
@@ -38,6 +46,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -121,12 +130,16 @@ export default function SettingsPage() {
   const ollamaAvailable = usePFCStore((s) => s.ollamaAvailable);
   const ollamaModels = usePFCStore((s) => s.ollamaModels);
   const setOllamaStatus = usePFCStore((s) => s.setOllamaStatus);
+  const ollamaHardware = usePFCStore((s) => s.ollamaHardware);
+  const setOllamaHardware = usePFCStore((s) => s.setOllamaHardware);
   const reset = usePFCStore((s) => s.reset);
 
   // Connection test state
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState('');
   const [ollamaChecking, setOllamaChecking] = useState(false);
+  const [hwLoading, setHwLoading] = useState(false);
+  const [copiedVar, setCopiedVar] = useState<string | null>(null);
 
   // Load persisted settings on mount
   useEffect(() => {
@@ -202,6 +215,34 @@ export default function SettingsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ollamaBaseUrl]);
+
+  const fetchHardwareStatus = useCallback(async () => {
+    setHwLoading(true);
+    try {
+      const res = await fetch(`/api/ollama-status?baseUrl=${encodeURIComponent(ollamaBaseUrl)}`);
+      const data: OllamaHardwareStatus = await res.json();
+      setOllamaHardware(data);
+    } catch {
+      setOllamaHardware(null);
+    } finally {
+      setHwLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ollamaBaseUrl]);
+
+  // Auto-fetch hardware status when Ollama is available
+  useEffect(() => {
+    if (inferenceMode === 'local' && ollamaAvailable) {
+      fetchHardwareStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ollamaAvailable, inferenceMode]);
+
+  const copyToClipboard = (text: string, varName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedVar(varName);
+    setTimeout(() => setCopiedVar(null), 2000);
+  };
 
   const testConnection = async () => {
     setTestStatus('testing');
@@ -518,6 +559,188 @@ export default function SettingsPage() {
                             {testError || 'Failed'}
                           </span>
                         )}
+                      </div>
+                    )}
+
+                    {/* ── Hardware Status Panel ── */}
+                    {ollamaAvailable && (
+                      <div className="space-y-4 pt-3 border-t border-border/20">
+                        {/* Header with refresh */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <HardDriveIcon className="h-3.5 w-3.5 text-pfc-cyan" />
+                            <span className="text-xs font-medium">Hardware Status</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={fetchHardwareStatus}
+                            disabled={hwLoading}
+                            className="text-xs h-7 px-2"
+                          >
+                            {hwLoading ? <Loader2Icon className="h-3 w-3 animate-spin" /> : <RefreshCwIcon className="h-3 w-3" />}
+                          </Button>
+                        </div>
+
+                        {/* GPU Info (nvidia-smi) */}
+                        {ollamaHardware?.gpu && (
+                          <div className="rounded-lg border border-pfc-green/20 bg-pfc-green/5 p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium text-pfc-green">GPU Detected</span>
+                              <Badge variant="secondary" className="text-[9px] bg-pfc-green/10 text-pfc-green border-0">
+                                {ollamaHardware.gpu.name}
+                              </Badge>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                                <span>VRAM Usage</span>
+                                <span className="font-mono">
+                                  {formatBytes(ollamaHardware.gpu.vramUsed)} / {formatBytes(ollamaHardware.gpu.vramTotal)}
+                                </span>
+                              </div>
+                              <Progress
+                                value={Math.round((ollamaHardware.gpu.vramUsed / ollamaHardware.gpu.vramTotal) * 100)}
+                                className="h-1.5 [&>div]:bg-pfc-green"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Running Models */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <GaugeIcon className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[11px] font-medium text-muted-foreground">Running Models</span>
+                          </div>
+                          {(!ollamaHardware || ollamaHardware.running.length === 0) ? (
+                            <div className="rounded-lg border border-border/20 bg-muted/20 px-3 py-2 text-center">
+                              <span className="text-[11px] text-muted-foreground/60">No models loaded — idle</span>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {ollamaHardware.running.map((m) => {
+                                const expiresIn = m.expiresAt ? Math.max(0, Math.round((new Date(m.expiresAt).getTime() - Date.now()) / 1000)) : 0;
+                                const minutes = Math.floor(expiresIn / 60);
+                                const seconds = expiresIn % 60;
+                                return (
+                                  <div key={m.name} className="rounded-lg border border-border/30 bg-muted/10 px-3 py-2 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-mono font-medium">{m.name}</span>
+                                      <CircleIcon className="h-2 w-2 fill-pfc-green text-pfc-green" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] text-muted-foreground">
+                                      <span>Parameters: <span className="font-mono text-foreground/80">{m.paramSize} ({m.quantization})</span></span>
+                                      <span>VRAM: <span className="font-mono text-foreground/80">{formatBytes(m.vramUsage)}</span></span>
+                                      <span>Family: <span className="font-mono text-foreground/80">{m.family}</span></span>
+                                      {expiresIn > 0 && (
+                                        <span>Unloads in: <span className="font-mono text-pfc-yellow">{minutes}m {seconds}s</span></span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* VRAM Estimator */}
+                        {ollamaHardware && ollamaHardware.models.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-1.5">
+                              <HardDriveIcon className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-[11px] font-medium text-muted-foreground">VRAM Estimates</span>
+                            </div>
+                            <div className="rounded-lg border border-border/20 overflow-hidden">
+                              <table className="w-full text-[11px]">
+                                <thead>
+                                  <tr className="bg-muted/30 border-b border-border/20">
+                                    <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Model</th>
+                                    <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Est. VRAM</th>
+                                    <th className="text-center px-3 py-1.5 font-medium text-muted-foreground">Quant</th>
+                                    {ollamaHardware.gpu && (
+                                      <th className="text-center px-3 py-1.5 font-medium text-muted-foreground">Fit</th>
+                                    )}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {ollamaHardware.models.map((m) => {
+                                    const gpu = ollamaHardware.gpu;
+                                    const fits = gpu ? m.estimatedVram < gpu.vramTotal : null;
+                                    const tight = gpu ? m.estimatedVram > gpu.vramTotal * 0.7 : false;
+                                    return (
+                                      <tr key={m.name} className="border-b border-border/10 last:border-0">
+                                        <td className="px-3 py-1.5 font-mono">{m.name}</td>
+                                        <td className="text-right px-3 py-1.5 font-mono">{formatBytes(m.estimatedVram)}</td>
+                                        <td className="text-center px-3 py-1.5">
+                                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{m.quantization}</Badge>
+                                        </td>
+                                        {gpu && (
+                                          <td className="text-center px-3 py-1.5">
+                                            {fits === null ? (
+                                              <span className="text-muted-foreground">—</span>
+                                            ) : fits && !tight ? (
+                                              <CheckCircle2Icon className="h-3 w-3 text-pfc-green inline-block" />
+                                            ) : fits && tight ? (
+                                              <span className="text-pfc-yellow text-[10px]">tight</span>
+                                            ) : (
+                                              <XCircleIcon className="h-3 w-3 text-pfc-red inline-block" />
+                                            )}
+                                          </td>
+                                        )}
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                            {!ollamaHardware.gpu && (
+                              <p className="text-[10px] text-muted-foreground/50">
+                                GPU info unavailable — estimates shown without hardware comparison.
+                              </p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground/50">
+                              Estimates based on parameter count x quantization bits + ~500MB overhead. Actual usage varies.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Config Helper */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <WrenchIcon className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[11px] font-medium text-muted-foreground">Ollama Configuration Tips</span>
+                          </div>
+                          <div className="rounded-lg border border-border/20 bg-muted/10 px-3 py-2.5 space-y-2.5">
+                            <p className="text-[10px] text-muted-foreground/70">
+                              Set these environment variables before starting Ollama to control hardware usage.
+                            </p>
+                            {([
+                              { name: 'OLLAMA_NUM_GPU', value: '999', desc: 'GPU layers to offload (999 = all, 0 = CPU only)' },
+                              { name: 'OLLAMA_MAX_LOADED_MODELS', value: '1', desc: 'Max models in memory simultaneously' },
+                              { name: 'OLLAMA_NUM_PARALLEL', value: '1', desc: 'Concurrent inference request slots' },
+                              { name: 'OLLAMA_FLASH_ATTENTION', value: '1', desc: 'Enable flash attention (reduces VRAM for long contexts)' },
+                            ] as const).map((env) => (
+                              <div key={env.name} className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <code className="text-[10px] font-mono text-pfc-cyan">{env.name}</code>
+                                  <p className="text-[9px] text-muted-foreground/60 mt-0.5">{env.desc}</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 px-1.5 shrink-0"
+                                  onClick={() => copyToClipboard(`export ${env.name}=${env.value}`, env.name)}
+                                >
+                                  {copiedVar === env.name ? (
+                                    <CheckCircle2Icon className="h-3 w-3 text-pfc-green" />
+                                  ) : (
+                                    <CopyIcon className="h-3 w-3 text-muted-foreground" />
+                                  )}
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </motion.div>

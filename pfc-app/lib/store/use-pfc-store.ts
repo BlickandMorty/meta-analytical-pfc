@@ -17,6 +17,7 @@ import type {
   SignalUpdate,
 } from '@/lib/engine/types';
 import type { InferenceConfig, InferenceMode, ApiProvider, OpenAIModel, AnthropicModel } from '@/lib/engine/llm/config';
+import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
 
 // --- Pipeline helpers ---
 
@@ -194,6 +195,7 @@ export interface PFCState {
   ollamaModel: string;
   ollamaAvailable: boolean;
   ollamaModels: string[];
+  ollamaHardware: OllamaHardwareStatus | null;
 
   // --- NEW: Live controls ---
   liveControlsOpen: boolean;
@@ -271,6 +273,7 @@ export interface PFCState {
   setOllamaBaseUrl: (url: string) => void;
   setOllamaModel: (model: string) => void;
   setOllamaStatus: (available: boolean, models: string[]) => void;
+  setOllamaHardware: (hardware: OllamaHardwareStatus | null) => void;
   getInferenceConfig: () => InferenceConfig;
 
   // --- NEW: Cortex archive ---
@@ -347,6 +350,7 @@ const initialState = {
   ollamaModel: 'llama3.1',
   ollamaAvailable: false,
   ollamaModels: [] as string[],
+  ollamaHardware: null as OllamaHardwareStatus | null,
 
   // NEW
   liveControlsOpen: false,
@@ -599,6 +603,7 @@ export const usePFCStore = create<PFCState>((set, get) => ({
   setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
   setOllamaModel: (model) => set({ ollamaModel: model }),
   setOllamaStatus: (available, models) => set({ ollamaAvailable: available, ollamaModels: models }),
+  setOllamaHardware: (hardware) => set({ ollamaHardware: hardware }),
   getInferenceConfig: () => {
     const s = get();
     return {
