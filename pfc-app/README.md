@@ -31,6 +31,34 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 That's it. No API keys needed — PFC runs in **Simulation mode** by default with zero external dependencies.
 
+### Automated Setup (includes Local Mode)
+
+If you want Local Mode with Ollama ready to go, use the setup scripts. They install dependencies, install Ollama if needed, pull a model, and start the app — all in one command.
+
+**macOS / Linux:**
+```bash
+git clone https://github.com/BlickandMorty/meta-analytical-pfc.git
+cd meta-analytical-pfc/pfc-app
+chmod +x setup.sh
+./setup.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/BlickandMorty/meta-analytical-pfc.git
+cd meta-analytical-pfc\pfc-app
+powershell -ExecutionPolicy Bypass -File setup.ps1
+```
+
+**Windows (Command Prompt):**
+```cmd
+git clone https://github.com/BlickandMorty/meta-analytical-pfc.git
+cd meta-analytical-pfc\pfc-app
+setup.bat
+```
+
+The scripts will walk you through model selection and skip anything already installed.
+
 ## Inference Modes
 
 ### Simulation (Default)
