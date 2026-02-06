@@ -21,8 +21,8 @@ PFC doesn't just answer questions — it shows you *how* it thinks, where it's u
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pfc-app.git
-cd pfc-app
+git clone https://github.com/BlickandMorty/meta-analytical-pfc.git
+cd meta-analytical-pfc/pfc-app
 npm install
 npm run dev
 ```
