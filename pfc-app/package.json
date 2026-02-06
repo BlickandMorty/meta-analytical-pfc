@@ -1,7 +1,8 @@
 {
   "name": "pfc-app",
   "version": "0.1.0",
-  "private": true,
+  "description": "Meta-Analytical Reasoning Engine — 10-stage cognitive pipeline with real-time signals, multi-engine arbitration, and 3 inference modes",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
