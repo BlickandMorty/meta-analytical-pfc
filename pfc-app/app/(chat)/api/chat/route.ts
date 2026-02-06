@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { runPipeline, type ConversationContext } from '@/lib/engine/simulate';
 import type { SteeringBias } from '@/lib/engine/steering/types';
+import type { InferenceConfig } from '@/lib/engine/llm/config';
 import {
   saveMessage,
   createChat,
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
   let existingChat: Awaited<ReturnType<typeof getChatById>>;
   let controls: Record<string, unknown> | undefined;
   let steeringBias: SteeringBias | undefined;
+  let inferenceConfig: InferenceConfig | undefined;
   let conversationContext: ConversationContext | undefined;
 
   try {
@@ -74,6 +76,7 @@ export async function POST(request: NextRequest) {
     const chatId = body.chatId;
     controls = body.controls;
     steeringBias = body.steeringBias;
+    inferenceConfig = body.inferenceConfig;
 
     if (!query || typeof query !== 'string') {
       return new Response('Missing query', { status: 400 });
@@ -123,6 +126,7 @@ export async function POST(request: NextRequest) {
   const capturedExistingChat = existingChat;
   const capturedContext = conversationContext;
   const capturedSteeringBias = steeringBias;
+  const capturedInferenceConfig = inferenceConfig;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -140,6 +144,7 @@ export async function POST(request: NextRequest) {
           controls as Parameters<typeof runPipeline>[1],
           capturedContext,
           capturedSteeringBias,
+          capturedInferenceConfig,
         )) {
           const data = JSON.stringify(event);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));

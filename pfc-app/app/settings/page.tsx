@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeftIcon,
   SettingsIcon,
@@ -13,6 +13,11 @@ import {
   Trash2Icon,
   ServerIcon,
   CpuIcon,
+  CloudIcon,
+  CheckCircle2Icon,
+  XCircleIcon,
+  Loader2Icon,
+  ExternalLinkIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
@@ -20,6 +25,8 @@ import { useRouter } from 'next/navigation';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { cn } from '@/lib/utils';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
+import { OPENAI_MODELS, ANTHROPIC_MODELS } from '@/lib/engine/llm/config';
+import type { InferenceMode, ApiProvider, OpenAIModel, AnthropicModel } from '@/lib/engine/llm/config';
 import {
   Card,
   CardContent,
@@ -52,30 +59,178 @@ const cardVariants = {
   }),
 };
 
+const MODE_OPTIONS: {
+  value: InferenceMode;
+  label: string;
+  description: string;
+  icon: typeof CpuIcon;
+  color: string;
+  activeColor: string;
+  activeBg: string;
+}[] = [
+  {
+    value: 'simulation',
+    label: 'Simulation',
+    description: 'Built-in engine',
+    icon: CpuIcon,
+    color: 'text-pfc-ember',
+    activeColor: 'border-pfc-ember/50 bg-pfc-ember/5',
+    activeBg: 'bg-pfc-ember',
+  },
+  {
+    value: 'api',
+    label: 'API Mode',
+    description: 'Cloud LLM',
+    icon: CloudIcon,
+    color: 'text-pfc-violet',
+    activeColor: 'border-pfc-violet/50 bg-pfc-violet/5',
+    activeBg: 'bg-pfc-violet',
+  },
+  {
+    value: 'local',
+    label: 'Local',
+    description: 'Ollama',
+    icon: ServerIcon,
+    color: 'text-pfc-green',
+    activeColor: 'border-pfc-green/50 bg-pfc-green/5',
+    activeBg: 'bg-pfc-green',
+  },
+];
+
 export default function SettingsPage() {
   const ready = useSetupGuard();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Store selectors
   const inferenceMode = usePFCStore((s) => s.inferenceMode);
   const setInferenceMode = usePFCStore((s) => s.setInferenceMode);
+  const apiProvider = usePFCStore((s) => s.apiProvider);
+  const setApiProvider = usePFCStore((s) => s.setApiProvider);
+  const apiKey = usePFCStore((s) => s.apiKey);
+  const setApiKey = usePFCStore((s) => s.setApiKey);
+  const openaiModel = usePFCStore((s) => s.openaiModel);
+  const setOpenAIModel = usePFCStore((s) => s.setOpenAIModel);
+  const anthropicModel = usePFCStore((s) => s.anthropicModel);
+  const setAnthropicModel = usePFCStore((s) => s.setAnthropicModel);
+  const ollamaBaseUrl = usePFCStore((s) => s.ollamaBaseUrl);
+  const setOllamaBaseUrl = usePFCStore((s) => s.setOllamaBaseUrl);
+  const ollamaModel = usePFCStore((s) => s.ollamaModel);
+  const setOllamaModel = usePFCStore((s) => s.setOllamaModel);
+  const ollamaAvailable = usePFCStore((s) => s.ollamaAvailable);
+  const ollamaModels = usePFCStore((s) => s.ollamaModels);
+  const setOllamaStatus = usePFCStore((s) => s.setOllamaStatus);
   const reset = usePFCStore((s) => s.reset);
-  const [mounted, setMounted] = useState(false);
-  const [apiKey, setApiKey] = useState('');
 
+  // Connection test state
+  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [testError, setTestError] = useState('');
+  const [ollamaChecking, setOllamaChecking] = useState(false);
+
+  // Load persisted settings on mount
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem('pfc-api-key') || '';
-    setApiKey(stored);
+    // Load API key from localStorage into store
+    const storedKey = localStorage.getItem('pfc-api-key') || '';
+    if (storedKey && !apiKey) setApiKey(storedKey);
+    // Load mode
+    const storedMode = localStorage.getItem('pfc-inference-mode') as InferenceMode;
+    if (storedMode && storedMode !== inferenceMode) setInferenceMode(storedMode);
+    // Load provider
+    const storedProvider = localStorage.getItem('pfc-api-provider') as ApiProvider;
+    if (storedProvider) setApiProvider(storedProvider);
+    // Load Ollama URL
+    const storedOllamaUrl = localStorage.getItem('pfc-ollama-url');
+    if (storedOllamaUrl) setOllamaBaseUrl(storedOllamaUrl);
+    // Load Ollama model
+    const storedOllamaModel = localStorage.getItem('pfc-ollama-model');
+    if (storedOllamaModel) setOllamaModel(storedOllamaModel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleModeChange = (mode: 'hybrid' | 'local') => {
+  // Auto-check Ollama when switching to local mode
+  useEffect(() => {
+    if (inferenceMode === 'local') {
+      checkOllama();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inferenceMode]);
+
+  const handleModeChange = (mode: InferenceMode) => {
     setInferenceMode(mode);
     localStorage.setItem('pfc-inference-mode', mode);
+    setTestStatus('idle');
   };
 
   const handleApiKeyChange = (value: string) => {
     setApiKey(value);
     localStorage.setItem('pfc-api-key', value);
+    setTestStatus('idle');
+  };
+
+  const handleProviderChange = (provider: ApiProvider) => {
+    setApiProvider(provider);
+    localStorage.setItem('pfc-api-provider', provider);
+    setTestStatus('idle');
+  };
+
+  const handleOllamaUrlChange = (url: string) => {
+    setOllamaBaseUrl(url);
+    localStorage.setItem('pfc-ollama-url', url);
+  };
+
+  const handleOllamaModelChange = (model: string) => {
+    setOllamaModel(model);
+    localStorage.setItem('pfc-ollama-model', model);
+  };
+
+  const checkOllama = useCallback(async () => {
+    setOllamaChecking(true);
+    try {
+      const res = await fetch(`/api/ollama-check?baseUrl=${encodeURIComponent(ollamaBaseUrl)}`);
+      const data = await res.json();
+      setOllamaStatus(data.available, data.models || []);
+      // Auto-select first model if none set
+      if (data.available && data.models?.length > 0 && !ollamaModel) {
+        handleOllamaModelChange(data.models[0]);
+      }
+    } catch {
+      setOllamaStatus(false, []);
+    } finally {
+      setOllamaChecking(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ollamaBaseUrl]);
+
+  const testConnection = async () => {
+    setTestStatus('testing');
+    setTestError('');
+    try {
+      const res = await fetch('/api/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: inferenceMode,
+          provider: apiProvider,
+          apiKey,
+          openaiModel,
+          anthropicModel,
+          ollamaBaseUrl,
+          ollamaModel,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTestStatus('success');
+      } else {
+        setTestStatus('error');
+        setTestError(data.error || 'Connection failed');
+      }
+    } catch (err) {
+      setTestStatus('error');
+      setTestError(err instanceof Error ? err.message : 'Network error');
+    }
   };
 
   const handleReset = () => {
@@ -120,73 +275,254 @@ export default function SettingsPage() {
                 Inference Mode
               </CardTitle>
               <CardDescription className="text-xs">
-                Choose how PFC processes queries. Simulation uses the built-in engine; API mode connects to an external LLM.
+                Choose how PFC processes queries. Simulation uses the built-in template engine;
+                API mode connects to OpenAI or Anthropic; Local mode uses Ollama.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => handleModeChange('hybrid')}
-                  className={cn(
-                    'relative flex flex-col items-center gap-2 rounded-xl border p-4 transition-all duration-200 cursor-pointer',
-                    inferenceMode === 'hybrid'
-                      ? 'border-pfc-ember/50 bg-pfc-ember/5 shadow-sm'
-                      : 'border-border/50 hover:border-border hover:bg-muted/30'
-                  )}
-                >
-                  <CpuIcon className={cn('h-5 w-5', inferenceMode === 'hybrid' ? 'text-pfc-ember' : 'text-muted-foreground')} />
-                  <span className={cn('text-sm font-medium', inferenceMode === 'hybrid' ? 'text-foreground' : 'text-muted-foreground')}>
-                    Simulation
-                  </span>
-                  <span className="text-[10px] text-muted-foreground/60">Built-in engine</span>
-                  {inferenceMode === 'hybrid' && (
-                    <Badge className="absolute -top-2 -right-2 bg-pfc-ember text-white text-[9px] px-1.5 py-0">
-                      Active
-                    </Badge>
-                  )}
-                </button>
-                <button
-                  onClick={() => handleModeChange('local')}
-                  className={cn(
-                    'relative flex flex-col items-center gap-2 rounded-xl border p-4 transition-all duration-200 cursor-pointer',
-                    inferenceMode === 'local'
-                      ? 'border-pfc-violet/50 bg-pfc-violet/5 shadow-sm'
-                      : 'border-border/50 hover:border-border hover:bg-muted/30'
-                  )}
-                >
-                  <ServerIcon className={cn('h-5 w-5', inferenceMode === 'local' ? 'text-pfc-violet' : 'text-muted-foreground')} />
-                  <span className={cn('text-sm font-medium', inferenceMode === 'local' ? 'text-foreground' : 'text-muted-foreground')}>
-                    API Mode
-                  </span>
-                  <span className="text-[10px] text-muted-foreground/60">External LLM</span>
-                  {inferenceMode === 'local' && (
-                    <Badge className="absolute -top-2 -right-2 bg-pfc-violet text-white text-[9px] px-1.5 py-0">
-                      Active
-                    </Badge>
-                  )}
-                </button>
+              {/* 3-mode selector */}
+              <div className="grid grid-cols-3 gap-3">
+                {MODE_OPTIONS.map((opt) => {
+                  const Icon = opt.icon;
+                  const isActive = inferenceMode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleModeChange(opt.value)}
+                      className={cn(
+                        'relative flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all duration-200 cursor-pointer',
+                        isActive
+                          ? `${opt.activeColor} shadow-sm`
+                          : 'border-border/50 hover:border-border hover:bg-muted/30',
+                      )}
+                    >
+                      <Icon className={cn('h-5 w-5', isActive ? opt.color : 'text-muted-foreground')} />
+                      <span className={cn('text-xs font-medium', isActive ? 'text-foreground' : 'text-muted-foreground')}>
+                        {opt.label}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground/60">{opt.description}</span>
+                      {isActive && (
+                        <Badge className={cn('absolute -top-2 -right-2 text-white text-[9px] px-1.5 py-0', opt.activeBg)}>
+                          Active
+                        </Badge>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
-              {inferenceMode === 'local' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2 pt-2"
-                >
-                  <label className="text-xs font-medium text-muted-foreground">API Key</label>
-                  <Input
-                    type="password"
-                    placeholder="sk-..."
-                    value={apiKey}
-                    onChange={(e) => handleApiKeyChange(e.target.value)}
-                    className="font-mono text-sm"
-                  />
-                  <p className="text-[10px] text-muted-foreground/60">
-                    Stored locally in your browser. Never sent to our servers.
-                  </p>
-                </motion.div>
-              )}
+              {/* API Mode sub-panel */}
+              <AnimatePresence>
+                {inferenceMode === 'api' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 pt-3 border-t border-border/30"
+                  >
+                    {/* Provider selector */}
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-2 block">Provider</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          { value: 'openai' as const, label: 'OpenAI', hint: 'GPT-4o' },
+                          { value: 'anthropic' as const, label: 'Anthropic', hint: 'Claude' },
+                        ]).map((p) => (
+                          <button
+                            key={p.value}
+                            onClick={() => handleProviderChange(p.value)}
+                            className={cn(
+                              'flex flex-col items-center gap-1 rounded-lg border px-3 py-2 text-xs transition-all cursor-pointer',
+                              apiProvider === p.value
+                                ? 'border-pfc-violet/50 bg-pfc-violet/5'
+                                : 'border-border/40 hover:border-border hover:bg-muted/30',
+                            )}
+                          >
+                            <span className={cn('font-medium', apiProvider === p.value ? 'text-foreground' : 'text-muted-foreground')}>
+                              {p.label}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground/60">{p.hint}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Model selector */}
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Model</label>
+                      <select
+                        value={apiProvider === 'openai' ? openaiModel : anthropicModel}
+                        onChange={(e) => {
+                          if (apiProvider === 'openai') setOpenAIModel(e.target.value as OpenAIModel);
+                          else setAnthropicModel(e.target.value as AnthropicModel);
+                        }}
+                        className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-pfc-violet/50"
+                      >
+                        {(apiProvider === 'openai' ? OPENAI_MODELS : ANTHROPIC_MODELS).map((m) => (
+                          <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* API Key */}
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">API Key</label>
+                      <Input
+                        type="password"
+                        placeholder={apiProvider === 'openai' ? 'sk-...' : 'sk-ant-...'}
+                        value={apiKey}
+                        onChange={(e) => handleApiKeyChange(e.target.value)}
+                        className="font-mono text-xs"
+                      />
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">
+                        Stored locally in your browser. Never sent to our servers.
+                      </p>
+                    </div>
+
+                    {/* Test connection */}
+                    <div className="flex items-center gap-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={testConnection}
+                        disabled={!apiKey || testStatus === 'testing'}
+                        className="text-xs gap-1.5"
+                      >
+                        {testStatus === 'testing' && <Loader2Icon className="h-3 w-3 animate-spin" />}
+                        Test Connection
+                      </Button>
+                      {testStatus === 'success' && (
+                        <span className="flex items-center gap-1 text-xs text-pfc-green">
+                          <CheckCircle2Icon className="h-3.5 w-3.5" />
+                          Connected
+                        </span>
+                      )}
+                      {testStatus === 'error' && (
+                        <span className="flex items-center gap-1 text-xs text-pfc-red">
+                          <XCircleIcon className="h-3.5 w-3.5" />
+                          {testError || 'Failed'}
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Local Mode (Ollama) sub-panel */}
+              <AnimatePresence>
+                {inferenceMode === 'local' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 pt-3 border-t border-border/30"
+                  >
+                    {/* Ollama status */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          'h-2 w-2 rounded-full',
+                          ollamaChecking ? 'bg-pfc-yellow animate-pulse' :
+                          ollamaAvailable ? 'bg-pfc-green' : 'bg-pfc-red',
+                        )} />
+                        <span className="text-xs text-muted-foreground">
+                          {ollamaChecking ? 'Checking...' :
+                           ollamaAvailable ? `Ollama running (${ollamaModels.length} models)` :
+                           'Ollama not detected'}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={checkOllama}
+                        disabled={ollamaChecking}
+                        className="text-xs h-7 px-2"
+                      >
+                        {ollamaChecking ? <Loader2Icon className="h-3 w-3 animate-spin" /> : 'Check'}
+                      </Button>
+                    </div>
+
+                    {/* Ollama URL */}
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Ollama URL</label>
+                      <Input
+                        type="text"
+                        placeholder="http://localhost:11434"
+                        value={ollamaBaseUrl}
+                        onChange={(e) => handleOllamaUrlChange(e.target.value)}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+
+                    {/* Model selector */}
+                    {ollamaAvailable && ollamaModels.length > 0 && (
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Model</label>
+                        <select
+                          value={ollamaModel}
+                          onChange={(e) => handleOllamaModelChange(e.target.value)}
+                          className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-pfc-green/50"
+                        >
+                          {ollamaModels.map((m) => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Not available hint */}
+                    {!ollamaAvailable && !ollamaChecking && (
+                      <div className="rounded-lg border border-border/30 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground space-y-1">
+                        <p>Ollama is not running. To use local models:</p>
+                        <ol className="list-decimal list-inside space-y-0.5 text-[11px]">
+                          <li>
+                            Install Ollama from{' '}
+                            <a
+                              href="https://ollama.com"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-pfc-green hover:underline inline-flex items-center gap-0.5"
+                            >
+                              ollama.com <ExternalLinkIcon className="h-2.5 w-2.5" />
+                            </a>
+                          </li>
+                          <li>Run <code className="font-mono bg-muted px-1 rounded">ollama serve</code></li>
+                          <li>Pull a model: <code className="font-mono bg-muted px-1 rounded">ollama pull llama3.1</code></li>
+                          <li>Click &quot;Check&quot; above</li>
+                        </ol>
+                      </div>
+                    )}
+
+                    {/* Test connection */}
+                    {ollamaAvailable && (
+                      <div className="flex items-center gap-3">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={testConnection}
+                          disabled={testStatus === 'testing'}
+                          className="text-xs gap-1.5"
+                        >
+                          {testStatus === 'testing' && <Loader2Icon className="h-3 w-3 animate-spin" />}
+                          Test Inference
+                        </Button>
+                        {testStatus === 'success' && (
+                          <span className="flex items-center gap-1 text-xs text-pfc-green">
+                            <CheckCircle2Icon className="h-3.5 w-3.5" />
+                            Working
+                          </span>
+                        )}
+                        {testStatus === 'error' && (
+                          <span className="flex items-center gap-1 text-xs text-pfc-red">
+                            <XCircleIcon className="h-3.5 w-3.5" />
+                            {testError || 'Failed'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
         </motion.div>
@@ -285,7 +621,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Version</span>
-                <span className="font-mono">v2.0.0</span>
+                <span className="font-mono">v2.1.0</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Engine</span>
@@ -294,6 +630,10 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Pipeline</span>
                 <span className="font-mono">10-stage executive reasoning</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Inference</span>
+                <span className="font-mono capitalize">{inferenceMode}</span>
               </div>
             </CardContent>
           </Card>

@@ -16,6 +16,7 @@ import type {
   ChatMessage,
   SignalUpdate,
 } from '@/lib/engine/types';
+import type { InferenceConfig, InferenceMode, ApiProvider, OpenAIModel, AnthropicModel } from '@/lib/engine/llm/config';
 
 // --- Pipeline helpers ---
 
@@ -80,7 +81,7 @@ export interface CortexSnapshot {
   concepts: { activeConcepts: string[]; activeChordProduct: number; harmonyKeyDistance: number };
   controls: PipelineControls;
   meta: { queriesProcessed: number; totalTraces: number; skillGapsDetected: number };
-  inferenceMode: 'hybrid' | 'local';
+  inferenceMode: InferenceMode;
   signalHistory: SignalHistoryEntry[];
 }
 
@@ -184,7 +185,15 @@ export interface PFCState {
   trainMeReport: TrainMeReport | null;
 
   // inference
-  inferenceMode: 'hybrid' | 'local';
+  inferenceMode: InferenceMode;
+  apiProvider: ApiProvider;
+  apiKey: string;
+  openaiModel: OpenAIModel;
+  anthropicModel: AnthropicModel;
+  ollamaBaseUrl: string;
+  ollamaModel: string;
+  ollamaAvailable: boolean;
+  ollamaModels: string[];
 
   // --- NEW: Live controls ---
   liveControlsOpen: boolean;
@@ -254,7 +263,15 @@ export interface PFCState {
   resetAllSignalOverrides: () => void;
 
   // --- NEW: Inference mode ---
-  setInferenceMode: (mode: 'hybrid' | 'local') => void;
+  setInferenceMode: (mode: InferenceMode) => void;
+  setApiProvider: (provider: ApiProvider) => void;
+  setApiKey: (key: string) => void;
+  setOpenAIModel: (model: OpenAIModel) => void;
+  setAnthropicModel: (model: AnthropicModel) => void;
+  setOllamaBaseUrl: (url: string) => void;
+  setOllamaModel: (model: string) => void;
+  setOllamaStatus: (available: boolean, models: string[]) => void;
+  getInferenceConfig: () => InferenceConfig;
 
   // --- NEW: Cortex archive ---
   saveCortexSnapshot: (label: string) => void;
@@ -321,7 +338,15 @@ const initialState = {
 
   trainMeReport: null,
 
-  inferenceMode: 'hybrid' as const,
+  inferenceMode: 'simulation' as InferenceMode,
+  apiProvider: 'openai' as ApiProvider,
+  apiKey: '',
+  openaiModel: 'gpt-4o' as OpenAIModel,
+  anthropicModel: 'claude-sonnet-4-20250514' as AnthropicModel,
+  ollamaBaseUrl: 'http://localhost:11434',
+  ollamaModel: 'llama3.1',
+  ollamaAvailable: false,
+  ollamaModels: [] as string[],
 
   // NEW
   liveControlsOpen: false,
@@ -345,7 +370,7 @@ const initialState = {
 
 // --- Store ---
 
-export const usePFCStore = create<PFCState>((set) => ({
+export const usePFCStore = create<PFCState>((set, get) => ({
   ...initialState,
 
   setCurrentChat: (chatId) => set({ currentChatId: chatId }),
@@ -567,6 +592,25 @@ export const usePFCStore = create<PFCState>((set) => ({
 
   // --- NEW: Inference mode ---
   setInferenceMode: (mode) => set({ inferenceMode: mode }),
+  setApiProvider: (provider) => set({ apiProvider: provider }),
+  setApiKey: (key) => set({ apiKey: key }),
+  setOpenAIModel: (model) => set({ openaiModel: model }),
+  setAnthropicModel: (model) => set({ anthropicModel: model }),
+  setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
+  setOllamaModel: (model) => set({ ollamaModel: model }),
+  setOllamaStatus: (available, models) => set({ ollamaAvailable: available, ollamaModels: models }),
+  getInferenceConfig: () => {
+    const s = get();
+    return {
+      mode: s.inferenceMode,
+      apiProvider: s.apiProvider,
+      apiKey: s.apiKey,
+      openaiModel: s.openaiModel,
+      anthropicModel: s.anthropicModel,
+      ollamaBaseUrl: s.ollamaBaseUrl,
+      ollamaModel: s.ollamaModel,
+    };
+  },
 
   // --- NEW: Cortex archive ---
   saveCortexSnapshot: (label) =>

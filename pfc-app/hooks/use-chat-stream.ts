@@ -59,6 +59,9 @@ export function useChatStream() {
     const steeringBias = steeringStore.computeBias(queryFeatures);
     const hasSteering = steeringBias.steeringStrength > 0.01;
 
+    // ── Inference config ─────────────────────────────────────
+    const inferenceConfig = store.getInferenceConfig();
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -69,6 +72,7 @@ export function useChatStream() {
           userId: 'local-user',
           ...(mergedControls && { controls: mergedControls }),
           ...(hasSteering && { steeringBias }),
+          inferenceConfig,
         }),
         signal: controller.signal,
       });

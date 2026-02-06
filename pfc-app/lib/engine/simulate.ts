@@ -18,6 +18,15 @@ import type {
 import { generateReflection } from './reflection';
 import { generateArbitration } from './arbitration';
 import { generateTruthAssessment } from './truthbot';
+import type { InferenceConfig } from './llm/config';
+import { resolveProvider } from './llm/provider';
+import {
+  llmGenerateRawAnalysis,
+  llmGenerateLaymanSummary,
+  llmGenerateReflection,
+  llmGenerateArbitration,
+  llmGenerateTruthAssessment,
+} from './llm/generate';
 
 // ═════════════════════════════════════════════════════════════════════
 // ██ CONVERSATION CONTEXT — follow-up query detection
@@ -486,7 +495,7 @@ function isTrivialQuery(query: string): boolean {
 
 type SectionLabels = NonNullable<LaymanSummary['sectionLabels']>;
 
-function getSectionLabels(qa: QueryAnalysis): SectionLabels {
+export function getSectionLabels(qa: QueryAnalysis): SectionLabels {
   if (qa.isPhilosophical) {
     return {
       whatWasTried: 'Analysis approach',
@@ -831,6 +840,7 @@ export async function* runPipeline(
   controls?: PipelineControls,
   context?: ConversationContext,
   steeringBias?: SteeringBias,
+  inferenceConfig?: InferenceConfig,
 ): AsyncGenerator<PipelineEvent> {
   const qa = analyzeQuery(query, context);
   const signals = generateSignals(qa, controls, steeringBias);
@@ -913,11 +923,52 @@ export async function* runPipeline(
     status: 'complete',
   };
 
-  // Generate the full analysis
-  const rawAnalysis = generateRawAnalysis(qa);
-  const laymanSummary = generateLaymanSummary(qa, rawAnalysis);
-  const reflection = generateReflection(stageResults, rawAnalysis);
-  const arbitration = generateArbitration(stageResults);
+  // ── Generate the full analysis ─────────────────────────────────
+  // Branch: LLM mode (api/local) uses real inference; simulation uses templates
+
+  const isLLM = inferenceConfig && inferenceConfig.mode !== 'simulation';
+
+  let rawAnalysis: string;
+  let laymanSummary: LaymanSummary;
+  let reflection: ReturnType<typeof generateReflection>;
+  let arbitration: ReturnType<typeof generateArbitration>;
+
+  if (isLLM) {
+    try {
+      const model = resolveProvider(inferenceConfig);
+
+      // Step 1: Generate raw analysis (sequential — needed by others)
+      rawAnalysis = await llmGenerateRawAnalysis(model, qa, signals);
+
+      // Step 2: Generate structured outputs in parallel (all depend on rawAnalysis)
+      const sectionLabels = getSectionLabels(qa);
+      const [llmLayman, llmReflection, llmArbitration] = await Promise.all([
+        llmGenerateLaymanSummary(model, qa, rawAnalysis, sectionLabels),
+        llmGenerateReflection(model, stageResults, rawAnalysis),
+        llmGenerateArbitration(model, stageResults),
+      ]);
+      laymanSummary = llmLayman;
+      reflection = llmReflection;
+      arbitration = llmArbitration;
+    } catch (llmError) {
+      // Graceful fallback to simulation mode
+      console.error('[runPipeline] LLM error, falling back to simulation:', llmError);
+      yield {
+        type: 'error',
+        message: `LLM inference failed (using simulation fallback): ${llmError instanceof Error ? llmError.message : 'Unknown error'}`,
+      };
+      rawAnalysis = generateRawAnalysis(qa);
+      laymanSummary = generateLaymanSummary(qa, rawAnalysis);
+      reflection = generateReflection(stageResults, rawAnalysis);
+      arbitration = generateArbitration(stageResults);
+    }
+  } else {
+    // Simulation mode — existing behavior, zero changes
+    rawAnalysis = generateRawAnalysis(qa);
+    laymanSummary = generateLaymanSummary(qa, rawAnalysis);
+    reflection = generateReflection(stageResults, rawAnalysis);
+    arbitration = generateArbitration(stageResults);
+  }
 
   const adjustedConfidence = reflection.adjustments.length > 0
     ? Math.max(0.15, signals.confidence - 0.02 * reflection.adjustments.length)
@@ -944,16 +995,42 @@ export async function* runPipeline(
     arbitration,
   };
 
-  // Generate truth assessment
-  const truthAssessment = generateTruthAssessment(dualMessage, {
-    entropy: signals.entropy,
-    dissonance: signals.dissonance,
-    confidence: adjustedConfidence,
-    healthScore: signals.healthScore,
-    safetyState: signals.safetyState,
-    tda: signals.tda,
-    riskScore: signals.riskScore,
-  });
+  // Generate truth assessment (also branched)
+  let truthAssessment;
+  if (isLLM) {
+    try {
+      const model = resolveProvider(inferenceConfig);
+      truthAssessment = await llmGenerateTruthAssessment(model, dualMessage, {
+        entropy: signals.entropy,
+        dissonance: signals.dissonance,
+        confidence: adjustedConfidence,
+        healthScore: signals.healthScore,
+        safetyState: signals.safetyState,
+        riskScore: signals.riskScore,
+      });
+    } catch {
+      // Fallback to signal-math-driven assessment
+      truthAssessment = generateTruthAssessment(dualMessage, {
+        entropy: signals.entropy,
+        dissonance: signals.dissonance,
+        confidence: adjustedConfidence,
+        healthScore: signals.healthScore,
+        safetyState: signals.safetyState,
+        tda: signals.tda,
+        riskScore: signals.riskScore,
+      });
+    }
+  } else {
+    truthAssessment = generateTruthAssessment(dualMessage, {
+      entropy: signals.entropy,
+      dissonance: signals.dissonance,
+      confidence: adjustedConfidence,
+      healthScore: signals.healthScore,
+      safetyState: signals.safetyState,
+      tda: signals.tda,
+      riskScore: signals.riskScore,
+    });
+  }
 
   // Stream the layman summary word-by-word for ChatGPT-like effect
   const textToStream = laymanSummary.whatIsLikelyTrue;
