@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { SteeringIndicator } from './steering-indicator';
 
 export function ChatHeader() {
   const toggleSynthesis = usePFCStore((s) => s.toggleSynthesisView);
@@ -71,6 +72,9 @@ export function ChatHeader() {
             Meta-Analytical Engine
           </span>
         </h1>
+
+        {/* Steering indicator */}
+        <SteeringIndicator />
 
         {/* Processing pill */}
         {isProcessing && activeStage && (

@@ -2,13 +2,18 @@
 
 import { useCallback, useRef } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
+import { useSteeringStore } from '@/lib/store/use-steering-store';
 import type { PipelineEvent } from '@/lib/engine/types';
+import type { QueryFeatureVector } from '@/lib/engine/steering/types';
+import type { SignalSnapshot, QueryAnalysisSnapshot } from '@/lib/engine/steering/encoder';
+import type { TruthAssessmentInput } from '@/lib/engine/steering/feedback';
 
 export function useChatStream() {
   const abortRef = useRef<AbortController | null>(null);
 
   const sendQuery = useCallback(async (query: string, chatId?: string) => {
     const store = usePFCStore.getState();
+    const steeringStore = useSteeringStore.getState();
 
     // Abort any existing stream
     if (abortRef.current) {
@@ -47,6 +52,13 @@ export function useChatStream() {
       ? { ...controls, ...(hasConceptWeights && { conceptWeights: effectiveWeights }) }
       : undefined;
 
+    // ── Compute steering bias ──────────────────────────────────
+    // Build a lightweight query feature vector from the query text
+    // (mirrors analyzeQuery logic from simulate.ts but client-side)
+    const queryFeatures = extractQueryFeatures(query);
+    const steeringBias = steeringStore.computeBias(queryFeatures);
+    const hasSteering = steeringBias.steeringStrength > 0.01;
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -56,6 +68,7 @@ export function useChatStream() {
           query,
           userId: 'local-user',
           ...(mergedControls && { controls: mergedControls }),
+          ...(hasSteering && { steeringBias }),
         }),
         signal: controller.signal,
       });
@@ -113,7 +126,7 @@ export function useChatStream() {
                 store.appendStreamingText(event.text);
                 break;
 
-              case 'complete':
+              case 'complete': {
                 store.completeProcessing(
                   event.dualMessage,
                   event.confidence,
@@ -123,7 +136,50 @@ export function useChatStream() {
                 );
                 // Apply final signals
                 store.applySignalUpdate(event.signals);
+
+                // ── Record in steering memory ──────────────────
+                // Build signal and query snapshots from the completed event
+                const signalSnap: SignalSnapshot = {
+                  confidence: event.confidence,
+                  entropy: event.signals?.entropy ?? store.entropy,
+                  dissonance: event.signals?.dissonance ?? store.dissonance,
+                  healthScore: event.signals?.healthScore ?? store.healthScore,
+                  riskScore: event.signals?.riskScore ?? store.riskScore,
+                  safetyState: event.signals?.safetyState ?? store.safetyState,
+                  tda: event.signals?.tda ?? store.tda,
+                  focusDepth: event.signals?.focusDepth ?? store.focusDepth,
+                  temperatureScale: event.signals?.temperatureScale ?? store.temperatureScale,
+                  activeConcepts: event.signals?.activeConcepts ?? store.activeConcepts,
+                  harmonyKeyDistance: event.signals?.harmonyKeyDistance ?? store.harmonyKeyDistance,
+                };
+
+                const querySnap: QueryAnalysisSnapshot = {
+                  complexity: queryFeatures.complexity,
+                  domain: getDomainName(queryFeatures.domain),
+                  questionType: getQuestionTypeName(queryFeatures.questionType),
+                  isEmpirical: queryFeatures.isEmpirical === 1,
+                  isPhilosophical: queryFeatures.isPhilosophical === 1,
+                  isMetaAnalytical: queryFeatures.isMetaAnalytical === 1,
+                  hasSafetyKeywords: queryFeatures.hasSafetyKeywords === 1,
+                  hasNormativeClaims: queryFeatures.hasNormativeClaims === 1,
+                  wordCount: query.split(/\s+/).length,
+                  entityCount: queryFeatures.entityCount * 8,
+                };
+
+                const truthInput: TruthAssessmentInput | null = event.truthAssessment
+                  ? {
+                      overallTruthLikelihood: event.truthAssessment.overallTruthLikelihood ?? 0.5,
+                      // Consensus and disagreements come from arbitration (inside dualMessage),
+                      // not from TruthAssessment directly — use safe defaults
+                      consensus: true,
+                      disagreements: event.truthAssessment.weaknesses ?? [],
+                    }
+                  : null;
+
+                const resolvedChat = chatId || store.currentChatId || 'unknown';
+                steeringStore.recordPipelineRun(signalSnap, querySnap, resolvedChat, truthInput);
                 break;
+              }
 
               case 'error':
                 console.error('Pipeline error:', event.message);
@@ -155,3 +211,89 @@ export function useChatStream() {
 
   return { sendQuery, abort };
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Lightweight client-side query feature extraction
+// (mirrors key heuristics from simulate.ts analyzeQuery)
+// ═══════════════════════════════════════════════════════════════════
+
+const DOMAIN_KEYWORDS: Record<string, string[]> = {
+  philosophical: ['free will', 'consciousness', 'moral', 'ethics', 'determinism', 'existential', 'metaphysics', 'ontology'],
+  medical: ['treatment', 'diagnosis', 'clinical', 'patient', 'disease', 'therapy', 'drug', 'symptom', 'medical'],
+  science: ['quantum', 'physics', 'biology', 'chemistry', 'experiment', 'hypothesis', 'empirical'],
+  technology: ['algorithm', 'software', 'machine learning', 'neural network', 'computing', 'AI', 'data'],
+  social_science: ['society', 'culture', 'population', 'demographic', 'social', 'political'],
+  economics: ['market', 'inflation', 'GDP', 'economic', 'trade', 'fiscal', 'monetary'],
+  psychology: ['cognitive', 'behavior', 'mental', 'perception', 'emotion', 'personality'],
+  ethics: ['should', 'ought', 'right', 'wrong', 'justice', 'fairness', 'moral'],
+};
+
+const QUESTION_TYPE_PATTERNS: Record<string, RegExp> = {
+  causal: /^(why|what causes|how does .* affect|what leads to)/i,
+  comparative: /^(compare|versus|vs|difference|better|worse)/i,
+  definitional: /^(what is|define|what does .* mean)/i,
+  evaluative: /^(is it true|evaluate|assess|how good)/i,
+  speculative: /^(what if|could|would|imagine)/i,
+  meta_analytical: /^(what does the evidence|meta-analy|systematic review|across studies)/i,
+  empirical: /^(evidence|research|studies|data|literature)/i,
+};
+
+function extractQueryFeatures(query: string): QueryFeatureVector {
+  const lower = query.toLowerCase();
+  const words = query.split(/\s+/);
+
+  // Domain detection
+  let domain = 8; // default: general
+  for (const [name, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw))) {
+      const domainNames = Object.keys(DOMAIN_KEYWORDS);
+      domain = domainNames.indexOf(name);
+      break;
+    }
+  }
+
+  // Question type detection
+  let questionType = 7; // default: conceptual
+  for (const [name, pattern] of Object.entries(QUESTION_TYPE_PATTERNS)) {
+    if (pattern.test(lower)) {
+      const typeNames = Object.keys(QUESTION_TYPE_PATTERNS);
+      questionType = typeNames.indexOf(name);
+      break;
+    }
+  }
+
+  // Complexity: based on word count, sentences, entities
+  const sentences = query.split(/[.!?]+/).filter(s => s.trim()).length;
+  const entities = words.filter(w => w.length > 5 && /^[A-Z]/.test(w)).length;
+  const complexity = Math.min(1, 0.3 + (words.length / 40) * 0.5 + (entities / 8) * 0.3);
+
+  // Flags
+  const safetyKeywords = ['weapon', 'bomb', 'hack', 'exploit', 'drug', 'illegal', 'poison'];
+  const normativeKeywords = ['should', 'ought', 'must', 'moral', 'ethical', 'right', 'wrong'];
+
+  return {
+    domain,
+    questionType,
+    complexity: Math.min(1, complexity),
+    isEmpirical: /evidence|research|studies|data|empirical/i.test(lower) ? 1 : 0,
+    isPhilosophical: /philosophy|consciousness|free will|moral|ethics|metaphysic/i.test(lower) ? 1 : 0,
+    isMetaAnalytical: /meta-analy|systematic review|across studies/i.test(lower) ? 1 : 0,
+    hasSafetyKeywords: safetyKeywords.some(kw => lower.includes(kw)) ? 1 : 0,
+    hasNormativeClaims: normativeKeywords.some(kw => lower.includes(kw)) ? 1 : 0,
+    wordCount: Math.min(1, words.length / 100),
+    entityCount: Math.min(1, entities / 8),
+  };
+}
+
+// Helper: index to domain name
+const DOMAIN_NAMES = [
+  'philosophical', 'medical', 'science', 'technology',
+  'social_science', 'economics', 'psychology', 'ethics', 'general',
+];
+function getDomainName(idx: number): string { return DOMAIN_NAMES[idx] ?? 'general'; }
+
+const QTYPE_NAMES = [
+  'causal', 'comparative', 'definitional', 'evaluative',
+  'speculative', 'meta_analytical', 'empirical', 'conceptual',
+];
+function getQuestionTypeName(idx: number): string { return QTYPE_NAMES[idx] ?? 'conceptual'; }

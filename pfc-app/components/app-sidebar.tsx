@@ -22,6 +22,7 @@ import {
   ArchiveIcon,
   FlaskConicalIcon,
   MicroscopeIcon,
+  CompassIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { href: '/concept-atlas', label: 'Concept Atlas', icon: BrainIcon },
   { href: '/trainme', label: 'Train Me', icon: GraduationCapIcon },
   { href: '/evaluate', label: 'ML Evaluator', icon: MicroscopeIcon },
+  { href: '/steering-lab', label: 'Steering Lab', icon: CompassIcon },
   { href: '/research-copilot', label: 'Research Copilot', icon: FlaskConicalIcon },
   { href: '/cortex-archive', label: 'Cortex Archive', icon: ArchiveIcon },
   { href: '/settings', label: 'Settings', icon: SettingsIcon },

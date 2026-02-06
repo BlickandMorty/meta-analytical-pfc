@@ -10,6 +10,8 @@ import type { ChatMessage } from '@/lib/engine/types';
 import { cn } from '@/lib/utils';
 import { UserIcon, BrainCircuitIcon, SparklesIcon, BookOpenIcon } from 'lucide-react';
 import { ConceptMiniMap } from './concept-mini-map';
+import { SteeringFeedback } from './steering-feedback';
+import { useSteeringStore } from '@/lib/store/use-steering-store';
 
 interface MessageProps {
   message: ChatMessage;
@@ -17,8 +19,17 @@ interface MessageProps {
 
 export function Message({ message }: MessageProps) {
   const showTruthBot = usePFCStore((s) => s.showTruthBot);
+  const latestSynthesisKeyId = useSteeringStore((s) => s.latestSynthesisKeyId);
+  const steeringMemory = useSteeringStore((s) => s.memory);
   const isUser = message.role === 'user';
   const [showLayman, setShowLayman] = useState(false);
+
+  // Find the synthesis key that was recorded for this message (by matching timestamp proximity)
+  const messageSynthesisKeyId = !isUser && message.confidence !== undefined
+    ? steeringMemory.exemplars.find(
+        ex => Math.abs(ex.key.timestamp - message.timestamp) < 5000,
+      )?.key.id ?? latestSynthesisKeyId
+    : null;
 
   return (
     <motion.div
@@ -124,6 +135,9 @@ export function Message({ message }: MessageProps) {
                 )}
               </div>
             )}
+
+            {/* Steering Feedback — thumbs up/down */}
+            <SteeringFeedback synthesisKeyId={messageSynthesisKeyId} />
 
             {/* Truth Assessment */}
             {showTruthBot && message.truthAssessment && (

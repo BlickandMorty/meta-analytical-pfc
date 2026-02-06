@@ -6,6 +6,7 @@
  */
 
 import { STAGES, type PipelineStage } from '@/lib/constants';
+import type { SteeringBias } from '@/lib/engine/steering/types';
 import type {
   DualMessage,
   LaymanSummary,
@@ -110,7 +111,7 @@ type QuestionType =
   | 'empirical'
   | 'conceptual';
 
-interface QueryAnalysis {
+export interface QueryAnalysis {
   domain: Domain;
   questionType: QuestionType;
   entities: string[];
@@ -129,7 +130,7 @@ interface QueryAnalysis {
   followUpFocus: string | null;
 }
 
-function analyzeQuery(query: string, context?: ConversationContext): QueryAnalysis {
+export function analyzeQuery(query: string, context?: ConversationContext): QueryAnalysis {
   const lower = query.toLowerCase();
   const words = query.split(/\s+/);
   const wordCount = words.length;
@@ -705,7 +706,7 @@ interface PipelineControls {
   conceptWeights?: Record<string, number>;
 }
 
-function generateSignals(qa: QueryAnalysis, controls?: PipelineControls): SignalUpdate & { grade: string; mode: string } {
+function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steeringBias?: SteeringBias): SignalUpdate & { grade: string; mode: string } {
   // Apply complexity bias from controls
   const c = Math.max(0, Math.min(1, qa.complexity + (controls?.complexityBias ?? 0)));
   const advInt = controls?.adversarialIntensity ?? 1.0;
@@ -740,19 +741,30 @@ function generateSignals(qa: QueryAnalysis, controls?: PipelineControls): Signal
     ? 0.2 + Math.random() * 0.4
     : (0.05 + c * 0.35 + Math.random() * 0.15) * advInt;
 
-  const healthScore = Math.max(0.25, 1 - entropy * 0.45 - dissonance * 0.35 - (qa.hasSafetyKeywords ? 0.15 : 0));
+  const healthScoreBase = Math.max(0.25, 1 - entropy * 0.45 - dissonance * 0.35 - (qa.hasSafetyKeywords ? 0.15 : 0));
 
-  const riskScore = qa.hasSafetyKeywords
+  const riskScoreBase = qa.hasSafetyKeywords
     ? 0.4 + Math.random() * 0.35
     : qa.hasNormativeClaims
     ? 0.15 + Math.random() * 0.25
     : 0.02 + c * 0.2 + Math.random() * 0.1;
 
+  // ── Apply steering bias (activation steering injection point) ──
+  // Pattern from interceptor.py: activations + coeff * vector
+  const sb = steeringBias;
+  const steeredConf = sb ? baseConf + sb.confidence * sb.steeringStrength : baseConf;
+  const steeredEntropy = sb ? entropy + sb.entropy * sb.steeringStrength : entropy;
+  const steeredDissonance = sb ? dissonance + sb.dissonance * sb.steeringStrength : dissonance;
+  const healthScore = sb ? healthScoreBase + sb.healthScore * sb.steeringStrength : healthScoreBase;
+  const riskScore = sb ? riskScoreBase + sb.riskScore * sb.steeringStrength : riskScoreBase;
+
   const safetyState: SafetyState = riskScore >= 0.55 ? 'red' : riskScore >= 0.35 ? 'yellow' : 'green';
 
-  // Apply focus/temperature overrides from controls
-  const depth = controls?.focusDepthOverride ?? (2 + c * 7 + (qa.isPhilosophical ? 1.5 : 0));
-  const temp = controls?.temperatureOverride ?? (qa.isPhilosophical ? 0.7 + Math.random() * 0.25 : 1.0 - c * 0.5);
+  // Apply focus/temperature overrides from controls + steering
+  const baseDepth = controls?.focusDepthOverride ?? (2 + c * 7 + (qa.isPhilosophical ? 1.5 : 0));
+  const baseTemp = controls?.temperatureOverride ?? (qa.isPhilosophical ? 0.7 + Math.random() * 0.25 : 1.0 - c * 0.5);
+  const depth = sb ? baseDepth + sb.focusDepth * sb.steeringStrength : baseDepth;
+  const temp = sb ? baseTemp + sb.temperatureScale * sb.steeringStrength : baseTemp;
 
   const conceptPool = qa.isPhilosophical
     ? ['free_will', 'determinism', 'moral_responsibility', 'compatibilism', 'retribution',
@@ -775,17 +787,17 @@ function generateSignals(qa: QueryAnalysis, controls?: PipelineControls): Signal
   const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
   const chord = concepts.reduce((p, _, i) => p * (primes[i] || 41), 1);
 
-  const clampedConf = Math.max(0.1, Math.min(baseConf, 0.95));
+  const clampedConf = Math.max(0.1, Math.min(steeredConf, 0.95));
   const grade = clampedConf > 0.7 ? 'A' : clampedConf > 0.5 ? 'B' : 'C';
   const mode = qa.isMetaAnalytical ? 'meta-analytical' : qa.isPhilosophical ? 'philosophical-analytical' : qa.isEmpirical ? 'executive' : 'moderate';
 
   return {
     confidence: clampedConf,
-    entropy: Math.min(entropy, 0.95),
-    dissonance: Math.min(dissonance, 0.95),
+    entropy: Math.max(0.01, Math.min(steeredEntropy, 0.95)),
+    dissonance: Math.max(0.01, Math.min(steeredDissonance, 0.95)),
     healthScore: Math.max(healthScore, 0.2),
     safetyState,
-    riskScore: Math.min(riskScore, 0.9),
+    riskScore: Math.max(0.01, Math.min(riskScore, 0.9)),
     tda: { betti0, betti1, persistenceEntropy, maxPersistence },
     focusDepth: depth,
     temperatureScale: temp,
@@ -818,9 +830,10 @@ export async function* runPipeline(
   query: string,
   controls?: PipelineControls,
   context?: ConversationContext,
+  steeringBias?: SteeringBias,
 ): AsyncGenerator<PipelineEvent> {
   const qa = analyzeQuery(query, context);
-  const signals = generateSignals(qa, controls);
+  const signals = generateSignals(qa, controls, steeringBias);
   const stageDelay = qa.isMetaAnalytical ? 350 : qa.isPhilosophical ? 300 : 200;
 
   // Track stage results for reflection/arbitration
