@@ -27,6 +27,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { InfoButton, PIPELINE_INFO, AnimatedSuggestions, PIPELINE_SUGGESTIONS } from '@/components/info-panel';
 
 // ---------------------------------------------------------------------------
 // Status icon helper
@@ -138,7 +139,12 @@ function StageCard({
                 </p>
               </div>
             </div>
-            <StatusIcon status={status} />
+            <div className="flex items-center gap-1">
+              {PIPELINE_INFO[stage] && (
+                <InfoButton info={PIPELINE_INFO[stage]} compact />
+              )}
+              <StatusIcon status={status} />
+            </div>
           </div>
         </CardHeader>
 
@@ -228,7 +234,7 @@ export default function PipelinePage() {
             <NetworkIcon className="h-5 w-5 text-pfc-ember" />
             <div>
               <h1 className="text-base font-semibold tracking-tight leading-none">Pipeline</h1>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5 hidden sm:block">10-stage executive reasoning</p>
+              <p className="text-[10px] text-muted-foreground/60 mt-0.5 hidden sm:block">10-stage executive reasoning protocol</p>
             </div>
           </div>
 
@@ -256,6 +262,14 @@ export default function PipelinePage() {
       {/* Stage cards grid */}
       <main className="relative flex-1 overflow-y-auto pb-20">
         <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+          {/* Animated suggestions */}
+          <div className="mb-5">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2 font-medium">
+              Quick Guide — What is this used for?
+            </p>
+            <AnimatedSuggestions suggestions={PIPELINE_SUGGESTIONS} />
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AnimatePresence mode="popLayout">
               {pipelineStages.map((result, i) => (

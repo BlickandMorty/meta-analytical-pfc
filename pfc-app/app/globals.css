@@ -39,7 +39,8 @@
   --color-pfc-red: #EF4444;
   --color-pfc-cyan: #06B6D4;
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono);
 
   --radius-lg: var(--radius);
@@ -120,7 +121,84 @@
 
 body {
   @apply bg-background text-foreground;
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "ss02" 1;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.011em;
+}
+
+/* ── Polished Typography (Inter — Claude/ChatGPT style) ── */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv01" 1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+h1 { letter-spacing: -0.032em; }
+h2 { letter-spacing: -0.028em; }
+h3 { letter-spacing: -0.022em; }
+
+/* Navigation and sidebar labels — crisp and tight */
+nav a,
+nav button,
+aside a,
+aside button,
+aside span,
+[role="navigation"] a,
+[role="navigation"] button {
+  font-family: var(--font-display);
+  letter-spacing: -0.012em;
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+}
+
+/* Badges, chips, and micro labels */
+[class*="badge"],
+[class*="chip"],
+[class*="uppercase tracking"] {
+  font-family: var(--font-display);
+  font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+}
+
+/* Tabular numbers for metrics/stats */
+[class*="tabular-nums"] {
+  font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1, "ss01" 1;
+}
+
+/* Input fields — clean and readable */
+input,
+textarea,
+select {
+  font-family: var(--font-sans);
+  letter-spacing: -0.011em;
   font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Button text — slightly tighter */
+button {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+}
+
+/* Card titles and section headers */
+[class*="card"] h1,
+[class*="card"] h2,
+[class*="card"] h3,
+[class*="card"] h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+}
+
+/* Prose content — slightly wider spacing for readability */
+.prose-pfc p,
+.prose-pfc li,
+.prose-pfc blockquote {
+  letter-spacing: -0.006em;
+  line-height: 1.7;
 }
 
 /* Smooth scrolling */
@@ -193,6 +271,15 @@ html {
 /* Typography */
 .prose-pfc {
   @apply prose prose-zinc dark:prose-invert max-w-none;
+  font-family: var(--font-sans);
+}
+
+.prose-pfc h1,
+.prose-pfc h2,
+.prose-pfc h3,
+.prose-pfc h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
 }
 
 .prose-pfc code {

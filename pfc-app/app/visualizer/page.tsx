@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
+import { InfoButton, VISUALIZER_INFO, AnimatedSuggestions, VISUALIZER_SUGGESTIONS } from '@/components/info-panel';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -1146,6 +1147,14 @@ export default function VisualizerPage() {
 
       {/* Main content */}
       <main className="mx-auto max-w-6xl px-4 py-6">
+        {/* Animated suggestions */}
+        <div className="mb-5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2 font-medium">
+            Quick Guide — What is this used for?
+          </p>
+          <AnimatedSuggestions suggestions={VISUALIZER_SUGGESTIONS} />
+        </div>
+
         <Tabs defaultValue="radar" className="w-full">
           {/* Tab triggers - scrollable row */}
           <TabsList className="mb-6 flex w-full overflow-x-auto">
@@ -1177,6 +1186,7 @@ export default function VisualizerPage() {
                     <CardTitle className="flex items-center gap-2 text-base">
                       <RadarIcon className="h-4 w-4 text-pfc-ember" />
                       Signal Radar
+                      <InfoButton info={VISUALIZER_INFO.radar} compact />
                       {hasOverrides && (
                         <Badge variant="outline" className="ml-2 text-[10px] border-pfc-violet/40 text-pfc-violet">
                           Manual Override Active
@@ -1254,6 +1264,7 @@ export default function VisualizerPage() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <NetworkIcon className="h-4 w-4 text-pfc-ember" />
                     Pipeline Flow
+                    <InfoButton info={VISUALIZER_INFO.pipeline} compact />
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1291,6 +1302,7 @@ export default function VisualizerPage() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <TrendingUpIcon className="h-4 w-4 text-pfc-ember" />
                     Confidence History
+                    <InfoButton info={VISUALIZER_INFO.confidence} compact />
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1316,6 +1328,7 @@ export default function VisualizerPage() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <ActivityIcon className="h-4 w-4 text-pfc-violet" />
                     TDA Landscape
+                    <InfoButton info={VISUALIZER_INFO.tda} compact />
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1347,6 +1360,7 @@ export default function VisualizerPage() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <BrainIcon className="h-4 w-4 text-pfc-violet" />
                     Concept Map
+                    <InfoButton info={VISUALIZER_INFO.concepts} compact />
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1372,6 +1386,7 @@ export default function VisualizerPage() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <TargetIcon className="h-4 w-4 text-pfc-red" />
                     Risk Matrix
+                    <InfoButton info={VISUALIZER_INFO.risk} compact />
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1398,6 +1413,7 @@ export default function VisualizerPage() {
                   <CardTitle className="flex items-center gap-2 text-base">
                     <ActivityIcon className="h-4 w-4 text-pfc-green" />
                     Harmony Spectrum
+                    <InfoButton info={VISUALIZER_INFO.harmony} compact />
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

@@ -19,6 +19,73 @@ import { generateArbitration } from './arbitration';
 import { generateTruthAssessment } from './truthbot';
 
 // ═════════════════════════════════════════════════════════════════════
+// ██ CONVERSATION CONTEXT — follow-up query detection
+// ═════════════════════════════════════════════════════════════════════
+
+/**
+ * Minimal conversation history passed to runPipeline so follow-up queries
+ * like "go deeper" or "what about the benefits" can inherit the original
+ * topic context instead of analyzing their own words literally.
+ */
+export interface ConversationContext {
+  /** Previous user messages (text only, most recent first) */
+  previousQueries: string[];
+  /** Previous system analysis entities — the *topic* of prior exchanges */
+  previousEntities: string[];
+  /** The original "root" question of the conversation */
+  rootQuestion?: string;
+}
+
+const FOLLOW_UP_PATTERNS = [
+  /^(go|let'?s?\s+go|dig|dive|let'?s?\s+dive|let'?s?\s+dig)\s+(deeper|further|more)/i,
+  /^(tell me|explain|elaborate|expand)\s+(more|further|on)/i,
+  /^(what about|how about|and what|and how)\b/i,
+  /^(more on|more about|deeper into)\b/i,
+  /^(can you|could you)\s+(explain|elaborate|expand|detail|go deeper)/i,
+  /^(why|how)\s+(is that|does that|is this|does this|so|exactly)\b/i,
+  /^(what makes|what are)\s+(it|them|this|that)\s/i,
+  /^(the|its?|their|those?)\s+(benefit|advantage|drawback|effect|impact|cause|reason|nuance)/i,
+  /^(benefits?|advantages?|drawbacks?|effects?|impacts?|causes?|reasons?|nuances?)\s+(of|behind)/i,
+  /^(ok|okay|sure|yes|yeah|right|interesting)\b.*\b(but|and|so|what|how|why|tell|explain|more|deeper)/i,
+];
+
+function isFollowUpQuery(query: string): boolean {
+  const trimmed = query.trim();
+  // Short queries with no strong topic words are likely follow-ups
+  if (trimmed.split(/\s+/).length <= 8 && !trimmed.includes('?')) {
+    for (const pattern of FOLLOW_UP_PATTERNS) {
+      if (pattern.test(trimmed)) return true;
+    }
+  }
+  // Also catch any query matching follow-up patterns regardless of length
+  for (const pattern of FOLLOW_UP_PATTERNS) {
+    if (pattern.test(trimmed)) return true;
+  }
+  return false;
+}
+
+/**
+ * Extract a focus qualifier from a follow-up query.
+ * e.g. "go deeper into the nuances of what makes it beneficial" → "beneficial"
+ * e.g. "what about the cognitive effects" → "cognitive effects"
+ */
+function extractFollowUpFocus(query: string): string | null {
+  const focusPatterns = [
+    /(?:deeper into|more about|expand on|elaborate on|tell me about)\s+(?:the\s+)?(?:nuances?\s+of\s+)?(?:what\s+makes?\s+(?:it|them|this|that)\s+)?(.+)/i,
+    /(?:what about|how about)\s+(?:the\s+)?(.+)/i,
+    /(?:what (?:makes?|are)\s+(?:it|them|this|that))\s+(.+)/i,
+    /(?:benefits?|advantages?|effects?|impacts?|causes?|reasons?)\s+(?:of\s+)?(.+)/i,
+  ];
+  for (const pattern of focusPatterns) {
+    const match = query.match(pattern);
+    if (match?.[1]) {
+      return match[1].replace(/[?.!]+$/, '').trim();
+    }
+  }
+  return null;
+}
+
+// ═════════════════════════════════════════════════════════════════════
 // ██ QUERY ANALYSIS
 // ═════════════════════════════════════════════════════════════════════
 
@@ -56,27 +123,44 @@ interface QueryAnalysis {
   hasNormativeClaims: boolean;
   keyTerms: string[];
   emotionalValence: 'neutral' | 'positive' | 'negative' | 'mixed';
+  /** True when the query is a follow-up referencing the previous topic */
+  isFollowUp: boolean;
+  /** The aspect the user wants to focus on in this follow-up */
+  followUpFocus: string | null;
 }
 
-function analyzeQuery(query: string): QueryAnalysis {
+function analyzeQuery(query: string, context?: ConversationContext): QueryAnalysis {
   const lower = query.toLowerCase();
   const words = query.split(/\s+/);
   const wordCount = words.length;
 
+  // Detect follow-up queries and merge with previous context
+  const followUp = context && context.previousQueries.length > 0 && isFollowUpQuery(query);
+  const followUpFocus = followUp ? extractFollowUpFocus(query) : null;
+
+  // If this is a follow-up, build an enriched query that includes the original topic
+  // This ensures analyzeQuery extracts the RIGHT entities (the topic, not "deeper")
+  const enrichedQuery = followUp && context
+    ? `${context.rootQuestion || context.previousQueries[0]} — ${followUpFocus || query}`
+    : query;
+
+  // Use enrichedQuery for domain/entity detection so follow-ups inherit topic
+  const analysisText = enrichedQuery;
+
   const domainPatterns: [RegExp, Domain][] = [
     [/\b(drug|treatment|therapy|clinical|patient|dose|symptom|disease|cancer|heart|blood|surgery|aspirin|stroke|medic|pharma|vaccine|diagnosis|prognosis|efficacy|ssri|depression|health)\b/i, 'medical'],
     [/\b(meaning|truth|moral|ethic|consciousness|existence|free.?will|determinism|metaphys|epistem|ontolog|philosophy|virtue|deontol|utilitarian|nihil|absurd)\b/i, 'philosophy'],
-    [/\b(quantum|particle|evolution|genome|cell|molecule|gravity|physics|chemistry|biology|neuroscience|climate|ecosystem|species)\b/i, 'science'],
+    [/\b(quantum|particle|evolution|genome|cell|molecule|gravity|physics|chemistry|biology|neuroscience|climate|ecosystem|species|bilingual|language|linguistic|cognitive)\b/i, 'science'],
     [/\b(algorithm|software|AI|machine.?learn|neural.?net|blockchain|compute|programming|data.?science|model|training|GPT|LLM|transformer)\b/i, 'technology'],
     [/\b(society|culture|inequality|gender|race|class|politics|democracy|governance|institution|social|community)\b/i, 'social_science'],
     [/\b(market|inflation|GDP|fiscal|monetary|trade|supply|demand|price|wage|economic|capitalism|labor)\b/i, 'economics'],
-    [/\b(behavior|cognition|emotion|perception|memory|personality|mental|anxiety|trauma|attachment|motivation|bias|cognitive|sleep)\b/i, 'psychology'],
+    [/\b(behavior|cognition|emotion|perception|memory|personality|mental|anxiety|trauma|attachment|motivation|bias|cognitive|sleep|bilingual|language)\b/i, 'psychology'],
     [/\b(should|ought|right|wrong|justice|fair|blame|guilt|punish|crime|criminal|prison|morality|law|legal)\b/i, 'ethics'],
   ];
 
   let domain: Domain = 'general';
   for (const [pattern, d] of domainPatterns) {
-    if (pattern.test(query)) { domain = d; break; }
+    if (pattern.test(analysisText)) { domain = d; break; }
   }
 
   const questionPatterns: [RegExp, QuestionType][] = [
@@ -91,7 +175,7 @@ function analyzeQuery(query: string): QueryAnalysis {
 
   let questionType: QuestionType = 'conceptual';
   for (const [pattern, qt] of questionPatterns) {
-    if (pattern.test(query)) { questionType = qt; break; }
+    if (pattern.test(analysisText)) { questionType = qt; break; }
   }
 
   const stopWords = new Set([
@@ -112,33 +196,44 @@ function analyzeQuery(query: string): QueryAnalysis {
     'seem', 'make', 'sense', 'ppl', 'people', 'get', 'got', 'going',
   ]);
 
-  const entities = words
+  // Extract entities from the enriched text (includes original topic for follow-ups)
+  const analysisWords = analysisText.split(/\s+/);
+  let entities = analysisWords
     .map((w) => w.replace(/[^a-zA-Z]/g, '').toLowerCase())
     .filter((w) => w.length > 3 && !stopWords.has(w))
-    // Clean concept names: remove stray suffixes, normalize
     .map((w) => w.replace(/^-+|-+$/g, '').replace(/[^a-z]/g, ''))
     .filter((w) => w.length > 3)
     .filter((v, i, a) => a.indexOf(v) === i)
     .slice(0, 8);
 
-  const sentences = query.split(/[.?!]+/).map((s) => s.trim()).filter(Boolean);
-  const questionSentence = sentences.find((s) => s.includes('?')) ?? sentences[0] ?? query;
-  const coreQuestion = questionSentence.slice(0, 120);
+  // For follow-ups, also inject previous entities to maintain topic continuity
+  if (followUp && context && context.previousEntities.length > 0) {
+    const merged = [...new Set([...context.previousEntities, ...entities])];
+    entities = merged.slice(0, 8);
+  }
 
-  const complexity = Math.min(1, (wordCount / 40) * 0.5 + (entities.length / 8) * 0.3 + (sentences.length > 2 ? 0.2 : 0));
+  const sentences = analysisText.split(/[.?!]+/).map((s) => s.trim()).filter(Boolean);
+  const questionSentence = sentences.find((s) => s.includes('?')) ?? sentences[0] ?? analysisText;
+  // For follow-ups, use the root question as the core question for display
+  const coreQuestion = followUp && context?.rootQuestion
+    ? context.rootQuestion.slice(0, 120)
+    : questionSentence.slice(0, 120);
 
-  const isEmpirical = /\b(study|trial|evidence|data|experiment|rct|cohort|measure|observe|effect|efficacy)\b/i.test(query);
-  const isPhilosophical = /\b(truth|meaning|moral|ethic|consciousness|free.?will|determinism|existence|reality|metaphys|why are we|what is the truth)\b/i.test(query);
-  const isMetaAnalytical = /\b(meta.?analy|pool|systematic|heterogeneity|across studies)\b/i.test(query);
-  const hasSafetyKeywords = /\b(harm|danger|weapon|toxic|exploit|kill|violence|suicide)\b/i.test(query);
-  const hasNormativeClaims = /\b(should|ought|right|wrong|blame|guilt|deserve|just|fair|moral)\b/i.test(query);
+  const complexity = Math.min(1, (wordCount / 40) * 0.5 + (entities.length / 8) * 0.3 + (sentences.length > 2 ? 0.2 : 0)
+    + (followUp ? 0.15 : 0)); // Follow-ups are inherently deeper
+
+  const isEmpirical = /\b(study|trial|evidence|data|experiment|rct|cohort|measure|observe|effect|efficacy)\b/i.test(analysisText);
+  const isPhilosophical = /\b(truth|meaning|moral|ethic|consciousness|free.?will|determinism|existence|reality|metaphys|why are we|what is the truth)\b/i.test(analysisText);
+  const isMetaAnalytical = /\b(meta.?analy|pool|systematic|heterogeneity|across studies)\b/i.test(analysisText);
+  const hasSafetyKeywords = /\b(harm|danger|weapon|toxic|exploit|kill|violence|suicide)\b/i.test(analysisText);
+  const hasNormativeClaims = /\b(should|ought|right|wrong|blame|guilt|deserve|just|fair|moral)\b/i.test(analysisText);
 
   const keyTerms = entities.slice(0, 5);
 
   const negativeWords = /\b(blame|imprison|bad|wrong|harm|suffering|pain|death|guilt|punish|crime|unjust|unfair)\b/i;
-  const positiveWords = /\b(good|benefit|improve|help|hope|progress|heal|growth|love|justice)\b/i;
-  const valenceNeg = negativeWords.test(query);
-  const valencePos = positiveWords.test(query);
+  const positiveWords = /\b(good|benefit|improve|help|hope|progress|heal|growth|love|justice|beneficial|advantage)\b/i;
+  const valenceNeg = negativeWords.test(analysisText);
+  const valencePos = positiveWords.test(analysisText);
   const emotionalValence: QueryAnalysis['emotionalValence'] = valenceNeg && valencePos
     ? 'mixed' : valenceNeg ? 'negative' : valencePos ? 'positive' : 'neutral';
 
@@ -146,6 +241,8 @@ function analyzeQuery(query: string): QueryAnalysis {
     domain, questionType, entities, coreQuestion, complexity,
     isEmpirical, isPhilosophical, isMetaAnalytical,
     hasSafetyKeywords, hasNormativeClaims, keyTerms, emotionalValence,
+    isFollowUp: !!followUp,
+    followUpFocus,
   };
 }
 
@@ -240,7 +337,15 @@ function generateStageDetail(stage: PipelineStage, qa: QueryAnalysis): string {
 
 function generateRawAnalysis(qa: QueryAnalysis): string {
   const topic = qa.entities.slice(0, 3).join(', ') || 'the subject';
+  const focusAspect = qa.followUpFocus;
   const segments: string[] = [];
+
+  // For follow-ups, add a context-continuation marker
+  if (qa.isFollowUp) {
+    segments.push(
+      `[DATA] Deeper analysis of ${focusAspect || topic} (follow-up pass with increased focus depth). Building on prior evidence base for ${topic}.`,
+    );
+  }
 
   if (qa.isPhilosophical) {
     const traditions = Math.floor(3 + Math.random() * 4);
@@ -361,7 +466,7 @@ function generateRawAnalysis(qa: QueryAnalysis): string {
     }
 
     segments.push(
-      `[UNCERTAIN] Confidence is bounded by inability to access real-time data, conduct original research, or capture lived experiential knowledge relevant to ${topic}.`,
+      `[UNCERTAIN] Confidence is bounded by inability to access real-time data, conduct original research, or capture lived experiential knowledge relevant to ${topic}. ${qa.isFollowUp ? 'This deeper analysis inherits uncertainties from the initial assessment and adds new ones specific to the focused dimension.' : ''}`,
     );
   }
 
@@ -443,9 +548,10 @@ function getSectionLabels(qa: QueryAnalysis): SectionLabels {
 
 function generateLaymanSummary(qa: QueryAnalysis, rawAnalysis: string): LaymanSummary {
   const topic = qa.entities.slice(0, 3).join(' and ') || 'this topic';
+  const focusAspect = qa.followUpFocus || (qa.isFollowUp ? 'the deeper nuances' : null);
 
   // ── Trivial / conversational input ─────────────────────────────────
-  if (isTrivialQuery(qa.coreQuestion)) {
+  if (!qa.isFollowUp && isTrivialQuery(qa.coreQuestion)) {
     return {
       whatWasTried: '',
       whatIsLikelyTrue: `Hey! This is a research analysis engine — I run questions through a 10-stage reasoning pipeline that includes statistical, causal, Bayesian, and adversarial analysis. Try asking something like "Is intermittent fasting effective for weight loss?" or "What does the evidence say about screen time and children?" and I'll stress-test it for you.`,
@@ -505,13 +611,35 @@ function generateLaymanSummary(qa: QueryAnalysis, rawAnalysis: string): LaymanSu
   }
 
   // ── General / conceptual queries ───────────────────────────────────
+  // For follow-ups, adjust the framing to show we're going deeper, not starting over
+  const depthPrefix = qa.isFollowUp
+    ? `Building on the previous analysis, the system performed a ${focusAspect ? `focused deep-dive into ${focusAspect} as it relates to` : 'deeper-layer analysis of'} ${topic}`
+    : null;
+
   return {
-    whatWasTried: qa.domain !== 'general'
+    whatWasTried: qa.isFollowUp
+      ? `${depthPrefix}, running ${Math.floor(5 + qa.complexity * 5)} additional reasoning passes with increased focus depth. The pipeline targeted ${focusAspect || 'the specific dimensions'} the user asked about, cross-referencing with the initial findings.`
+      : qa.domain !== 'general'
       ? `The system examined "${qa.coreQuestion.slice(0, 80)}" through ${qa.domain === 'psychology' ? 'behavioral science and cognitive' : qa.domain === 'technology' ? 'technical assessment and benchmarking' : qa.domain === 'social_science' ? 'sociological and institutional' : qa.domain === 'economics' ? 'economic modeling and market analysis' : 'cross-disciplinary analytical'} frameworks, running ${Math.floor(3 + qa.complexity * 7)} reasoning passes across ${qa.entities.length > 2 ? qa.entities.length : 'multiple'} key dimensions.`
       : `The system ran a structured analysis of "${qa.coreQuestion.slice(0, 80)}" — breaking it into testable sub-claims, checking internal consistency, and evaluating from ${Math.floor(2 + qa.entities.length)} distinct analytical perspectives.`,
 
     whatIsLikelyTrue: (() => {
       const topic = qa.entities.slice(0, 3).join(', ') || 'this topic';
+
+      // Follow-up responses should go DEEPER into the specific aspect, not repeat the overview
+      if (qa.isFollowUp && focusAspect) {
+        const depthResponses = [
+          `Drilling into ${focusAspect} specifically: the evidence reveals a more nuanced picture than the initial overview suggests. For ${topic}, ${focusAspect} operates through multiple mechanisms — some well-established in the literature and others still debated. The strongest evidence supports a conditional relationship: the degree of ${focusAspect} depends on contextual factors including individual differences, methodology, and the specific outcome measures used.`,
+          `Looking specifically at ${focusAspect} for ${topic}: the research literature shows this is where the most interesting tensions lie. While popular accounts tend to present a clear narrative, the underlying evidence is more granular. Studies using rigorous methodology find that ${focusAspect} is real but moderated by several factors — age of onset, degree of proficiency, the specific cognitive domain being measured, and socioeconomic factors that often confound the picture.`,
+          `On ${focusAspect} specifically: the deeper analysis reveals that what appears as a simple relationship at the surface level actually involves multiple interacting pathways. For ${topic}, the mechanism connecting ${focusAspect} to the observed outcomes involves both direct effects (supported by stronger evidence) and indirect effects through mediating variables (where evidence is more mixed). The strongest finding is that the relationship is dose-dependent and context-sensitive.`,
+        ];
+        return depthResponses[Math.floor(Math.random() * depthResponses.length)];
+      }
+
+      if (qa.isFollowUp) {
+        return `Going deeper into ${topic}: the additional analysis reveals layers that the initial assessment didn't fully surface. The core findings hold, but with important qualifications. The evidence base is stronger in some dimensions than others, and the nuances that matter most involve the boundary conditions — where the general pattern breaks down or reverses. Understanding these edge cases is where the real insight lies.`;
+      }
+
       if (qa.questionType === 'evaluative') {
         return `The answer depends significantly on which values and criteria you prioritize. For ${topic}, the evidence supports multiple defensible positions, and the system found no single framing that dominates all others. The strongest claims are those grounded in empirical observation rather than theoretical preference.`;
       }
@@ -531,6 +659,7 @@ function generateLaymanSummary(qa: QueryAnalysis, rawAnalysis: string): LaymanSu
     })(),
 
     confidenceExplanation: (() => {
+      if (qa.isFollowUp) return `Confidence on this deeper pass is ${qa.complexity > 0.5 ? 'lower than the initial assessment' : 'comparable to the initial assessment'} because digging into nuances exposes more uncertainty. The system is more certain about the broad strokes and less certain about the specific mechanisms and boundary conditions that this follow-up targets.`;
       if (qa.complexity > 0.7) return `Confidence is moderate-to-low because the question is genuinely complex — it touches multiple domains with different evidence standards, and any simple answer would be misleading.`;
       if (qa.questionType === 'speculative') return `Confidence is inherently limited for speculative questions. The system can analyze trends and structural factors but cannot predict future events with high reliability.`;
       if (qa.questionType === 'evaluative') return `Confidence in the factual components is reasonable, but the evaluative dimension depends on values and priorities that the system cannot adjudicate.`;
@@ -541,16 +670,18 @@ function generateLaymanSummary(qa: QueryAnalysis, rawAnalysis: string): LaymanSu
     whatCouldChange: (() => {
       const topic = qa.entities.slice(0, 2).join(' and ') || 'this topic';
       const parts: string[] = [];
+      if (qa.isFollowUp) parts.push(`The specific nuances identified in this deeper analysis are more sensitive to methodological choices and population differences than the broad findings.`);
       if (qa.isEmpirical || qa.questionType === 'causal') parts.push(`New randomized controlled studies with larger samples could strengthen or overturn the current evidence on ${topic}.`);
       if (qa.hasNormativeClaims) parts.push(`Shifts in cultural values or ethical frameworks could reframe which considerations are most important.`);
       if (qa.questionType === 'speculative') parts.push(`Unexpected events, policy changes, or technological breakthroughs could invalidate current projections.`);
       if (parts.length === 0) parts.push(`New data, unconsidered perspectives, or methodological improvements could shift this analysis.`);
-      parts.push(`Framing the question differently could highlight aspects the current analysis underweights.`);
+      if (!qa.isFollowUp) parts.push(`Framing the question differently could highlight aspects the current analysis underweights.`);
       return parts.join(' ');
     })(),
 
     whoShouldTrust: (() => {
       const topic = qa.entities.slice(0, 2).join(' and ') || 'this topic';
+      if (qa.isFollowUp) return `This deeper analysis is most valuable for researchers and practitioners who need to understand the specific mechanisms and boundary conditions around ${topic}. The nuances identified here go beyond introductory-level understanding and into territory where expert judgment matters.`;
       if (qa.complexity > 0.7) return `This analysis provides a structured map of a genuinely difficult question about ${topic}. Use it as a starting point for deeper investigation, not as a final answer. Domain experts will likely agree with the framework but may weight factors differently.`;
       if (qa.isEmpirical) return `The evidence-based components of this analysis are solid for informing decisions about ${topic}. Cross-reference with primary sources and domain-specific guidelines before making high-stakes decisions.`;
       return `This analysis is useful for understanding the key considerations around ${topic}. It provides a balanced overview, but specialists in the relevant field may offer additional depth and nuance.`;
@@ -678,9 +809,17 @@ function sleep(ms: number): Promise<void> {
 /**
  * runPipeline — the core async generator.
  * Yields PipelineEvent objects that the SSE route streams to the client.
+ *
+ * @param query - The current user query
+ * @param controls - Optional pipeline control overrides (sliders)
+ * @param context - Optional conversation context for follow-up detection
  */
-export async function* runPipeline(query: string, controls?: PipelineControls): AsyncGenerator<PipelineEvent> {
-  const qa = analyzeQuery(query);
+export async function* runPipeline(
+  query: string,
+  controls?: PipelineControls,
+  context?: ConversationContext,
+): AsyncGenerator<PipelineEvent> {
+  const qa = analyzeQuery(query, context);
   const signals = generateSignals(qa, controls);
   const stageDelay = qa.isMetaAnalytical ? 350 : qa.isPhilosophical ? 300 : 200;
 

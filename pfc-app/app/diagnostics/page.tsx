@@ -40,6 +40,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { InfoButton, DIAGNOSTICS_INFO, AnimatedSuggestions, DIAGNOSTICS_SUGGESTIONS } from '@/components/info-panel';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -425,6 +426,14 @@ export default function DiagnosticsPage() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
+        {/* Animated suggestions */}
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2 font-medium">
+            Quick Guide — What is this used for?
+          </p>
+          <AnimatedSuggestions suggestions={DIAGNOSTICS_SUGGESTIONS} />
+        </div>
+
         {/* Anomaly Alerts */}
         {anomalies.length > 0 && (
           <section>
@@ -480,6 +489,7 @@ export default function DiagnosticsPage() {
                     <span className="flex items-center gap-1.5">
                       <TargetIcon className="h-3.5 w-3.5" />
                       Confidence
+                      <InfoButton info={DIAGNOSTICS_INFO.confidence} compact />
                     </span>
                     <TrendArrow data={signalHistory.map((h) => h.confidence)} />
                   </CardDescription>
@@ -503,6 +513,7 @@ export default function DiagnosticsPage() {
                     <span className="flex items-center gap-1.5">
                       <ZapIcon className="h-3.5 w-3.5" />
                       Entropy
+                      <InfoButton info={DIAGNOSTICS_INFO.entropy} compact />
                     </span>
                     <TrendArrow data={signalHistory.map((h) => h.entropy)} />
                   </CardDescription>
@@ -526,6 +537,7 @@ export default function DiagnosticsPage() {
                     <span className="flex items-center gap-1.5">
                       <BrainIcon className="h-3.5 w-3.5" />
                       Dissonance
+                      <InfoButton info={DIAGNOSTICS_INFO.dissonance} compact />
                     </span>
                     <TrendArrow data={signalHistory.map((h) => h.dissonance)} />
                   </CardDescription>
@@ -549,6 +561,7 @@ export default function DiagnosticsPage() {
                     <span className="flex items-center gap-1.5">
                       <HeartPulseIcon className="h-3.5 w-3.5" />
                       System Health
+                      <InfoButton info={DIAGNOSTICS_INFO.health} compact />
                     </span>
                     <TrendArrow data={signalHistory.map((h) => h.healthScore)} />
                   </CardDescription>
@@ -614,6 +627,7 @@ export default function DiagnosticsPage() {
                 <CardDescription className="flex items-center gap-1.5">
                   <ActivityIcon className="h-3.5 w-3.5" />
                   Signal Correlations
+                  <InfoButton info={DIAGNOSTICS_INFO.correlations} compact />
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex items-center justify-center">
@@ -679,6 +693,7 @@ export default function DiagnosticsPage() {
           <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             <BrainIcon className="h-4 w-4" />
             TDA Topology
+            <InfoButton info={DIAGNOSTICS_INFO.tda} compact />
           </h2>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">

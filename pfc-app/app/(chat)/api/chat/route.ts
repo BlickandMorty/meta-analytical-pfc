@@ -1,19 +1,69 @@
 import { NextRequest } from 'next/server';
-import { runPipeline } from '@/lib/engine/simulate';
+import { runPipeline, type ConversationContext } from '@/lib/engine/simulate';
 import {
   saveMessage,
   createChat,
   getChatById,
   updateChatTitle,
   getOrCreateUser,
+  getMessagesByChatId,
 } from '@/lib/db/queries';
 import { generateUUID } from '@/lib/utils';
+
+/**
+ * Build conversation context from prior messages so the pipeline can detect
+ * follow-up queries and inherit the original topic.
+ */
+async function buildConversationContext(chatId: string): Promise<ConversationContext | undefined> {
+  try {
+    const messages = await getMessagesByChatId(chatId);
+    if (!messages || messages.length === 0) return undefined;
+
+    const userMessages = messages
+      .filter((m) => m.role === 'user')
+      .map((m) => m.content);
+
+    if (userMessages.length === 0) return undefined;
+
+    // Extract entities from previous system responses (stored in dualMessage JSON)
+    const previousEntities: string[] = [];
+    for (const msg of messages) {
+      if (msg.role === 'system' && msg.dualMessage) {
+        try {
+          const dual = JSON.parse(msg.dualMessage);
+          // The layman summary's whatWasTried often contains the topic
+          // But we can also extract entities from the raw analysis tags
+          if (dual.laymanSummary?.whatIsLikelyTrue) {
+            // Extract topic-relevant nouns from previous analysis
+            const text = dual.laymanSummary.whatIsLikelyTrue;
+            const stopWords = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'were', 'for', 'and', 'but', 'this', 'that', 'with', 'from', 'not', 'has', 'have', 'its', 'may', 'can', 'more', 'most', 'some', 'all', 'each', 'than', 'also', 'which', 'what', 'where', 'when', 'how', 'about', 'evidence', 'analysis', 'system', 'question', 'answer', 'suggests', 'indicates', 'shows', 'found', 'between', 'through', 'multiple', 'specific']);
+            const words = text.split(/\s+/)
+              .map((w: string) => w.replace(/[^a-zA-Z]/g, '').toLowerCase())
+              .filter((w: string) => w.length > 4 && !stopWords.has(w));
+            previousEntities.push(...words.slice(0, 5));
+          }
+        } catch {
+          // Skip malformed dualMessage
+        }
+      }
+    }
+
+    return {
+      previousQueries: userMessages.reverse(), // most recent first
+      previousEntities: [...new Set(previousEntities)].slice(0, 8),
+      rootQuestion: userMessages[userMessages.length - 1], // first user message = original question
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 export async function POST(request: NextRequest) {
   let resolvedChatId: string;
   let query: string;
   let existingChat: Awaited<ReturnType<typeof getChatById>>;
   let controls: Record<string, unknown> | undefined;
+  let conversationContext: ConversationContext | undefined;
 
   try {
     const body = await request.json();
@@ -42,6 +92,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Build conversation context from prior messages (for follow-up detection)
+    if (existingChat) {
+      conversationContext = await buildConversationContext(resolvedChatId);
+    }
+
     // Save user message
     const userMsgId = generateUUID();
     await saveMessage({
@@ -63,6 +118,7 @@ export async function POST(request: NextRequest) {
   const capturedQuery = query;
   const capturedChatId = resolvedChatId;
   const capturedExistingChat = existingChat;
+  const capturedContext = conversationContext;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -74,8 +130,12 @@ export async function POST(request: NextRequest) {
           )
         );
 
-        // Run the pipeline and stream events
-        for await (const event of runPipeline(capturedQuery, controls as Parameters<typeof runPipeline>[1])) {
+        // Run the pipeline and stream events (with conversation context)
+        for await (const event of runPipeline(
+          capturedQuery,
+          controls as Parameters<typeof runPipeline>[1],
+          capturedContext,
+        )) {
           const data = JSON.stringify(event);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
 
