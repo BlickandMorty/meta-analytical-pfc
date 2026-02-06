@@ -1,0 +1,290 @@
+@import "tailwindcss";
+@import "tailwindcss/theme" theme(reference);
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* PFC brand colors */
+  --color-pfc-ember: #C15F3C;
+  --color-pfc-violet: #6B5CE7;
+  --color-pfc-green: #22C55E;
+  --color-pfc-yellow: #EAB308;
+  --color-pfc-red: #EF4444;
+  --color-pfc-cyan: #06B6D4;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+/* Light theme */
+:root {
+  --background: oklch(0.98 0.005 250);
+  --foreground: oklch(0.15 0.01 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.01 250);
+  --primary: oklch(0.55 0.15 30);
+  --primary-foreground: oklch(0.98 0.005 0);
+  --secondary: oklch(0.93 0.01 250);
+  --secondary-foreground: oklch(0.25 0.01 250);
+  --muted: oklch(0.93 0.01 250);
+  --muted-foreground: oklch(0.5 0.01 250);
+  --accent: oklch(0.55 0.2 285);
+  --accent-foreground: oklch(0.98 0.005 0);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0.005 0);
+  --border: oklch(0.88 0.01 250);
+  --input: oklch(0.88 0.01 250);
+  --ring: oklch(0.55 0.15 30);
+  --radius: 0.625rem;
+
+  /* Sidebar */
+  --sidebar: oklch(0.96 0.005 250);
+  --sidebar-foreground: oklch(0.25 0.01 250);
+  --sidebar-border: oklch(0.88 0.01 250);
+  --sidebar-accent: oklch(0.92 0.01 250);
+  --sidebar-accent-foreground: oklch(0.25 0.01 250);
+  --sidebar-ring: oklch(0.55 0.15 30);
+}
+
+/* Dark theme - PFC signature dark mode */
+.dark {
+  --background: oklch(0.14 0.01 50);
+  --foreground: oklch(0.9 0.01 50);
+  --card: oklch(0.18 0.01 50);
+  --card-foreground: oklch(0.9 0.01 50);
+  --popover: oklch(0.18 0.01 50);
+  --popover-foreground: oklch(0.9 0.01 50);
+  --primary: oklch(0.65 0.15 30);
+  --primary-foreground: oklch(0.12 0.01 50);
+  --secondary: oklch(0.22 0.01 50);
+  --secondary-foreground: oklch(0.9 0.01 50);
+  --muted: oklch(0.22 0.01 50);
+  --muted-foreground: oklch(0.55 0.01 50);
+  --accent: oklch(0.6 0.2 285);
+  --accent-foreground: oklch(0.98 0.005 0);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0.005 0);
+  --border: oklch(0.26 0.01 50);
+  --input: oklch(0.26 0.01 50);
+  --ring: oklch(0.65 0.15 30);
+
+  /* Sidebar dark */
+  --sidebar: oklch(0.16 0.01 50);
+  --sidebar-foreground: oklch(0.85 0.01 50);
+  --sidebar-border: oklch(0.26 0.01 50);
+  --sidebar-accent: oklch(0.22 0.01 50);
+  --sidebar-accent-foreground: oklch(0.85 0.01 50);
+  --sidebar-ring: oklch(0.65 0.15 30);
+}
+
+/* Base styles */
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background-color: oklch(0.65 0.15 30 / 0.3);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0.01 250 / 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.01 250 / 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0.01 50 / 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.5 0.01 50 / 0.5);
+}
+
+/* Streaming cursor animation */
+@keyframes blink-cursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink-cursor 1s step-end infinite;
+}
+
+/* Pipeline pulse animation */
+@keyframes pipeline-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-pipeline-pulse {
+  animation: pipeline-pulse 1.5s ease-in-out infinite;
+}
+
+/* Retro terminal glow */
+@keyframes terminal-glow {
+  0%, 100% { text-shadow: 0 0 4px currentColor; }
+  50% { text-shadow: 0 0 12px currentColor, 0 0 20px currentColor; }
+}
+
+.animate-terminal-glow {
+  animation: terminal-glow 2s ease-in-out infinite;
+}
+
+/* Typography */
+.prose-pfc {
+  @apply prose prose-zinc dark:prose-invert max-w-none;
+}
+
+.prose-pfc code {
+  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+.prose-pfc pre {
+  @apply bg-muted rounded-lg border;
+}
+
+.prose-pfc pre code {
+  @apply bg-transparent px-0 py-0;
+}
+
+/* Accordion animations */
+@keyframes accordion-down {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+
+@keyframes accordion-up {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus visible ring — skip form elements */
+:focus-visible:not(input):not(textarea):not(select) {
+  outline: 2px solid oklch(0.55 0.15 30);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  ring: none;
+}
+
+/* Subtle chat grid background */
+.chat-grid-bg {
+  background-image:
+    linear-gradient(var(--border) 0.5px, transparent 0.5px),
+    linear-gradient(90deg, var(--border) 0.5px, transparent 0.5px);
+  background-size: 28px 28px;
+  opacity: 0.18;
+}
+
+.dark .chat-grid-bg {
+  opacity: 0.05;
+}
+
+/* Falling code rain animation */
+@keyframes code-fall {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes code-fall-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.6); }
+}
+
+.animate-code-fall {
+  animation: code-fall var(--fall-duration, 6s) var(--fall-delay, 0s) linear infinite;
+}
+
+.animate-code-glow {
+  animation: code-fall-glow 3s ease-in-out infinite;
+}
