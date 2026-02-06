@@ -3,30 +3,91 @@
 import { useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
 
-// ── Subtle code tokens for chat background rain ──
-const SUBTLE_TOKENS = [
+// ── Code tokens with syntax-highlighting colors ──
+const TOKENS = [
+  // Keywords (purple)
   { text: 'const', color: '#8B7CF6' },
   { text: 'async', color: '#8B7CF6' },
   { text: 'return', color: '#8B7CF6' },
   { text: 'type', color: '#8B7CF6' },
   { text: 'if', color: '#8B7CF6' },
   { text: 'for', color: '#8B7CF6' },
+  { text: 'let', color: '#8B7CF6' },
+  { text: 'import', color: '#8B7CF6' },
+  { text: 'export', color: '#8B7CF6' },
+  { text: 'await', color: '#8B7CF6' },
+  { text: 'function', color: '#8B7CF6' },
+  { text: 'interface', color: '#8B7CF6' },
+  // Function calls (ember/orange)
   { text: 'runPipeline()', color: '#E07850' },
   { text: 'calibrate()', color: '#E07850' },
   { text: 'synthesize()', color: '#E07850' },
   { text: 'assessTruth()', color: '#E07850' },
+  { text: 'analyze()', color: '#E07850' },
+  { text: 'updateSignals()', color: '#E07850' },
+  { text: 'generateReport()', color: '#E07850' },
+  { text: 'adversarialReview()', color: '#E07850' },
+  // Strings (green)
   { text: '"confidence"', color: '#4ADE80' },
   { text: '"entropy"', color: '#4ADE80' },
   { text: '"bayesian"', color: '#4ADE80' },
+  { text: '"pipeline"', color: '#4ADE80' },
+  { text: '"synthesis"', color: '#4ADE80' },
+  { text: '"causal"', color: '#4ADE80' },
+  // Numbers (cyan)
   { text: '0.95', color: '#22D3EE' },
   { text: '0.73', color: '#22D3EE' },
   { text: '256', color: '#22D3EE' },
+  { text: '0.42', color: '#22D3EE' },
+  { text: '1024', color: '#22D3EE' },
+  { text: '3.14', color: '#22D3EE' },
+  { text: '0.001', color: '#22D3EE' },
+  // Types (yellow)
   { text: 'StageResult', color: '#FACC15' },
   { text: 'DualMessage', color: '#FACC15' },
+  { text: 'SignalUpdate', color: '#FACC15' },
+  { text: 'TDASnapshot', color: '#FACC15' },
+  { text: 'PipelineEvent', color: '#FACC15' },
+  // Operators / punctuation (gray)
   { text: '=>', color: '#9CA3AF' },
   { text: '...', color: '#9CA3AF' },
+  { text: '===', color: '#9CA3AF' },
+  { text: '{ }', color: '#9CA3AF' },
+  { text: '[ ]', color: '#9CA3AF' },
+  { text: '??', color: '#9CA3AF' },
+  { text: '|>', color: '#9CA3AF' },
+  // Comments (soft green)
   { text: '// meta-analysis', color: '#86EFAC' },
-  { text: '// bayesian', color: '#86EFAC' },
+  { text: '// bayesian update', color: '#86EFAC' },
+  { text: '// adversarial pass', color: '#86EFAC' },
+  { text: '// calibration', color: '#86EFAC' },
+  { text: '// triage', color: '#86EFAC' },
+];
+
+// ── Depth layers define the parallax feel ──
+// Each layer has a size range, speed range, and opacity range
+// Far = small + slow + faint, Close = large + fast + brighter
+interface DepthLayer {
+  fontMin: number;
+  fontMax: number;
+  speedMin: number;
+  speedMax: number;
+  opacityMin: number;
+  opacityMax: number;
+  proportion: number; // fraction of total tokens in this layer
+}
+
+const DEPTH_LAYERS: DepthLayer[] = [
+  // Far background — tiny, crawling, very faint
+  { fontMin: 5, fontMax: 8, speedMin: 0.08, speedMax: 0.18, opacityMin: 0.02, opacityMax: 0.05, proportion: 0.30 },
+  // Mid-far — small, slow
+  { fontMin: 8, fontMax: 11, speedMin: 0.15, speedMax: 0.30, opacityMin: 0.03, opacityMax: 0.07, proportion: 0.25 },
+  // Mid — medium
+  { fontMin: 11, fontMax: 15, speedMin: 0.25, speedMax: 0.50, opacityMin: 0.04, opacityMax: 0.09, proportion: 0.20 },
+  // Mid-close — larger, faster
+  { fontMin: 15, fontMax: 20, speedMin: 0.40, speedMax: 0.70, opacityMin: 0.04, opacityMax: 0.08, proportion: 0.15 },
+  // Close foreground — big, fast, slightly bolder
+  { fontMin: 20, fontMax: 28, speedMin: 0.60, speedMax: 1.10, opacityMin: 0.03, opacityMax: 0.07, proportion: 0.10 },
 ];
 
 interface FallingToken {
@@ -37,30 +98,56 @@ interface FallingToken {
   text: string;
   color: string;
   opacity: number;
+  drift: number;      // horizontal sway amplitude
+  driftPhase: number;  // sway phase offset
+  driftSpeed: number;  // sway speed
+  blur: boolean;       // whether to apply slight blur (far tokens)
 }
 
-function createFallingToken(w: number, h: number): FallingToken {
-  const token = SUBTLE_TOKENS[Math.floor(Math.random() * SUBTLE_TOKENS.length)];
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+function createToken(w: number, h: number, startAbove: boolean): FallingToken {
+  const token = TOKENS[Math.floor(Math.random() * TOKENS.length)];
+
+  // Pick a depth layer weighted by proportion
+  let roll = Math.random();
+  let layer = DEPTH_LAYERS[0];
+  for (const l of DEPTH_LAYERS) {
+    roll -= l.proportion;
+    if (roll <= 0) { layer = l; break; }
+  }
+
+  const t = Math.random(); // interpolation within layer
+  const fontSize = lerp(layer.fontMin, layer.fontMax, t);
+  const speed = lerp(layer.speedMin, layer.speedMax, t);
+  const opacity = lerp(layer.opacityMin, layer.opacityMax, Math.random());
+
   return {
     x: Math.random() * w,
-    y: -Math.random() * h - 20,
-    speed: 0.15 + Math.random() * 0.4,
-    fontSize: 8 + Math.random() * 3,
+    y: startAbove ? (-Math.random() * h * 1.5 - 20) : (Math.random() * h),
+    speed,
+    fontSize,
     text: token.text,
     color: token.color,
-    opacity: 0.04 + Math.random() * 0.08,
+    opacity,
+    drift: 0.2 + Math.random() * (fontSize > 15 ? 1.5 : 0.6),
+    driftPhase: Math.random() * Math.PI * 2,
+    driftSpeed: 0.0003 + Math.random() * 0.0008,
+    blur: fontSize < 9,
   };
 }
 
 /**
- * Animated dot grid + subtle falling syntax background.
+ * Immersive falling syntax rain background.
+ * Multi-depth parallax — small/faint tokens feel distant, large ones feel close.
  * Uses canvas for performance. Covers full parent area.
  */
 export function AnimatedDotGrid() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { resolvedTheme } = useTheme();
   const themeRef = useRef(resolvedTheme);
-  const mountedRef = useRef(false);
   const tokensRef = useRef<FallingToken[]>([]);
 
   useEffect(() => {
@@ -68,7 +155,6 @@ export function AnimatedDotGrid() {
   }, [resolvedTheme]);
 
   useEffect(() => {
-    mountedRef.current = true;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -77,30 +163,22 @@ export function AnimatedDotGrid() {
 
     let animationId: number;
 
-    // Dot grid parameters
-    const spacing = 24;
-    const baseDotRadius = 1.0;
-    const waveSpeed = 0.0008;
-    const waveAmplitude = 0.6;
-    const driftAmplitude = 1.2;
-    const driftSpeed = 0.0004;
-
     function resize() {
-      if (!canvas) return;
+      if (!canvas || !ctx) return;
       const dpr = window.devicePixelRatio || 1;
-      // Use getBoundingClientRect for accurate full-area coverage
       const rect = canvas.getBoundingClientRect();
       const w = rect.width || window.innerWidth;
       const h = rect.height || window.innerHeight;
       canvas.width = w * dpr;
       canvas.height = h * dpr;
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Init falling tokens — sparse, subtle
-      const tokenCount = Math.max(6, Math.floor(w / 55));
+      // Dense token count — scales with screen area
+      // Roughly 1 token per 2500px² → a 1920x1080 screen gets ~830 tokens
+      const tokenCount = Math.max(40, Math.floor((w * h) / 2500));
       tokensRef.current = [];
       for (let i = 0; i < tokenCount; i++) {
-        tokensRef.current.push(createFallingToken(w, h));
+        tokensRef.current.push(createToken(w, h, false));
       }
     }
 
@@ -117,61 +195,47 @@ export function AnimatedDotGrid() {
 
       ctx.clearRect(0, 0, w, h);
 
-      // ── Layer 1: Dot grid ──
-      const cols = Math.ceil(w / spacing) + 2;
-      const rows = Math.ceil(h / spacing) + 2;
+      // Theme-based opacity multiplier
+      const themeMul = isDark ? 1.4 : 0.8;
 
-      for (let row = -1; row < rows; row++) {
-        for (let col = -1; col < cols; col++) {
-          const baseX = col * spacing;
-          const baseY = row * spacing;
-
-          const phase = (col * 0.4 + row * 0.3);
-          const driftX = Math.sin(timestamp * driftSpeed + phase) * driftAmplitude;
-          const driftY = Math.cos(timestamp * driftSpeed * 0.7 + phase * 1.3) * driftAmplitude;
-
-          const x = baseX + driftX;
-          const y = baseY + driftY;
-
-          const wave = Math.sin(timestamp * waveSpeed + col * 0.15 + row * 0.12);
-          const opacityBase = isDark ? 0.12 : 0.18;
-          const opacityVariation = wave * waveAmplitude * (isDark ? 0.06 : 0.08);
-          const opacity = Math.max(0.02, opacityBase + opacityVariation);
-
-          const sizeWave = Math.sin(timestamp * waveSpeed * 1.3 + col * 0.2 + row * 0.18);
-          const radius = baseDotRadius + sizeWave * 0.3;
-
-          ctx.beginPath();
-          ctx.arc(x, y, Math.max(0.3, radius), 0, Math.PI * 2);
-          ctx.fillStyle = isDark
-            ? `rgba(160, 160, 180, ${opacity})`
-            : `rgba(80, 80, 100, ${opacity})`;
-          ctx.fill();
-        }
-      }
-
-      // ── Layer 2: Subtle falling syntax tokens ──
-      ctx.save();
       for (const token of tokensRef.current) {
+        // Move down
         token.y += token.speed;
 
+        // Gentle horizontal sway
+        const sway = Math.sin(timestamp * token.driftSpeed + token.driftPhase) * token.drift;
+
+        const drawX = token.x + sway;
+        const drawY = token.y;
+
+        // Set font
         ctx.font = `${token.fontSize}px "Geist Mono", ui-monospace, monospace`;
-        ctx.globalAlpha = isDark ? token.opacity * 1.3 : token.opacity * 0.7;
+        ctx.globalAlpha = Math.min(token.opacity * themeMul, 0.15);
         ctx.fillStyle = token.color;
-        ctx.fillText(token.text, token.x, token.y);
+
+        // Very far tokens get slight blur for depth
+        if (token.blur) {
+          ctx.filter = 'blur(0.5px)';
+        } else {
+          ctx.filter = 'none';
+        }
+
+        ctx.fillText(token.text, drawX, drawY);
 
         // Reset when off screen
-        if (token.y > h + 30) {
-          token.y = -20 - Math.random() * 100;
+        if (token.y > h + 40) {
+          const newToken = TOKENS[Math.floor(Math.random() * TOKENS.length)];
+          token.y = -10 - Math.random() * 80;
           token.x = Math.random() * w;
-          token.speed = 0.15 + Math.random() * 0.4;
-          const newToken = SUBTLE_TOKENS[Math.floor(Math.random() * SUBTLE_TOKENS.length)];
           token.text = newToken.text;
           token.color = newToken.color;
-          token.opacity = 0.04 + Math.random() * 0.08;
+          token.driftPhase = Math.random() * Math.PI * 2;
         }
       }
-      ctx.restore();
+
+      // Reset filter
+      ctx.filter = 'none';
+      ctx.globalAlpha = 1;
 
       animationId = requestAnimationFrame(draw);
     }
@@ -181,7 +245,6 @@ export function AnimatedDotGrid() {
     return () => {
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(animationId);
-      mountedRef.current = false;
     };
   }, []);
 
