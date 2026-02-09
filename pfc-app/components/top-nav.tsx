@@ -101,11 +101,11 @@ const NavBubble = memo(function NavBubble({
         cursor: disabled ? 'not-allowed' : 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: expanded ? '0.375rem 0.75rem' : '0.375rem',
-        height: '2rem',
-        minWidth: expanded ? 'auto' : '2rem',
-        fontSize: '0.75rem',
-        fontWeight: isActive ? 600 : 500,
+        padding: expanded ? '0.4375rem 0.875rem' : '0.4375rem',
+        height: '2.25rem',
+        minWidth: expanded ? 'auto' : '2.25rem',
+        fontSize: '0.8125rem',
+        fontWeight: isActive ? 700 : 600,
         letterSpacing: '-0.01em',
         opacity: disabled ? 0.35 : 1,
         color: disabled
@@ -126,8 +126,8 @@ const NavBubble = memo(function NavBubble({
       }}
     >
       <Icon style={{
-        height: '0.875rem',
-        width: '0.875rem',
+        height: '0.9375rem',
+        width: '0.9375rem',
         flexShrink: 0,
         color: isActive ? '#8B7CF6' : 'inherit',
       }} />
@@ -184,7 +184,7 @@ export function TopNav() {
         alignItems: 'center',
         justifyContent: 'center',
         gap: '0.5rem',
-        padding: '0.5rem 1rem',
+        padding: '0.625rem 1rem',
         pointerEvents: 'auto',
         background: isDark
           ? 'rgba(0,0,0,0.5)'
