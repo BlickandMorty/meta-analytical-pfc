@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from 'react';
+import { memo, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
@@ -10,14 +10,23 @@ import {
   MessageSquareIcon,
   BookOpenIcon,
   SparklesIcon,
-  SearchIcon,
   SettingsIcon,
+  CpuIcon,
+  CloudIcon,
+  MonitorIcon,
 } from 'lucide-react';
 import type { ChatViewMode } from '@/lib/research/types';
+import { getInferenceModeFeatures } from '@/lib/research/types';
 
 interface ResearchModeBarProps {
   isDark: boolean;
 }
+
+const MODE_ICON: Record<string, typeof CpuIcon> = {
+  local: CpuIcon,
+  api: CloudIcon,
+  simulation: MonitorIcon,
+};
 
 export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: ResearchModeBarProps) {
   const researchChatMode = usePFCStore((s) => s.researchChatMode);
@@ -26,7 +35,11 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
   const setChatViewMode = usePFCStore((s) => s.setChatViewMode);
   const researchModeControls = usePFCStore((s) => s.researchModeControls);
   const setResearchModeControls = usePFCStore((s) => s.setResearchModeControls);
+  const inferenceMode = usePFCStore((s) => s.inferenceMode);
   const [showControls, setShowControls] = useState(false);
+
+  const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
+  const ModeIcon = MODE_ICON[inferenceMode] || MonitorIcon;
 
   const toggleBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
   const activeBg = isDark ? 'rgba(52,211,153,0.15)' : 'rgba(52,211,153,0.1)';
@@ -130,6 +143,45 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               }}
             />
 
+            {/* Inference Mode Badge */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.1875rem',
+                padding: '0.125rem 0.3rem',
+                borderRadius: '0.3rem',
+                background: inferenceMode === 'local'
+                  ? (isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)')
+                  : inferenceMode === 'api'
+                    ? (isDark ? 'rgba(139,124,246,0.1)' : 'rgba(139,124,246,0.08)')
+                    : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
+                fontSize: '0.5rem',
+                fontWeight: 600,
+                textTransform: 'uppercase' as const,
+                letterSpacing: '0.05em',
+                color: inferenceMode === 'local'
+                  ? 'var(--color-pfc-green)'
+                  : inferenceMode === 'api'
+                    ? '#8B7CF6'
+                    : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'),
+              }}
+              title={features.modeHint}
+            >
+              <ModeIcon style={{ height: '0.5rem', width: '0.5rem' }} />
+              {features.modeLabel}
+            </div>
+
+            {/* Divider */}
+            <div
+              style={{
+                width: '1px',
+                height: '1rem',
+                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                margin: '0 0.125rem',
+              }}
+            />
+
             {/* Research Controls Toggle */}
             <button
               onClick={() => setShowControls(!showControls)}
@@ -188,7 +240,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               Research Controls
             </p>
 
-            {/* Auto-extract citations */}
+            {/* Auto-extract citations — always available */}
             <label style={{
               display: 'flex',
               alignItems: 'center',
@@ -234,7 +286,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               </div>
             </label>
 
-            {/* Preview visualizations */}
+            {/* Preview visualizations — always available */}
             <label style={{
               display: 'flex',
               alignItems: 'center',
@@ -280,42 +332,55 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               </div>
             </label>
 
-            {/* Deep research */}
+            {/* Deep research — gated by inference mode */}
             <label style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '0.5rem',
-              cursor: 'pointer',
+              cursor: features.deepResearch ? 'pointer' : 'not-allowed',
+              opacity: features.deepResearch ? 1 : 0.4,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                 <SparklesIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--color-pfc-ember)' }} />
-                <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }}>
-                  Deep research mode
-                </span>
+                <div>
+                  <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }}>
+                    Deep research mode
+                  </span>
+                  {!features.deepResearch && (
+                    <p style={{
+                      fontSize: '0.5rem',
+                      color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+                      marginTop: '0.0625rem',
+                    }}>
+                      Requires API or local model
+                    </p>
+                  )}
+                </div>
               </div>
               <div
-                onClick={() =>
+                onClick={() => {
+                  if (!features.deepResearch) return;
                   setResearchModeControls({
                     deepResearchEnabled: !researchModeControls.deepResearchEnabled,
-                  })
-                }
+                  });
+                }}
                 style={{
                   width: '2rem',
                   height: '1.125rem',
                   borderRadius: '9999px',
-                  background: researchModeControls.deepResearchEnabled
+                  background: researchModeControls.deepResearchEnabled && features.deepResearch
                     ? 'var(--color-pfc-ember)'
                     : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
                   position: 'relative',
                   transition: 'background 0.2s',
-                  cursor: 'pointer',
+                  cursor: features.deepResearch ? 'pointer' : 'not-allowed',
                 }}
               >
                 <div style={{
                   position: 'absolute',
                   top: '0.125rem',
-                  left: researchModeControls.deepResearchEnabled ? '1rem' : '0.125rem',
+                  left: researchModeControls.deepResearchEnabled && features.deepResearch ? '1rem' : '0.125rem',
                   width: '0.875rem',
                   height: '0.875rem',
                   borderRadius: '50%',
@@ -325,6 +390,35 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 }} />
               </div>
             </label>
+
+            {/* Mode hint at bottom */}
+            <div style={{
+              marginTop: '0.25rem',
+              padding: '0.375rem 0.5rem',
+              borderRadius: '0.375rem',
+              background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+              border: isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.04)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+            }}>
+              <ModeIcon style={{
+                height: '0.625rem',
+                width: '0.625rem',
+                color: inferenceMode === 'local'
+                  ? 'var(--color-pfc-green)'
+                  : inferenceMode === 'api'
+                    ? '#8B7CF6'
+                    : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'),
+              }} />
+              <span style={{
+                fontSize: '0.5625rem',
+                color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+                lineHeight: 1.4,
+              }}>
+                {features.modeHint}
+              </span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

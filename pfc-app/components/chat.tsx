@@ -17,6 +17,8 @@ import { ThinkingControls } from './thinking-controls';
 import { ThoughtVisualizer } from './thought-visualizer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
+import { getInferenceModeFeatures } from '@/lib/research/types';
+import { CpuIcon, CloudIcon, MonitorIcon } from 'lucide-react';
 
 const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -264,16 +266,20 @@ export function Chat() {
   const researchChatMode = usePFCStore((s) => s.researchChatMode);
   const chatViewMode = usePFCStore((s) => s.chatViewMode);
   const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
+  const inferenceMode = usePFCStore((s) => s.inferenceMode);
   const { sendQuery, abort } = useChatStream();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [modeHintDismissed, setModeHintDismissed] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
   const isEmpty = messages.length === 0;
   const isDark = mounted ? resolvedTheme === 'dark' : true;
   const showThoughtViz = researchChatMode && chatViewMode === 'visualize-thought' && !isEmpty;
+  const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
+  const showModeHint = researchChatMode && !features.playPause && !modeHintDismissed && !isEmpty;
 
   return (
     <div style={{ position: 'relative', display: 'flex', height: '100%', flexDirection: 'column' }}>
@@ -429,7 +435,56 @@ export function Chat() {
                 <SynthesisCard />
               </div>
 
-              {/* Thinking Controls (play/pause/stop) — shown during processing */}
+              {/* Mode hint — shown when research mode is on but not all controls are available */}
+              <AnimatePresence>
+                {showModeHint && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.25rem 1rem', overflow: 'hidden' }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.375rem 0.625rem',
+                        borderRadius: '0.5rem',
+                        background: isDark ? 'rgba(139,124,246,0.06)' : 'rgba(139,124,246,0.04)',
+                        border: isDark ? '1px solid rgba(139,124,246,0.1)' : '1px solid rgba(139,124,246,0.08)',
+                        fontSize: '0.625rem',
+                        color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)',
+                      }}
+                    >
+                      {inferenceMode === 'api'
+                        ? <CloudIcon style={{ height: '0.625rem', width: '0.625rem', flexShrink: 0, color: '#8B7CF6' }} />
+                        : <MonitorIcon style={{ height: '0.625rem', width: '0.625rem', flexShrink: 0, color: '#8B7CF6' }} />
+                      }
+                      <span style={{ flex: 1 }}>
+                        {features.modeHint} — Switch to local inference for full thinking controls.
+                      </span>
+                      <button
+                        onClick={() => setModeHintDismissed(true)}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          fontSize: '0.625rem',
+                          color: '#8B7CF6',
+                          fontWeight: 600,
+                          padding: '0.125rem 0.25rem',
+                          borderRadius: '0.25rem',
+                        }}
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Thinking Controls (play/pause/stop/reroute) — shown during processing */}
               {(isProcessing || isStreaming) && researchChatMode && (
                 <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.375rem 1rem' }}>
                   <ThinkingControls isDark={isDark} />

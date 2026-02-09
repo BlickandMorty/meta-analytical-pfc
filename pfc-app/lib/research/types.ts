@@ -84,3 +84,64 @@ export interface RerouteInstruction {
 
 /** Thinking speed multiplier */
 export type ThinkingSpeed = 0.25 | 0.5 | 1 | 1.5 | 2;
+
+// ═══════════════════════════════════════════════════════════════════
+// Inference-Mode Feature Gating
+// ═══════════════════════════════════════════════════════════════════
+
+import type { InferenceMode } from '@/lib/engine/llm/config';
+
+/** Which features are available per inference mode */
+export interface InferenceModeFeatures {
+  /** Play/Pause thinking — genuine on local, fake on API */
+  playPause: boolean;
+  /** Speed control for generation/rendering */
+  speedControl: boolean;
+  /** Stop / abort thinking stream */
+  stopThinking: boolean;
+  /** Reroute thinking via follow-up prompt */
+  rerouteThinking: boolean;
+  /** Deep research mode */
+  deepResearch: boolean;
+  /** Label for why limited features */
+  modeLabel: string;
+  /** Short description of limitations */
+  modeHint: string;
+}
+
+/** Get available features for the current inference mode */
+export function getInferenceModeFeatures(mode: InferenceMode): InferenceModeFeatures {
+  switch (mode) {
+    case 'local':
+      return {
+        playPause: true,
+        speedControl: true,
+        stopThinking: true,
+        rerouteThinking: true,
+        deepResearch: true,
+        modeLabel: 'Local',
+        modeHint: 'Full thinking controls — running on your hardware',
+      };
+    case 'api':
+      return {
+        playPause: false,
+        speedControl: false,
+        stopThinking: true,
+        rerouteThinking: true,
+        deepResearch: true,
+        modeLabel: 'API',
+        modeHint: 'Research & notes focused — some controls need local models',
+      };
+    case 'simulation':
+    default:
+      return {
+        playPause: false,
+        speedControl: false,
+        stopThinking: true,
+        rerouteThinking: true,
+        deepResearch: false,
+        modeLabel: 'Simulation',
+        modeHint: 'Simulated inference — connect a model for full features',
+      };
+  }
+}
