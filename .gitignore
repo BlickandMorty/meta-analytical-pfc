@@ -90,3 +90,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 .claude/
+
+# Reference repos (local only)
+repos/
