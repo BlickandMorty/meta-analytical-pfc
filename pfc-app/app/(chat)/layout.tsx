@@ -1,7 +1,5 @@
 'use client';
 
-import { AppSidebar } from '@/components/app-sidebar';
-import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { motion } from 'framer-motion';
 
@@ -10,37 +8,25 @@ export default function ChatLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const sidebarOpen = usePFCStore((s) => s.sidebarOpen);
   const ready = useSetupGuard();
 
-  // Show nothing while checking / redirecting — avoids flash
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          className="h-6 w-6 rounded-full border-2 border-pfc-violet/20 border-t-pfc-violet"
+        />
       </div>
     );
   }
 
   return (
     <div className="relative h-screen overflow-hidden">
-      <AppSidebar />
-      {/* Main content — always full width, positioned to the right of sidebar when open */}
-      <motion.main
-        className="absolute inset-0 overflow-hidden"
-        initial={false}
-        animate={{
-          left: sidebarOpen ? 280 : 0,
-        }}
-        transition={{
-          type: 'spring',
-          stiffness: 500,
-          damping: 35,
-          mass: 0.6,
-        }}
-      >
+      <main className="absolute inset-0 overflow-hidden" style={{ paddingTop: '2.625rem' }}>
         {children}
-      </motion.main>
+      </main>
     </div>
   );
 }
