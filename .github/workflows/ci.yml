@@ -7,14 +7,18 @@ on:
     branches: ["main"]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: pfc-app/package-lock.json
       - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run tests
-        run: pytest -q
+        run: npm ci
+        working-directory: pfc-app
+      - name: Build
+        run: npx next build
+        working-directory: pfc-app
