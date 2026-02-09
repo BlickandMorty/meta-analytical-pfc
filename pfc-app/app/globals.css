@@ -489,3 +489,22 @@ select:focus-visible {
 .thinking-indicator svg {
   animation: thinking-shake 0.8s var(--anim-motion-cupertino) infinite;
 }
+
+/* Thinking shimmer text effect */
+.thinking-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-pfc-violet) 0%,
+    #c4b5fd 50%,
+    var(--color-pfc-violet) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: 200% center; }
+  50% { background-position: 0% center; }
+}

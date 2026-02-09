@@ -25,6 +25,7 @@ import { CpuIcon, CloudIcon, MonitorIcon } from 'lucide-react';
 const LiveControls = dynamic(() => import('./live-controls').then((m) => ({ default: m.LiveControls })), { ssr: false });
 const ConceptHierarchyPanel = dynamic(() => import('./concept-hierarchy-panel').then((m) => ({ default: m.ConceptHierarchyPanel })), { ssr: false });
 const ThoughtVisualizer = dynamic(() => import('./thought-visualizer').then((m) => ({ default: m.ThoughtVisualizer })), { ssr: false });
+const PortalSidebar = dynamic(() => import('./portal-sidebar').then((m) => ({ default: m.PortalSidebar })), { ssr: false });
 
 const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -516,6 +517,9 @@ export function Chat() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Portal sidebar — code suggestions and artifacts */}
+      {mounted && <PortalSidebar />}
     </div>
   );
 }

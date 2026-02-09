@@ -5,7 +5,7 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Message } from './message';
 import type { ChatMessage } from '@/lib/engine/types';
 import { StreamingText } from './streaming-text';
-import { ThinkingIndicator } from './thinking-indicator';
+import { ThinkingAccordion } from './thinking-accordion';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import { ArrowDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,11 +19,17 @@ const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
 const selectMessages = (s: { messages: ChatMessage[] }) => s.messages;
 const selectIsStreaming = (s: { isStreaming: boolean }) => s.isStreaming;
 const selectIsProcessing = (s: { isProcessing: boolean }) => s.isProcessing;
+const selectReasoningText = (s: { reasoningText: string }) => s.reasoningText;
+const selectReasoningDuration = (s: { reasoningDuration: number | null }) => s.reasoningDuration;
+const selectIsReasoning = (s: { isReasoning: boolean }) => s.isReasoning;
 
 function MessagesInner() {
   const messages = usePFCStore(selectMessages);
   const isStreaming = usePFCStore(selectIsStreaming);
   const isProcessing = usePFCStore(selectIsProcessing);
+  const reasoningText = usePFCStore(selectReasoningText);
+  const reasoningDuration = usePFCStore(selectReasoningDuration);
+  const isReasoning = usePFCStore(selectIsReasoning);
   const { containerRef, isAtBottom, scrollToBottom } = useScrollToBottom<HTMLDivElement>();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -52,13 +58,21 @@ function MessagesInner() {
               <div className="flex shrink-0 mt-1">
                 <BrainMascot isDark={isDark} size={28} mini />
               </div>
-              <div className="max-w-[85%] rounded-2xl rounded-bl-md glass px-4 py-3">
+              <div className="max-w-[85%] rounded-2xl rounded-bl-md glass px-4 py-3 space-y-2">
+                {/* Reasoning accordion — shows AI thinking process */}
+                {(isReasoning || reasoningText) && (
+                  <ThinkingAccordion
+                    content={reasoningText}
+                    duration={reasoningDuration}
+                    isThinking={isReasoning}
+                  />
+                )}
                 {isStreaming ? (
                   <StreamingText />
                 ) : (
                   <div className="flex items-center gap-2.5">
                     <span className="text-xs text-muted-foreground/60">
-                      Thinking...
+                      {isReasoning ? 'Reasoning...' : 'Thinking...'}
                     </span>
                   </div>
                 )}

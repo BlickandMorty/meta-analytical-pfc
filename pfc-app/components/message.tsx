@@ -6,6 +6,7 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { MessageLayman } from './message-layman';
 import { MessageResearch } from './message-research';
 import { TruthBotCard } from './truth-bot-card';
+import { ThinkingAccordion } from './thinking-accordion';
 import type { ChatMessage } from '@/lib/engine/types';
 import { cn } from '@/lib/utils';
 import { UserIcon, ChevronDownIcon } from 'lucide-react';
@@ -83,6 +84,15 @@ function MessageInner({ message }: MessageProps) {
           <p className="text-[14px] leading-relaxed">{message.text}</p>
         ) : message.dualMessage ? (
           <div className="space-y-2">
+            {/* Reasoning accordion — shows AI thinking for this message */}
+            {message.reasoning?.content && (
+              <ThinkingAccordion
+                content={message.reasoning.content}
+                duration={message.reasoning.duration}
+                isThinking={false}
+              />
+            )}
+
             {/* Clean response text — always visible */}
             <div className="text-[14px] leading-[1.7] text-foreground/90 whitespace-pre-line">
               {cleanText}

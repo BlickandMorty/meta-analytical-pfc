@@ -7,6 +7,7 @@ import type { PipelineEvent } from '@/lib/engine/types';
 import type { QueryFeatureVector } from '@/lib/engine/steering/types';
 import type { SignalSnapshot, QueryAnalysisSnapshot } from '@/lib/engine/steering/encoder';
 import type { TruthAssessmentInput } from '@/lib/engine/steering/feedback';
+import { StreamingHandler, detectArtifacts } from '@/libs/agent-runtime/StreamingHandler';
 
 export function useChatStream() {
   const abortRef = useRef<AbortController | null>(null);
@@ -26,6 +27,30 @@ export function useChatStream() {
     // Optimistic: add user message immediately
     store.submitQuery(query);
     store.startStreaming();
+
+    // Create StreamingHandler for reasoning/text separation
+    const streamHandler = new StreamingHandler({
+      onContentUpdate: (_content, _reasoning) => {
+        // Content updates are handled via appendStreamingText in the event loop
+      },
+      onReasoningUpdate: (_reasoning) => {
+        // Reasoning updates are handled via appendReasoningText in the event loop
+      },
+      onReasoningStart: () => {
+        store.startReasoning();
+      },
+      onReasoningComplete: (durationMs) => {
+        store.stopReasoning();
+        usePFCStore.setState({ reasoningDuration: durationMs });
+      },
+      onComplete: () => {
+        store.stopStreaming();
+      },
+      onError: (error) => {
+        console.error('StreamingHandler error:', error);
+        store.stopStreaming();
+      },
+    });
 
     // Gather pipeline controls from store
     const { controls, conceptWeights } = store;
@@ -126,7 +151,13 @@ export function useChatStream() {
                 store.applySignalUpdate(event.data);
                 break;
 
+              case 'reasoning':
+                streamHandler.handleChunk({ type: 'reasoning', text: event.text });
+                store.appendReasoningText(event.text);
+                break;
+
               case 'text-delta':
+                streamHandler.handleChunk({ type: 'text', text: event.text });
                 store.appendStreamingText(event.text);
                 break;
 
@@ -182,6 +213,24 @@ export function useChatStream() {
 
                 const resolvedChat = chatId || store.currentChatId || 'unknown';
                 steeringStore.recordPipelineRun(signalSnap, querySnap, resolvedChat, truthInput);
+
+                // ── Artifact detection → push to portal ──────────
+                const rawText = event.dualMessage?.rawAnalysis || '';
+                const detectedArtifacts = detectArtifacts(rawText);
+                if (detectedArtifacts.length > 0) {
+                  const latestMsg = store.messages[store.messages.length - 1];
+                  const msgId = latestMsg?.id || 'unknown';
+                  // Push the first significant artifact to the portal
+                  const art = detectedArtifacts[0];
+                  store.openArtifact({
+                    messageId: msgId,
+                    identifier: art.identifier,
+                    title: art.title,
+                    type: art.type,
+                    language: art.language,
+                    content: art.content,
+                  });
+                }
                 break;
               }
 

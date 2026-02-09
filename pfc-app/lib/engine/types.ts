@@ -123,6 +123,7 @@ export type PipelineEvent =
   | { type: 'stage'; stage: PipelineStage; detail: string; value: number; status: StageStatus }
   | { type: 'signals'; data: Partial<SignalUpdate> }
   | { type: 'text-delta'; text: string }
+  | { type: 'reasoning'; text: string }
   | { type: 'complete'; dualMessage: DualMessage; truthAssessment: TruthAssessment; confidence: number; grade: string; mode: string; signals: SignalUpdate }
   | { type: 'error'; message: string };
 
@@ -155,4 +156,8 @@ export interface ChatMessage {
   attachments?: FileAttachment[];
   truthAssessment?: TruthAssessment;
   concepts?: string[];
+  reasoning?: {
+    content: string;
+    duration?: number;
+  };
 }

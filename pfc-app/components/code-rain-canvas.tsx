@@ -378,6 +378,10 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
+    // Pre-cached values to avoid per-frame allocation
+    let cachedW = window.innerWidth;
+    let cachedH = window.innerHeight;
+
     function resize() {
       if (!canvas) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -419,9 +423,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
     const CODEBLOCK_CHANCE = 0.00025;   // Less frequent (was 0.0004)
     let cursorClock = 0;
 
-    // Pre-cached values to avoid per-frame allocation
-    let cachedW = window.innerWidth;
-    let cachedH = window.innerHeight;
     const blurCache = new Map<number, string>();
     const fontCache = new Map<number, string>();
     const measureCache = new Map<string, number>();
