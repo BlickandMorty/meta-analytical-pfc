@@ -14,6 +14,7 @@ import {
   DownloadIcon,
   CodeIcon,
   WrenchIcon,
+  PenLineIcon,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -32,6 +33,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Search', icon: SearchIcon },
+  { href: '/notes', label: 'Notes', icon: PenLineIcon },
   { href: '/dev-tools', label: 'Dev Tools', icon: WrenchIcon, minTier: 'programming' },
   { href: '/code-analyzer', label: 'Analyzer', icon: CodeIcon, minTier: 'programming' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full' },

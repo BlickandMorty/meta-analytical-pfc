@@ -18,6 +18,7 @@ import { createTierSlice } from './slices/tier';
 import { createResearchSlice } from './slices/research';
 import { createPortalSlice } from './slices/portal';
 import { createUISlice } from './slices/ui';
+import { createNotesSlice } from './slices/notes';
 
 // Slice types — local imports for composition + re-exports for consumers
 import type { MessageSliceState, MessageSliceActions } from './slices/message';
@@ -30,6 +31,7 @@ import type { TierSliceState, TierSliceActions } from './slices/tier';
 import type { ResearchSliceState, ResearchSliceActions } from './slices/research';
 import type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifact, PortalViewType } from './slices/portal';
 import type { UISliceState, UISliceActions } from './slices/ui';
+import type { NotesSliceState, NotesSliceActions } from './slices/notes';
 
 // Re-export slice types for consumers
 export type { MessageSliceState, MessageSliceActions } from './slices/message';
@@ -42,6 +44,7 @@ export type { TierSliceState, TierSliceActions } from './slices/tier';
 export type { ResearchSliceState, ResearchSliceActions } from './slices/research';
 export type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifact, PortalViewType } from './slices/portal';
 export type { UISliceState, UISliceActions } from './slices/ui';
+export type { NotesSliceState, NotesSliceActions } from './slices/notes';
 
 // Re-export constants
 export { STAGES, STAGE_LABELS } from '@/lib/constants';
@@ -60,7 +63,8 @@ export type PFCStoreState =
   & TierSliceState
   & ResearchSliceState
   & PortalSliceState
-  & UISliceState;
+  & UISliceState
+  & NotesSliceState;
 
 export type PFCStoreActions =
   & MessageSliceActions
@@ -73,6 +77,7 @@ export type PFCStoreActions =
   & ResearchSliceActions
   & PortalSliceActions
   & UISliceActions
+  & NotesSliceActions
   & { reset: () => void };
 
 export type PFCState = PFCStoreState & PFCStoreActions;
@@ -94,6 +99,7 @@ export const usePFCStore = create<PFCState>()(
     ...createResearchSlice(set, get),
     ...createPortalSlice(set, get),
     ...createUISlice(set, get),
+    ...createNotesSlice(set, get),
 
     // Global reset — preserves tier settings, cortex, and codebase analyses
     reset: () => {
