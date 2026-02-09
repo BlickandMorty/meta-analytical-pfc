@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
+  HomeIcon,
   MessageSquareIcon,
   BarChart3Icon,
   SettingsIcon,
@@ -34,8 +35,8 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  // ── Pillar 1: Chat ──
-  { href: '/', label: 'Chat', icon: MessageSquareIcon, group: 'core' },
+  // ── Home / Landing ──
+  { href: '/', label: 'Home', icon: HomeIcon, group: 'core' },
   // ── Pillar 2: Notes ──
   { href: '/notes', label: 'Notes', icon: PenLineIcon, group: 'core' },
   // ── Pillar 3: Research ──

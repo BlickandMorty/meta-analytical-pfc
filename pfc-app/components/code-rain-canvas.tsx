@@ -290,22 +290,22 @@ function pickSizeTier(): SizeTier {
 function applyTier(col: Partial<RainColumn>, tier: SizeTier) {
   switch (tier) {
     case 'large':
-      col.fontSize = 22 + Math.random() * 14;   // Larger sizes (was 18+8)
-      col.opacity = 0.03 + Math.random() * 0.05;
+      col.fontSize = 24 + Math.random() * 16;   // Slightly larger
+      col.opacity = 0.05 + Math.random() * 0.06;
       col.speed = 0.15 + Math.random() * 0.35;  // Slower drift
       col.blur = 4 + Math.random() * 6;          // More blur for depth
       break;
     case 'tiny':
-      col.fontSize = 6 + Math.random() * 3;
-      col.opacity = 0.06 + Math.random() * 0.10;
+      col.fontSize = 7 + Math.random() * 4;
+      col.opacity = 0.08 + Math.random() * 0.12;
       col.speed = 0.6 + Math.random() * 1.4;
       col.blur = 0.5 + Math.random() * 2;
       break;
     default:
-      col.fontSize = 10 + Math.random() * 4;
-      col.opacity = 0.08 + Math.random() * 0.14;  // Slightly less opaque
-      col.blur = Math.random() < 0.4 ? (0.5 + Math.random() * 2) : 0;  // More blur variety (was 0.25)
-      col.speed = 0.25 + Math.random() * 0.9;     // Slower overall, more varied
+      col.fontSize = 12 + Math.random() * 5;
+      col.opacity = 0.10 + Math.random() * 0.16;
+      col.blur = Math.random() < 0.4 ? (0.5 + Math.random() * 2) : 0;
+      col.speed = 0.25 + Math.random() * 0.9;
       break;
   }
 }
