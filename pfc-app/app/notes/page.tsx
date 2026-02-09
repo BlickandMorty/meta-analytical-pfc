@@ -30,6 +30,10 @@ const NoteAIChat = dynamic(
   () => import('@/components/notes/note-ai-chat').then((m) => ({ default: m.NoteAIChat })),
   { ssr: false },
 );
+const LearningPanel = dynamic(
+  () => import('@/components/notes/learning-panel').then((m) => ({ default: m.LearningPanel })),
+  { ssr: false },
+);
 
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
 const SIDEBAR_WIDTH = 260;
@@ -481,6 +485,9 @@ export default function NotesPage() {
           {activePageId && mounted && (
             <NoteAIChat pageId={activePageId} activeBlockId={editingBlockId} />
           )}
+
+          {/* AI Learning panel (docked bottom-left) */}
+          {mounted && <LearningPanel />}
         </div>
       </div>
     </div>

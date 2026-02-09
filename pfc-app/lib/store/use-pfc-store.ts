@@ -19,6 +19,7 @@ import { createResearchSlice } from './slices/research';
 import { createPortalSlice } from './slices/portal';
 import { createUISlice } from './slices/ui';
 import { createNotesSlice } from './slices/notes';
+import { createLearningSlice } from './slices/learning';
 
 // Slice types — local imports for composition + re-exports for consumers
 import type { MessageSliceState, MessageSliceActions } from './slices/message';
@@ -32,6 +33,7 @@ import type { ResearchSliceState, ResearchSliceActions } from './slices/research
 import type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifact, PortalViewType } from './slices/portal';
 import type { UISliceState, UISliceActions } from './slices/ui';
 import type { NotesSliceState, NotesSliceActions } from './slices/notes';
+import type { LearningSliceState, LearningSliceActions } from './slices/learning';
 
 // Re-export slice types for consumers
 export type { MessageSliceState, MessageSliceActions } from './slices/message';
@@ -45,6 +47,7 @@ export type { ResearchSliceState, ResearchSliceActions } from './slices/research
 export type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifact, PortalViewType } from './slices/portal';
 export type { UISliceState, UISliceActions } from './slices/ui';
 export type { NotesSliceState, NotesSliceActions } from './slices/notes';
+export type { LearningSliceState, LearningSliceActions } from './slices/learning';
 
 // Re-export constants
 export { STAGES, STAGE_LABELS } from '@/lib/constants';
@@ -64,7 +67,8 @@ export type PFCStoreState =
   & ResearchSliceState
   & PortalSliceState
   & UISliceState
-  & NotesSliceState;
+  & NotesSliceState
+  & LearningSliceState;
 
 export type PFCStoreActions =
   & MessageSliceActions
@@ -78,6 +82,7 @@ export type PFCStoreActions =
   & PortalSliceActions
   & UISliceActions
   & NotesSliceActions
+  & LearningSliceActions
   & { reset: () => void };
 
 export type PFCState = PFCStoreState & PFCStoreActions;
@@ -100,6 +105,7 @@ export const usePFCStore = create<PFCState>()(
     ...createPortalSlice(set, get),
     ...createUISlice(set, get),
     ...createNotesSlice(set, get),
+    ...createLearningSlice(set, get),
 
     // Global reset — preserves tier settings, cortex, and codebase analyses
     reset: () => {
@@ -174,6 +180,10 @@ export const usePFCStore = create<PFCState>()(
         // (conceptWeights reset)
         conceptWeights: {},
         queryConceptHistory: [],
+
+        // Reset learning (preserve history)
+        learningSession: null,
+        learningStreamText: '',
       });
     },
   })),
