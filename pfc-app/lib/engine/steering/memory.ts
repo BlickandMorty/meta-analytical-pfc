@@ -41,8 +41,6 @@ export function addExemplar(
   outcome: SteeringOutcome,
   config: SteeringConfig,
 ): SteeringMemory {
-  const now = Date.now();
-
   const exemplar: SteeringExemplar = {
     key,
     outcome,
@@ -60,15 +58,13 @@ export function addExemplar(
     totalNegative: memory.totalNegative + (isNegative ? 1 : 0),
   };
 
-  // Refresh all decay weights
-  const refreshed = refreshDecayWeights(updated, now, config.decayRate);
-
-  // Prune if over limit
-  if (refreshed.exemplars.length > config.maxExemplars) {
+  // Only refresh decay weights when pruning is needed (O(n) amortized over maxExemplars adds)
+  if (updated.exemplars.length > config.maxExemplars) {
+    const refreshed = refreshDecayWeights(updated, Date.now(), config.decayRate);
     return pruneExemplars(refreshed, config.maxExemplars);
   }
 
-  return refreshed;
+  return updated;
 }
 
 // ── Refresh decay weights ────────────────────────────────────────
@@ -134,9 +130,10 @@ export function getNegativeExemplars(
 // ── Get weighted vectors ─────────────────────────────────────────
 // Returns synthesis key vectors weighted by their decay
 
-export function getWeightedVectors(exemplars: SteeringExemplar[]): number[][] {
+export function getWeightedVectors(exemplars: SteeringExemplar[], decayRate = 0.95): number[][] {
+  const now = Date.now();
   return exemplars.map(ex => {
-    const w = ex.decayWeight;
+    const w = computeDecayWeight(ex.key.timestamp, now, decayRate);
     return ex.key.vector.map(v => v * w);
   });
 }
@@ -235,7 +232,7 @@ export interface MemoryStats {
   userRatedCount: number;
 }
 
-export function getMemoryStats(memory: SteeringMemory): MemoryStats {
+export function getMemoryStats(memory: SteeringMemory, decayRate = 0.95): MemoryStats {
   if (memory.exemplars.length === 0) {
     return {
       totalExemplars: 0,
@@ -250,11 +247,14 @@ export function getMemoryStats(memory: SteeringMemory): MemoryStats {
     };
   }
 
+  const now = Date.now();
   let positiveCount = 0;
   let negativeCount = 0;
   let neutralCount = 0;
   let decaySum = 0;
   let userRatedCount = 0;
+  let oldest = Infinity;
+  let newest = 0;
   const domains = new Set<string>();
 
   for (const ex of memory.exemplars) {
@@ -262,9 +262,13 @@ export function getMemoryStats(memory: SteeringMemory): MemoryStats {
     else if (ex.outcome.compositeScore < -0.3) negativeCount++;
     else neutralCount++;
 
-    decaySum += ex.decayWeight;
+    decaySum += computeDecayWeight(ex.key.timestamp, now, decayRate);
 
     if (ex.outcome.userRating !== null) userRatedCount++;
+
+    const ts = ex.key.timestamp;
+    if (ts < oldest) oldest = ts;
+    if (ts > newest) newest = ts;
 
     // Extract domain from query features
     const domIdx = ex.key.queryFeatures.domain;
@@ -277,16 +281,14 @@ export function getMemoryStats(memory: SteeringMemory): MemoryStats {
     }
   }
 
-  const timestamps = memory.exemplars.map(ex => ex.key.timestamp);
-
   return {
     totalExemplars: memory.exemplars.length,
     positiveCount,
     negativeCount,
     neutralCount,
     averageDecayWeight: decaySum / memory.exemplars.length,
-    oldestTimestamp: Math.min(...timestamps),
-    newestTimestamp: Math.max(...timestamps),
+    oldestTimestamp: oldest,
+    newestTimestamp: newest,
     uniqueDomains: [...domains],
     userRatedCount,
   };

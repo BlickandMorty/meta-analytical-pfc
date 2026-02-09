@@ -1,11 +1,9 @@
 'use client';
 
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   BarChart3Icon,
-  ArrowLeftIcon,
   RadarIcon,
   NetworkIcon,
   TrendingUpIcon,
@@ -13,18 +11,15 @@ import {
   BrainIcon,
   ActivityIcon,
   RotateCcwIcon,
-  GripIcon,
 } from 'lucide-react';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
-import { InfoButton, VISUALIZER_INFO, AnimatedSuggestions, VISUALIZER_SUGGESTIONS } from '@/components/info-panel';
+import { PageShell, GlassSection } from '@/components/page-shell';
+import { GlassBubbleButton } from '@/components/glass-bubble-button';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -1102,59 +1097,25 @@ export default function VisualizerPage() {
 
   if (!ready) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
         <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md"
-      >
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full px-3 py-1 -ml-3 hover:bg-muted"
-          >
-            <ArrowLeftIcon className="h-3.5 w-3.5" />
-            <span className="text-xs">Back</span>
-          </Link>
+    <PageShell icon={BarChart3Icon} iconColor="var(--color-pfc-ember)" title="Visualizer" subtitle="Interactive signal visualization dashboard">
+      {/* Status badges */}
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        <Badge variant="outline" className="text-xs font-mono">
+          Confidence {confidence.toFixed(2)}
+        </Badge>
+        <Badge variant="outline" className="text-xs font-mono">
+          Health {healthScore.toFixed(2)}
+        </Badge>
+      </div>
 
-          <div className="flex items-center gap-2 ml-1">
-            <BarChart3Icon className="h-5 w-5 text-pfc-ember" />
-            <h1 className="text-lg font-semibold tracking-tight">
-              Visualizer
-            </h1>
-          </div>
-
-          <div className="ml-auto flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className="text-xs font-mono hidden sm:inline-flex">
-              Confidence {confidence.toFixed(2)}
-            </Badge>
-            <Badge variant="outline" className="text-xs font-mono hidden sm:inline-flex">
-              Health {healthScore.toFixed(2)}
-            </Badge>
-            <ThemeToggle />
-          </div>
-        </div>
-      </motion.header>
-
-      {/* Main content */}
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        {/* Animated suggestions */}
-        <div className="mb-5">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2 font-medium">
-            Quick Guide — What is this used for?
-          </p>
-          <AnimatedSuggestions suggestions={VISUALIZER_SUGGESTIONS} />
-        </div>
-
+      <GlassSection title="Visualizations" className="">
         <Tabs defaultValue="radar" className="w-full">
           {/* Tab triggers - scrollable row */}
           <TabsList className="mb-6 flex w-full overflow-x-auto">
@@ -1180,75 +1141,69 @@ export default function VisualizerPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <RadarIcon className="h-4 w-4 text-pfc-ember" />
-                      Signal Radar
-                      <InfoButton info={VISUALIZER_INFO.radar} compact />
-                      {hasOverrides && (
-                        <Badge variant="outline" className="ml-2 text-[10px] border-pfc-violet/40 text-pfc-violet">
-                          Manual Override Active
-                        </Badge>
-                      )}
-                    </CardTitle>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <RadarIcon className="h-4 w-4 text-pfc-ember" />
+                    <h3 className="text-base font-semibold">Signal Radar</h3>
                     {hasOverrides && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 text-xs border-pfc-violet/30 text-pfc-violet hover:bg-pfc-violet/10"
-                        onClick={resetAllSignalOverrides}
-                      >
-                        <RotateCcwIcon className="h-3 w-3" />
-                        Reset to Auto
-                      </Button>
+                      <Badge variant="outline" className="ml-2 text-[10px] border-pfc-violet/40 text-pfc-violet">
+                        Manual Override Active
+                      </Badge>
                     )}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Drag the data points to manually override signal values.
-                    Overridden signals are shown in purple. The dashed outline shows the auto-calculated values.
-                  </p>
-
-                  {/* Override status indicators */}
                   {hasOverrides && (
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {SIGNAL_KEYS.map((key) => {
-                        const override = userSignalOverrides[key];
-                        if (override === null) return null;
-                        const autoVal = key === 'entropy' ? Math.min(1, entropy) : key === 'dissonance' ? Math.min(1, dissonance) : key === 'confidence' ? confidence : healthScore;
-                        return (
-                          <button
-                            key={key}
-                            onClick={() => setSignalOverride(key, null)}
-                            className={cn(
-                              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px]',
-                              'border border-pfc-violet/30 bg-pfc-violet/5 text-pfc-violet',
-                              'hover:bg-pfc-violet/15 transition-colors cursor-pointer',
-                            )}
-                          >
-                            <span className="font-medium capitalize">{key === 'healthScore' ? 'Health' : key}</span>
-                            <span className="font-mono">{override.toFixed(2)}</span>
-                            <span className="text-[9px] opacity-60">(auto: {autoVal.toFixed(2)})</span>
-                            <span className="ml-0.5 text-pfc-violet/60">✕</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <GlassBubbleButton
+                      color="violet"
+                      size="sm"
+                      onClick={resetAllSignalOverrides}
+                    >
+                      <RotateCcwIcon className="h-3 w-3" />
+                      Reset to Auto
+                    </GlassBubbleButton>
                   )}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Drag the data points to manually override signal values.
+                  Overridden signals are shown in purple. The dashed outline shows the auto-calculated values.
+                </p>
 
-                  <InteractiveSignalRadar
-                    confidence={confidence}
-                    entropy={entropy}
-                    dissonance={dissonance}
-                    healthScore={healthScore}
-                    overrides={userSignalOverrides}
-                    onSignalChange={handleSignalChange}
-                  />
-                </CardContent>
-              </Card>
+                {/* Override status indicators */}
+                {hasOverrides && (
+                  <div className="flex flex-wrap gap-2">
+                    {SIGNAL_KEYS.map((key) => {
+                      const override = userSignalOverrides[key];
+                      if (override === null) return null;
+                      const autoVal = key === 'entropy' ? Math.min(1, entropy) : key === 'dissonance' ? Math.min(1, dissonance) : key === 'confidence' ? confidence : healthScore;
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => setSignalOverride(key, null)}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px]',
+                            'border border-pfc-violet/30 bg-pfc-violet/5 text-pfc-violet',
+                            'hover:bg-pfc-violet/15 transition-colors cursor-pointer',
+                          )}
+                        >
+                          <span className="font-medium capitalize">{key === 'healthScore' ? 'Health' : key}</span>
+                          <span className="font-mono">{override.toFixed(2)}</span>
+                          <span className="text-[9px] opacity-60">(auto: {autoVal.toFixed(2)})</span>
+                          <span className="ml-0.5 text-pfc-violet/60">{'\u2715'}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <InteractiveSignalRadar
+                  confidence={confidence}
+                  entropy={entropy}
+                  dissonance={dissonance}
+                  healthScore={healthScore}
+                  overrides={userSignalOverrides}
+                  onSignalChange={handleSignalChange}
+                />
+              </div>
             </motion.div>
           </TabsContent>
 
@@ -1259,34 +1214,29 @@ export default function VisualizerPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <NetworkIcon className="h-4 w-4 text-pfc-ember" />
-                    Pipeline Flow
-                    <InfoButton info={VISUALIZER_INFO.pipeline} compact />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    The 10-stage analytical pipeline. Nodes pulse when active
-                    and turn green on completion.
-                  </p>
-                  <PipelineFlow stages={pipelineStages} />
-                  {/* Legend */}
-                  <div className="flex flex-wrap items-center gap-4 mt-4 text-xs text-muted-foreground">
-                    {Object.entries(STATUS_COLOR).map(([status, color]) => (
-                      <span key={status} className="flex items-center gap-1.5">
-                        <span
-                          className="inline-block h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: color }}
-                        />
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </span>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <NetworkIcon className="h-4 w-4 text-pfc-ember" />
+                  <h3 className="text-base font-semibold">Pipeline Flow</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  The 10-stage analytical pipeline. Nodes pulse when active
+                  and turn green on completion.
+                </p>
+                <PipelineFlow stages={pipelineStages} />
+                {/* Legend */}
+                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                  {Object.entries(STATUS_COLOR).map(([status, color]) => (
+                    <span key={status} className="flex items-center gap-1.5">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </motion.div>
           </TabsContent>
 
@@ -1297,22 +1247,17 @@ export default function VisualizerPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <TrendingUpIcon className="h-4 w-4 text-pfc-ember" />
-                    Confidence History
-                    <InfoButton info={VISUALIZER_INFO.confidence} compact />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Simulated trajectory showing how confidence has evolved.
-                    The final bar is the current live value.
-                  </p>
-                  <ConfidenceHistory confidence={confidence} />
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUpIcon className="h-4 w-4 text-pfc-ember" />
+                  <h3 className="text-base font-semibold">Confidence History</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Simulated trajectory showing how confidence has evolved.
+                  The final bar is the current live value.
+                </p>
+                <ConfidenceHistory confidence={confidence} />
+              </div>
             </motion.div>
           </TabsContent>
 
@@ -1323,28 +1268,23 @@ export default function VisualizerPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <ActivityIcon className="h-4 w-4 text-pfc-violet" />
-                    TDA Landscape
-                    <InfoButton info={VISUALIZER_INFO.tda} compact />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Topological Data Analysis snapshot. Betti numbers indicate
-                    connected components and loops; persistence entropy measures
-                    topological complexity.
-                  </p>
-                  <TDALandscape
-                    betti0={tda.betti0}
-                    betti1={tda.betti1}
-                    persistenceEntropy={tda.persistenceEntropy}
-                    maxPersistence={tda.maxPersistence}
-                  />
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ActivityIcon className="h-4 w-4 text-pfc-violet" />
+                  <h3 className="text-base font-semibold">TDA Landscape</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Topological Data Analysis snapshot. Betti numbers indicate
+                  connected components and loops; persistence entropy measures
+                  topological complexity.
+                </p>
+                <TDALandscape
+                  betti0={tda.betti0}
+                  betti1={tda.betti1}
+                  persistenceEntropy={tda.persistenceEntropy}
+                  maxPersistence={tda.maxPersistence}
+                />
+              </div>
             </motion.div>
           </TabsContent>
 
@@ -1355,22 +1295,17 @@ export default function VisualizerPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <BrainIcon className="h-4 w-4 text-pfc-violet" />
-                    Concept Map
-                    <InfoButton info={VISUALIZER_INFO.concepts} compact />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Active concepts extracted from the reasoning pipeline,
-                    displayed as an interconnected node graph.
-                  </p>
-                  <ConceptMap concepts={activeConcepts} />
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <BrainIcon className="h-4 w-4 text-pfc-violet" />
+                  <h3 className="text-base font-semibold">Concept Map</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Active concepts extracted from the reasoning pipeline,
+                  displayed as an interconnected node graph.
+                </p>
+                <ConceptMap concepts={activeConcepts} />
+              </div>
             </motion.div>
           </TabsContent>
 
@@ -1381,23 +1316,18 @@ export default function VisualizerPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <TargetIcon className="h-4 w-4 text-pfc-red" />
-                    Risk Matrix
-                    <InfoButton info={VISUALIZER_INFO.risk} compact />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    2x2 risk/uncertainty matrix. The pulsing dot shows the
-                    current analytical position based on risk score and
-                    confidence.
-                  </p>
-                  <RiskMatrix riskScore={riskScore} confidence={confidence} />
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <TargetIcon className="h-4 w-4 text-pfc-red" />
+                  <h3 className="text-base font-semibold">Risk Matrix</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  2x2 risk/uncertainty matrix. The pulsing dot shows the
+                  current analytical position based on risk score and
+                  confidence.
+                </p>
+                <RiskMatrix riskScore={riskScore} confidence={confidence} />
+              </div>
             </motion.div>
           </TabsContent>
 
@@ -1408,30 +1338,25 @@ export default function VisualizerPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <ActivityIcon className="h-4 w-4 text-pfc-green" />
-                    Harmony Spectrum
-                    <InfoButton info={VISUALIZER_INFO.harmony} compact />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Concept chord harmony visualised as a spectrum. The marker
-                    shows how far the current key distance is from perfect
-                    harmonic alignment.
-                  </p>
-                  <HarmonySpectrum
-                    harmonyKeyDistance={harmonyKeyDistance}
-                    activeChordProduct={activeChordProduct}
-                  />
-                </CardContent>
-              </Card>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ActivityIcon className="h-4 w-4 text-pfc-green" />
+                  <h3 className="text-base font-semibold">Harmony Spectrum</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Concept chord harmony visualised as a spectrum. The marker
+                  shows how far the current key distance is from perfect
+                  harmonic alignment.
+                </p>
+                <HarmonySpectrum
+                  harmonyKeyDistance={harmonyKeyDistance}
+                  activeChordProduct={activeChordProduct}
+                />
+              </div>
             </motion.div>
           </TabsContent>
         </Tabs>
-      </main>
-    </div>
+      </GlassSection>
+    </PageShell>
   );
 }

@@ -6,11 +6,11 @@ import { projectPCA } from '@/lib/engine/steering/engine';
 import { getMemoryStats } from '@/lib/engine/steering/memory';
 import { DIMENSION_LABELS } from '@/lib/engine/steering/encoder';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { PageShell, GlassSection } from '@/components/page-shell';
 import {
   CompassIcon,
-  ArrowLeftIcon,
   DownloadIcon,
   UploadIcon,
   TrashIcon,
@@ -21,7 +21,6 @@ import {
   ScatterChartIcon,
   GaugeIcon,
 } from 'lucide-react';
-import Link from 'next/link';
 
 export default function SteeringLabPage() {
   const memory = useSteeringStore((s) => s.memory);
@@ -97,49 +96,15 @@ export default function SteeringLabPage() {
   const strengthPct = Math.round(currentBias.steeringStrength * 100);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background">
-      {/* Header */}
-      <header className="flex h-14 items-center justify-between border-b px-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href="/">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <ArrowLeftIcon className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-pfc-violet/10 text-pfc-violet">
-              <CompassIcon className="h-3.5 w-3.5" />
-            </div>
-            <h1 className="text-lg font-semibold tracking-tight">Steering Lab</h1>
-          </div>
-          <Badge variant="secondary" className="text-[10px] font-mono">
-            {stats.totalExemplars} exemplars
-          </Badge>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" onClick={handleExport}>
-            <DownloadIcon className="h-3 w-3" /> Export
-          </Button>
-          <Button variant="outline" size="sm" className="h-7 text-[11px] gap-1" onClick={handleImport}>
-            <UploadIcon className="h-3 w-3" /> Import
-          </Button>
-          <Button
-            variant={config.enabled ? 'default' : 'outline'}
-            size="sm"
-            className="h-7 text-[11px] gap-1"
-            onClick={toggleSteering}
-          >
-            <PowerIcon className="h-3 w-3" />
-            {config.enabled ? 'Active' : 'Off'}
-          </Button>
-        </div>
-      </header>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {stats.totalExemplars === 0 ? (
-          /* Empty state */
+    <PageShell
+      icon={CompassIcon}
+      iconColor="var(--color-pfc-violet)"
+      title="Steering Lab"
+      subtitle="Adaptive steering memory and bias engine"
+    >
+      {stats.totalExemplars === 0 ? (
+        /* Empty state */
+        <GlassSection>
           <div className="flex flex-col items-center justify-center h-[60vh] text-center">
             <div className="h-16 w-16 rounded-2xl bg-pfc-violet/10 flex items-center justify-center mb-4">
               <BrainCircuitIcon className="h-8 w-8 text-pfc-violet/50" />
@@ -147,16 +112,18 @@ export default function SteeringLabPage() {
             <h2 className="text-lg font-semibold tracking-tight mb-1">No Steering Data Yet</h2>
             <p className="text-sm text-muted-foreground max-w-md">
               Submit queries in the chat to start building your steering memory.
-              The engine learns from each analysis — rate results with 👍/👎 for faster adaptation.
+              The engine learns from each analysis — rate results with thumbs up/down for faster adaptation.
             </p>
             <p className="text-xs text-muted-foreground/50 mt-3">
-              Steering activates after 3+ exemplars • Full strength at 20+
+              Steering activates after 3+ exemplars | Full strength at 20+
             </p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* ── Hero Stats ── */}
-            <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        </GlassSection>
+      ) : (
+        <div className="space-y-6">
+          {/* Hero Stats */}
+          <GlassSection title="Overview" className="">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard
                 label="Steering Strength"
                 value={`${strengthPct}%`}
@@ -185,13 +152,11 @@ export default function SteeringLabPage() {
                 sub={stats.uniqueDomains.slice(0, 3).join(', ')}
               />
             </div>
+          </GlassSection>
 
-            {/* ── PCA Scatter Plot ── */}
-            <div className="rounded-xl border bg-card/50 p-4">
-              <h3 className="text-sm font-semibold tracking-tight mb-3 flex items-center gap-2">
-                <ScatterChartIcon className="h-4 w-4 text-pfc-violet" />
-                Synthesis Key Space (PCA)
-              </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* PCA Scatter Plot */}
+            <GlassSection title="Synthesis Key Space (PCA)">
               {pca ? (
                 <div className="relative">
                   <svg viewBox="-3 -3 6 6" className="w-full h-[280px]" preserveAspectRatio="xMidYMid meet">
@@ -243,14 +208,10 @@ export default function SteeringLabPage() {
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-8">Need 3+ exemplars for PCA projection</p>
               )}
-            </div>
+            </GlassSection>
 
-            {/* ── Bayesian Priors ── */}
-            <div className="rounded-xl border bg-card/50 p-4">
-              <h3 className="text-sm font-semibold tracking-tight mb-3 flex items-center gap-2">
-                <BarChart3Icon className="h-4 w-4 text-pfc-cyan" />
-                Bayesian Prior Distributions
-              </h3>
+            {/* Bayesian Priors */}
+            <GlassSection title="Bayesian Prior Distributions">
               <div className="space-y-2">
                 {priorData.map(({ label, mean, confidence, sampleCount }) => (
                   <div key={label} className="flex items-center gap-2">
@@ -281,14 +242,10 @@ export default function SteeringLabPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </GlassSection>
 
-            {/* ── Current Bias Bars ── */}
-            <div className="rounded-xl border bg-card/50 p-4">
-              <h3 className="text-sm font-semibold tracking-tight mb-3 flex items-center gap-2">
-                <TrendingUpIcon className="h-4 w-4 text-pfc-ember" />
-                Active Steering Bias
-              </h3>
+            {/* Active Steering Bias */}
+            <GlassSection title="Active Steering Bias">
               {currentBias.steeringStrength > 0.01 ? (
                 <div className="space-y-2">
                   {biasEntries.map(({ label, value, color }) => {
@@ -319,16 +276,25 @@ export default function SteeringLabPage() {
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-8">No active bias — need more exemplars</p>
               )}
-            </div>
+            </GlassSection>
 
-            {/* ── Master Controls ── */}
-            <div className="rounded-xl border bg-card/50 p-4">
-              <h3 className="text-sm font-semibold tracking-tight mb-3 flex items-center gap-2">
-                <GaugeIcon className="h-4 w-4 text-muted-foreground" />
-                Controls
-              </h3>
-
+            {/* Controls */}
+            <GlassSection title="Controls">
               <div className="space-y-4">
+                {/* Action buttons */}
+                <div className="flex items-center gap-2">
+                  <GlassBubbleButton onClick={handleExport} color="violet" size="sm">
+                    <DownloadIcon className="h-3 w-3" /> Export
+                  </GlassBubbleButton>
+                  <GlassBubbleButton onClick={handleImport} color="violet" size="sm">
+                    <UploadIcon className="h-3 w-3" /> Import
+                  </GlassBubbleButton>
+                  <GlassBubbleButton onClick={toggleSteering} active={config.enabled} color="green" size="sm">
+                    <PowerIcon className="h-3 w-3" />
+                    {config.enabled ? 'Active' : 'Off'}
+                  </GlassBubbleButton>
+                </div>
+
                 {/* Master strength slider */}
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
@@ -348,79 +314,72 @@ export default function SteeringLabPage() {
                 {/* Toggle */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Steering Engine</span>
-                  <Button
-                    variant={config.enabled ? 'default' : 'outline'}
-                    size="sm"
-                    className="h-7 text-[11px] gap-1"
-                    onClick={toggleSteering}
-                  >
+                  <GlassBubbleButton onClick={toggleSteering} active={config.enabled} color="green" size="sm">
                     <PowerIcon className="h-3 w-3" />
                     {config.enabled ? 'Active' : 'Disabled'}
-                  </Button>
+                  </GlassBubbleButton>
                 </div>
 
                 {/* Reset */}
                 <div className="pt-3 border-t border-border/30">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-[11px] gap-1 text-pfc-red border-pfc-red/20 hover:bg-pfc-red/10"
+                  <GlassBubbleButton
                     onClick={() => {
                       if (confirm('Reset all steering memory? This cannot be undone.')) {
                         resetMemory();
                       }
                     }}
+                    color="red"
+                    size="sm"
                   >
                     <TrashIcon className="h-3 w-3" />
                     Reset Steering Memory
-                  </Button>
+                  </GlassBubbleButton>
                 </div>
               </div>
-            </div>
-
-            {/* ── Learning Timeline ── */}
-            {memory.exemplars.length > 2 && (
-              <div className="lg:col-span-2 rounded-xl border bg-card/50 p-4">
-                <h3 className="text-sm font-semibold tracking-tight mb-3">Learning Timeline</h3>
-                <div className="h-[100px]">
-                  <svg viewBox={`0 0 ${memory.exemplars.length} 2`} className="w-full h-full" preserveAspectRatio="none">
-                    {/* Zero line */}
-                    <line x1="0" y1="1" x2={memory.exemplars.length} y2="1" stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.02" />
-                    {/* Score line */}
-                    <polyline
-                      fill="none"
-                      stroke="var(--color-pfc-violet)"
-                      strokeWidth="0.04"
-                      points={memory.exemplars
-                        .map((ex, i) => `${i},${1 - ex.outcome.compositeScore}`)
-                        .join(' ')}
-                    />
-                    {/* Dots */}
-                    {memory.exemplars.map((ex, i) => (
-                      <circle
-                        key={i}
-                        cx={i}
-                        cy={1 - ex.outcome.compositeScore}
-                        r={0.06}
-                        fill={ex.outcome.compositeScore > 0.3 ? 'var(--color-pfc-green)' : ex.outcome.compositeScore < -0.3 ? 'var(--color-pfc-red)' : 'var(--color-pfc-yellow)'}
-                      />
-                    ))}
-                  </svg>
-                </div>
-                <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-1">
-                  <span>First exemplar</span>
-                  <span>Latest</span>
-                </div>
-              </div>
-            )}
+            </GlassSection>
           </div>
-        )}
-      </div>
-    </div>
+
+          {/* Learning Timeline */}
+          {memory.exemplars.length > 2 && (
+            <GlassSection title="Learning Timeline">
+              <div className="h-[100px]">
+                <svg viewBox={`0 0 ${memory.exemplars.length} 2`} className="w-full h-full" preserveAspectRatio="none">
+                  {/* Zero line */}
+                  <line x1="0" y1="1" x2={memory.exemplars.length} y2="1" stroke="currentColor" strokeOpacity="0.1" strokeWidth="0.02" />
+                  {/* Score line */}
+                  <polyline
+                    fill="none"
+                    stroke="var(--color-pfc-violet)"
+                    strokeWidth="0.04"
+                    points={memory.exemplars
+                      .map((ex, i) => `${i},${1 - ex.outcome.compositeScore}`)
+                      .join(' ')}
+                  />
+                  {/* Dots */}
+                  {memory.exemplars.map((ex, i) => (
+                    <circle
+                      key={i}
+                      cx={i}
+                      cy={1 - ex.outcome.compositeScore}
+                      r={0.06}
+                      fill={ex.outcome.compositeScore > 0.3 ? 'var(--color-pfc-green)' : ex.outcome.compositeScore < -0.3 ? 'var(--color-pfc-red)' : 'var(--color-pfc-yellow)'}
+                    />
+                  ))}
+                </svg>
+              </div>
+              <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-1">
+                <span>First exemplar</span>
+                <span>Latest</span>
+              </div>
+            </GlassSection>
+          )}
+        </div>
+      )}
+    </PageShell>
   );
 }
 
-// ── StatCard sub-component ──────────────────────────────────────
+// -- StatCard sub-component --
 
 function StatCard({ label, value, icon, color, sub }: {
   label: string;
@@ -430,7 +389,7 @@ function StatCard({ label, value, icon, color, sub }: {
   sub?: string;
 }) {
   return (
-    <div className="rounded-xl border bg-card/50 p-3">
+    <div className="rounded-2xl glass-bubble-pill p-4">
       <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
         <span className={color}>{icon}</span>
         <span className="text-[10px] uppercase tracking-wider">{label}</span>

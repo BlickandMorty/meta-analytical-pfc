@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { CodeRainCanvas, CodeRainOverlays } from '@/components/code-rain-canvas';
 import {
   KeyIcon,
   ArrowRightIcon,
@@ -16,223 +16,6 @@ import {
   MonitorIcon,
   TerminalIcon,
 } from 'lucide-react';
-
-// ═══════════════════════════════════════════════════════════════════════
-// Code tokens for canvas rain — multicolor syntax highlighting
-// ═══════════════════════════════════════════════════════════════════════
-
-const TOKEN_POOL = [
-  // Keywords (violet)
-  { text: 'const', color: '#8B7CF6' },
-  { text: 'async', color: '#8B7CF6' },
-  { text: 'await', color: '#8B7CF6' },
-  { text: 'function', color: '#8B7CF6' },
-  { text: 'return', color: '#8B7CF6' },
-  { text: 'import', color: '#8B7CF6' },
-  { text: 'export', color: '#8B7CF6' },
-  { text: 'yield', color: '#8B7CF6' },
-  { text: 'class', color: '#8B7CF6' },
-  { text: 'type', color: '#8B7CF6' },
-  { text: 'interface', color: '#8B7CF6' },
-  { text: 'if', color: '#8B7CF6' },
-  { text: 'else', color: '#8B7CF6' },
-  { text: 'for', color: '#8B7CF6' },
-  { text: 'while', color: '#8B7CF6' },
-  { text: 'new', color: '#8B7CF6' },
-  { text: 'try', color: '#8B7CF6' },
-  { text: 'catch', color: '#8B7CF6' },
-  // Functions (ember)
-  { text: 'runPipeline()', color: '#E07850' },
-  { text: 'analyzeQuery()', color: '#E07850' },
-  { text: 'calibrate()', color: '#E07850' },
-  { text: 'synthesize()', color: '#E07850' },
-  { text: 'arbitrate()', color: '#E07850' },
-  { text: 'assessTruth()', color: '#E07850' },
-  { text: 'updateBayesian()', color: '#E07850' },
-  { text: 'computeTDA()', color: '#E07850' },
-  { text: 'inferCausal()', color: '#E07850' },
-  { text: 'parseEvidence()', color: '#E07850' },
-  { text: 'generateReflection()', color: '#E07850' },
-  { text: 'quantifyUncertainty()', color: '#E07850' },
-  // Strings (green)
-  { text: '"confidence"', color: '#4ADE80' },
-  { text: '"entropy"', color: '#4ADE80' },
-  { text: '"dissonance"', color: '#4ADE80' },
-  { text: '"synthesis"', color: '#4ADE80' },
-  { text: '"pipeline"', color: '#4ADE80' },
-  { text: '"bayesian"', color: '#4ADE80' },
-  { text: '"causal"', color: '#4ADE80' },
-  { text: '"meta-analysis"', color: '#4ADE80' },
-  // Numbers (cyan)
-  { text: '0.95', color: '#22D3EE' },
-  { text: '0.73', color: '#22D3EE' },
-  { text: '14.3', color: '#22D3EE' },
-  { text: '0.81', color: '#22D3EE' },
-  { text: '256', color: '#22D3EE' },
-  { text: '1024', color: '#22D3EE' },
-  { text: '0.42', color: '#22D3EE' },
-  { text: '3.14', color: '#22D3EE' },
-  // Types (yellow)
-  { text: 'PipelineEvent', color: '#FACC15' },
-  { text: 'StageResult', color: '#FACC15' },
-  { text: 'DualMessage', color: '#FACC15' },
-  { text: 'TruthAssessment', color: '#FACC15' },
-  { text: 'SignalUpdate', color: '#FACC15' },
-  { text: 'TDASnapshot', color: '#FACC15' },
-  { text: 'QueryAnalysis', color: '#FACC15' },
-  // Operators (dim)
-  { text: '=>', color: '#9CA3AF' },
-  { text: '===', color: '#9CA3AF' },
-  { text: '...', color: '#9CA3AF' },
-  { text: '{ }', color: '#9CA3AF' },
-  { text: '<T>', color: '#9CA3AF' },
-  { text: '??', color: '#9CA3AF' },
-  { text: '|>', color: '#9CA3AF' },
-  // Comments (dim green)
-  { text: '// meta-analysis', color: '#86EFAC' },
-  { text: '// calibration', color: '#86EFAC' },
-  { text: '// adversarial', color: '#86EFAC' },
-  { text: '// truth-bot', color: '#86EFAC' },
-  { text: '// reflection', color: '#86EFAC' },
-  { text: '// bayesian update', color: '#86EFAC' },
-];
-
-// ═══════════════════════════════════════════════════════════════════════
-// Canvas rain column
-// ═══════════════════════════════════════════════════════════════════════
-
-interface RainColumn {
-  x: number;
-  y: number;
-  speed: number;
-  fontSize: number;
-  tokens: { text: string; color: string }[];
-  tokenIndex: number;
-  opacity: number;
-  trail: { text: string; color: string; y: number; opacity: number }[];
-}
-
-function createColumn(canvasWidth: number, canvasHeight: number): RainColumn {
-  const fontSize = 10 + Math.random() * 4;
-  const tokenCount = 4 + Math.floor(Math.random() * 6);
-  const tokens: { text: string; color: string }[] = [];
-  for (let i = 0; i < tokenCount; i++) {
-    tokens.push(TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)]);
-  }
-  return {
-    x: Math.random() * canvasWidth,
-    y: -Math.random() * canvasHeight,
-    speed: 0.4 + Math.random() * 1.2,
-    fontSize,
-    tokens,
-    tokenIndex: 0,
-    opacity: 0.15 + Math.random() * 0.45,
-    trail: [],
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// Canvas rain component
-// ═══════════════════════════════════════════════════════════════════════
-
-function CodeRainCanvas({ isDark }: { isDark: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const columnsRef = useRef<RainColumn[]>([]);
-  const rafRef = useRef<number>(0);
-  const lastTimeRef = useRef<number>(0);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
-
-    function resize() {
-      if (!canvas) return;
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
-      ctx!.scale(dpr, dpr);
-
-      // Regenerate columns on resize
-      const colCount = Math.floor(window.innerWidth / 28);
-      columnsRef.current = [];
-      for (let i = 0; i < colCount; i++) {
-        columnsRef.current.push(createColumn(window.innerWidth, window.innerHeight));
-      }
-    }
-
-    resize();
-    window.addEventListener('resize', resize);
-
-    function draw(timestamp: number) {
-      if (!canvas || !ctx) return;
-      const delta = timestamp - lastTimeRef.current;
-      lastTimeRef.current = timestamp;
-      const dt = Math.min(delta / 16.67, 3); // Normalize to ~60fps
-
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-
-      // Clear with semi-transparent background for trail effect
-      if (isDark) {
-        ctx.fillStyle = 'rgba(5, 5, 8, 0.12)';
-      } else {
-        ctx.fillStyle = 'rgba(252, 250, 248, 0.15)';
-      }
-      ctx.fillRect(0, 0, w, h);
-
-      for (const col of columnsRef.current) {
-        col.y += col.speed * dt;
-
-        // Draw current token
-        const token = col.tokens[col.tokenIndex % col.tokens.length];
-        ctx.font = `${col.fontSize}px "Geist Mono", ui-monospace, monospace`;
-
-        // Lead character is brighter
-        const alpha = isDark ? col.opacity * 1.2 : col.opacity * 0.8;
-        ctx.fillStyle = token.color;
-        ctx.globalAlpha = Math.min(alpha, 1);
-        ctx.fillText(token.text, col.x, col.y);
-
-        // Advance token every few frames
-        if (Math.random() < 0.02) {
-          col.tokenIndex++;
-        }
-
-        // Reset when off screen
-        if (col.y > h + 50) {
-          col.y = -Math.random() * 200 - 50;
-          col.x = Math.random() * w;
-          col.speed = 0.4 + Math.random() * 1.2;
-          col.tokenIndex = Math.floor(Math.random() * col.tokens.length);
-          col.opacity = 0.15 + Math.random() * 0.45;
-        }
-      }
-
-      ctx.globalAlpha = 1;
-      rafRef.current = requestAnimationFrame(draw);
-    }
-
-    rafRef.current = requestAnimationFrame(draw);
-
-    return () => {
-      window.removeEventListener('resize', resize);
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, [isDark]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 z-0"
-      style={{ pointerEvents: 'none' }}
-    />
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════════
 // Boot lines
@@ -256,23 +39,8 @@ const BOOT_LINES = [
 
 const LINE_DELAY_MS = 65;
 
-function formatLine(text: string, type: string) {
-  if (type === 'module') {
-    const okIndex = text.lastIndexOf('[OK]');
-    if (okIndex !== -1) {
-      return (
-        <>
-          <span className="text-pfc-green/50">{text.slice(0, okIndex)}</span>
-          <span className="text-pfc-green font-bold">[OK]</span>
-        </>
-      );
-    }
-  }
-  return text;
-}
-
 // ═══════════════════════════════════════════════════════════════════════
-// Main page
+// Main page — bubble-style onboarding
 // ═══════════════════════════════════════════════════════════════════════
 
 type Phase = 'boot' | 'apikey' | 'launching';
@@ -288,7 +56,6 @@ export default function OnboardingPage() {
 
   useEffect(() => setMounted(true), []);
 
-  // If already set up, redirect immediately
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const done = localStorage.getItem('pfc-setup-done');
@@ -296,7 +63,6 @@ export default function OnboardingPage() {
     }
   }, [router]);
 
-  // Boot sequence auto-advance
   useEffect(() => {
     if (phase !== 'boot') return;
     if (visibleCount < BOOT_LINES.length) {
@@ -324,61 +90,81 @@ export default function OnboardingPage() {
 
   const isDark = mounted ? resolvedTheme === 'dark' : true;
 
+  // Shared bubble glass style
+  const bubbleGlass: React.CSSProperties = {
+    background: isDark ? 'rgba(12,12,16,0.88)' : 'rgba(255,255,255,0.88)',
+    backdropFilter: 'blur(120px) saturate(2.4)',
+    WebkitBackdropFilter: 'blur(120px) saturate(2.4)',
+    boxShadow: isDark
+      ? '0 8px 60px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.05), inset 0 0.5px 0 rgba(255,255,255,0.06)'
+      : '0 8px 60px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.08), inset 0 0.5px 0 rgba(255,255,255,0.8)',
+    borderRadius: '1.5rem',
+    border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+  };
+
+  const textDim = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.4)';
+  const textFaint = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.2)';
+
   return (
     <div
-      className={cn(
-        'relative min-h-screen flex items-center justify-center p-4 overflow-hidden',
-        isDark ? 'bg-[#050508]' : 'bg-[#FCFAF8]',
-      )}
+      style={{
+        position: 'relative',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        overflow: 'hidden',
+        background: isDark ? '#050508' : '#FCFAF8',
+      }}
     >
-      {/* Canvas code rain */}
+      {/* Canvas code rain + overlays */}
       {mounted && <CodeRainCanvas isDark={isDark} />}
-
-      {/* Vignette overlay */}
-      <div
-        className="pointer-events-none fixed inset-0 z-[2]"
-        style={{
-          background: isDark
-            ? 'radial-gradient(ellipse at center, transparent 30%, rgba(5,5,8,0.9) 100%)'
-            : 'radial-gradient(ellipse at center, transparent 30%, rgba(252,250,248,0.92) 100%)',
-        }}
-      />
-
-      {/* Scanlines */}
-      <div
-        className="pointer-events-none fixed inset-0 z-[3]"
-        style={{
-          background: isDark
-            ? 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px)'
-            : 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px)',
-        }}
-      />
+      <CodeRainOverlays isDark={isDark} />
 
       {/* Skip button */}
-      <Button
-        variant="ghost"
+      <button
         onClick={handleSkip}
-        className={cn(
-          'fixed top-4 right-4 z-20 font-mono text-xs',
-          isDark
-            ? 'text-white/20 hover:text-white/50 hover:bg-white/5'
-            : 'text-black/20 hover:text-black/50 hover:bg-black/5',
-        )}
+        style={{
+          position: 'fixed',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 20,
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.6875rem',
+          cursor: 'pointer',
+          border: 'none',
+          background: 'transparent',
+          color: textFaint,
+          padding: '0.375rem 0.75rem',
+          borderRadius: '0.5rem',
+          transition: 'color 0.2s, background 0.2s',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.color = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
+          e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.color = textFaint;
+          e.currentTarget.style.background = 'transparent';
+        }}
       >
         Skip &gt;&gt;
-      </Button>
+      </button>
 
-      {/* Main card */}
+      {/* Main bubble card */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className={cn(
-          'relative z-10 w-full max-w-lg rounded-2xl p-6 sm:p-8',
-          isDark
-            ? 'bg-[#0a0a0f]/80 backdrop-blur-2xl border border-white/[0.06] shadow-[0_0_80px_rgba(107,92,231,0.06),0_0_160px_rgba(193,95,60,0.04)]'
-            : 'bg-white/80 backdrop-blur-2xl border border-black/[0.06] shadow-[0_8px_60px_rgba(0,0,0,0.08)]',
-        )}
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.8 }}
+        style={{
+          ...bubbleGlass,
+          position: 'relative',
+          zIndex: 10,
+          width: '100%',
+          maxWidth: '28rem',
+          padding: '1.5rem 1.75rem',
+        }}
       >
         <AnimatePresence mode="wait">
           {/* ─── Boot ─── */}
@@ -387,7 +173,12 @@ export default function OnboardingPage() {
               key="boot"
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.25 }}
-              className="font-mono text-xs sm:text-sm leading-relaxed space-y-0.5 min-h-[280px]"
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.6875rem',
+                lineHeight: 1.8,
+                minHeight: '280px',
+              }}
             >
               {BOOT_LINES.slice(0, visibleCount).map((line, i) => (
                 <motion.div
@@ -395,18 +186,31 @@ export default function OnboardingPage() {
                   initial={{ opacity: 0, x: -4 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.1 }}
-                  className={cn(
-                    'whitespace-pre',
-                    line.type === 'title' && 'text-pfc-ember',
-                    line.type === 'module' && 'text-pfc-green/50',
-                    line.type === 'success' && 'text-pfc-green font-bold mt-2',
-                  )}
+                  style={{
+                    whiteSpace: 'pre',
+                    color: line.type === 'title'
+                      ? 'var(--color-pfc-ember)'
+                      : line.type === 'success'
+                        ? 'var(--color-pfc-green)'
+                        : undefined,
+                    fontWeight: line.type === 'success' ? 700 : undefined,
+                    marginTop: line.type === 'success' ? '0.5rem' : undefined,
+                  }}
                 >
-                  {formatLine(line.text, line.type)}
+                  {line.type === 'module' ? (
+                    <>
+                      <span style={{ color: isDark ? 'rgba(74,222,128,0.5)' : 'rgba(74,222,128,0.6)' }}>
+                        {line.text.slice(0, line.text.lastIndexOf('[OK]'))}
+                      </span>
+                      <span style={{ color: 'var(--color-pfc-green)', fontWeight: 700 }}>[OK]</span>
+                    </>
+                  ) : (
+                    line.text
+                  )}
                 </motion.div>
               ))}
               {visibleCount > 0 && visibleCount < BOOT_LINES.length && (
-                <span className="text-pfc-green animate-blink">{'\u2588'}</span>
+                <span style={{ color: 'var(--color-pfc-green)' }}>{'\u2588'}</span>
               )}
             </motion.div>
           )}
@@ -419,115 +223,143 @@ export default function OnboardingPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96 }}
               transition={{ duration: 0.35 }}
-              className="space-y-6"
+              style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
             >
               {/* Logo */}
-              <div className="text-center space-y-3">
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                 <motion.div
                   initial={{ scale: 0.85, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.08, duration: 0.35 }}
-                  className="flex justify-center"
                 >
                   <div
-                    className={cn(
-                      'h-14 w-14 rounded-2xl border flex items-center justify-center',
-                      isDark
-                        ? 'bg-gradient-to-br from-pfc-ember/20 to-pfc-violet/20 border-white/10'
-                        : 'bg-gradient-to-br from-pfc-ember/10 to-pfc-violet/10 border-black/5',
-                    )}
+                    style={{
+                      height: '3.5rem',
+                      width: '3.5rem',
+                      borderRadius: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: isDark
+                        ? 'linear-gradient(135deg, rgba(224,120,80,0.2), rgba(139,124,246,0.2))'
+                        : 'linear-gradient(135deg, rgba(224,120,80,0.1), rgba(139,124,246,0.1))',
+                      border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)',
+                    }}
                   >
-                    <span className="text-2xl font-bold bg-gradient-to-r from-pfc-ember to-pfc-violet bg-clip-text text-transparent font-mono">
+                    <span
+                      style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        fontFamily: 'var(--font-mono)',
+                        background: 'linear-gradient(135deg, var(--color-pfc-ember), var(--color-pfc-violet))',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
                       PFC
                     </span>
                   </div>
                 </motion.div>
-                <h1 className={cn('text-lg font-bold tracking-tight', isDark ? 'text-white' : 'text-foreground')}>
+                <h1 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? 'rgba(255,255,255,0.95)' : 'var(--foreground)' }}>
                   Meta-Analytical PFC Engine
                 </h1>
-                <p className={cn('text-xs', isDark ? 'text-white/35' : 'text-muted-foreground')}>
+                <p style={{ fontSize: '0.6875rem', color: textDim }}>
                   10-stage analytical pipeline for stress-testing claims
                 </p>
               </div>
 
               {/* Key input */}
-              <div className="space-y-3">
-                <div className={cn('flex items-center gap-2 text-xs', isDark ? 'text-white/45' : 'text-muted-foreground')}>
-                  <KeyIcon className="h-3.5 w-3.5" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.6875rem', color: textDim }}>
+                  <KeyIcon style={{ height: '0.875rem', width: '0.875rem' }} />
                   <span>OpenAI API Key</span>
-                  <span className={cn('ml-auto', isDark ? 'text-white/20' : 'text-muted-foreground/50')}>(optional)</span>
+                  <span style={{ marginLeft: 'auto', color: textFaint }}>(optional)</span>
                 </div>
 
-                <div className="relative">
+                <div style={{ position: 'relative' }}>
                   <Input
                     type={showKey ? 'text' : 'password'}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="sk-..."
-                    className={cn(
-                      'font-mono text-sm pr-10',
-                      isDark
-                        ? 'bg-white/[0.03] border-white/10 text-white placeholder:text-white/15 focus:border-pfc-ember/50 focus:ring-pfc-ember/20'
-                        : 'bg-black/[0.02] border-black/10 text-foreground placeholder:text-muted-foreground/30 focus:border-pfc-ember/50 focus:ring-pfc-ember/20',
-                    )}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveKey();
+                    className="font-mono text-sm pr-10"
+                    style={{
+                      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+                      color: isDark ? 'rgba(255,255,255,0.9)' : 'var(--foreground)',
+                      borderRadius: '0.625rem',
                     }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveKey(); }}
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      'absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7',
-                      isDark ? 'text-white/25 hover:text-white/50' : 'text-muted-foreground/40 hover:text-muted-foreground',
-                    )}
+                  <button
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-md cursor-pointer border-none bg-transparent"
+                    style={{ color: textDim }}
                     onClick={() => setShowKey(!showKey)}
                   >
                     {showKey ? <EyeOffIcon className="h-3.5 w-3.5" /> : <EyeIcon className="h-3.5 w-3.5" />}
-                  </Button>
+                  </button>
                 </div>
 
-                <p className={cn('text-[10px] leading-relaxed', isDark ? 'text-white/20' : 'text-muted-foreground/50')}>
+                <p style={{ fontSize: '0.5625rem', lineHeight: 1.6, color: textFaint }}>
                   Stored locally in your browser. Without a key the engine runs in simulation mode.
                 </p>
               </div>
 
-              {/* Cross-platform setup info */}
-              <div className={cn('rounded-lg border p-3 space-y-2.5', isDark ? 'border-white/[0.06] bg-white/[0.02]' : 'border-black/[0.06] bg-black/[0.01]')}>
-                <p className={cn('text-[10px] uppercase tracking-wider font-medium', isDark ? 'text-white/30' : 'text-muted-foreground/50')}>
+              {/* Platform info bubble */}
+              <div
+                style={{
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                  border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+                }}
+              >
+                <p style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, color: textFaint }}>
                   Works on all platforms
                 </p>
-                <div className="grid grid-cols-3 gap-2">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
                   {[
                     { label: 'macOS', icon: TerminalIcon, cmd: 'brew install node' },
                     { label: 'Linux', icon: TerminalIcon, cmd: 'apt install nodejs' },
                     { label: 'Windows', icon: MonitorIcon, cmd: 'winget install Node' },
                   ].map((platform) => (
-                    <div key={platform.label} className={cn('rounded-md p-2 text-center space-y-1', isDark ? 'bg-white/[0.03]' : 'bg-black/[0.02]')}>
-                      <platform.icon className={cn('h-3.5 w-3.5 mx-auto', isDark ? 'text-white/30' : 'text-muted-foreground/40')} />
-                      <p className={cn('text-[10px] font-medium', isDark ? 'text-white/50' : 'text-muted-foreground/70')}>{platform.label}</p>
-                      <p className={cn('text-[8px] font-mono', isDark ? 'text-pfc-violet/40' : 'text-pfc-violet/50')}>{platform.cmd}</p>
+                    <div
+                      key={platform.label}
+                      style={{
+                        borderRadius: '0.5rem',
+                        padding: '0.5rem',
+                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      }}
+                    >
+                      <platform.icon style={{ height: '0.875rem', width: '0.875rem', color: textDim }} />
+                      <p style={{ fontSize: '0.5625rem', fontWeight: 500, color: textDim }}>{platform.label}</p>
+                      <p style={{ fontSize: '0.4375rem', fontFamily: 'var(--font-mono)', color: isDark ? 'rgba(139,124,246,0.4)' : 'rgba(139,124,246,0.5)' }}>{platform.cmd}</p>
                     </div>
                   ))}
                 </div>
-                <p className={cn('text-[9px] leading-relaxed', isDark ? 'text-white/15' : 'text-muted-foreground/40')}>
-                  Requires Node.js 18+. Run <span className="font-mono">npm run dev</span> to start. Tested on macOS, Ubuntu/Debian, and Windows 10/11.
+                <p style={{ fontSize: '0.5rem', lineHeight: 1.6, color: textFaint }}>
+                  Requires Node.js 18+. Run <span style={{ fontFamily: 'var(--font-mono)' }}>npm run dev</span> to start.
                 </p>
               </div>
 
               {/* Action */}
-              <Button
+              <GlassBubbleButton
                 onClick={handleSaveKey}
-                className={cn(
-                  'w-full gap-2 font-mono text-sm',
-                  'bg-gradient-to-r from-pfc-ember to-pfc-ember/80 hover:from-pfc-ember/90 hover:to-pfc-ember/70',
-                  'text-white border-0',
-                  'shadow-[0_0_24px_rgba(193,95,60,0.15)]',
-                )}
+                color="ember"
+                size="lg"
+                fullWidth
               >
                 {apiKey.trim() ? 'Save & Launch' : 'Continue in Simulation Mode'}
-                <ArrowRightIcon className="h-4 w-4" />
-              </Button>
+                <ArrowRightIcon style={{ height: '1rem', width: '1rem' }} />
+              </GlassBubbleButton>
             </motion.div>
           )}
 
@@ -538,15 +370,28 @@ export default function OnboardingPage() {
               initial={{ opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.35 }}
-              className="flex flex-col items-center justify-center py-16 space-y-4"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4rem 0',
+                gap: '1rem',
+              }}
             >
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
-                className="h-10 w-10 rounded-full border-2 border-pfc-ember/30 border-t-pfc-ember"
+                style={{
+                  height: '2.5rem',
+                  width: '2.5rem',
+                  borderRadius: '50%',
+                  border: '2px solid rgba(224,120,80,0.3)',
+                  borderTopColor: 'var(--color-pfc-ember)',
+                }}
               />
-              <div className={cn('flex items-center gap-2 text-sm font-mono', isDark ? 'text-white/50' : 'text-muted-foreground')}>
-                <CheckCircle2Icon className="h-4 w-4 text-pfc-green" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', fontFamily: 'var(--font-mono)', color: textDim }}>
+                <CheckCircle2Icon style={{ height: '1rem', width: '1rem', color: 'var(--color-pfc-green)' }} />
                 Launching PFC Engine...
               </div>
             </motion.div>

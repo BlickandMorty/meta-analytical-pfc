@@ -104,37 +104,6 @@ export interface TruthAssessment {
   recommendedActions: string[];
 }
 
-// --- Train Me ---
-
-export interface ExperimentSuggestion {
-  name: string;
-  description: string;
-  methodology: string;
-  expectedOutcome: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  estimatedTime: string;
-  requiredTools: string[];
-}
-
-export interface TrainingInsight {
-  id: string;
-  category: 'architecture' | 'data' | 'optimization' | 'evaluation' | 'alignment';
-  title: string;
-  observation: string;
-  hypothesis: string;
-  experiment: ExperimentSuggestion;
-  priority: 'high' | 'medium' | 'low';
-  relatedSignals: string[];
-}
-
-export interface TrainMeReport {
-  insights: TrainingInsight[];
-  systemSelfAssessment: string;
-  prioritizedImprovements: string[];
-  researcherNotes: string;
-  timestamp: number;
-}
-
 // --- TDA Snapshot ---
 
 export interface TDASnapshot {

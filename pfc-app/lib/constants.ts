@@ -51,27 +51,4 @@ export const STAGE_DESCRIPTIONS: Record<PipelineStage, string> = {
   calibration: 'Calibrating final confidence intervals',
 };
 
-export const EXAMPLE_QUERIES = [
-  {
-    title: 'Analyze a claim',
-    query: 'Is intermittent fasting effective for weight loss?',
-    icon: '🔬',
-  },
-  {
-    title: 'Evaluate evidence',
-    query: 'What does the research say about screen time effects on children?',
-    icon: '📊',
-  },
-  {
-    title: 'Compare approaches',
-    query: 'CBT vs medication for treating anxiety disorders',
-    icon: '⚖️',
-  },
-  {
-    title: 'Investigate a topic',
-    query: 'How reliable are polygraph tests as evidence?',
-    icon: '🕵️',
-  },
-];
-
 export type SafetyState = 'green' | 'yellow' | 'orange' | 'red';

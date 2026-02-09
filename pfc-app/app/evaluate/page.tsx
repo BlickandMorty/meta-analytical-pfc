@@ -1,11 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeftIcon,
-  BrainCircuitIcon,
   FlaskConicalIcon,
   SendIcon,
   ChevronDownIcon,
@@ -14,23 +11,19 @@ import {
   CheckCircle2Icon,
   TrendingUpIcon,
   ShieldCheckIcon,
-  CodeIcon,
   SparklesIcon,
-  TargetIcon,
   ZapIcon,
   BookOpenIcon,
-  LayersIcon,
   GaugeIcon,
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { PageShell, GlassSection } from '@/components/page-shell';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
+import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import type {
   MLProjectEvaluation,
   MLProjectInput,
@@ -246,278 +239,245 @@ export default function EvaluatePage() {
 
   if (!ready) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
         <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full px-3 py-1 -ml-3 hover:bg-muted"
-          >
-            <ArrowLeftIcon className="h-3.5 w-3.5" />
-            <span className="text-xs">Back</span>
-          </Link>
+    <PageShell
+      icon={FlaskConicalIcon}
+      iconColor="var(--color-pfc-ember)"
+      title="ML Evaluator"
+      subtitle="Proprietary intelligence assessment for ML projects"
+    >
+      {/* ── Input Form ── */}
+      <GlassSection title="Project Intake" className="">
+        <p className="text-[11px] text-muted-foreground/60 mb-5">
+          Describe your ML project and we&apos;ll run a comprehensive 12-dimension evaluation
+          using proprietary assessment techniques inspired by SHAP/LIME feature attribution,
+          Process Reward Models, and enterprise MLOps benchmarks.
+        </p>
 
-          <div className="flex items-center gap-2 ml-1">
-            <FlaskConicalIcon className="h-5 w-5 text-pfc-ember" />
+        <div className="space-y-5">
+          {/* Name & description */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <h1 className="text-lg font-semibold tracking-tight">ML Evaluator</h1>
-              <p className="text-[10px] text-muted-foreground/60 hidden sm:block">
-                Proprietary intelligence assessment for ML projects
-              </p>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Project Name *
+              </label>
+              <input
+                type="text"
+                value={input.name}
+                onChange={(e) => setInput(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g. Customer Churn Predictor"
+                className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Model Architecture
+              </label>
+              <input
+                type="text"
+                value={input.modelArchitecture}
+                onChange={(e) => setInput(prev => ({ ...prev, modelArchitecture: e.target.value }))}
+                placeholder="e.g. XGBoost, ResNet-50, LSTM"
+                className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+              />
             </div>
           </div>
 
-          <div className="ml-auto">
-            <ThemeToggle />
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Project Description *
+            </label>
+            <textarea
+              value={input.description}
+              onChange={(e) => setInput(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Describe what your ML project does, the problem it solves, data sources, preprocessing steps, training approach, evaluation methodology, and any specific techniques used. Be as detailed as possible for the best assessment."
+              rows={4}
+              className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30 resize-none"
+            />
           </div>
-        </div>
-      </header>
 
-      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
-        {/* Input Form */}
-        <section>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <BrainCircuitIcon className="h-4 w-4 text-pfc-ember" />
-                Project Intake
-              </CardTitle>
-              <CardDescription className="text-[11px]">
-                Describe your ML project and we&apos;ll run a comprehensive 12-dimension evaluation
-                using proprietary assessment techniques inspired by SHAP/LIME feature attribution,
-                Process Reward Models, and enterprise MLOps benchmarks.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {/* Name & description */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    Project Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={input.name}
-                    onChange={(e) => setInput(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g. Customer Churn Predictor"
-                    className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    Model Architecture
-                  </label>
-                  <input
-                    type="text"
-                    value={input.modelArchitecture}
-                    onChange={(e) => setInput(prev => ({ ...prev, modelArchitecture: e.target.value }))}
-                    placeholder="e.g. XGBoost, ResNet-50, LSTM"
-                    className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
-                  />
-                </div>
-              </div>
+          {/* Project type */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-2 block">
+              Project Type
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {PROJECT_TYPES.map((pt) => (
+                <GlassBubbleButton
+                  key={pt.value}
+                  onClick={() => setInput(prev => ({ ...prev, projectType: pt.value }))}
+                  active={input.projectType === pt.value}
+                  color="ember"
+                  size="sm"
+                >
+                  <span>{pt.icon}</span>
+                  {pt.label}
+                </GlassBubbleButton>
+              ))}
+            </div>
+          </div>
 
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  Project Description *
-                </label>
-                <textarea
-                  value={input.description}
-                  onChange={(e) => setInput(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe what your ML project does, the problem it solves, data sources, preprocessing steps, training approach, evaluation methodology, and any specific techniques used. Be as detailed as possible for the best assessment."
-                  rows={4}
-                  className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30 resize-none"
+          {/* Tech stack */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Tech Stack
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={techStackInput}
+                  onChange={(e) => setTechStackInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addTechStack()}
+                  placeholder="e.g. pytorch, scikit-learn"
+                  className="flex-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
                 />
+                <GlassBubbleButton onClick={addTechStack} color="violet" size="sm">Add</GlassBubbleButton>
               </div>
-
-              {/* Project type */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">
-                  Project Type
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {PROJECT_TYPES.map((pt) => (
-                    <button
-                      key={pt.value}
-                      onClick={() => setInput(prev => ({ ...prev, projectType: pt.value }))}
-                      className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] border transition-all duration-200 cursor-pointer',
-                        input.projectType === pt.value
-                          ? 'border-pfc-ember/50 bg-pfc-ember/10 text-pfc-ember font-medium'
-                          : 'border-border/30 text-muted-foreground hover:border-border/60 hover:bg-muted/30',
-                      )}
+              {(input.techStack ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {(input.techStack ?? []).map((t, i) => (
+                    <Badge
+                      key={i}
+                      variant="secondary"
+                      className="text-[10px] cursor-pointer hover:bg-pfc-red/10"
+                      onClick={() => setInput(prev => ({
+                        ...prev,
+                        techStack: (prev.techStack ?? []).filter((_, idx) => idx !== i),
+                      }))}
                     >
-                      <span>{pt.icon}</span>
-                      {pt.label}
-                    </button>
+                      {t} ✕
+                    </Badge>
                   ))}
                 </div>
-              </div>
-
-              {/* Tech stack */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    Tech Stack
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={techStackInput}
-                      onChange={(e) => setTechStackInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addTechStack()}
-                      placeholder="e.g. pytorch, scikit-learn"
-                      className="flex-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
-                    />
-                    <Button variant="outline" size="sm" onClick={addTechStack}>Add</Button>
-                  </div>
-                  {(input.techStack ?? []).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {(input.techStack ?? []).map((t, i) => (
-                        <Badge
-                          key={i}
-                          variant="secondary"
-                          className="text-[10px] cursor-pointer hover:bg-pfc-red/10"
-                          onClick={() => setInput(prev => ({
-                            ...prev,
-                            techStack: (prev.techStack ?? []).filter((_, idx) => idx !== i),
-                          }))}
-                        >
-                          {t} ✕
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    Dataset Size
-                  </label>
-                  <input
-                    type="text"
-                    value={input.datasetSize}
-                    onChange={(e) => setInput(prev => ({ ...prev, datasetSize: e.target.value }))}
-                    placeholder="e.g. 100k rows, 50k images"
-                    className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
-                  />
-                </div>
-              </div>
-
-              {/* Performance metrics */}
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                  Performance Metrics
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={metricKey}
-                    onChange={(e) => setMetricKey(e.target.value)}
-                    placeholder="Metric name (e.g. accuracy)"
-                    className="flex-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
-                  />
-                  <input
-                    type="text"
-                    value={metricValue}
-                    onChange={(e) => setMetricValue(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addMetric()}
-                    placeholder="Value (e.g. 0.92)"
-                    className="w-28 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
-                  />
-                  <Button variant="outline" size="sm" onClick={addMetric}>Add</Button>
-                </div>
-                {Object.keys(input.performanceMetrics ?? {}).length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {Object.entries(input.performanceMetrics ?? {}).map(([k, v]) => (
-                      <Badge
-                        key={k}
-                        variant="secondary"
-                        className="text-[10px] cursor-pointer hover:bg-pfc-red/10"
-                        onClick={() => {
-                          const next = { ...(input.performanceMetrics ?? {}) };
-                          delete next[k];
-                          setInput(prev => ({ ...prev, performanceMetrics: next }));
-                        }}
-                      >
-                        {k}: {v} ✕
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Checkboxes */}
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={input.hasTests}
-                    onChange={(e) => setInput(prev => ({ ...prev, hasTests: e.target.checked }))}
-                    className="rounded border-border"
-                  />
-                  <span className="text-xs text-muted-foreground">Has test suite</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={input.hasDocumentation}
-                    onChange={(e) => setInput(prev => ({ ...prev, hasDocumentation: e.target.checked }))}
-                    className="rounded border-border"
-                  />
-                  <span className="text-xs text-muted-foreground">Has documentation</span>
-                </label>
-              </div>
-
-              {/* Submit */}
-              {error && (
-                <p className="text-xs text-pfc-red">{error}</p>
               )}
-              <Button
-                onClick={handleEvaluate}
-                disabled={loading}
-                className="gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <SendIcon className="h-4 w-4" />
-                    Run Evaluation
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Dataset Size
+              </label>
+              <input
+                type="text"
+                value={input.datasetSize}
+                onChange={(e) => setInput(prev => ({ ...prev, datasetSize: e.target.value }))}
+                placeholder="e.g. 100k rows, 50k images"
+                className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+              />
+            </div>
+          </div>
 
-        {/* Results */}
-        <AnimatePresence>
-          {evaluation && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4 }}
-              className="space-y-8"
-            >
-              <Separator />
+          {/* Performance metrics */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Performance Metrics
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={metricKey}
+                onChange={(e) => setMetricKey(e.target.value)}
+                placeholder="Metric name (e.g. accuracy)"
+                className="flex-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+              />
+              <input
+                type="text"
+                value={metricValue}
+                onChange={(e) => setMetricValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addMetric()}
+                placeholder="Value (e.g. 0.92)"
+                className="w-28 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+              />
+              <GlassBubbleButton onClick={addMetric} color="violet" size="sm">Add</GlassBubbleButton>
+            </div>
+            {Object.keys(input.performanceMetrics ?? {}).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {Object.entries(input.performanceMetrics ?? {}).map(([k, v]) => (
+                  <Badge
+                    key={k}
+                    variant="secondary"
+                    className="text-[10px] cursor-pointer hover:bg-pfc-red/10"
+                    onClick={() => {
+                      const next = { ...(input.performanceMetrics ?? {}) };
+                      delete next[k];
+                      setInput(prev => ({ ...prev, performanceMetrics: next }));
+                    }}
+                  >
+                    {k}: {v} ✕
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
 
-              {/* Hero scores */}
-              <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <Card className="relative overflow-hidden">
+          {/* Checkboxes */}
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={input.hasTests}
+                onChange={(e) => setInput(prev => ({ ...prev, hasTests: e.target.checked }))}
+                className="rounded border-border"
+              />
+              <span className="text-xs text-muted-foreground">Has test suite</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={input.hasDocumentation}
+                onChange={(e) => setInput(prev => ({ ...prev, hasDocumentation: e.target.checked }))}
+                className="rounded border-border"
+              />
+              <span className="text-xs text-muted-foreground">Has documentation</span>
+            </label>
+          </div>
+
+          {/* Submit */}
+          {error && (
+            <p className="text-xs text-pfc-red">{error}</p>
+          )}
+          <GlassBubbleButton
+            onClick={handleEvaluate}
+            disabled={loading}
+            color="ember"
+            size="lg"
+          >
+            {loading ? (
+              <>
+                <div style={{ height: 16, width: 16, borderRadius: '50%', border: '2px solid rgba(224,120,80,0.3)', borderTopColor: '#E07850', animation: 'spin 1s linear infinite' }} />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <SendIcon style={{ height: 16, width: 16 }} />
+                Run Evaluation
+              </>
+            )}
+          </GlassBubbleButton>
+        </div>
+      </GlassSection>
+
+      {/* ── Results ── */}
+      <AnimatePresence>
+        {evaluation && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-6 mt-6"
+          >
+            {/* ── Hero scores ── */}
+            <GlassSection title="Score Overview">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="rounded-2xl glass-bubble-pill p-5 text-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-pfc-ember/5 to-transparent" />
-                  <CardContent className="pt-5 pb-4 text-center relative">
+                  <div className="relative">
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Overall Score</p>
                     <p className={cn('text-4xl font-black tabular-nums', scoreColor(evaluation.overallScore / 100))}>
                       {evaluation.overallScore}
@@ -525,23 +485,23 @@ export default function EvaluatePage() {
                     <Badge className={cn('mt-1.5 text-[10px] font-bold', gradeColor(evaluation.overallGrade))}>
                       Grade {evaluation.overallGrade}
                     </Badge>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card className="relative overflow-hidden">
+                <div className="rounded-2xl glass-bubble-pill p-5 text-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-pfc-violet/5 to-transparent" />
-                  <CardContent className="pt-5 pb-4 text-center relative">
+                  <div className="relative">
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Project IQ</p>
                     <p className="text-4xl font-black tabular-nums text-pfc-violet">
                       {evaluation.intelligenceQuotient}
                     </p>
                     <p className="text-[10px] text-muted-foreground/50 mt-1.5">of 150</p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card className="relative overflow-hidden">
+                <div className="rounded-2xl glass-bubble-pill p-5 text-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-pfc-cyan/5 to-transparent" />
-                  <CardContent className="pt-5 pb-4 text-center relative">
+                  <div className="relative">
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Maturity</p>
                     <p className="text-lg font-bold capitalize text-pfc-cyan mt-2">
                       {evaluation.maturityLevel}
@@ -549,12 +509,12 @@ export default function EvaluatePage() {
                     <Badge variant="outline" className="mt-1.5 text-[10px]">
                       P{evaluation.industryPercentile} Percentile
                     </Badge>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card className="relative overflow-hidden">
+                <div className="rounded-2xl glass-bubble-pill p-5 text-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-pfc-green/5 to-transparent" />
-                  <CardContent className="pt-5 pb-4 text-center relative">
+                  <div className="relative">
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Deploy Ready</p>
                     <p className={cn('text-4xl font-black tabular-nums', scoreColor(evaluation.readinessScore))}>
                       {Math.round(evaluation.readinessScore * 100)}%
@@ -562,35 +522,30 @@ export default function EvaluatePage() {
                     <p className="text-[10px] text-muted-foreground/50 mt-1.5">
                       Tech debt: {Math.round(evaluation.technicalDebt * 100)}%
                     </p>
-                  </CardContent>
-                </Card>
-              </section>
-
-              {/* Dimension scores grid */}
-              <section>
-                <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  <LayersIcon className="h-4 w-4" />
-                  12-Dimension Assessment
-                </h2>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {evaluation.dimensions.map((dim) => (
-                    <DimensionCard key={dim.dimension} dim={dim} />
-                  ))}
+                  </div>
                 </div>
-              </section>
+              </div>
+            </GlassSection>
 
-              <Separator />
+            {/* ── Dimension scores grid ── */}
+            <GlassSection title="12-Dimension Assessment">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {evaluation.dimensions.map((dim) => (
+                  <DimensionCard key={dim.dimension} dim={dim} />
+                ))}
+              </div>
+            </GlassSection>
 
-              {/* Robustness & Calibration */}
-              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <ShieldCheckIcon className="h-4 w-4 text-pfc-ember" />
-                      Robustness Profile
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+            {/* ── Robustness & Calibration ── */}
+            <GlassSection title="Robustness & Calibration">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {/* Robustness Profile */}
+                <div className="rounded-xl border border-border/30 p-4">
+                  <h4 className="text-sm flex items-center gap-2 mb-3 font-semibold">
+                    <ShieldCheckIcon className="h-4 w-4 text-pfc-ember" />
+                    Robustness Profile
+                  </h4>
+                  <div className="space-y-3">
                     {[
                       { label: 'Perturbation Sensitivity', value: 1 - evaluation.robustness.perturbationSensitivity, inverted: true },
                       { label: 'Distribution Shift Resilience', value: evaluation.robustness.distributionShiftResilience },
@@ -615,17 +570,16 @@ export default function EvaluatePage() {
                         <Badge className="text-[10px] bg-pfc-red/10 text-pfc-red border-pfc-red/30">No</Badge>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <GaugeIcon className="h-4 w-4 text-pfc-violet" />
-                      Calibration Profile
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
+                {/* Calibration Profile */}
+                <div className="rounded-xl border border-border/30 p-4">
+                  <h4 className="text-sm flex items-center gap-2 mb-3 font-semibold">
+                    <GaugeIcon className="h-4 w-4 text-pfc-violet" />
+                    Calibration Profile
+                  </h4>
+                  <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-[10px] text-muted-foreground/60 mb-0.5">ECE</p>
@@ -640,7 +594,7 @@ export default function EvaluatePage() {
                         </p>
                       </div>
                     </div>
-                    <Separator />
+                    <div className="border-t border-border/30" />
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-[10px] text-muted-foreground/60 mb-0.5">Overconfidence</p>
@@ -661,190 +615,150 @@ export default function EvaluatePage() {
                         {evaluation.calibration.reliabilityDiagramShape.replace(/-/g, ' ')}
                       </Badge>
                     </div>
-                  </CardContent>
-                </Card>
-              </section>
-
-              <Separator />
-
-              {/* Pattern Analysis */}
-              <section>
-                <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  <CodeIcon className="h-4 w-4" />
-                  Pattern Analysis
-                </h2>
-
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                  {/* Anti-patterns */}
-                  <Card className={cn(evaluation.patternAnalysis.antiPatterns.length > 0 && 'border-pfc-red/20')}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs flex items-center gap-2">
-                        <AlertTriangleIcon className="h-3.5 w-3.5 text-pfc-red" />
-                        Anti-Patterns Detected
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {evaluation.patternAnalysis.antiPatterns.length === 0 ? (
-                        <p className="text-[11px] text-pfc-green flex items-center gap-1.5">
-                          <CheckCircle2Icon className="h-3 w-3" /> No anti-patterns detected
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {evaluation.patternAnalysis.antiPatterns.map((ap, i) => (
-                            <div key={i} className="rounded-md bg-pfc-red/5 border border-pfc-red/15 px-2.5 py-2">
-                              <p className="text-[11px] font-medium text-pfc-red">{ap.name}</p>
-                              <p className="text-[10px] text-muted-foreground mt-0.5">{ap.impact}</p>
-                              <p className="text-[10px] text-pfc-ember mt-1">Fix: {ap.fix}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {/* Best practices */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs flex items-center gap-2">
-                        <CheckCircle2Icon className="h-3.5 w-3.5 text-pfc-green" />
-                        Best Practices
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1.5">
-                        {evaluation.patternAnalysis.bestPractices.map((bp, i) => (
-                          <div key={i} className="flex items-center gap-2 text-[11px]">
-                            {bp.implemented ? (
-                              <CheckCircle2Icon className="h-3 w-3 text-pfc-green shrink-0" />
-                            ) : (
-                              <div className="h-3 w-3 rounded-full border border-muted-foreground/30 shrink-0" />
-                            )}
-                            <span className={bp.implemented ? 'text-foreground/80' : 'text-muted-foreground/60'}>
-                              {bp.name}
-                            </span>
-                            {bp.importance === 'essential' && !bp.implemented && (
-                              <Badge className="text-[8px] bg-pfc-red/10 text-pfc-red border-pfc-red/20 px-1 py-0">!</Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Innovation */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs flex items-center gap-2">
-                        <SparklesIcon className="h-3.5 w-3.5 text-pfc-violet" />
-                        Innovation & Complexity
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {evaluation.patternAnalysis.innovativeApproaches.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {evaluation.patternAnalysis.innovativeApproaches.map((ia, i) => (
-                            <Badge key={i} variant="secondary" className="text-[10px] bg-pfc-violet/10 text-pfc-violet border-pfc-violet/20">
-                              {ia}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-muted-foreground/50">No innovative approaches detected</p>
-                      )}
-                      <Separator />
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-[10px] text-muted-foreground/60">Complexity</p>
-                          <Progress value={evaluation.patternAnalysis.complexityScore * 100} className="h-1.5 mt-1" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-muted-foreground/60">Modularity</p>
-                          <Progress value={evaluation.patternAnalysis.modularityScore * 100} className="h-1.5 mt-1" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  </div>
                 </div>
-              </section>
+              </div>
+            </GlassSection>
 
-              <Separator />
-
-              {/* Improvement Roadmap */}
-              <section>
-                <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  <TargetIcon className="h-4 w-4" />
-                  Improvement Roadmap
-                </h2>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  {evaluation.criticalIssues.length > 0 && (
-                    <Card className="border-pfc-red/20">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-xs text-pfc-red flex items-center gap-1.5">
-                          <ZapIcon className="h-3.5 w-3.5" /> Critical Issues
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {evaluation.criticalIssues.map((issue, i) => (
-                          <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{issue}</p>
-                        ))}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  <Card className="border-pfc-ember/20">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs text-pfc-ember flex items-center gap-1.5">
-                        <TrendingUpIcon className="h-3.5 w-3.5" /> Quick Wins
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {evaluation.quickWins.length > 0 ? (
-                        evaluation.quickWins.map((qw, i) => (
-                          <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{qw}</p>
-                        ))
-                      ) : (
-                        <p className="text-[11px] text-pfc-green">No urgent quick wins — solid foundation</p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs text-pfc-violet flex items-center gap-1.5">
-                        <BookOpenIcon className="h-3.5 w-3.5" /> Long-Term
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {evaluation.longTermRecommendations.length > 0 ? (
-                        evaluation.longTermRecommendations.map((rec, i) => (
-                          <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{rec}</p>
-                        ))
-                      ) : (
-                        <p className="text-[11px] text-pfc-green">Excellent long-term positioning</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </section>
-
-              {/* Comparable projects */}
-              <section className="pb-8">
-                <Card className="bg-muted/20">
-                  <CardContent className="py-4">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2">Comparable Benchmarks</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {evaluation.comparableProjects.map((cp, i) => (
-                        <Badge key={i} variant="outline" className="text-[10px]">{cp}</Badge>
+            {/* ── Pattern Analysis ── */}
+            <GlassSection title="Pattern Analysis">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                {/* Anti-patterns */}
+                <div className={cn('rounded-xl border border-border/30 p-4', evaluation.patternAnalysis.antiPatterns.length > 0 && 'border-pfc-red/20')}>
+                  <h4 className="text-xs flex items-center gap-2 mb-3 font-semibold">
+                    <AlertTriangleIcon className="h-3.5 w-3.5 text-pfc-red" />
+                    Anti-Patterns Detected
+                  </h4>
+                  {evaluation.patternAnalysis.antiPatterns.length === 0 ? (
+                    <p className="text-[11px] text-pfc-green flex items-center gap-1.5">
+                      <CheckCircle2Icon className="h-3 w-3" /> No anti-patterns detected
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {evaluation.patternAnalysis.antiPatterns.map((ap, i) => (
+                        <div key={i} className="rounded-md bg-pfc-red/5 border border-pfc-red/15 px-2.5 py-2">
+                          <p className="text-[11px] font-medium text-pfc-red">{ap.name}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{ap.impact}</p>
+                          <p className="text-[10px] text-pfc-ember mt-1">Fix: {ap.fix}</p>
+                        </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              </section>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-    </div>
+                  )}
+                </div>
+
+                {/* Best practices */}
+                <div className="rounded-xl border border-border/30 p-4">
+                  <h4 className="text-xs flex items-center gap-2 mb-3 font-semibold">
+                    <CheckCircle2Icon className="h-3.5 w-3.5 text-pfc-green" />
+                    Best Practices
+                  </h4>
+                  <div className="space-y-1.5">
+                    {evaluation.patternAnalysis.bestPractices.map((bp, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[11px]">
+                        {bp.implemented ? (
+                          <CheckCircle2Icon className="h-3 w-3 text-pfc-green shrink-0" />
+                        ) : (
+                          <div className="h-3 w-3 rounded-full border border-muted-foreground/30 shrink-0" />
+                        )}
+                        <span className={bp.implemented ? 'text-foreground/80' : 'text-muted-foreground/60'}>
+                          {bp.name}
+                        </span>
+                        {bp.importance === 'essential' && !bp.implemented && (
+                          <Badge className="text-[8px] bg-pfc-red/10 text-pfc-red border-pfc-red/20 px-1 py-0">!</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Innovation */}
+                <div className="rounded-xl border border-border/30 p-4">
+                  <h4 className="text-xs flex items-center gap-2 mb-3 font-semibold">
+                    <SparklesIcon className="h-3.5 w-3.5 text-pfc-violet" />
+                    Innovation & Complexity
+                  </h4>
+                  <div className="space-y-3">
+                    {evaluation.patternAnalysis.innovativeApproaches.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {evaluation.patternAnalysis.innovativeApproaches.map((ia, i) => (
+                          <Badge key={i} variant="secondary" className="text-[10px] bg-pfc-violet/10 text-pfc-violet border-pfc-violet/20">
+                            {ia}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground/50">No innovative approaches detected</p>
+                    )}
+                    <div className="border-t border-border/30" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground/60">Complexity</p>
+                        <Progress value={evaluation.patternAnalysis.complexityScore * 100} className="h-1.5 mt-1" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground/60">Modularity</p>
+                        <Progress value={evaluation.patternAnalysis.modularityScore * 100} className="h-1.5 mt-1" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </GlassSection>
+
+            {/* ── Improvement Roadmap ── */}
+            <GlassSection title="Improvement Roadmap">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {evaluation.criticalIssues.length > 0 && (
+                  <div className="rounded-xl border border-pfc-red/20 p-4">
+                    <h4 className="text-xs text-pfc-red flex items-center gap-1.5 mb-3 font-semibold">
+                      <ZapIcon className="h-3.5 w-3.5" /> Critical Issues
+                    </h4>
+                    {evaluation.criticalIssues.map((issue, i) => (
+                      <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{issue}</p>
+                    ))}
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-pfc-ember/20 p-4">
+                  <h4 className="text-xs text-pfc-ember flex items-center gap-1.5 mb-3 font-semibold">
+                    <TrendingUpIcon className="h-3.5 w-3.5" /> Quick Wins
+                  </h4>
+                  {evaluation.quickWins.length > 0 ? (
+                    evaluation.quickWins.map((qw, i) => (
+                      <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{qw}</p>
+                    ))
+                  ) : (
+                    <p className="text-[11px] text-pfc-green">No urgent quick wins — solid foundation</p>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-border/30 p-4">
+                  <h4 className="text-xs text-pfc-violet flex items-center gap-1.5 mb-3 font-semibold">
+                    <BookOpenIcon className="h-3.5 w-3.5" /> Long-Term
+                  </h4>
+                  {evaluation.longTermRecommendations.length > 0 ? (
+                    evaluation.longTermRecommendations.map((rec, i) => (
+                      <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{rec}</p>
+                    ))
+                  ) : (
+                    <p className="text-[11px] text-pfc-green">Excellent long-term positioning</p>
+                  )}
+                </div>
+              </div>
+            </GlassSection>
+
+            {/* ── Comparable projects ── */}
+            <GlassSection className="pb-8">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2">Comparable Benchmarks</p>
+              <div className="flex flex-wrap gap-1.5">
+                {evaluation.comparableProjects.map((cp, i) => (
+                  <Badge key={i} variant="outline" className="text-[10px]">{cp}</Badge>
+                ))}
+              </div>
+            </GlassSection>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </PageShell>
   );
 }

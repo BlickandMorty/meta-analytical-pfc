@@ -8,7 +8,6 @@ import type {
   SynthesisReport,
   FileAttachment,
   TruthAssessment,
-  TrainMeReport,
   StageResult,
   StageStatus,
   TDASnapshot,
@@ -182,9 +181,6 @@ export interface PFCState {
   showTruthBot: boolean;
   latestTruthAssessment: TruthAssessment | null;
 
-  // train me
-  trainMeReport: TrainMeReport | null;
-
   // inference
   inferenceMode: InferenceMode;
   apiProvider: ApiProvider;
@@ -241,8 +237,6 @@ export interface PFCState {
   clearAttachments: () => void;
   toggleTruthBot: () => void;
   setTruthAssessment: (assessment: TruthAssessment) => void;
-  setTrainMeReport: (report: TrainMeReport) => void;
-
   // Streaming actions
   appendStreamingText: (text: string) => void;
   startStreaming: () => void;
@@ -290,6 +284,7 @@ export interface PFCState {
   toggleConceptHierarchy: () => void;
   getEffectiveConceptWeights: () => Record<string, number>;
 
+  clearMessages: () => void;
   reset: () => void;
 }
 
@@ -332,14 +327,12 @@ const initialState = {
   showSynthesis: false,
   arcadeMode: false,
 
-  sidebarOpen: true,
+  sidebarOpen: false,
 
   pendingAttachments: [] as FileAttachment[],
 
   showTruthBot: true,
   latestTruthAssessment: null,
-
-  trainMeReport: null,
 
   inferenceMode: 'simulation' as InferenceMode,
   apiProvider: 'openai' as ApiProvider,
@@ -531,9 +524,6 @@ export const usePFCStore = create<PFCState>((set, get) => ({
 
   setTruthAssessment: (assessment) =>
     set({ latestTruthAssessment: assessment }),
-
-  setTrainMeReport: (report) =>
-    set({ trainMeReport: report }),
 
   // Streaming actions
   appendStreamingText: (text) =>
@@ -760,6 +750,8 @@ export const usePFCStore = create<PFCState>((set, get) => ({
     }
     return result;
   },
+
+  clearMessages: () => set(() => ({ messages: [], currentChatId: null, isProcessing: false, isStreaming: false, streamingText: '', pipelineStages: freshPipeline(), activeStage: null })),
 
   reset: () => set((s) => ({ ...initialState, pipelineStages: freshPipeline(), signalHistory: [], cortexArchive: s.cortexArchive, conceptWeights: {}, queryConceptHistory: [], userSignalOverrides: { confidence: null, entropy: null, dissonance: null, healthScore: null } })),
 }));

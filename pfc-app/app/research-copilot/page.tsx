@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeftIcon,
   FlaskConicalIcon,
   BrainCircuitIcon,
   BookOpenIcon,
@@ -23,7 +21,6 @@ import {
   ZapIcon,
   NetworkIcon,
   FilterIcon,
-  SparklesIcon,
 } from 'lucide-react';
 import { usePFCStore, type ConceptWeight } from '@/lib/store/use-pfc-store';
 import { cn } from '@/lib/utils';
@@ -32,14 +29,12 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  CardDescription,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
+import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { PageShell, GlassSection } from '@/components/page-shell';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -402,7 +397,7 @@ function TechniqueCard({
                   <ul className="space-y-0.5">
                     {technique.limitations.map((l, i) => (
                       <li key={i} className="text-[10px] text-foreground/60 flex items-start gap-1">
-                        <span className="text-pfc-red mt-0.5">−</span> {l}
+                        <span className="text-pfc-red mt-0.5">-</span> {l}
                       </li>
                     ))}
                   </ul>
@@ -460,11 +455,11 @@ function ToolCard({ tool }: { tool: ScaffoldingTool }) {
           <div className="flex-1 min-w-0">
             <h4 className="text-sm font-medium">{tool.name}</h4>
             <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{tool.description}</p>
-            <Button
-              variant="outline"
+            <GlassBubbleButton
+              color="ember"
               size="sm"
-              className="mt-2 h-7 text-[10px] gap-1.5"
               onClick={handleAction}
+              className="mt-2"
             >
               {copied ? (
                 <>
@@ -477,7 +472,7 @@ function ToolCard({ tool }: { tool: ScaffoldingTool }) {
                   {tool.actionLabel}
                 </>
               )}
-            </Button>
+            </GlassBubbleButton>
           </div>
         </div>
       </CardContent>
@@ -514,9 +509,9 @@ function generateToolOutput(
       return `BIAS DETECTION REPORT\n` +
         `Confidence: ${(ctx.confidence * 100).toFixed(0)}% | Entropy: ${(ctx.entropy * 100).toFixed(0)}%\n\n` +
         `Detected patterns:\n` +
-        `${ctx.confidence > 0.7 ? '⚠ Overconfidence risk — high confidence with limited evidence base' : '✓ Confidence appears calibrated'}\n` +
-        `${ctx.entropy < 0.2 ? '⚠ Low entropy may indicate premature convergence' : '✓ Entropy suggests adequate exploration'}\n` +
-        `${ctx.concepts.length < 3 ? '⚠ Narrow concept base — consider expanding analytical scope' : '✓ Concept diversity is adequate'}`;
+        `${ctx.confidence > 0.7 ? 'Warning: Overconfidence risk — high confidence with limited evidence base' : 'OK: Confidence appears calibrated'}\n` +
+        `${ctx.entropy < 0.2 ? 'Warning: Low entropy may indicate premature convergence' : 'OK: Entropy suggests adequate exploration'}\n` +
+        `${ctx.concepts.length < 3 ? 'Warning: Narrow concept base — consider expanding analytical scope' : 'OK: Concept diversity is adequate'}`;
 
     case 'concept-mapper':
       return `CONCEPT HIERARCHY EXPORT\n` +
@@ -580,65 +575,37 @@ export default function ResearchCopilotPage() {
 
   if (!ready) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
         <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full px-3 py-1 -ml-3 hover:bg-muted"
-          >
-            <ArrowLeftIcon className="h-3.5 w-3.5" />
-            <span className="text-xs">Back</span>
-          </Link>
-          <div className="flex items-center gap-2 ml-1">
-            <FlaskConicalIcon className="h-5 w-5 text-pfc-ember" />
-            <h1 className="text-lg font-semibold tracking-tight">Research Copilot</h1>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            {activeConcepts.length > 0 && (
-              <Badge variant="outline" className="text-[10px] font-mono gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-pfc-violet inline-block" />
-                {activeConcepts.length} active concepts
-              </Badge>
-            )}
-            <Badge variant="outline" className="text-[10px] font-mono">
-              Conf {(confidence * 100).toFixed(0)}%
-            </Badge>
-            <ThemeToggle />
-          </div>
+    <PageShell
+      icon={FlaskConicalIcon}
+      iconColor="var(--color-pfc-ember)"
+      title="Research Copilot"
+      subtitle="Techniques, tools, and study references"
+    >
+      {/* Intro */}
+      <div className="flex items-start gap-4 mb-6">
+        <div className="p-3 rounded-xl bg-pfc-ember/10 shrink-0">
+          <FlaskConicalIcon className="h-6 w-6 text-pfc-ember" />
         </div>
-      </header>
+        <div>
+          <h2 className="text-base font-semibold mb-1">Your Research Toolkit</h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Techniques, scaffolding tools, and study references tailored to your current analytical state.
+            {activeConcepts.length > 0
+              ? ` Currently tracking ${activeConcepts.length} concepts with ${(confidence * 100).toFixed(0)}% confidence.`
+              : ' Start a chat to see personalized recommendations.'}
+          </p>
+        </div>
+      </div>
 
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 space-y-6">
-        {/* Intro card */}
-        <Card className="bg-gradient-to-r from-pfc-ember/5 to-pfc-violet/5 border-pfc-ember/10">
-          <CardContent className="p-5">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-xl bg-pfc-ember/10 shrink-0">
-                <FlaskConicalIcon className="h-6 w-6 text-pfc-ember" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold mb-1">Your Research Toolkit</h2>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Techniques, scaffolding tools, and study references tailored to your current analytical state.
-                  {activeConcepts.length > 0
-                    ? ` Currently tracking ${activeConcepts.length} concepts with ${(confidence * 100).toFixed(0)}% confidence.`
-                    : ' Start a chat to see personalized recommendations.'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tab switcher */}
+      {/* Tab switcher */}
+      <GlassSection className="">
         <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1">
           {(['techniques', 'tools', 'studies'] as const).map((tab) => (
             <button
@@ -658,125 +625,123 @@ export default function ResearchCopilotPage() {
             </button>
           ))}
         </div>
+      </GlassSection>
 
-        {/* Techniques tab */}
-        <AnimatePresence mode="wait">
-          {activeTab === 'techniques' && (
-            <motion.div
-              key="techniques"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4"
-            >
-              {/* Search */}
-              <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search techniques by name, category, or concept..."
-                  className="pl-9 text-sm"
+      {/* Tab content */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'techniques' && (
+          <motion.div
+            key="techniques"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4"
+          >
+            {/* Search */}
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search techniques by name, category, or concept..."
+                className="pl-9 text-sm"
+              />
+            </div>
+
+            {/* Technique cards */}
+            <div className="space-y-3">
+              {filteredTechniques.map((t) => (
+                <TechniqueCard
+                  key={t.id}
+                  technique={t}
+                  isRelevant={t.isRelevant}
                 />
-              </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-              {/* Technique cards */}
-              <div className="space-y-3">
-                {filteredTechniques.map((t) => (
-                  <TechniqueCard
-                    key={t.id}
-                    technique={t}
-                    isRelevant={t.isRelevant}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
+        {activeTab === 'tools' && (
+          <motion.div
+            key="tools"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4"
+          >
+            <p className="text-xs text-muted-foreground">
+              Scaffolding tools that generate outputs based on your current PFC state. Results are copied to clipboard.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {SCAFFOLDING_TOOLS.map((tool) => (
+                <ToolCard key={tool.id} tool={tool} />
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-          {/* Tools tab */}
-          {activeTab === 'tools' && (
-            <motion.div
-              key="tools"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4"
-            >
-              <p className="text-xs text-muted-foreground">
-                Scaffolding tools that generate outputs based on your current PFC state. Results are copied to clipboard.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {SCAFFOLDING_TOOLS.map((tool) => (
-                  <ToolCard key={tool.id} tool={tool} />
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* Studies tab */}
-          {activeTab === 'studies' && (
-            <motion.div
-              key="studies"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4"
-            >
-              <p className="text-xs text-muted-foreground">
-                Study references contextual to your current research concepts. Relevance scores reflect concept hierarchy weights.
-              </p>
-              {studyRefs.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <BookOpenIcon className="h-8 w-8 text-muted-foreground/15 mb-3" />
-                    <p className="text-sm text-muted-foreground/50">No study references yet</p>
-                    <p className="text-[10px] text-muted-foreground/30 mt-1">Ask research questions to generate concept-based study suggestions</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  {studyRefs.map((ref) => (
-                    <Card key={ref.id} className="hover:border-pfc-violet/20 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium leading-snug">{ref.title}</h4>
-                            <div className="flex items-center gap-2 mt-1.5">
-                              <Badge variant="outline" className={cn('text-[8px] uppercase', CATEGORY_COLORS[ref.domain.toLowerCase()] || 'text-muted-foreground')}>
-                                {ref.domain}
-                              </Badge>
-                              <Badge variant="secondary" className="text-[8px]">
-                                {ref.methodology}
-                              </Badge>
-                              <Badge variant="secondary" className="text-[8px] bg-pfc-violet/5 text-pfc-violet/70">
-                                {ref.keyConcept.replace(/_/g, ' ')}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <div className={cn(
-                              'text-[10px] font-mono font-bold',
-                              ref.relevance > 0.7 ? 'text-pfc-green' :
-                              ref.relevance > 0.4 ? 'text-pfc-yellow' :
-                              'text-muted-foreground/40',
-                            )}>
-                              {(ref.relevance * 100).toFixed(0)}%
-                            </div>
-                            <div className="text-[8px] text-muted-foreground/30">relevance</div>
+        {activeTab === 'studies' && (
+          <motion.div
+            key="studies"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4"
+          >
+            <p className="text-xs text-muted-foreground">
+              Study references contextual to your current research concepts. Relevance scores reflect concept hierarchy weights.
+            </p>
+            {studyRefs.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                  <BookOpenIcon className="h-8 w-8 text-muted-foreground/15 mb-3" />
+                  <p className="text-sm text-muted-foreground/50">No study references yet</p>
+                  <p className="text-[10px] text-muted-foreground/30 mt-1">Ask research questions to generate concept-based study suggestions</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {studyRefs.map((ref) => (
+                  <Card key={ref.id} className="hover:border-pfc-violet/20 transition-colors">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium leading-snug">{ref.title}</h4>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <Badge variant="outline" className={cn('text-[8px] uppercase', CATEGORY_COLORS[ref.domain.toLowerCase()] || 'text-muted-foreground')}>
+                              {ref.domain}
+                            </Badge>
+                            <Badge variant="secondary" className="text-[8px]">
+                              {ref.methodology}
+                            </Badge>
+                            <Badge variant="secondary" className="text-[8px] bg-pfc-violet/5 text-pfc-violet/70">
+                              {ref.keyConcept.replace(/_/g, ' ')}
+                            </Badge>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-    </div>
+                        <div className="shrink-0 text-right">
+                          <div className={cn(
+                            'text-[10px] font-mono font-bold',
+                            ref.relevance > 0.7 ? 'text-pfc-green' :
+                            ref.relevance > 0.4 ? 'text-pfc-yellow' :
+                            'text-muted-foreground/40',
+                          )}>
+                            {(ref.relevance * 100).toFixed(0)}%
+                          </div>
+                          <div className="text-[8px] text-muted-foreground/30">relevance</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </PageShell>
   );
 }

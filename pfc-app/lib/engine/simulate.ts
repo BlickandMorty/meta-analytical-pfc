@@ -827,13 +827,32 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Wrap a promise with a timeout to prevent infinite hangs */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
+/** Helper: yield a stage event */
+function stageEvent(
+  stage: PipelineStage,
+  status: 'active' | 'complete',
+  detail?: string,
+  value?: number,
+): PipelineEvent {
+  return { type: 'stage', stage, status, detail: detail ?? '', value: value ?? (status === 'complete' ? 1 : 0.5) };
+}
+
 /**
  * runPipeline — the core async generator.
  * Yields PipelineEvent objects that the SSE route streams to the client.
  *
- * @param query - The current user query
- * @param controls - Optional pipeline control overrides (sliders)
- * @param context - Optional conversation context for follow-up detection
+ * In LLM mode (api/local), stages progress as actual LLM calls execute.
+ * In simulation mode, stages progress with synthetic delays.
  */
 export async function* runPipeline(
   query: string,
@@ -844,7 +863,6 @@ export async function* runPipeline(
 ): AsyncGenerator<PipelineEvent> {
   const qa = analyzeQuery(query, context);
   const signals = generateSignals(qa, controls, steeringBias);
-  const stageDelay = qa.isMetaAnalytical ? 350 : qa.isPhilosophical ? 300 : 200;
 
   // Track stage results for reflection/arbitration
   const stageResults: StageResult[] = STAGES.map((s) => ({
@@ -853,13 +871,201 @@ export async function* runPipeline(
     summary: s,
   }));
 
-  // Process each pipeline stage
+  const isLLM = inferenceConfig && inferenceConfig.mode !== 'simulation';
+
+  // ════════════════════════════════════════════════════════════════
+  // LLM MODE — stages correspond to real LLM processing steps
+  // ════════════════════════════════════════════════════════════════
+  if (isLLM) {
+    const LLM_TIMEOUT = 60_000; // 60s per call
+    let rawAnalysis: string;
+    let laymanSummary: LaymanSummary;
+    let reflection: ReturnType<typeof generateReflection>;
+    let arbitration: ReturnType<typeof generateArbitration>;
+
+    try {
+      const model = resolveProvider(inferenceConfig);
+
+      // ── Stage 1: Triage — query analysis ──
+      yield stageEvent('triage', 'active', 'Analyzing query structure...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.1, dissonance: signals.dissonance * 0.1, healthScore: 0.9, safetyState: 'green' as SafetyState, riskScore: signals.riskScore * 0.1 } };
+      stageResults[0] = { stage: 'triage', status: 'complete', summary: 'triage', detail: generateStageDetail('triage', qa), value: 1 };
+      await sleep(200);
+      yield stageEvent('triage', 'complete', stageResults[0].detail, 1);
+
+      // ── Stage 2: Memory — context retrieval ──
+      yield stageEvent('memory', 'active', 'Retrieving relevant context...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.2, dissonance: signals.dissonance * 0.15, healthScore: 0.85, safetyState: 'green' as SafetyState, riskScore: signals.riskScore * 0.15 } };
+      stageResults[1] = { stage: 'memory', status: 'complete', summary: 'memory', detail: generateStageDetail('memory', qa), value: 1 };
+      await sleep(200);
+      yield stageEvent('memory', 'complete', stageResults[1].detail, 1);
+
+      // ── Stage 3: Routing — pathway selection ──
+      yield stageEvent('routing', 'active', 'Selecting analytical pathways...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.3, dissonance: signals.dissonance * 0.25, healthScore: 0.8, safetyState: 'green' as SafetyState, riskScore: signals.riskScore * 0.2 } };
+      stageResults[2] = { stage: 'routing', status: 'complete', summary: 'routing', detail: generateStageDetail('routing', qa), value: 1 };
+      await sleep(150);
+      yield stageEvent('routing', 'complete', stageResults[2].detail, 1);
+
+      // ── Stage 4: Statistical — LLM raw analysis (THE BIG CALL) ──
+      yield stageEvent('statistical', 'active', 'Running statistical analysis via LLM...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.4, dissonance: signals.dissonance * 0.35 } };
+      rawAnalysis = await withTimeout(llmGenerateRawAnalysis(model, qa, signals), LLM_TIMEOUT, 'Raw analysis');
+      stageResults[3] = { stage: 'statistical', status: 'complete', summary: 'statistical', detail: 'Statistical analysis complete', value: 1 };
+      yield stageEvent('statistical', 'complete', 'Analysis generated', 1);
+
+      // ── Stage 5: Causal — completed (part of raw analysis) ──
+      yield stageEvent('causal', 'active', 'Evaluating causal relationships...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.55, dissonance: signals.dissonance * 0.5, healthScore: signals.healthScore * 0.7 } };
+      stageResults[4] = { stage: 'causal', status: 'complete', summary: 'causal', detail: generateStageDetail('causal', qa), value: 1 };
+      await sleep(100);
+      yield stageEvent('causal', 'complete', stageResults[4].detail, 1);
+
+      // Emit mid-pipeline TDA and concept signals
+      yield { type: 'signals', data: { tda: signals.tda, focusDepth: signals.focusDepth, temperatureScale: signals.temperatureScale, activeConcepts: signals.activeConcepts, activeChordProduct: signals.activeChordProduct, harmonyKeyDistance: signals.harmonyKeyDistance } };
+
+      // ── Stage 6: Meta-Analysis — completed (part of raw analysis) ──
+      yield stageEvent('meta_analysis', 'active', 'Running meta-analytical synthesis...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.65, dissonance: signals.dissonance * 0.6 } };
+      stageResults[5] = { stage: 'meta_analysis', status: 'complete', summary: 'meta_analysis', detail: generateStageDetail('meta_analysis', qa), value: 1 };
+      await sleep(100);
+      yield stageEvent('meta_analysis', 'complete', stageResults[5].detail, 1);
+
+      // ── Stage 7-8: Bayesian + Synthesis — parallel LLM calls ──
+      yield stageEvent('bayesian', 'active', 'Computing Bayesian posteriors...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.75, dissonance: signals.dissonance * 0.7, healthScore: signals.healthScore * 0.85 } };
+      const sectionLabels = getSectionLabels(qa);
+      const [llmLayman, llmReflection, llmArbitration] = await withTimeout(
+        Promise.all([
+          llmGenerateLaymanSummary(model, qa, rawAnalysis, sectionLabels),
+          llmGenerateReflection(model, stageResults, rawAnalysis),
+          llmGenerateArbitration(model, stageResults),
+        ]),
+        LLM_TIMEOUT,
+        'Parallel LLM calls',
+      );
+      laymanSummary = llmLayman;
+      reflection = llmReflection;
+      arbitration = llmArbitration;
+
+      stageResults[6] = { stage: 'bayesian', status: 'complete', summary: 'bayesian', detail: 'Bayesian updating complete', value: 1 };
+      yield stageEvent('bayesian', 'complete', 'Bayesian posteriors computed', 1);
+      stageResults[7] = { stage: 'synthesis', status: 'complete', summary: 'synthesis', detail: 'Synthesis complete', value: 1 };
+      yield stageEvent('synthesis', 'active', 'Synthesizing results...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.85, dissonance: signals.dissonance * 0.8, safetyState: signals.safetyState } };
+      await sleep(80);
+      yield stageEvent('synthesis', 'complete', 'Results synthesized', 1);
+
+      // ── Stage 9: Adversarial — reflection ──
+      yield stageEvent('adversarial', 'active', 'Running adversarial review...');
+      yield { type: 'signals', data: { entropy: signals.entropy * 0.92, dissonance: signals.dissonance * 0.9, riskScore: signals.riskScore * 0.85 } };
+      stageResults[8] = { stage: 'adversarial', status: 'complete', summary: 'adversarial', detail: `${reflection.selfCriticalQuestions.length} critical questions, ${reflection.adjustments.length} adjustments`, value: 1 };
+      await sleep(80);
+      yield stageEvent('adversarial', 'complete', stageResults[8].detail, 1);
+
+      // ── Build dualMessage before truth assessment ──
+      const adjustedConfidence = reflection.adjustments.length > 0
+        ? Math.max(0.15, signals.confidence - 0.02 * reflection.adjustments.length)
+        : signals.confidence;
+
+      const uncertaintyTags = (rawAnalysis.match(/\[(DATA|MODEL|UNCERTAIN|CONFLICT)\]/g) ?? []).map((tag) => ({
+        claim: tag,
+        tag: tag.replace(/[[\]]/g, '') as 'DATA' | 'MODEL' | 'UNCERTAIN' | 'CONFLICT',
+      }));
+
+      const modelVsDataFlags = uncertaintyTags.map((t) => ({
+        claim: t.claim,
+        source: t.tag === 'DATA' ? 'data-driven' as const
+          : t.tag === 'MODEL' ? 'model-assumption' as const
+          : 'heuristic' as const,
+      }));
+
+      const dualMessage: DualMessage = {
+        rawAnalysis,
+        uncertaintyTags,
+        modelVsDataFlags,
+        laymanSummary,
+        reflection,
+        arbitration,
+      };
+
+      // ── Stage 10: Calibration — truth assessment ──
+      yield stageEvent('calibration', 'active', 'Calibrating truth assessment...');
+      yield { type: 'signals', data: { entropy: signals.entropy, dissonance: signals.dissonance, healthScore: signals.healthScore, riskScore: signals.riskScore, confidence: adjustedConfidence } };
+
+      let truthAssessment;
+      try {
+        truthAssessment = await withTimeout(
+          llmGenerateTruthAssessment(model, dualMessage, {
+            entropy: signals.entropy,
+            dissonance: signals.dissonance,
+            confidence: adjustedConfidence,
+            healthScore: signals.healthScore,
+            safetyState: signals.safetyState,
+            riskScore: signals.riskScore,
+          }),
+          LLM_TIMEOUT,
+          'Truth assessment',
+        );
+      } catch {
+        truthAssessment = generateTruthAssessment(dualMessage, {
+          entropy: signals.entropy,
+          dissonance: signals.dissonance,
+          confidence: adjustedConfidence,
+          healthScore: signals.healthScore,
+          safetyState: signals.safetyState,
+          tda: signals.tda,
+          riskScore: signals.riskScore,
+        });
+      }
+
+      stageResults[9] = { stage: 'calibration', status: 'complete', summary: 'calibration', detail: 'Calibration complete', value: 1 };
+      yield stageEvent('calibration', 'complete', 'Calibration complete', 1);
+
+      // ── Stream the layman summary word-by-word ──
+      const textToStream = laymanSummary.whatIsLikelyTrue;
+      const words = textToStream.split(' ');
+      for (let w = 0; w < words.length; w++) {
+        const word = (w === 0 ? '' : ' ') + words[w];
+        yield { type: 'text-delta', text: word };
+        await sleep(25 + Math.random() * 35);
+      }
+
+      // ── Emit complete event ──
+      yield {
+        type: 'complete',
+        dualMessage,
+        truthAssessment,
+        confidence: adjustedConfidence,
+        grade: signals.grade,
+        mode: signals.mode,
+        signals: {
+          ...signals,
+          confidence: adjustedConfidence,
+        },
+      };
+      return; // Done — skip simulation path
+    } catch (llmError) {
+      // Graceful fallback to simulation mode on any LLM error
+      console.error('[runPipeline] LLM error, falling back to simulation:', llmError);
+      yield {
+        type: 'error',
+        message: `LLM inference failed (using simulation fallback): ${llmError instanceof Error ? llmError.message : 'Unknown error'}`,
+      };
+      // Fall through to simulation path below
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // SIMULATION MODE — synthetic delays, template-generated content
+  // ════════════════════════════════════════════════════════════════
+  const stageDelay = qa.isMetaAnalytical ? 350 : qa.isPhilosophical ? 300 : 200;
+
   for (let i = 0; i < STAGES.length; i++) {
     const stage = STAGES[i];
     const detail = generateStageDetail(stage, qa);
     const value = 0.3 + Math.random() * 0.7;
 
-    // Mark current stage active
     stageResults[i] = { stage, status: 'active', summary: stage, detail, value };
 
     yield {
@@ -870,7 +1076,6 @@ export async function* runPipeline(
       status: 'active',
     };
 
-    // Progressive signal updates
     const progress = (i + 1) / STAGES.length;
     yield {
       type: 'signals',
@@ -883,7 +1088,6 @@ export async function* runPipeline(
       },
     };
 
-    // Mark previous stage complete
     if (i > 0) {
       stageResults[i - 1] = { ...stageResults[i - 1], status: 'complete' };
       yield {
@@ -895,7 +1099,6 @@ export async function* runPipeline(
       };
     }
 
-    // Mid-pipeline: emit TDA, focus, and concept signals
     if (i === 4) {
       yield {
         type: 'signals',
@@ -913,7 +1116,6 @@ export async function* runPipeline(
     await sleep(stageDelay + Math.random() * 150);
   }
 
-  // Mark final stage complete
   stageResults[STAGES.length - 1] = { ...stageResults[STAGES.length - 1], status: 'complete' };
   yield {
     type: 'stage',
@@ -923,52 +1125,11 @@ export async function* runPipeline(
     status: 'complete',
   };
 
-  // ── Generate the full analysis ─────────────────────────────────
-  // Branch: LLM mode (api/local) uses real inference; simulation uses templates
-
-  const isLLM = inferenceConfig && inferenceConfig.mode !== 'simulation';
-
-  let rawAnalysis: string;
-  let laymanSummary: LaymanSummary;
-  let reflection: ReturnType<typeof generateReflection>;
-  let arbitration: ReturnType<typeof generateArbitration>;
-
-  if (isLLM) {
-    try {
-      const model = resolveProvider(inferenceConfig);
-
-      // Step 1: Generate raw analysis (sequential — needed by others)
-      rawAnalysis = await llmGenerateRawAnalysis(model, qa, signals);
-
-      // Step 2: Generate structured outputs in parallel (all depend on rawAnalysis)
-      const sectionLabels = getSectionLabels(qa);
-      const [llmLayman, llmReflection, llmArbitration] = await Promise.all([
-        llmGenerateLaymanSummary(model, qa, rawAnalysis, sectionLabels),
-        llmGenerateReflection(model, stageResults, rawAnalysis),
-        llmGenerateArbitration(model, stageResults),
-      ]);
-      laymanSummary = llmLayman;
-      reflection = llmReflection;
-      arbitration = llmArbitration;
-    } catch (llmError) {
-      // Graceful fallback to simulation mode
-      console.error('[runPipeline] LLM error, falling back to simulation:', llmError);
-      yield {
-        type: 'error',
-        message: `LLM inference failed (using simulation fallback): ${llmError instanceof Error ? llmError.message : 'Unknown error'}`,
-      };
-      rawAnalysis = generateRawAnalysis(qa);
-      laymanSummary = generateLaymanSummary(qa, rawAnalysis);
-      reflection = generateReflection(stageResults, rawAnalysis);
-      arbitration = generateArbitration(stageResults);
-    }
-  } else {
-    // Simulation mode — existing behavior, zero changes
-    rawAnalysis = generateRawAnalysis(qa);
-    laymanSummary = generateLaymanSummary(qa, rawAnalysis);
-    reflection = generateReflection(stageResults, rawAnalysis);
-    arbitration = generateArbitration(stageResults);
-  }
+  // Template-generated content
+  const rawAnalysis = generateRawAnalysis(qa);
+  const laymanSummary = generateLaymanSummary(qa, rawAnalysis);
+  const reflection = generateReflection(stageResults, rawAnalysis);
+  const arbitration = generateArbitration(stageResults);
 
   const adjustedConfidence = reflection.adjustments.length > 0
     ? Math.max(0.15, signals.confidence - 0.02 * reflection.adjustments.length)
@@ -995,56 +1156,27 @@ export async function* runPipeline(
     arbitration,
   };
 
-  // Generate truth assessment (also branched)
-  let truthAssessment;
-  if (isLLM) {
-    try {
-      const model = resolveProvider(inferenceConfig);
-      truthAssessment = await llmGenerateTruthAssessment(model, dualMessage, {
-        entropy: signals.entropy,
-        dissonance: signals.dissonance,
-        confidence: adjustedConfidence,
-        healthScore: signals.healthScore,
-        safetyState: signals.safetyState,
-        riskScore: signals.riskScore,
-      });
-    } catch {
-      // Fallback to signal-math-driven assessment
-      truthAssessment = generateTruthAssessment(dualMessage, {
-        entropy: signals.entropy,
-        dissonance: signals.dissonance,
-        confidence: adjustedConfidence,
-        healthScore: signals.healthScore,
-        safetyState: signals.safetyState,
-        tda: signals.tda,
-        riskScore: signals.riskScore,
-      });
-    }
-  } else {
-    truthAssessment = generateTruthAssessment(dualMessage, {
-      entropy: signals.entropy,
-      dissonance: signals.dissonance,
-      confidence: adjustedConfidence,
-      healthScore: signals.healthScore,
-      safetyState: signals.safetyState,
-      tda: signals.tda,
-      riskScore: signals.riskScore,
-    });
-  }
+  const truthAssessment = generateTruthAssessment(dualMessage, {
+    entropy: signals.entropy,
+    dissonance: signals.dissonance,
+    confidence: adjustedConfidence,
+    healthScore: signals.healthScore,
+    safetyState: signals.safetyState,
+    tda: signals.tda,
+    riskScore: signals.riskScore,
+  });
 
-  // Stream the layman summary word-by-word for ChatGPT-like effect
+  // Stream the layman summary word-by-word
   const textToStream = laymanSummary.whatIsLikelyTrue;
   const words = textToStream.split(' ');
 
   for (let i = 0; i < words.length; i++) {
     const word = (i === 0 ? '' : ' ') + words[i];
     yield { type: 'text-delta', text: word };
-    // Vary speed: faster for common words, slower for key terms
     const baseDelay = 30 + Math.random() * 40;
     await sleep(baseDelay);
   }
 
-  // Emit complete event with all data
   yield {
     type: 'complete',
     dualMessage,
