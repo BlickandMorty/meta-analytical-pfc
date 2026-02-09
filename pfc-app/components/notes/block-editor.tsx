@@ -578,7 +578,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
       )}
       style={{
         paddingLeft,
-        minHeight: 32,
+        minHeight: 28,
         // Violet accent line on left when focused
         borderLeft: isFocused
           ? `2px solid ${VIOLET}`
@@ -588,7 +588,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* ── Collapse chevron / spacer ── */}
-      <div className="flex items-center justify-center w-5 h-8 flex-shrink-0">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, minHeight: 28, flexShrink: 0, paddingTop: 5 }}>
         {hasChildBlocks ? (
           <button
             onClick={handleCollapseToggle}
@@ -597,6 +597,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
               'text-muted-foreground/40 hover:text-muted-foreground/70 hover:bg-white/[0.06]',
             )}
             aria-label={block.collapsed ? 'Expand' : 'Collapse'}
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
           >
             <motion.span
               animate={{ rotate: block.collapsed ? 0 : 90 }}
@@ -607,23 +608,21 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
             </motion.span>
           </button>
         ) : (
-          <span className="w-4 h-4" />
+          <span style={{ width: 16, height: 16 }} />
         )}
       </div>
 
       {/* ── Bullet point ── */}
-      <div className="flex items-center justify-center w-5 h-8 flex-shrink-0">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, minHeight: 28, flexShrink: 0, paddingTop: 5 }}>
         <span
-          className={cn(
-            'rounded-full transition-all duration-200',
-            isFocused ? 'w-[5px] h-[5px]' : 'w-1 h-1',
-          )}
           style={{
+            width: isFocused ? 5 : 4,
+            height: isFocused ? 5 : 4,
+            borderRadius: '50%',
             background: VIOLET,
             opacity: isFocused ? 1 : 0.5,
-            boxShadow: isFocused
-              ? `0 0 6px ${VIOLET_FAINT}`
-              : 'none',
+            boxShadow: isFocused ? `0 0 6px ${VIOLET_FAINT}` : 'none',
+            transition: 'all 0.2s ease',
           }}
         />
       </div>
@@ -644,15 +643,17 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
           onKeyDown={handleKeyDown}
           data-placeholder="Type '/' for commands..."
           className={cn(
-            'outline-none min-h-[28px] py-1 pr-2 text-sm leading-relaxed',
+            'outline-none pr-2 text-sm',
             'text-foreground/90 selection:bg-pfc-violet/20',
-            // Placeholder style via CSS
             'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/30',
             'empty:before:pointer-events-none',
           )}
           style={{
             wordBreak: 'break-word',
             caretColor: VIOLET,
+            minHeight: 28,
+            lineHeight: '28px',
+            padding: 0,
           }}
         />
 
