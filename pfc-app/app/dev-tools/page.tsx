@@ -206,7 +206,7 @@ export default function DevToolsPage() {
               <p
                 style={{
                   fontSize: '0.875rem',
-                  color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.45)',
+                  color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)',
                   maxWidth: '24rem',
                   lineHeight: 1.5,
                 }}
@@ -258,19 +258,19 @@ export default function DevToolsPage() {
                     height: '1.75rem',
                     width: '1.75rem',
                     borderRadius: '0.5rem',
-                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                    background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)',
                   }}
                 >
                   {deviceProfile.deviceClass === 'phone' || deviceProfile.deviceClass === 'tablet' ? (
-                    <MonitorIcon style={{ height: '0.875rem', width: '0.875rem', color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)' }} />
+                    <MonitorIcon style={{ height: '0.875rem', width: '0.875rem', color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.35)' }} />
                   ) : (
-                    <CpuIcon style={{ height: '0.875rem', width: '0.875rem', color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)' }} />
+                    <CpuIcon style={{ height: '0.875rem', width: '0.875rem', color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.35)' }} />
                   )}
                 </div>
                 <span
                   style={{
                     fontSize: '0.75rem',
-                    color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+                    color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)',
                     fontFamily: 'var(--font-mono, ui-monospace, monospace)',
                   }}
                 >
@@ -281,7 +281,7 @@ export default function DevToolsPage() {
               <span
                 style={{
                   fontSize: '0.75rem',
-                  color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
+                  color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.25)',
                 }}
               >
                 Detecting device...
@@ -383,23 +383,15 @@ function ToolCardComponent({
         position: 'relative',
         padding: '1.5rem',
         borderRadius: '1.25rem',
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-        background: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(255,255,255,0.6)',
-        backdropFilter: 'blur(24px) saturate(1.4)',
-        WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
+        border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
+        background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(255,255,255,0.6)',
+        backdropFilter: 'blur(12px) saturate(1.3)',
+        WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
         cursor: isDisabled ? 'default' : 'pointer',
         opacity: isDisabled ? 0.55 : 1,
         overflow: 'hidden',
-        transition: 'border-color 0.25s cubic-bezier(0.32,0.72,0,1), box-shadow 0.25s cubic-bezier(0.32,0.72,0,1), background 0.25s cubic-bezier(0.32,0.72,0,1)',
+        transition: 'border-color 0.25s cubic-bezier(0.32,0.72,0,1), background 0.25s cubic-bezier(0.32,0.72,0,1)',
       }}
-      whileHover={
-        isDisabled
-          ? undefined
-          : {
-              scale: 1.02,
-              transition: { type: 'spring', stiffness: 400, damping: 25, mass: 0.5 },
-            }
-      }
       whileTap={
         isDisabled
           ? undefined
@@ -413,20 +405,16 @@ function ToolCardComponent({
         const el = e.target as HTMLElement;
         if (el?.style) {
           el.style.borderColor = isDark
-            ? 'rgba(255,255,255,0.12)'
+            ? 'rgba(62,61,57,0.5)'
             : 'rgba(0,0,0,0.1)';
-          el.style.boxShadow = isDark
-            ? `0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)`
-            : `0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)`;
         }
       }}
       onHoverEnd={(e) => {
         const el = e.target as HTMLElement;
         if (el?.style) {
           el.style.borderColor = isDark
-            ? 'rgba(255,255,255,0.06)'
+            ? 'rgba(62,61,57,0.3)'
             : 'rgba(0,0,0,0.06)';
-          el.style.boxShadow = 'none';
         }
       }}
     >
@@ -460,7 +448,7 @@ function ToolCardComponent({
           fontWeight: 650,
           letterSpacing: '-0.02em',
           marginBottom: '0.375rem',
-          color: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)',
+          color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)',
         }}
       >
         {tool.title}
@@ -471,7 +459,7 @@ function ToolCardComponent({
         style={{
           fontSize: '0.8125rem',
           lineHeight: 1.5,
-          color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.45)',
+          color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)',
           marginBottom: '1rem',
         }}
       >

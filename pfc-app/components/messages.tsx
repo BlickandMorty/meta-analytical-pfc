@@ -10,8 +10,7 @@ import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import { ArrowDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BrainMascot } from './brain-mascot';
-import { useTheme } from 'next-themes';
+import { ThinkingIndicator } from './thinking-indicator';
 
 const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -31,8 +30,6 @@ function MessagesInner() {
   const reasoningDuration = usePFCStore(selectReasoningDuration);
   const isReasoning = usePFCStore(selectIsReasoning);
   const { containerRef, isAtBottom, scrollToBottom } = useScrollToBottom<HTMLDivElement>();
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
 
   return (
     <div className="relative flex-1 overflow-hidden">
@@ -50,33 +47,24 @@ function MessagesInner() {
           {/* Thinking / streaming indicator */}
           {(isStreaming || isProcessing) && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
-              className="flex gap-3"
+              className="space-y-2"
             >
-              <div className="flex shrink-0 mt-1">
-                <BrainMascot isDark={isDark} size={28} mini />
-              </div>
-              <div className="max-w-[85%] rounded-2xl rounded-bl-md glass px-4 py-3 space-y-2">
-                {/* Reasoning accordion — shows AI thinking process */}
-                {(isReasoning || reasoningText) && (
-                  <ThinkingAccordion
-                    content={reasoningText}
-                    duration={reasoningDuration}
-                    isThinking={isReasoning}
-                  />
-                )}
-                {isStreaming ? (
-                  <StreamingText />
-                ) : (
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xs text-muted-foreground/60">
-                      {isReasoning ? 'Reasoning...' : 'Thinking...'}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {/* Reasoning accordion — shows AI thinking process */}
+              {(isReasoning || reasoningText) && (
+                <ThinkingAccordion
+                  content={reasoningText}
+                  duration={reasoningDuration}
+                  isThinking={isReasoning}
+                />
+              )}
+              {isStreaming ? (
+                <StreamingText />
+              ) : (
+                <ThinkingIndicator isReasoning={isReasoning} />
+              )}
             </motion.div>
           )}
         </div>

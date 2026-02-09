@@ -2034,7 +2034,7 @@ export default function CodeAnalyzerPage() {
                           style={{
                             fontSize: '0.75rem',
                             fontWeight: 600,
-                            color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)',
+                            color: isDark ? 'rgba(232,228,222,0.85)' : 'rgba(0,0,0,0.7)',
                             marginBottom: '0.125rem',
                           }}
                         >
