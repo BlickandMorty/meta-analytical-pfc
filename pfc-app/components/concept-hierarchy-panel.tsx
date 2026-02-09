@@ -173,8 +173,14 @@ export function ConceptHierarchyPanel() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="fixed right-4 top-16 bottom-4 w-80 z-40 rounded-2xl border bg-card/95 backdrop-blur-xl shadow-2xl flex flex-col overflow-hidden"
+          transition={{ type: 'spring', stiffness: 500, damping: 28, mass: 0.6 }}
+          className="fixed right-4 top-16 bottom-4 w-80 z-40 rounded-2xl border flex flex-col overflow-hidden"
+          style={{
+            background: 'var(--glass-bg)',
+            backdropFilter: 'blur(80px) saturate(2.2)',
+            WebkitBackdropFilter: 'blur(80px) saturate(2.2)',
+            boxShadow: 'var(--shadow-l)',
+          }}
         >
           {/* Header */}
           <div className="px-4 py-3 border-b flex items-center justify-between shrink-0">
@@ -199,6 +205,7 @@ export function ConceptHierarchyPanel() {
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={toggleConceptHierarchy}
+                aria-label="Close concept hierarchy"
               >
                 <XIcon className="h-3.5 w-3.5" />
               </Button>
@@ -236,7 +243,7 @@ export function ConceptHierarchyPanel() {
           </div>
 
           {/* Concept list */}
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="p-2 space-y-0.5">
               {sortedConcepts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -3,23 +3,33 @@
 import { memo } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Message } from './message';
+import type { ChatMessage } from '@/lib/engine/types';
 import { StreamingText } from './streaming-text';
+import { ThinkingIndicator } from './thinking-indicator';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
-import { BrainCircuitIcon, ArrowDownIcon } from 'lucide-react';
+import { ArrowDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
+import { BrainMascot } from './brain-mascot';
+import { useTheme } from 'next-themes';
+
+const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+
+// Stable selectors
+const selectMessages = (s: { messages: ChatMessage[] }) => s.messages;
+const selectIsStreaming = (s: { isStreaming: boolean }) => s.isStreaming;
+const selectIsProcessing = (s: { isProcessing: boolean }) => s.isProcessing;
 
 function MessagesInner() {
-  const messages = usePFCStore((s) => s.messages);
-  const isStreaming = usePFCStore((s) => s.isStreaming);
-  const isProcessing = usePFCStore((s) => s.isProcessing);
+  const messages = usePFCStore(selectMessages);
+  const isStreaming = usePFCStore(selectIsStreaming);
+  const isProcessing = usePFCStore(selectIsProcessing);
   const { containerRef, isAtBottom, scrollToBottom } = useScrollToBottom<HTMLDivElement>();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   return (
     <div className="relative flex-1 overflow-hidden">
-      {/* Subtle grid background */}
-      <div className="absolute inset-0 chat-grid-bg pointer-events-none" />
-
       <div
         ref={containerRef}
         className="relative h-full overflow-y-auto px-4 py-6"
@@ -31,27 +41,25 @@ function MessagesInner() {
             ))}
           </AnimatePresence>
 
-          {/* Streaming indicator */}
+          {/* Thinking / streaming indicator */}
           {(isStreaming || isProcessing) && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
               className="flex gap-3"
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pfc-ember/10 text-pfc-ember mt-1">
-                <BrainCircuitIcon className="h-3.5 w-3.5 animate-pulse" />
+              <div className="flex shrink-0 mt-1">
+                <BrainMascot isDark={isDark} size={28} mini />
               </div>
-              <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-card/80 border border-border/40 px-4 py-3">
+              <div className="max-w-[85%] rounded-2xl rounded-bl-md glass px-4 py-3">
                 {isStreaming ? (
                   <StreamingText />
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-pfc-ember animate-bounce [animation-delay:0ms]" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-pfc-ember animate-bounce [animation-delay:150ms]" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-pfc-ember animate-bounce [animation-delay:300ms]" />
-                    </div>
-                    <span className="text-xs text-muted-foreground">Processing through pipeline...</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xs text-muted-foreground/60">
+                      Thinking...
+                    </span>
                   </div>
                 )}
               </div>
@@ -60,19 +68,25 @@ function MessagesInner() {
         </div>
       </div>
 
-      {/* Scroll to bottom button */}
+      {/* Scroll to bottom */}
       <AnimatePresence>
         {!isAtBottom && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 28, mass: 0.6 }}
             className="absolute bottom-4 left-1/2 -translate-x-1/2"
           >
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full shadow-md h-6 text-[10px] gap-1 px-2.5 bg-background/90 backdrop-blur-sm"
+              className="rounded-full shadow-lg h-7 text-[10px] gap-1 px-3 hover:shadow-xl cursor-pointer"
+              style={{
+                background: 'var(--glass-bg)',
+                backdropFilter: 'blur(20px) saturate(1.4)',
+                WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+              }}
               onClick={scrollToBottom}
             >
               <ArrowDownIcon className="h-2.5 w-2.5" />

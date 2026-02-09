@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import type { SynthesisReport } from '@/lib/engine/types';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SparklesIcon, XIcon, BookOpenIcon, FlaskConicalIcon, LightbulbIcon } from 'lucide-react';
@@ -12,8 +10,17 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Markdown } from '@/components/markdown';
 import { cn } from '@/lib/utils';
 
+const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+
+const TABS = [
+  { key: 'plain', label: 'Summary', icon: BookOpenIcon },
+  { key: 'research', label: 'Research', icon: FlaskConicalIcon },
+  { key: 'suggestions', label: 'Ideas', icon: LightbulbIcon },
+] as const;
+
 export function SynthesisCard() {
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('plain');
 
   const synthesisReport = usePFCStore((s) => s.synthesisReport);
   const showSynthesis = usePFCStore((s) => s.showSynthesis);
@@ -46,28 +53,16 @@ export function SynthesisCard() {
         body: JSON.stringify({
           messages,
           signals: {
-            confidence,
-            entropy,
-            dissonance,
-            healthScore,
-            safetyState,
-            riskScore,
-            tda,
-            focusDepth,
-            temperatureScale,
-            activeConcepts,
-            activeChordProduct,
-            harmonyKeyDistance,
-            queriesProcessed,
-            totalTraces,
-            skillGapsDetected,
-            inferenceMode,
+            confidence, entropy, dissonance, healthScore,
+            safetyState, riskScore, tda, focusDepth,
+            temperatureScale, activeConcepts, activeChordProduct,
+            harmonyKeyDistance, queriesProcessed, totalTraces,
+            skillGapsDetected, inferenceMode,
           },
         }),
       });
 
       if (!res.ok) throw new Error('Synthesis request failed');
-
       const report: SynthesisReport = await res.json();
       setSynthesisReport(report);
     } catch (err) {
@@ -84,110 +79,125 @@ export function SynthesisCard() {
       {showSynthesis && (
         <motion.div
           key="synthesis-card"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="flex justify-center w-full"
+          initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, y: -12, filter: 'blur(8px)' }}
+          transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
+          className="flex justify-center w-full mb-3"
         >
-          <Card className="max-w-3xl w-full border-pfc-violet/20 bg-card dark:bg-muted/30">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <SparklesIcon className="h-4 w-4 text-pfc-violet" />
-                  <span>Synthesis Report</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {synthesisReport?.timestamp && (
-                    <Badge variant="outline" className="text-[10px] font-mono">
-                      {new Date(synthesisReport.timestamp).toLocaleString()}
-                    </Badge>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={toggleSynthesisView}
-                  >
-                    <XIcon className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
+          <div
+            className="max-w-3xl w-full rounded-2xl border border-border/20 overflow-hidden"
+            style={{
+              background: 'var(--glass-bg)',
+              backdropFilter: 'blur(80px) saturate(2.2)',
+              WebkitBackdropFilter: 'blur(80px) saturate(2.2)',
+              boxShadow: 'var(--shadow-s)',
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/15">
+              <div className="flex items-center gap-2">
+                <SparklesIcon className="h-3.5 w-3.5 text-pfc-violet" />
+                <span className="text-xs font-bold tracking-tight">Synthesis</span>
+                {synthesisReport?.timestamp && (
+                  <span className="text-[9px] text-muted-foreground/40 font-mono">
+                    {new Date(synthesisReport.timestamp).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={toggleSynthesisView}
+                aria-label="Close synthesis"
+                className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 hover:text-foreground cursor-pointer transition-colors"
+              >
+                <XIcon className="h-3.5 w-3.5" />
+              </motion.button>
+            </div>
 
-            <CardContent className="p-4 pt-0">
+            {/* Content */}
+            <div className="p-4">
               {!synthesisReport ? (
-                <div className="flex flex-col items-center gap-3 py-8">
-                  <p className="text-sm text-muted-foreground text-center">
-                    Generate a synthesis report from your conversation and current signal data.
+                <div className="flex flex-col items-center gap-3 py-6">
+                  <p className="text-xs text-muted-foreground/60 text-center max-w-sm">
+                    Generate a synthesis from your conversation and current signals.
                   </p>
-                  <Button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={handleGenerate}
                     disabled={loading}
-                    className="bg-pfc-violet hover:bg-pfc-violet/90 text-white"
-                  >
-                    {loading ? (
-                      <>
-                        <SparklesIcon className="h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <SparklesIcon className="h-4 w-4" />
-                        Generate Synthesis
-                      </>
+                    className={cn(
+                      'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer',
+                      'bg-pfc-violet text-white hover:bg-pfc-violet/90',
+                      'transition-colors disabled:opacity-50',
                     )}
-                  </Button>
+                  >
+                    <SparklesIcon className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+                    {loading ? 'Generating...' : 'Generate'}
+                  </motion.button>
                 </div>
               ) : (
-                <Tabs defaultValue="plain" className="w-full">
-                  <TabsList className="w-full">
-                    <TabsTrigger value="plain" className="flex-1 gap-1.5 text-xs">
-                      <BookOpenIcon className="h-3.5 w-3.5" />
-                      Plain Summary
-                    </TabsTrigger>
-                    <TabsTrigger value="research" className="flex-1 gap-1.5 text-xs">
-                      <FlaskConicalIcon className="h-3.5 w-3.5" />
-                      Research Summary
-                    </TabsTrigger>
-                    <TabsTrigger value="suggestions" className="flex-1 gap-1.5 text-xs">
-                      <LightbulbIcon className="h-3.5 w-3.5" />
-                      Suggestions
-                    </TabsTrigger>
-                  </TabsList>
+                <div>
+                  {/* Tab bar */}
+                  <div className="flex gap-1 mb-3">
+                    {TABS.map((tab) => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.key;
+                      return (
+                        <motion.button
+                          key={tab.key}
+                          onClick={() => setActiveTab(tab.key)}
+                          whileTap={{ scale: 0.95 }}
+                          className={cn(
+                            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-colors',
+                            isActive
+                              ? 'bg-pfc-violet/12 text-pfc-violet'
+                              : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40',
+                          )}
+                        >
+                          <Icon className="h-3 w-3" />
+                          {tab.label}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
 
-                  <TabsContent value="plain" className="mt-3">
-                    <div className="rounded-lg border bg-background p-4">
-                      <Markdown>{synthesisReport.plainSummary}</Markdown>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="research" className="mt-3">
-                    <div className="rounded-lg border bg-background p-4">
-                      <Markdown>{synthesisReport.researchSummary}</Markdown>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="suggestions" className="mt-3">
-                    <div className="rounded-lg border bg-background p-4">
-                      <ol className="space-y-2">
-                        {synthesisReport.suggestions.map((suggestion, i) => (
-                          <li
-                            key={i}
-                            className="flex gap-3 text-sm text-foreground/90 leading-relaxed"
-                          >
-                            <span className="shrink-0 font-mono text-xs font-bold text-pfc-violet mt-0.5">
-                              {i + 1}.
-                            </span>
-                            <span>{suggestion}</span>
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                  {/* Tab content */}
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.2, ease: CUPERTINO_EASE }}
+                      className="rounded-xl bg-background/40 p-4 text-xs leading-relaxed text-foreground/80 max-h-[280px] overflow-y-auto"
+                    >
+                      {activeTab === 'plain' && (
+                        <Markdown>{synthesisReport.plainSummary}</Markdown>
+                      )}
+                      {activeTab === 'research' && (
+                        <Markdown>{synthesisReport.researchSummary}</Markdown>
+                      )}
+                      {activeTab === 'suggestions' && (
+                        <ol className="space-y-2">
+                          {synthesisReport.suggestions.map((suggestion, i) => (
+                            <li key={i} className="flex gap-2.5 text-xs leading-relaxed">
+                              <span className="shrink-0 font-mono text-[10px] font-bold text-pfc-violet mt-0.5">
+                                {i + 1}.
+                              </span>
+                              <span>{suggestion}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

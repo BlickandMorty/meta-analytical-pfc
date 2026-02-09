@@ -23,12 +23,12 @@ export function LiveBrief() {
       <div className="flex items-center gap-2">
         <div
           className={cn(
-            'h-2 w-2 rounded-full',
+            'h-1.5 w-1.5 rounded-full transition-colors duration-500',
             safetyState === 'green' ? 'bg-pfc-green' :
             safetyState === 'yellow' ? 'bg-pfc-yellow' : 'bg-pfc-red'
           )}
         />
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/55 font-mono">
           {queriesProcessed} queries
         </span>
       </div>
@@ -36,10 +36,10 @@ export function LiveBrief() {
       <div className="grid grid-cols-2 gap-x-3 gap-y-1">
         {signals.map((s) => (
           <div key={s.label} className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-muted-foreground uppercase">
+            <span className="text-[10px] font-mono text-muted-foreground/50 uppercase">
               {s.label}
             </span>
-            <span className={cn('text-[11px] font-mono font-medium', s.color)}>
+            <span className={cn('text-[11px] font-mono font-medium transition-colors duration-500', s.color)}>
               {(s.value * 100).toFixed(0)}%
             </span>
           </div>

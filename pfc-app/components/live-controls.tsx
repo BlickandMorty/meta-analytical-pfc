@@ -56,7 +56,7 @@ function ControlRow({
           <Switch
             checked={!autoEnabled}
             onCheckedChange={onAutoToggle}
-            className="h-4 w-7 data-[state=checked]:bg-pfc-ember"
+            className="h-4 w-7 data-[state=checked]:bg-pfc-violet"
           />
         </div>
       </div>
@@ -89,15 +89,15 @@ export function LiveControls() {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
+          transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
           className="overflow-hidden"
         >
           <div className="mx-auto max-w-3xl px-4 pb-3">
-            <div className="rounded-xl border bg-card/80 backdrop-blur-sm p-4 space-y-4">
+            <div className="rounded-2xl p-4 space-y-4 border border-border/15" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(80px) saturate(2.2)', WebkitBackdropFilter: 'blur(80px) saturate(2.2)', boxShadow: 'var(--shadow-s)' }}>
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <BrainCircuitIcon className="h-3.5 w-3.5 text-pfc-ember" />
+                  <BrainCircuitIcon className="h-3.5 w-3.5 text-pfc-violet" />
                   <span className="text-xs font-semibold tracking-tight">Live Controls</span>
                 </div>
                 <Button

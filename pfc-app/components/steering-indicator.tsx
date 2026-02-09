@@ -35,9 +35,10 @@ export function SteeringIndicator() {
           <div
             className={cn(
               'flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums',
-              'bg-card/50 border border-border/30 backdrop-blur-sm',
+              'bg-card/50 border border-border/30',
               color,
             )}
+            style={{ backdropFilter: 'blur(20px) saturate(1.4)', WebkitBackdropFilter: 'blur(20px) saturate(1.4)' }}
           >
             <CompassIcon className="h-3 w-3" />
             <span>{strengthPct}%</span>

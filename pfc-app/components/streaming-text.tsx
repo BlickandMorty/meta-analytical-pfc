@@ -12,7 +12,7 @@ export function StreamingText() {
     <div className="text-foreground/90 leading-relaxed">
       {streamingText}
       {isStreaming && (
-        <span className="inline-block w-2 h-4 ml-0.5 bg-pfc-ember animate-blink rounded-sm" />
+        <span className="inline-block w-2 h-4 ml-0.5 bg-pfc-violet animate-blink rounded-sm" />
       )}
     </div>
   );

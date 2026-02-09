@@ -74,7 +74,12 @@ function MiniConceptCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conceptsKey, weightsKey]);
 
+  const pausedRef = useRef(false);
+  const intersectingRef = useRef(true);
+
   const draw = useCallback(() => {
+    if (pausedRef.current || !intersectingRef.current) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -141,12 +146,13 @@ function MiniConceptCanvas({
       const pulse = Math.sin(t * 2 + node.x * 0.02) * 1.5;
       const r = node.r + pulse;
 
-      // Glow
-      const glow = ctx.createRadialGradient(nx, ny, 0, nx, ny, r * 2.5);
-      glow.addColorStop(0, node.color + '25');
-      glow.addColorStop(1, node.color + '00');
-      ctx.fillStyle = glow;
-      ctx.fillRect(nx - r * 3, ny - r * 3, r * 6, r * 6);
+      // Glow (simple circle instead of per-frame gradient — perf)
+      ctx.globalAlpha = 0.12;
+      ctx.beginPath();
+      ctx.arc(nx, ny, r * 2, 0, Math.PI * 2);
+      ctx.fillStyle = node.color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
 
       // Circle
       ctx.beginPath();
@@ -169,9 +175,38 @@ function MiniConceptCanvas({
     animRef.current = requestAnimationFrame(draw);
   }, []);
 
+  // Visibility gating: pause canvas when tab hidden or element off-screen
   useEffect(() => {
+    const canvas = canvasRef.current;
+
+    function handleVisibility() {
+      pausedRef.current = document.hidden;
+      if (!document.hidden && intersectingRef.current) {
+        animRef.current = requestAnimationFrame(draw);
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    const observer = canvas
+      ? new IntersectionObserver(
+          ([entry]) => {
+            intersectingRef.current = entry.isIntersecting;
+            if (entry.isIntersecting && !pausedRef.current) {
+              animRef.current = requestAnimationFrame(draw);
+            }
+          },
+          { threshold: 0 },
+        )
+      : null;
+    if (canvas) observer?.observe(canvas);
+
     animRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animRef.current);
+
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      observer?.disconnect();
+    };
   }, [draw]);
 
   return (
