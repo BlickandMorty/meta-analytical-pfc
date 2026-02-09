@@ -95,11 +95,11 @@ function MessagesInner() {
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full shadow-lg h-7 text-[10px] gap-1 px-3 hover:shadow-xl cursor-pointer"
+              className="rounded-full h-7 text-[10px] gap-1 px-3 cursor-pointer border-none"
               style={{
                 background: 'var(--glass-bg)',
-                backdropFilter: 'blur(20px) saturate(1.4)',
-                WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+                backdropFilter: 'blur(12px) saturate(1.3)',
+                WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
               }}
               onClick={scrollToBottom}
             >

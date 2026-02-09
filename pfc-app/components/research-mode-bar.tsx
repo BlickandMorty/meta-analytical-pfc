@@ -41,8 +41,8 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
   const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
   const ModeIcon = MODE_ICON[inferenceMode] || MonitorIcon;
 
-  const toggleBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
-  const activeBg = isDark ? 'rgba(52,211,153,0.15)' : 'rgba(52,211,153,0.1)';
+  const toggleBg = isDark ? 'rgba(196,149,106,0.03)' : 'rgba(0,0,0,0.02)';
+  const activeBg = isDark ? 'rgba(52,211,153,0.12)' : 'rgba(52,211,153,0.1)';
 
   return (
     <div
@@ -51,9 +51,9 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
         alignItems: 'center',
         gap: '0.375rem',
         padding: '0.375rem 0.625rem',
-        borderRadius: '0.75rem',
+        borderRadius: '9999px',
         background: toggleBg,
-        border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+        border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
       }}
     >
       {/* Research Mode Toggle */}
@@ -64,7 +64,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
           alignItems: 'center',
           gap: '0.375rem',
           padding: '0.25rem 0.5rem',
-          borderRadius: '0.5rem',
+          borderRadius: '9999px',
           border: 'none',
           cursor: 'pointer',
           fontSize: '0.6875rem',
@@ -72,7 +72,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
           background: researchChatMode ? activeBg : 'transparent',
           color: researchChatMode
             ? 'var(--color-pfc-green)'
-            : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'),
+            : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
           transition: 'all 0.2s',
         }}
       >
@@ -86,7 +86,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
           style={{
             width: '1px',
             height: '1rem',
-            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+            background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
           }}
         />
       )}
@@ -115,15 +115,15 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                     alignItems: 'center',
                     gap: '0.25rem',
                     padding: '0.25rem 0.375rem',
-                    borderRadius: '0.375rem',
+                    borderRadius: '9999px',
                     border: 'none',
                     cursor: 'pointer',
                     fontSize: '0.625rem',
                     fontWeight: isActive ? 600 : 400,
-                    background: isActive ? (isDark ? 'rgba(139,124,246,0.15)' : 'rgba(139,124,246,0.1)') : 'transparent',
+                    background: isActive ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)') : 'transparent',
                     color: isActive
                       ? '#C4956A'
-                      : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
+                      : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.3)'),
                     transition: 'all 0.15s',
                   }}
                 >
@@ -138,7 +138,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               style={{
                 width: '1px',
                 height: '1rem',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
                 margin: '0 0.125rem',
               }}
             />
@@ -150,12 +150,12 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 alignItems: 'center',
                 gap: '0.1875rem',
                 padding: '0.125rem 0.3rem',
-                borderRadius: '0.3rem',
+                borderRadius: '9999px',
                 background: inferenceMode === 'local'
                   ? (isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)')
                   : inferenceMode === 'api'
-                    ? (isDark ? 'rgba(139,124,246,0.1)' : 'rgba(139,124,246,0.08)')
-                    : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
+                    ? (isDark ? 'rgba(196,149,106,0.1)' : 'rgba(196,149,106,0.08)')
+                    : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.03)'),
                 fontSize: '0.5rem',
                 fontWeight: 600,
                 textTransform: 'uppercase' as const,
@@ -164,7 +164,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   ? 'var(--color-pfc-green)'
                   : inferenceMode === 'api'
                     ? '#C4956A'
-                    : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'),
+                    : (isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)'),
               }}
               title={features.modeHint}
             >
@@ -177,7 +177,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               style={{
                 width: '1px',
                 height: '1rem',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+                background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
                 margin: '0 0.125rem',
               }}
             />
@@ -190,12 +190,12 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 alignItems: 'center',
                 gap: '0.25rem',
                 padding: '0.25rem 0.375rem',
-                borderRadius: '0.375rem',
+                borderRadius: '9999px',
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: '0.625rem',
-                background: showControls ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)') : 'transparent',
-                color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+                background: showControls ? (isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.04)') : 'transparent',
+                color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.3)',
                 transition: 'all 0.15s',
               }}
             >
@@ -218,11 +218,10 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               right: 0,
               marginBottom: '0.5rem',
               padding: '0.75rem',
-              borderRadius: '0.75rem',
-              background: isDark ? 'rgba(20,20,24,0.95)' : 'rgba(255,255,255,0.95)',
-              border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-              backdropFilter: 'blur(20px)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+              borderRadius: '1rem',
+              background: isDark ? 'rgba(43,42,39,0.95)' : 'rgba(255,255,255,0.95)',
+              border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.1)',
+              backdropFilter: 'blur(12px) saturate(1.3)',
               minWidth: '14rem',
               zIndex: 50,
               display: 'flex',
@@ -235,7 +234,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
             }}>
               Research Controls
             </p>
@@ -250,7 +249,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                 <BookOpenIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--color-pfc-green)' }} />
-                <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }}>
+                <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.55)' }}>
                   Auto-extract citations
                 </span>
               </div>
@@ -266,7 +265,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   borderRadius: '9999px',
                   background: researchModeControls.autoExtractCitations
                     ? 'var(--color-pfc-green)'
-                    : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
+                    : (isDark ? 'rgba(155,150,137,0.2)' : 'rgba(0,0,0,0.15)'),
                   position: 'relative',
                   transition: 'background 0.2s',
                   cursor: 'pointer',
@@ -281,7 +280,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   borderRadius: '50%',
                   background: 'white',
                   transition: 'left 0.2s',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                 }} />
               </div>
             </label>
@@ -296,7 +295,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                 <EyeIcon style={{ height: '0.75rem', width: '0.75rem', color: '#C4956A' }} />
-                <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }}>
+                <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.55)' }}>
                   Preview visualizations
                 </span>
               </div>
@@ -312,7 +311,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   borderRadius: '9999px',
                   background: researchModeControls.showVisualizationPreview
                     ? '#C4956A'
-                    : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
+                    : (isDark ? 'rgba(155,150,137,0.2)' : 'rgba(0,0,0,0.15)'),
                   position: 'relative',
                   transition: 'background 0.2s',
                   cursor: 'pointer',
@@ -327,7 +326,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   borderRadius: '50%',
                   background: 'white',
                   transition: 'left 0.2s',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                 }} />
               </div>
             </label>
@@ -344,13 +343,13 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                 <SparklesIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--color-pfc-ember)' }} />
                 <div>
-                  <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }}>
+                  <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.55)' }}>
                     Deep research mode
                   </span>
                   {!features.deepResearch && (
                     <p style={{
                       fontSize: '0.5rem',
-                      color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+                      color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.2)',
                       marginTop: '0.0625rem',
                     }}>
                       Requires API or local model
@@ -371,7 +370,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   borderRadius: '9999px',
                   background: researchModeControls.deepResearchEnabled && features.deepResearch
                     ? 'var(--color-pfc-ember)'
-                    : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'),
+                    : (isDark ? 'rgba(155,150,137,0.2)' : 'rgba(0,0,0,0.15)'),
                   position: 'relative',
                   transition: 'background 0.2s',
                   cursor: features.deepResearch ? 'pointer' : 'not-allowed',
@@ -386,7 +385,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   borderRadius: '50%',
                   background: 'white',
                   transition: 'left 0.2s',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                 }} />
               </div>
             </label>
@@ -395,9 +394,9 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
             <div style={{
               marginTop: '0.25rem',
               padding: '0.375rem 0.5rem',
-              borderRadius: '0.375rem',
-              background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-              border: isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.04)',
+              borderRadius: '9999px',
+              background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(0,0,0,0.02)',
+              border: isDark ? '1px solid rgba(62,61,57,0.2)' : '1px solid rgba(0,0,0,0.04)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.375rem',
@@ -409,11 +408,11 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   ? 'var(--color-pfc-green)'
                   : inferenceMode === 'api'
                     ? '#C4956A'
-                    : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'),
+                    : (isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)'),
               }} />
               <span style={{
                 fontSize: '0.5625rem',
-                color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+                color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
                 lineHeight: 1.4,
               }}>
                 {features.modeHint}

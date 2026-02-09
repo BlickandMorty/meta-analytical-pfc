@@ -260,13 +260,9 @@ export const LearningPanel = memo(function LearningPanel() {
     ? 'rgba(196, 149, 106, 0.06)'
     : 'rgba(0, 0, 0, 0.03)';
 
-  const glassShadow = isDark
-    ? '0 8px 40px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(196,149,106,0.06) inset'
-    : '0 8px 40px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(255,255,255,0.6) inset';
+  const glassShadow = 'none';
 
-  const fabShadow = isDark
-    ? '0 4px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(196,149,106,0.06) inset'
-    : '0 4px 24px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(255,255,255,0.5) inset';
+  const fabShadow = 'none';
 
   // ════════════════════════════════════════════════════════════════
   // B) Expanded state — active or completed session
@@ -291,8 +287,8 @@ export const LearningPanel = memo(function LearningPanel() {
             background: glassBackground,
             border: `1px solid ${glassBorder}`,
             borderRadius: '1rem',
-            backdropFilter: 'blur(40px) saturate(1.8)',
-            WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
+            backdropFilter: 'blur(12px) saturate(1.3)',
+            WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
             boxShadow: glassShadow,
             overflow: 'hidden',
             zIndex: 50,
@@ -425,8 +421,7 @@ export const LearningPanel = memo(function LearningPanel() {
               {(isRunning || isPaused) && (
                 <motion.button
                   onClick={isPaused ? handleResume : handlePause}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.92 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                   style={{
                     display: 'flex',
@@ -453,8 +448,7 @@ export const LearningPanel = memo(function LearningPanel() {
               {/* Stop / Close */}
               <motion.button
                 onClick={handleStop}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.92 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                 style={{
                   display: 'flex',
@@ -642,8 +636,7 @@ export const LearningPanel = memo(function LearningPanel() {
               >
                 <motion.button
                   onClick={handleRunAgain}
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
+                  whileTap={{ scale: 0.92 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                   style={{
                     flex: 1,
@@ -657,7 +650,7 @@ export const LearningPanel = memo(function LearningPanel() {
                     color: '#D4B896',
                     background: 'rgba(196, 149, 106, 0.1)',
                     border: '1px solid rgba(196, 149, 106, 0.2)',
-                    borderRadius: '0.625rem',
+                    borderRadius: '9999px',
                     cursor: 'pointer',
                   }}
                 >
@@ -667,8 +660,7 @@ export const LearningPanel = memo(function LearningPanel() {
 
                 <motion.button
                   onClick={handleStop}
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
+                  whileTap={{ scale: 0.92 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                   style={{
                     flex: 1,
@@ -682,7 +674,7 @@ export const LearningPanel = memo(function LearningPanel() {
                     color: bodyText,
                     background: inputBg,
                     border: `1px solid ${glassBorder}`,
-                    borderRadius: '0.625rem',
+                    borderRadius: '9999px',
                     cursor: 'pointer',
                   }}
                 >
@@ -744,14 +736,13 @@ export const LearningPanel = memo(function LearningPanel() {
               border: `1px solid ${glassBorder}`,
               borderRadius: '1.25rem',
               cursor: 'pointer',
-              backdropFilter: 'blur(24px) saturate(1.6)',
-              WebkitBackdropFilter: 'blur(24px) saturate(1.6)',
+              backdropFilter: 'blur(12px) saturate(1.3)',
+              WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
               boxShadow: fabShadow,
               zIndex: 50,
               transition: 'left 0.4s cubic-bezier(0.32, 0.72, 0, 1)',
             }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 500, damping: 28 }}
           >
             <Brain style={{ width: 14, height: 14 }} />
@@ -779,8 +770,8 @@ export const LearningPanel = memo(function LearningPanel() {
               background: glassBackground,
               border: `1px solid ${glassBorder}`,
               borderRadius: '1rem',
-              backdropFilter: 'blur(40px) saturate(1.8)',
-              WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
+              backdropFilter: 'blur(12px) saturate(1.3)',
+              WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
               boxShadow: glassShadow,
               zIndex: 50,
               transition: 'left 0.4s cubic-bezier(0.32, 0.72, 0, 1)',
@@ -815,8 +806,7 @@ export const LearningPanel = memo(function LearningPanel() {
               </div>
               <motion.button
                 onClick={() => setPopoverOpen(false)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.92 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                 style={{
                   display: 'flex',
@@ -854,7 +844,7 @@ export const LearningPanel = memo(function LearningPanel() {
                 display: 'flex',
                 gap: '0.3rem',
                 background: inputBg,
-                borderRadius: '0.625rem',
+                borderRadius: '9999px',
                 padding: '0.2rem',
               }}
             >
@@ -862,7 +852,6 @@ export const LearningPanel = memo(function LearningPanel() {
                 <motion.button
                   key={d}
                   onClick={() => setDepth(d)}
-                  whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                   style={{
@@ -877,7 +866,7 @@ export const LearningPanel = memo(function LearningPanel() {
                     border: depth === d
                       ? '1px solid rgba(196, 149, 106, 0.2)'
                       : '1px solid transparent',
-                    borderRadius: '0.5rem',
+                    borderRadius: '9999px',
                     cursor: 'pointer',
                     transition: 'background 0.15s, border-color 0.15s, color 0.15s',
                   }}
@@ -942,8 +931,7 @@ export const LearningPanel = memo(function LearningPanel() {
             {/* Start button */}
             <motion.button
               onClick={handleStart}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.92 }}
               transition={{ type: 'spring', stiffness: 500, damping: 28 }}
               style={{
                 display: 'flex',
@@ -957,7 +945,7 @@ export const LearningPanel = memo(function LearningPanel() {
                 color: '#fff',
                 background: 'linear-gradient(135deg, #C4956A, #D4B896)',
                 border: 'none',
-                borderRadius: '0.625rem',
+                borderRadius: '9999px',
                 cursor: 'pointer',
                 boxShadow: '0 2px 12px rgba(196, 149, 106, 0.3)',
               }}

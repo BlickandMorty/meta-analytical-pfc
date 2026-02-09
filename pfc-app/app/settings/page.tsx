@@ -275,7 +275,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Model</label>
-                  <select value={apiProvider === 'openai' ? openaiModel : anthropicModel} onChange={(e) => { if (apiProvider === 'openai') setOpenAIModel(e.target.value as OpenAIModel); else setAnthropicModel(e.target.value as AnthropicModel); }} className="w-full rounded-xl border border-border/30 bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-pfc-violet/50">
+                  <select value={apiProvider === 'openai' ? openaiModel : anthropicModel} onChange={(e) => { if (apiProvider === 'openai') setOpenAIModel(e.target.value as OpenAIModel); else setAnthropicModel(e.target.value as AnthropicModel); }} className="w-full rounded-full border border-border/30 bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-pfc-violet/50">
                     {(apiProvider === 'openai' ? OPENAI_MODELS : ANTHROPIC_MODELS).map((m) => (
                       <option key={m.value} value={m.value}>{m.label}</option>
                     ))}

@@ -93,7 +93,7 @@ export function LiveControls() {
           className="overflow-hidden"
         >
           <div className="mx-auto max-w-3xl px-4 pb-3">
-            <div className="rounded-2xl p-4 space-y-4 border border-border/15" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(80px) saturate(2.2)', WebkitBackdropFilter: 'blur(80px) saturate(2.2)', boxShadow: 'var(--shadow-s)' }}>
+            <div className="rounded-2xl p-4 space-y-4 border border-border/15" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(12px) saturate(1.3)', WebkitBackdropFilter: 'blur(12px) saturate(1.3)' }}>
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

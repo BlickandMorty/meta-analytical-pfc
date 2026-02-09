@@ -189,8 +189,8 @@ export const NotesSidebar = memo(function NotesSidebar() {
             background: isDark
               ? 'rgba(31, 30, 27, 0.95)'
               : 'rgba(255, 255, 255, 0.40)',
-            backdropFilter: 'blur(40px) saturate(1.6)',
-            WebkitBackdropFilter: 'blur(40px) saturate(1.6)',
+            backdropFilter: 'blur(12px) saturate(1.3)',
+            WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
             borderRight: isDark
               ? '1px solid rgba(62, 61, 57, 0.5)'
               : '1px solid rgba(0, 0, 0, 0.06)',
@@ -329,10 +329,8 @@ const SidebarHeader = memo(function SidebarHeader({
             fontSize: '0.6875rem',
             fontWeight: 400,
             letterSpacing: '-0.005em',
-            borderRadius: '0.75rem',
-            border: isDark
-              ? '1px solid rgba(62,61,57,0.5)'
-              : '1px solid rgba(0,0,0,0.06)',
+            borderRadius: '9999px',
+            border: 'none',
             background: isDark
               ? 'rgba(196,149,106,0.08)'
               : 'rgba(0,0,0,0.03)',
@@ -380,8 +378,7 @@ const SidebarHeader = memo(function SidebarHeader({
       {/* Action buttons row */}
       <div style={{ display: 'flex', gap: '0.375rem' }}>
         <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
+          whileTap={{ scale: 0.92 }}
           onClick={onNewPage}
           style={{
             flex: 1,
@@ -391,13 +388,13 @@ const SidebarHeader = memo(function SidebarHeader({
             gap: '0.25rem',
             height: '1.625rem',
             fontSize: '0.625rem',
-            fontWeight: 550,
+            fontWeight: 600,
             letterSpacing: '-0.005em',
-            borderRadius: '0.5rem',
+            borderRadius: '9999px',
             border: 'none',
             background: isDark
               ? 'rgba(52,211,153,0.12)'
-              : 'rgba(52,211,153,0.15)',
+              : 'rgba(52,211,153,0.10)',
             color: '#34D399',
             cursor: 'pointer',
             transition: 'background 0.15s',
@@ -408,8 +405,7 @@ const SidebarHeader = memo(function SidebarHeader({
         </motion.button>
 
         <motion.button
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
+          whileTap={{ scale: 0.92 }}
           onClick={onTodayJournal}
           style={{
             flex: 1,
@@ -419,13 +415,13 @@ const SidebarHeader = memo(function SidebarHeader({
             gap: '0.25rem',
             height: '1.625rem',
             fontSize: '0.625rem',
-            fontWeight: 550,
+            fontWeight: 600,
             letterSpacing: '-0.005em',
-            borderRadius: '0.5rem',
+            borderRadius: '9999px',
             border: 'none',
             background: isDark
               ? 'rgba(196,149,106,0.12)'
-              : 'rgba(124,108,240,0.12)',
+              : 'rgba(196,149,106,0.10)',
             color: '#C4956A',
             cursor: 'pointer',
             transition: 'background 0.15s',
@@ -471,8 +467,7 @@ const ViewTabBar = memo(function ViewTabBar({
         return (
           <motion.button
             key={tab.id}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.94 }}
+            whileTap={{ scale: 0.92 }}
             onClick={() => onViewChange(tab.id)}
             style={{
               flex: 1,
@@ -482,18 +477,18 @@ const ViewTabBar = memo(function ViewTabBar({
               gap: '0.25rem',
               height: '1.5rem',
               fontSize: '0.5625rem',
-              fontWeight: isActive ? 600 : 450,
+              fontWeight: isActive ? 700 : 600,
               letterSpacing: '-0.005em',
-              borderRadius: '0.375rem',
+              borderRadius: '9999px',
               border: 'none',
               cursor: 'pointer',
               transition: 'background 0.15s, color 0.15s',
               background: isActive
-                ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(124,108,240,0.10)')
+                ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)')
                 : 'transparent',
               color: isActive
-                ? '#C4956A'
-                : (isDark ? 'rgba(232,228,222,0.35)' : 'rgba(0,0,0,0.35)'),
+                ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+                : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.35)'),
             }}
           >
             <Icon style={{ width: '0.6875rem', height: '0.6875rem' }} />
@@ -758,8 +753,7 @@ const PageContextMenu = memo(function PageContextMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+          whileTap={{ scale: 0.92 }}
           onClick={(e) => e.stopPropagation()}
           style={{
             width: '1.25rem',
@@ -767,7 +761,7 @@ const PageContextMenu = memo(function PageContextMenu({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderRadius: '0.25rem',
+            borderRadius: '50%',
             border: 'none',
             background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.04)',
             color: isDark ? 'rgba(232,228,222,0.4)' : 'rgba(0,0,0,0.35)',
@@ -784,10 +778,10 @@ const PageContextMenu = memo(function PageContextMenu({
         sideOffset={4}
         className="min-w-[140px]"
         style={{
-          background: isDark ? 'rgba(20,20,20,0.95)' : 'rgba(255,255,255,0.95)',
-          backdropFilter: 'blur(20px)',
-          border: isDark ? '1px solid rgba(62,61,57,0.5)' : '1px solid rgba(0,0,0,0.08)',
-          borderRadius: '0.5rem',
+          background: isDark ? 'rgba(43,42,39,0.95)' : 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(12px) saturate(1.3)',
+          border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+          borderRadius: '0.75rem',
           padding: '0.25rem',
         }}
       >
@@ -1119,13 +1113,13 @@ function BooksView({ isDark, books }: BooksViewProps) {
               gap: '0.375rem',
               height: '2rem',
               fontSize: '0.6875rem',
-              fontWeight: 550,
-              borderRadius: '0.5rem',
+              fontWeight: 600,
+              borderRadius: '9999px',
               border: isDark
-                ? '1px dashed rgba(62,61,57,0.5)'
-                : '1px dashed rgba(0,0,0,0.10)',
+                ? '1px dashed rgba(62,61,57,0.3)'
+                : '1px dashed rgba(0,0,0,0.08)',
               background: 'transparent',
-              color: isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
               cursor: 'pointer',
               transition: 'border-color 0.15s, color 0.15s',
             }}
@@ -1241,8 +1235,7 @@ function BooksView({ isDark, books }: BooksViewProps) {
       {/* Create book button */}
       <div style={{ padding: '0.375rem 0.75rem' }}>
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileTap={{ scale: 0.92 }}
           style={{
             width: '100%',
             display: 'flex',
@@ -1251,13 +1244,13 @@ function BooksView({ isDark, books }: BooksViewProps) {
             gap: '0.375rem',
             height: '2rem',
             fontSize: '0.6875rem',
-            fontWeight: 550,
-            borderRadius: '0.5rem',
+            fontWeight: 600,
+            borderRadius: '9999px',
             border: isDark
-              ? '1px dashed rgba(62,61,57,0.5)'
-              : '1px dashed rgba(0,0,0,0.10)',
+              ? '1px dashed rgba(62,61,57,0.3)'
+              : '1px dashed rgba(0,0,0,0.08)',
             background: 'transparent',
-            color: isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)',
+            color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
             cursor: 'pointer',
             transition: 'border-color 0.15s, color 0.15s',
           }}

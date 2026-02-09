@@ -89,9 +89,8 @@ export function SynthesisCard() {
             className="max-w-3xl w-full rounded-2xl border border-border/20 overflow-hidden"
             style={{
               background: 'var(--glass-bg)',
-              backdropFilter: 'blur(80px) saturate(2.2)',
-              WebkitBackdropFilter: 'blur(80px) saturate(2.2)',
-              boxShadow: 'var(--shadow-s)',
+              backdropFilter: 'blur(12px) saturate(1.3)',
+              WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
             }}
           >
             {/* Header */}
@@ -106,11 +105,10 @@ export function SynthesisCard() {
                 )}
               </div>
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.92 }}
                 onClick={toggleSynthesisView}
                 aria-label="Close synthesis"
-                className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 hover:text-foreground cursor-pointer transition-colors"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground/50 hover:text-foreground cursor-pointer transition-colors"
               >
                 <XIcon className="h-3.5 w-3.5" />
               </motion.button>
@@ -124,15 +122,19 @@ export function SynthesisCard() {
                     Generate a synthesis from your conversation and current signals.
                   </p>
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileTap={{ scale: 0.92 }}
                     onClick={handleGenerate}
                     disabled={loading}
                     className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer',
-                      'bg-pfc-violet text-white hover:bg-pfc-violet/90',
+                      'flex items-center gap-2 px-4 py-2 rounded-full text-xs cursor-pointer',
                       'transition-colors disabled:opacity-50',
                     )}
+                    style={{
+                      background: 'rgba(196,149,106,0.12)',
+                      color: 'rgba(232,228,222,0.95)',
+                      fontWeight: 700,
+                      border: 'none',
+                    }}
                   >
                     <SparklesIcon className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
                     {loading ? 'Generating...' : 'Generate'}
@@ -149,11 +151,11 @@ export function SynthesisCard() {
                         <motion.button
                           key={tab.key}
                           onClick={() => setActiveTab(tab.key)}
-                          whileTap={{ scale: 0.95 }}
+                          whileTap={{ scale: 0.92 }}
                           className={cn(
-                            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-colors',
+                            'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-colors',
                             isActive
-                              ? 'bg-pfc-violet/12 text-pfc-violet'
+                              ? 'bg-[rgba(196,149,106,0.12)] text-[rgba(232,228,222,0.95)]'
                               : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40',
                           )}
                         >

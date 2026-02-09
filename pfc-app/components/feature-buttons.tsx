@@ -111,32 +111,23 @@ export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }:
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04, duration: 0.22 }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
+              whileTap={{ scale: 0.92 }}
               onClick={() => handleClick(feat.action)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = hoverBg;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = bg;
-              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.375rem',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '0.875rem',
-                border: isDark
-                  ? '1px solid rgba(62,61,57,0.5)'
-                  : '1px solid rgba(0,0,0,0.06)',
+                padding: '0.4375rem 0.875rem',
+                borderRadius: '9999px',
+                border: 'none',
                 background: bg,
                 color: textColor,
                 cursor: 'pointer',
                 fontSize: '0.75rem',
-                fontWeight: 500,
+                fontWeight: 600,
                 letterSpacing: '-0.01em',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
+                backdropFilter: 'blur(12px) saturate(1.3)',
+                WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
                 transition: 'background 0.15s, color 0.15s',
               }}
             >

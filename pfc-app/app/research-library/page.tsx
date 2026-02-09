@@ -142,7 +142,7 @@ export default function ResearchLibraryPage() {
               placeholder="Search papers, authors, tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 rounded-xl text-sm"
+              className="pl-9 rounded-full text-sm"
             />
           </div>
           <GlassBubbleButton
@@ -203,7 +203,7 @@ export default function ResearchLibraryPage() {
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="Paper title"
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div className="col-span-2">
@@ -214,7 +214,7 @@ export default function ResearchLibraryPage() {
                       value={newAuthors}
                       onChange={(e) => setNewAuthors(e.target.value)}
                       placeholder="Smith, J., Doe, A."
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div>
@@ -225,7 +225,7 @@ export default function ResearchLibraryPage() {
                       value={newYear}
                       onChange={(e) => setNewYear(e.target.value)}
                       placeholder="2024"
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div>
@@ -236,7 +236,7 @@ export default function ResearchLibraryPage() {
                       value={newJournal}
                       onChange={(e) => setNewJournal(e.target.value)}
                       placeholder="Nature, Science, etc."
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div>
@@ -247,7 +247,7 @@ export default function ResearchLibraryPage() {
                       value={newDoi}
                       onChange={(e) => setNewDoi(e.target.value)}
                       placeholder="10.1000/xyz123"
-                      className="rounded-xl text-sm font-mono"
+                      className="rounded-full text-sm font-mono"
                     />
                   </div>
                   <div>
@@ -258,7 +258,7 @@ export default function ResearchLibraryPage() {
                       value={newUrl}
                       onChange={(e) => setNewUrl(e.target.value)}
                       placeholder="https://..."
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div className="col-span-2">
@@ -269,7 +269,7 @@ export default function ResearchLibraryPage() {
                       value={newTags}
                       onChange={(e) => setNewTags(e.target.value)}
                       placeholder="neuroscience, meta-analysis, rct"
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div className="col-span-2">
@@ -281,7 +281,7 @@ export default function ResearchLibraryPage() {
                       onChange={(e) => setNewAbstract(e.target.value)}
                       placeholder="Paper abstract..."
                       rows={3}
-                      className="w-full rounded-xl border border-border/30 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-pfc-green/50 resize-none"
+                      className="w-full rounded-2xl border border-border/30 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-pfc-green/50 resize-none"
                     />
                   </div>
                 </div>

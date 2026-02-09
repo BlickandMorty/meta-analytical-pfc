@@ -47,9 +47,8 @@ export function ChatHeader() {
       className="flex h-12 items-center justify-between px-4 pl-14 shrink-0"
       style={{
         background: 'var(--glass-bg)',
-        backdropFilter: 'blur(80px) saturate(2.2)',
-        WebkitBackdropFilter: 'blur(80px) saturate(2.2)',
-        boxShadow: 'var(--shadow-s)',
+        backdropFilter: 'blur(12px) saturate(1.3)',
+        WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
         borderRadius: 'var(--radius-obs-xl)',
       }}
     >

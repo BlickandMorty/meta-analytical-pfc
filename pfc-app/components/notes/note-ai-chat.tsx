@@ -333,15 +333,12 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
             border: `1px solid ${glassBorder}`,
             borderRadius: '1.25rem',
             cursor: 'pointer',
-            backdropFilter: 'blur(24px) saturate(1.6)',
-            WebkitBackdropFilter: 'blur(24px) saturate(1.6)',
-            boxShadow: isDark
-              ? '0 4px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.06) inset'
-              : '0 4px 24px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(255,255,255,0.5) inset',
+            backdropFilter: 'blur(12px) saturate(1.3)',
+            WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+            boxShadow: 'none',
             zIndex: 50,
           }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.92 }}
           transition={{ type: 'spring', stiffness: 500, damping: 28 }}
         >
           <Sparkles style={{ width: 14, height: 14 }} />
@@ -372,11 +369,9 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
           background: glassBackground,
           border: `1px solid ${glassBorder}`,
           borderRadius: '1rem',
-          backdropFilter: 'blur(40px) saturate(1.8)',
-          WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
-          boxShadow: isDark
-            ? '0 8px 40px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06) inset'
-            : '0 8px 40px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(255,255,255,0.6) inset',
+          backdropFilter: 'blur(12px) saturate(1.3)',
+          WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+          boxShadow: 'none',
           overflow: 'hidden',
           zIndex: 50,
           transition: 'max-height 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
@@ -411,8 +406,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
           </div>
           <motion.button
             onClick={handleClose}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 500, damping: 28 }}
             style={{
               display: 'flex',
@@ -420,7 +414,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
               justifyContent: 'center',
               width: 22,
               height: 22,
-              borderRadius: '0.375rem',
+              borderRadius: '50%',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -452,8 +446,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                 key={action.id}
                 onClick={() => handleQuickAction(action)}
                 disabled={disabled}
-                whileHover={disabled ? undefined : { scale: 1.04 }}
-                whileTap={disabled ? undefined : { scale: 0.96 }}
+                whileTap={disabled ? undefined : { scale: 0.92 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 28 }}
                 style={{
                   display: 'inline-flex',
@@ -466,7 +459,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                   color: disabled ? subtleText : bodyText,
                   background: inputBg,
                   border: `1px solid ${inputBorder}`,
-                  borderRadius: '0.625rem',
+                  borderRadius: '9999px',
                   cursor: disabled ? 'not-allowed' : 'pointer',
                   opacity: disabled ? 0.45 : 1,
                   whiteSpace: 'nowrap',
@@ -516,7 +509,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                   color: bodyText,
                   scrollbarWidth: 'thin',
                   scrollbarColor: isDark
-                    ? 'rgba(255,255,255,0.1) transparent'
+                    ? 'rgba(196,149,106,0.15) transparent'
                     : 'rgba(0,0,0,0.1) transparent',
                 }}
               >
@@ -621,7 +614,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
               color: bodyText,
               background: inputBg,
               border: `1px solid ${inputBorder}`,
-              borderRadius: '0.5rem',
+              borderRadius: '9999px',
               outline: 'none',
               opacity: isGenerating ? 0.5 : 1,
               transition: 'border-color 0.15s, opacity 0.15s',
@@ -638,8 +631,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
           {isGenerating ? (
             <motion.button
               onClick={handleStop}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.92 }}
               transition={{ type: 'spring', stiffness: 500, damping: 28 }}
               style={{
                 display: 'flex',
@@ -647,7 +639,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                 justifyContent: 'center',
                 width: 28,
                 height: 28,
-                borderRadius: '0.5rem',
+                borderRadius: '50%',
                 background: 'rgba(224, 120, 80, 0.15)',
                 border: `1px solid rgba(224, 120, 80, 0.25)`,
                 cursor: 'pointer',
@@ -662,8 +654,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
             <motion.button
               onClick={handleSend}
               disabled={!inputValue.trim()}
-              whileHover={inputValue.trim() ? { scale: 1.1 } : undefined}
-              whileTap={inputValue.trim() ? { scale: 0.9 } : undefined}
+              whileTap={inputValue.trim() ? { scale: 0.92 } : undefined}
               transition={{ type: 'spring', stiffness: 500, damping: 28 }}
               style={{
                 display: 'flex',
@@ -671,7 +662,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                 justifyContent: 'center',
                 width: 28,
                 height: 28,
-                borderRadius: '0.5rem',
+                borderRadius: '50%',
                 background: inputValue.trim()
                   ? 'rgba(124, 108, 240, 0.15)'
                   : inputBg,
@@ -736,8 +727,7 @@ function ActionButton({
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ scale: 1.04 }}
-      whileTap={{ scale: 0.96 }}
+      whileTap={{ scale: 0.92 }}
       transition={{ type: 'spring', stiffness: 500, damping: 28 }}
       style={{
         display: 'inline-flex',
@@ -749,7 +739,7 @@ function ActionButton({
         color: bodyText,
         background: inputBg,
         border: `1px solid ${inputBorder}`,
-        borderRadius: '0.5rem',
+        borderRadius: '9999px',
         cursor: 'pointer',
         whiteSpace: 'nowrap',
         transition: 'background 0.15s',

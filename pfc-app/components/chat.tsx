@@ -373,8 +373,8 @@ export function Chat() {
                   border: isDark
                     ? '1.5px solid rgba(74,72,69,0.7)'
                     : '1.5px solid rgba(0,0,0,0.12)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
+                  backdropFilter: 'blur(12px) saturate(1.3)',
+                  WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
                 }}
               >
                 <MultimodalInput
@@ -461,9 +461,9 @@ export function Chat() {
                         alignItems: 'center',
                         gap: '0.5rem',
                         padding: '0.375rem 0.625rem',
-                        borderRadius: '0.5rem',
+                        borderRadius: '9999px',
                         background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
-                        border: isDark ? '1px solid rgba(196,149,106,0.1)' : '1px solid rgba(196,149,106,0.08)',
+                        border: 'none',
                         fontSize: '0.625rem',
                         color: isDark ? 'rgba(155,150,137,0.9)' : 'rgba(0,0,0,0.4)',
                       }}
@@ -479,13 +479,13 @@ export function Chat() {
                         onClick={() => setModeHintDismissed(true)}
                         style={{
                           border: 'none',
-                          background: 'transparent',
+                          background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
                           cursor: 'pointer',
                           fontSize: '0.625rem',
                           color: '#C4956A',
                           fontWeight: 600,
-                          padding: '0.125rem 0.25rem',
-                          borderRadius: '0.25rem',
+                          padding: '0.125rem 0.5rem',
+                          borderRadius: '9999px',
                         }}
                       >
                         Got it

@@ -768,7 +768,7 @@ function ScoreBar({
           fontSize: '0.6875rem',
           width: '5.5rem',
           flexShrink: 0,
-          color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+          color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)',
           letterSpacing: '-0.01em',
         }}
       >
@@ -779,7 +779,7 @@ function ScoreBar({
           flex: 1,
           height: '0.375rem',
           borderRadius: '0.25rem',
-          background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+          background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
           overflow: 'hidden',
         }}
       >
@@ -800,7 +800,7 @@ function ScoreBar({
           fontWeight: 600,
           width: '1.75rem',
           textAlign: 'right',
-          color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+          color: isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.6)',
           fontVariantNumeric: 'tabular-nums',
         }}
       >
@@ -843,7 +843,7 @@ function LanguageResultCard({
             ? 'rgba(139,124,246,0.08)'
             : 'rgba(139,124,246,0.06)'
           : isDark
-            ? 'rgba(255,255,255,0.03)'
+            ? 'rgba(196,149,106,0.05)'
             : 'rgba(0,0,0,0.02)',
         border: `1px solid ${
           isTop
@@ -851,7 +851,7 @@ function LanguageResultCard({
               ? 'rgba(139,124,246,0.25)'
               : 'rgba(139,124,246,0.2)'
             : isDark
-              ? 'rgba(255,255,255,0.06)'
+              ? 'rgba(62,61,57,0.3)'
               : 'rgba(0,0,0,0.06)'
         }`,
         borderRadius: '1rem',
@@ -877,12 +877,12 @@ function LanguageResultCard({
             background: isTop
               ? 'rgba(139,124,246,0.2)'
               : isDark
-                ? 'rgba(255,255,255,0.06)'
+                ? 'rgba(62,61,57,0.3)'
                 : 'rgba(0,0,0,0.06)',
             color: isTop
               ? '#8B7CF6'
               : isDark
-                ? 'rgba(255,255,255,0.4)'
+                ? 'rgba(155,150,137,0.7)'
                 : 'rgba(0,0,0,0.4)',
             flexShrink: 0,
           }}
@@ -906,7 +906,7 @@ function LanguageResultCard({
               fontWeight: 600,
               fontSize: '0.9375rem',
               letterSpacing: '-0.02em',
-              color: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)',
+              color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)',
             }}
           >
             {langInfo.name}
@@ -934,8 +934,8 @@ function LanguageResultCard({
                 fontWeight: 600,
                 padding: '0.125rem 0.5rem',
                 borderRadius: '1rem',
-                background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+                background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
+                color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)',
                 letterSpacing: '0.02em',
                 textTransform: 'uppercase',
               }}
@@ -961,7 +961,7 @@ function LanguageResultCard({
           <span
             style={{
               fontSize: '0.6875rem',
-              color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
             }}
           >
             /100
@@ -971,7 +971,7 @@ function LanguageResultCard({
               style={{
                 width: '0.875rem',
                 height: '0.875rem',
-                color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
               }}
             />
           ) : (
@@ -979,7 +979,7 @@ function LanguageResultCard({
               style={{
                 width: '0.875rem',
                 height: '0.875rem',
-                color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
               }}
             />
           )}
@@ -992,7 +992,7 @@ function LanguageResultCard({
           style={{
             height: '0.25rem',
             borderRadius: '0.25rem',
-            background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+            background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
             overflow: 'hidden',
           }}
         >
@@ -1025,7 +1025,7 @@ function LanguageResultCard({
                 style={{
                   fontSize: '0.8125rem',
                   lineHeight: 1.6,
-                  color: isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)',
+                  color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.55)',
                   marginBottom: '1rem',
                 }}
               >
@@ -1062,7 +1062,7 @@ function LanguageResultCard({
                     style={{
                       fontSize: '0.6875rem',
                       fontWeight: 600,
-                      color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                      color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.5)',
                       textTransform: 'uppercase',
                       letterSpacing: '0.04em',
                     }}
@@ -1110,7 +1110,7 @@ function LanguageResultCard({
                     style={{
                       fontSize: '0.6875rem',
                       fontWeight: 600,
-                      color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                      color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.5)',
                       textTransform: 'uppercase',
                       letterSpacing: '0.04em',
                     }}
@@ -1166,7 +1166,7 @@ function LanguageResultCard({
                       style={{
                         fontSize: '0.6875rem',
                         fontWeight: 600,
-                        color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                        color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.5)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}
@@ -1179,7 +1179,7 @@ function LanguageResultCard({
                       key={lib}
                       style={{
                         fontSize: '0.75rem',
-                        color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                        color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.5)',
                         padding: '0.125rem 0',
                       }}
                     >
@@ -1207,7 +1207,7 @@ function LanguageResultCard({
                       style={{
                         fontSize: '0.6875rem',
                         fontWeight: 600,
-                        color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                        color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.5)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}
@@ -1220,7 +1220,7 @@ function LanguageResultCard({
                       key={repo}
                       style={{
                         fontSize: '0.75rem',
-                        color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                        color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.5)',
                         padding: '0.125rem 0',
                       }}
                     >
@@ -1318,7 +1318,7 @@ export default function CodeAnalyzerPage() {
             <p
               style={{
                 fontSize: '0.8125rem',
-                color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+                color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)',
                 maxWidth: '24rem',
                 lineHeight: 1.6,
               }}
@@ -1432,8 +1432,8 @@ export default function CodeAnalyzerPage() {
                         gap: '0.75rem',
                         padding: '0.75rem 1rem',
                         borderRadius: '0.75rem',
-                        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                        background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.02)',
+                        border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
                         cursor: 'pointer',
                         transition: 'background 0.15s',
                       }}
@@ -1454,7 +1454,7 @@ export default function CodeAnalyzerPage() {
                             fontSize: '0.8125rem',
                             fontWeight: 600,
                             letterSpacing: '-0.01em',
-                            color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)',
+                            color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.8)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -1465,7 +1465,7 @@ export default function CodeAnalyzerPage() {
                         <div
                           style={{
                             fontSize: '0.6875rem',
-                            color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+                            color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.35)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.5rem',
@@ -1479,7 +1479,7 @@ export default function CodeAnalyzerPage() {
                       <div
                         style={{
                           fontSize: '0.625rem',
-                          color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
+                          color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.25)',
                           flexShrink: 0,
                           display: 'flex',
                           alignItems: 'center',
@@ -1503,7 +1503,7 @@ export default function CodeAnalyzerPage() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                          color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.2)',
                           transition: 'color 0.15s',
                         }}
                       >
@@ -1536,7 +1536,7 @@ export default function CodeAnalyzerPage() {
                     display: 'block',
                     fontSize: '0.75rem',
                     fontWeight: 500,
-                    color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+                    color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)',
                     marginBottom: '0.375rem',
                     letterSpacing: '-0.01em',
                   }}
@@ -1552,9 +1552,9 @@ export default function CodeAnalyzerPage() {
                     width: '100%',
                     padding: '0.5rem 0.75rem',
                     borderRadius: '0.75rem',
-                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
-                    color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)',
+                    border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.08)'}`,
+                    background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.02)',
+                    color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.8)',
                     fontSize: '0.8125rem',
                     outline: 'none',
                     transition: 'border-color 0.15s',
@@ -1579,7 +1579,6 @@ export default function CodeAnalyzerPage() {
                   return (
                     <motion.div
                       key={cat.key}
-                      whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => handleCategorySelect(cat.key)}
                       style={{
@@ -1591,13 +1590,13 @@ export default function CodeAnalyzerPage() {
                             ? 'rgba(139,124,246,0.12)'
                             : 'rgba(139,124,246,0.08)'
                           : isDark
-                            ? 'rgba(255,255,255,0.03)'
+                            ? 'rgba(196,149,106,0.05)'
                             : 'rgba(0,0,0,0.02)',
                         border: `1px solid ${
                           isSelected
                             ? 'rgba(139,124,246,0.3)'
                             : isDark
-                              ? 'rgba(255,255,255,0.06)'
+                              ? 'rgba(62,61,57,0.3)'
                               : 'rgba(0,0,0,0.06)'
                         }`,
                         transition: 'background 0.15s, border-color 0.15s',
@@ -1608,7 +1607,7 @@ export default function CodeAnalyzerPage() {
                           style={{
                             width: '1rem',
                             height: '1rem',
-                            color: isSelected ? '#8B7CF6' : isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+                            color: isSelected ? '#8B7CF6' : isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.35)',
                             flexShrink: 0,
                           }}
                         />
@@ -1620,7 +1619,7 @@ export default function CodeAnalyzerPage() {
                             color: isSelected
                               ? '#8B7CF6'
                               : isDark
-                                ? 'rgba(255,255,255,0.75)'
+                                ? 'rgba(232,228,222,0.85)'
                                 : 'rgba(0,0,0,0.75)',
                           }}
                         >
@@ -1630,7 +1629,7 @@ export default function CodeAnalyzerPage() {
                       <p
                         style={{
                           fontSize: '0.6875rem',
-                          color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                          color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
                           lineHeight: 1.4,
                           marginLeft: '1.625rem',
                         }}
@@ -1658,7 +1657,7 @@ export default function CodeAnalyzerPage() {
               <p
                 style={{
                   fontSize: '0.8125rem',
-                  color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+                  color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)',
                   marginBottom: '1rem',
                   lineHeight: 1.6,
                 }}
@@ -1722,7 +1721,6 @@ export default function CodeAnalyzerPage() {
                       return (
                         <motion.div
                           key={lang}
-                          whileHover={{ scale: 1.03 }}
                           whileTap={{ scale: 0.96 }}
                           onClick={() => setCurrentLang(lang)}
                           style={{
@@ -1737,13 +1735,13 @@ export default function CodeAnalyzerPage() {
                                 ? 'rgba(139,124,246,0.12)'
                                 : 'rgba(139,124,246,0.08)'
                               : isDark
-                                ? 'rgba(255,255,255,0.03)'
+                                ? 'rgba(196,149,106,0.05)'
                                 : 'rgba(0,0,0,0.02)',
                             border: `1px solid ${
                               isSelected
                                 ? 'rgba(139,124,246,0.3)'
                                 : isDark
-                                  ? 'rgba(255,255,255,0.06)'
+                                  ? 'rgba(62,61,57,0.3)'
                                   : 'rgba(0,0,0,0.06)'
                             }`,
                             transition: 'background 0.15s, border-color 0.15s',
@@ -1765,7 +1763,7 @@ export default function CodeAnalyzerPage() {
                               color: isSelected
                                 ? '#8B7CF6'
                                 : isDark
-                                  ? 'rgba(255,255,255,0.6)'
+                                  ? 'rgba(232,228,222,0.7)'
                                   : 'rgba(0,0,0,0.6)',
                             }}
                           >
@@ -1830,7 +1828,7 @@ export default function CodeAnalyzerPage() {
                         fontWeight: 700,
                         letterSpacing: '-0.02em',
                         marginBottom: '0.25rem',
-                        color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.9)',
+                        color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)',
                       }}
                     >
                       {analysis.projectName}
@@ -1841,7 +1839,7 @@ export default function CodeAnalyzerPage() {
                         alignItems: 'center',
                         gap: '0.5rem',
                         fontSize: '0.75rem',
-                        color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+                        color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)',
                       }}
                     >
                       <span>{CATEGORIES.find((c) => c.key === analysis.category)?.label}</span>
@@ -1902,7 +1900,7 @@ export default function CodeAnalyzerPage() {
                   style={{
                     fontSize: '0.8125rem',
                     lineHeight: 1.65,
-                    color: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                    color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.5)',
                   }}
                 >
                   {analysis.aiSummary}
@@ -1917,15 +1915,15 @@ export default function CodeAnalyzerPage() {
                       gap: '0.75rem',
                       padding: '0.75rem 1rem',
                       borderRadius: '0.75rem',
-                      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                      background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.02)',
+                      border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
                     }}
                   >
                     <ArrowRightIcon
                       style={{
                         width: '1rem',
                         height: '1rem',
-                        color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                        color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
                       }}
                     />
                     <div style={{ flex: 1 }}>
@@ -1933,7 +1931,7 @@ export default function CodeAnalyzerPage() {
                         style={{
                           fontSize: '0.75rem',
                           fontWeight: 600,
-                          color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+                          color: isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.6)',
                           marginBottom: '0.125rem',
                         }}
                       >
@@ -1944,7 +1942,7 @@ export default function CodeAnalyzerPage() {
                       <div
                         style={{
                           fontSize: '0.6875rem',
-                          color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+                          color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.35)',
                         }}
                       >
                         Complexity:{' '}
@@ -2019,7 +2017,7 @@ export default function CodeAnalyzerPage() {
                         gap: '0.5rem',
                         padding: '0.625rem 0.75rem',
                         borderRadius: '0.75rem',
-                        background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+                        background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.015)',
                       }}
                     >
                       <DimIcon
@@ -2045,7 +2043,7 @@ export default function CodeAnalyzerPage() {
                         <div
                           style={{
                             fontSize: '0.6875rem',
-                            color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+                            color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.35)',
                             lineHeight: 1.4,
                           }}
                         >

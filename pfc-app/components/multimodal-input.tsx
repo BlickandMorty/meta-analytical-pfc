@@ -216,11 +216,9 @@ function BrainButtonWithToggle({
           cursor: 'pointer',
           border: 'none',
           /* Dark mode: brain is white with a glow. Light mode: dim, no glow */
-          background: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.06)',
-          color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.3)',
-          boxShadow: isDark
-            ? '0 0 12px rgba(255,255,255,0.15), 0 0 24px rgba(196,149,106,0.1)'
-            : 'none',
+          background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.04)',
+          color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.35)',
+          boxShadow: 'none',
           transition: 'background 0.3s, color 0.3s, box-shadow 0.3s',
         }}
       >
@@ -264,8 +262,8 @@ function BrainButtonWithToggle({
             position: 'absolute',
             inset: '-2px',
             borderRadius: '50%',
-            border: '1.5px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 0 8px rgba(255,255,255,0.06)',
+            border: '1.5px solid rgba(196,149,106,0.1)',
+            boxShadow: '0 0 8px rgba(196,149,106,0.06)',
             pointerEvents: 'none',
             transition: 'opacity 0.3s',
           }}
@@ -407,13 +405,13 @@ export function MultimodalInput({
           hero ? 'rounded-3xl' : 'rounded-2xl',
           !hero && !className?.includes('glass') && 'border bg-card/80',
           !hero && (focused
-            ? 'shadow-[var(--shadow-s)]'
-            : 'shadow-[var(--shadow-tactile)]'),
+            ? ''
+            : ''),
           className,
         )}
         style={!hero && !className?.includes('glass') ? {
-          backdropFilter: 'blur(20px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+          backdropFilter: 'blur(12px) saturate(1.3)',
+          WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
         } : undefined}
       >
         {/* Text row */}
@@ -464,7 +462,7 @@ export function MultimodalInput({
           ) : trimmedValue ? (
             /* Active send arrow */
             <motion.button
-              whileTap={{ scale: 0.88 }}
+              whileTap={{ scale: 0.92 }}
               onClick={handleSubmit}
               style={{
                 height: '2.5rem',
@@ -500,7 +498,7 @@ export function MultimodalInput({
               style={{ overflow: 'hidden' }}
             >
               <div style={{
-                borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                borderTop: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
                 paddingTop: '0.375rem',
                 marginTop: '0.5rem',
               }}>
@@ -522,12 +520,12 @@ export function MultimodalInput({
                       cursor: 'pointer',
                       textAlign: 'left',
                       fontSize: '0.8125rem',
-                      borderRadius: '0.5rem',
-                      color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
+                      borderRadius: '9999px',
+                      color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.55)',
                       transition: 'background 0.12s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+                      e.currentTarget.style.background = isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent';
@@ -542,7 +540,7 @@ export function MultimodalInput({
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <span style={{
                         fontWeight: 600,
-                        color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.85)',
+                        color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)',
                       }}>
                         {trimmedValue}
                       </span>

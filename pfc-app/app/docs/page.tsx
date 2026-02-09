@@ -46,8 +46,8 @@ function DocSection({
       style={{
         borderRadius: '1rem',
         overflow: 'hidden',
-        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-        border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+        background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(0,0,0,0.02)',
+        border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
       }}
     >
       <button
@@ -72,9 +72,9 @@ function DocSection({
             justifyContent: 'center',
             height: '2rem',
             width: '2rem',
-            borderRadius: '0.625rem',
+            borderRadius: '9999px',
             flexShrink: 0,
-            background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+            background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.04)',
           }}
         >
           <Icon style={{ height: '1rem', width: '1rem', color: iconColor }} />
@@ -109,7 +109,7 @@ function DocSection({
                 padding: '0 1.25rem 1.25rem',
                 fontSize: '0.8125rem',
                 lineHeight: 1.7,
-                color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+                color: isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.6)',
               }}
             >
               {children}
@@ -133,8 +133,8 @@ function Code({ children }: { children: React.ReactNode }) {
         fontSize: '0.75rem',
         padding: '0.125rem 0.375rem',
         borderRadius: '0.375rem',
-        background: 'rgba(139,124,246,0.1)',
-        color: '#8B7CF6',
+        background: 'rgba(196,149,106,0.1)',
+        color: '#C4956A',
       }}
     >
       {children}
@@ -178,7 +178,7 @@ function CodeBlock({ children }: { children: string }) {
         padding: '0.875rem 1rem',
         borderRadius: '0.75rem',
         background: 'rgba(0,0,0,0.3)',
-        color: 'rgba(255,255,255,0.75)',
+        color: 'rgba(232,228,222,0.8)',
         overflowX: 'auto',
         margin: '0.75rem 0',
       }}

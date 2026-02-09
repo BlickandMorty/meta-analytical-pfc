@@ -100,7 +100,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
           style={{
             height: '0.8125rem',
             width: '0.8125rem',
-            color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+            color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
           }}
         />
         <span
@@ -109,7 +109,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
             fontWeight: 600,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
-            color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+            color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
           }}
         >
@@ -122,12 +122,10 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          borderRadius: '0.75rem',
+          borderRadius: '1rem',
           overflow: 'hidden',
-          background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.5)',
-          border: isDark
-            ? '1px solid rgba(255,255,255,0.06)'
-            : '1px solid rgba(0,0,0,0.06)',
+          background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(245,240,232,0.6)',
+          border: 'none',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
         }}
@@ -150,10 +148,10 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 padding: '0.625rem 0.75rem',
                 border: 'none',
                 borderTop: idx > 0
-                  ? (isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.04)')
+                  ? (isDark ? '1px solid rgba(62,61,57,0.2)' : '1px solid rgba(0,0,0,0.04)')
                   : 'none',
                 background: isHovered
-                  ? (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)')
+                  ? (isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)')
                   : 'transparent',
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -166,7 +164,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                   height: '0.875rem',
                   width: '0.875rem',
                   flexShrink: 0,
-                  color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)',
+                  color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)',
                 }}
               />
               <span
@@ -174,7 +172,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                   flex: 1,
                   fontSize: '0.8125rem',
                   fontWeight: 500,
-                  color: isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.7)',
+                  color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.7)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -187,7 +185,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 style={{
                   fontSize: '0.6875rem',
                   fontWeight: 400,
-                  color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)',
+                  color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.3)',
                   flexShrink: 0,
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
                 }}
