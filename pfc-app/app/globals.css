@@ -4,6 +4,47 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Custom display fonts ── */
+@font-face {
+  font-family: 'Ubuntu';
+  src: url('/fonts/Ubuntu-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MarioKartDS';
+  src: url('/fonts/Mario-Kart-DS.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Frantically';
+  src: url('/fonts/Frantically-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'FuntasiLear';
+  src: url('/fonts/FuntasiLear.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Billyand';
+  src: url('/fonts/Billyand.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -31,17 +72,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* PFC brand colors */
-  --color-pfc-ember: #C15F3C;
-  --color-pfc-violet: #6B5CE7;
-  --color-pfc-green: #22C55E;
-  --color-pfc-yellow: #EAB308;
-  --color-pfc-red: #EF4444;
-  --color-pfc-cyan: #06B6D4;
+  /* PFC brand — Cupertino-refined palette */
+  --color-pfc-ember: #E07850;
+  --color-pfc-violet: #7C6CF0;
+  --color-pfc-green: #34D399;
+  --color-pfc-yellow: #FBBF24;
+  --color-pfc-red: #F87171;
+  --color-pfc-cyan: #22D3EE;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -51,70 +92,161 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
 }
 
-/* Light theme */
+/* ─────────────────────────────────────────────────────────
+   Obsidian Liquid Glass — Motion & Duration Tokens
+   ───────────────────────────────────────────────────────── */
 :root {
-  --background: oklch(0.98 0.005 250);
-  --foreground: oklch(0.15 0.01 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.15 0.01 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.15 0.01 250);
-  --primary: oklch(0.55 0.15 30);
-  --primary-foreground: oklch(0.98 0.005 0);
-  --secondary: oklch(0.93 0.01 250);
-  --secondary-foreground: oklch(0.25 0.01 250);
-  --muted: oklch(0.93 0.01 250);
-  --muted-foreground: oklch(0.5 0.01 250);
-  --accent: oklch(0.55 0.2 285);
-  --accent-foreground: oklch(0.98 0.005 0);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.98 0.005 0);
-  --border: oklch(0.88 0.01 250);
-  --input: oklch(0.88 0.01 250);
-  --ring: oklch(0.55 0.15 30);
-  --radius: 0.625rem;
+  /* Canonical Cupertino animation curve from Obsidian */
+  --anim-motion-cupertino: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* Sidebar */
-  --sidebar: oklch(0.96 0.005 250);
-  --sidebar-foreground: oklch(0.25 0.01 250);
-  --sidebar-border: oklch(0.88 0.01 250);
-  --sidebar-accent: oklch(0.92 0.01 250);
-  --sidebar-accent-foreground: oklch(0.25 0.01 250);
-  --sidebar-ring: oklch(0.55 0.15 30);
+  /* Duration system */
+  --anim-duration-superfast: 80ms;
+  --anim-duration-fast: 160ms;
+  --anim-duration-moderate: 320ms;
+  --anim-duration-slow: 640ms;
+
+  /* Blur tiers — stripped saturate for perf, GPU-light */
+  --blur-s: blur(10px);
+  --blur-m: blur(16px);
+  --blur-l: blur(20px);
+
+  /* Radius system — Obsidian */
+  --radius-obs-s: 8px;
+  --radius-obs-m: 12px;
+  --radius-obs-l: 20px;
+  --radius-obs-xl: 28px;
+
 }
 
-/* Dark theme - PFC signature dark mode */
+/* ─────────────────────────────────────────────────────────
+   Light theme — Warm parchment + Liquid Glass
+   ───────────────────────────────────────────────────────── */
+:root {
+  --background: oklch(0.935 0.018 65);
+  --foreground: oklch(0.18 0.02 55);
+  --card: oklch(0.945 0.015 60 / 0.72);
+  --card-foreground: oklch(0.18 0.02 55);
+  --popover: oklch(0.94 0.016 62 / 0.92);
+  --popover-foreground: oklch(0.18 0.02 55);
+  --primary: oklch(0.55 0.14 30);
+  --primary-foreground: oklch(0.97 0.008 60);
+  --secondary: oklch(0.91 0.016 60);
+  --secondary-foreground: oklch(0.3 0.02 55);
+  --muted: oklch(0.91 0.016 60);
+  --muted-foreground: oklch(0.48 0.015 55);
+  --accent: oklch(0.57 0.18 285);
+  --accent-foreground: oklch(0.97 0.008 60);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.97 0.008 60);
+  --border: oklch(0.86 0.018 60 / 0.5);
+  --input: oklch(0.86 0.018 60 / 0.5);
+  --ring: oklch(0.55 0.14 30);
+  --radius: 0.75rem;
+
+  /* Sidebar — warm frosted vibrancy */
+  --sidebar: oklch(0.92 0.016 60 / 0.78);
+  --sidebar-foreground: oklch(0.22 0.02 55);
+  --sidebar-border: oklch(0.86 0.018 60 / 0.5);
+  --sidebar-accent: oklch(0.89 0.018 60 / 0.6);
+  --sidebar-accent-foreground: oklch(0.22 0.02 55);
+  --sidebar-ring: oklch(0.55 0.14 30);
+
+  /* Liquid Glass — Warm Light (heavy frosted) */
+  --liquid-glass-background: rgba(245, 235, 220, 0.72);
+  --shadow-base: inset 1px 1px 2px rgba(255, 248, 238, 0.6),
+    inset -1px -1px 2px rgba(255, 248, 238, 0.4),
+    inset 0 4px 16px rgba(255, 248, 238, 0.03);
+  --shadow-border: 0 0 1px 0 rgba(120, 90, 50, 0.25);
+  --shadow-xs: var(--shadow-base),
+    inset 0 -8px 48px rgba(80, 50, 20, 0.02),
+    0 0 8px rgba(80, 50, 20, 0.025),
+    0 4px 48px rgba(80, 50, 20, 0.1);
+  --shadow-s: var(--shadow-base),
+    inset 0 0 1px 1px rgba(255, 248, 238, 0.7),
+    var(--shadow-border),
+    0 8px 16px 0 rgba(80, 50, 20, 0.12);
+  --shadow-l: var(--shadow-border),
+    inset 0 0 1px 1px rgba(255, 248, 238, 0.7),
+    0 16px 64px 0 rgba(80, 50, 20, 0.1);
+  --shadow-tactile: rgba(80, 50, 20, 0.06) 0px 2px 8px -2px,
+    rgba(80, 50, 20, 0.04) 0px 2px 4px -2px;
+
+  /* Glass tokens — iOS frosted glass */
+  --glass-bg: var(--liquid-glass-background);
+  --glass-border: oklch(0.88 0.018 60 / 0.5);
+  --glass-hover: oklch(0.95 0.012 60 / 0.7);
+  --glass-blur: 20px;
+  --glass-blur-heavy: 24px;
+
+  /* Chat surface — same as background in light mode */
+  --chat-surface: oklch(0.935 0.018 65);
+
+}
+
+/* ─────────────────────────────────────────────────────────
+   Dark theme — Liquid Glass dark surface system
+   ───────────────────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.14 0.01 50);
-  --foreground: oklch(0.9 0.01 50);
-  --card: oklch(0.18 0.01 50);
-  --card-foreground: oklch(0.9 0.01 50);
-  --popover: oklch(0.18 0.01 50);
-  --popover-foreground: oklch(0.9 0.01 50);
-  --primary: oklch(0.65 0.15 30);
-  --primary-foreground: oklch(0.12 0.01 50);
-  --secondary: oklch(0.22 0.01 50);
-  --secondary-foreground: oklch(0.9 0.01 50);
-  --muted: oklch(0.22 0.01 50);
-  --muted-foreground: oklch(0.55 0.01 50);
-  --accent: oklch(0.6 0.2 285);
-  --accent-foreground: oklch(0.98 0.005 0);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.98 0.005 0);
-  --border: oklch(0.26 0.01 50);
-  --input: oklch(0.26 0.01 50);
-  --ring: oklch(0.65 0.15 30);
+  --background: oklch(0.07 0.005 260);
+  --foreground: oklch(0.92 0.008 250);
+  --card: oklch(0.18 0.008 260 / 0.65);
+  --card-foreground: oklch(0.92 0.008 250);
+  --popover: oklch(0.14 0.008 260 / 0.92);
+  --popover-foreground: oklch(0.92 0.008 250);
+  --primary: oklch(0.62 0.16 30);
+  --primary-foreground: oklch(0.07 0.005 260);
+  --secondary: oklch(0.18 0.008 260);
+  --secondary-foreground: oklch(0.92 0.008 250);
+  --muted: oklch(0.18 0.008 260);
+  --muted-foreground: oklch(0.50 0.008 250);
+  --accent: oklch(0.55 0.22 285);
+  --accent-foreground: oklch(0.99 0.003 0);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.99 0.003 0);
+  --border: oklch(0.22 0.008 260 / 0.5);
+  --input: oklch(0.22 0.008 260 / 0.5);
+  --ring: oklch(0.62 0.16 30);
 
-  /* Sidebar dark */
-  --sidebar: oklch(0.16 0.01 50);
-  --sidebar-foreground: oklch(0.85 0.01 50);
-  --sidebar-border: oklch(0.26 0.01 50);
-  --sidebar-accent: oklch(0.22 0.01 50);
-  --sidebar-accent-foreground: oklch(0.85 0.01 50);
-  --sidebar-ring: oklch(0.65 0.15 30);
+  /* Chat surface — dark gray instead of OLED black */
+  --chat-surface: oklch(0.16 0.006 260);
+
+  /* Sidebar dark — deep vibrancy */
+  --sidebar: oklch(0.12 0.008 260 / 0.78);
+  --sidebar-foreground: oklch(0.88 0.008 250);
+  --sidebar-border: oklch(0.22 0.008 260 / 0.4);
+  --sidebar-accent: oklch(0.18 0.008 260 / 0.5);
+  --sidebar-accent-foreground: oklch(0.88 0.008 250);
+  --sidebar-ring: oklch(0.62 0.16 30);
+
+  /* Liquid Glass — Dark (heavy frosted) */
+  --liquid-glass-background: rgba(255, 255, 255, 0.07);
+  --shadow-base: inset 1px 1.5px 1px -1px rgba(255, 255, 255, 0.2),
+    inset -1px -1.5px 1px -1px rgba(255, 255, 255, 0.15),
+    inset 0 4px 16px rgba(255, 255, 255, 0.025);
+  --shadow-border: 0 0 1px 0 rgba(255, 255, 255, 0.3);
+  --shadow-xs: var(--shadow-base);
+  --shadow-s: var(--shadow-border),
+    0 0 1px rgba(255, 255, 255, 0.5),
+    0 0 1px 0 rgba(0, 0, 0, 0.4),
+    0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  --shadow-l: var(--shadow-border),
+    0 0 1px rgba(255, 255, 255, 0.5),
+    0 0 1px 0 rgba(0, 0, 0, 0.7),
+    0 16px 64px 0 rgba(0, 0, 0, 0.3);
+  --shadow-tactile: rgba(0, 0, 0, 0.08) 0px 2px 8px -2px,
+    rgba(255, 255, 255, 0.04) 0px 2px 4px -2px;
+
+  /* Glass tokens (dark) — iOS frosted glass */
+  --glass-bg: var(--liquid-glass-background);
+  --glass-border: oklch(0.3 0.008 260 / 0.35);
+  --glass-hover: oklch(0.2 0.008 260 / 0.55);
+  --glass-blur: 20px;
+  --glass-blur-heavy: 24px;
 }
 
-/* Base styles */
+/* ─────────────────────────────────────────────────────────
+   Base resets
+   ───────────────────────────────────────────────────────── */
 * {
   @apply border-border;
 }
@@ -129,8 +261,9 @@ body {
   letter-spacing: -0.011em;
 }
 
-/* ── Polished Typography (Inter — Claude/ChatGPT style) ── */
-
+/* ─────────────────────────────────────────────────────────
+   Typography — SF Pro / Cupertino hierarchy
+   ───────────────────────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv01" 1;
@@ -142,142 +275,126 @@ h1 { letter-spacing: -0.032em; }
 h2 { letter-spacing: -0.028em; }
 h3 { letter-spacing: -0.022em; }
 
-/* Navigation and sidebar labels — crisp and tight */
-nav a,
-nav button,
-aside a,
-aside button,
-aside span,
-[role="navigation"] a,
-[role="navigation"] button {
+nav a, nav button, aside a, aside button, aside span,
+[role="navigation"] a, [role="navigation"] button {
   font-family: var(--font-display);
   letter-spacing: -0.012em;
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
 }
 
-/* Badges, chips, and micro labels */
-[class*="badge"],
-[class*="chip"],
-[class*="uppercase tracking"] {
+[class*="badge"], [class*="chip"], [class*="uppercase tracking"] {
   font-family: var(--font-display);
   font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
 }
 
-/* Tabular numbers for metrics/stats */
 [class*="tabular-nums"] {
   font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1, "ss01" 1;
 }
 
-/* Input fields — clean and readable */
-input,
-textarea,
-select {
+input, textarea, select {
   font-family: var(--font-sans);
   letter-spacing: -0.011em;
   font-feature-settings: "rlig" 1, "calt" 1;
 }
 
-/* Button text — slightly tighter */
 button {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
 }
 
-/* Card titles and section headers */
-[class*="card"] h1,
-[class*="card"] h2,
-[class*="card"] h3,
-[class*="card"] h4 {
+[class*="card"] h1, [class*="card"] h2, [class*="card"] h3, [class*="card"] h4 {
   font-family: var(--font-display);
   letter-spacing: -0.025em;
 }
 
-/* Prose content — slightly wider spacing for readability */
-.prose-pfc p,
-.prose-pfc li,
-.prose-pfc blockquote {
+.prose-pfc p, .prose-pfc li, .prose-pfc blockquote {
   letter-spacing: -0.006em;
   line-height: 1.7;
 }
 
-/* Smooth scrolling */
+/* ─────────────────────────────────────────────────────────
+   Smooth scrolling & selection
+   ───────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
 }
 
-/* Selection color */
 ::selection {
-  background-color: oklch(0.65 0.15 30 / 0.3);
+  background-color: oklch(0.57 0.18 285 / 0.25);
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ─────────────────────────────────────────────────────────
+   Scrollbars — completely hidden, scroll still works
+   ───────────────────────────────────────────────────────── */
+* {
+  scrollbar-width: none;           /* Firefox */
+  -ms-overflow-style: none;        /* IE / Edge */
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+*::-webkit-scrollbar {
+  display: none;                   /* Chrome / Safari / Opera */
 }
 
-::-webkit-scrollbar-thumb {
-  background: oklch(0.5 0.01 250 / 0.3);
-  border-radius: 3px;
+/* ─────────────────────────────────────────────────────────
+   Liquid Glass — Surface utility classes
+   Ported from the Obsidian liquid glass theme
+   ───────────────────────────────────────────────────────── */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--blur-l);
+  -webkit-backdrop-filter: var(--blur-l);
+  box-shadow: var(--shadow-xs);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.5 0.01 250 / 0.5);
-}
+/* ─────────────────────────────────────────────────────────
+   Animations — purposeful, physics-driven
+   ───────────────────────────────────────────────────────── */
 
-.dark ::-webkit-scrollbar-thumb {
-  background: oklch(0.5 0.01 50 / 0.3);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.5 0.01 50 / 0.5);
-}
-
-/* Streaming cursor animation */
+/* Streaming cursor — subtle blink */
 @keyframes blink-cursor {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 .animate-blink {
-  animation: blink-cursor 1s step-end infinite;
+  animation: blink-cursor 1.2s ease-in-out infinite;
 }
 
-/* Pipeline pulse animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Pipeline pulse — soft breathe */
 @keyframes pipeline-pulse {
-  0%, 100% { opacity: 0.6; }
+  0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
 }
 
 .animate-pipeline-pulse {
-  animation: pipeline-pulse 1.5s ease-in-out infinite;
+  animation: pipeline-pulse 2s var(--anim-motion-cupertino) infinite;
 }
 
-/* Retro terminal glow */
-@keyframes terminal-glow {
-  0%, 100% { text-shadow: 0 0 4px currentColor; }
-  50% { text-shadow: 0 0 12px currentColor, 0 0 20px currentColor; }
+/* Bubble menu item — pill-shaped glass bubble */
+.glass-bubble-pill {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  box-shadow: var(--shadow-s);
+  border-radius: var(--radius-obs-xl);
 }
 
-.animate-terminal-glow {
-  animation: terminal-glow 2s ease-in-out infinite;
-}
-
-/* Typography */
+/* ─────────────────────────────────────────────────────────
+   Prose — clean reading experience
+   ───────────────────────────────────────────────────────── */
 .prose-pfc {
   @apply prose prose-zinc dark:prose-invert max-w-none;
   font-family: var(--font-sans);
 }
 
-.prose-pfc h1,
-.prose-pfc h2,
-.prose-pfc h3,
-.prose-pfc h4 {
+.prose-pfc h1, .prose-pfc h2, .prose-pfc h3, .prose-pfc h4 {
   font-family: var(--font-display);
   letter-spacing: -0.025em;
 }
@@ -294,7 +411,9 @@ html {
   @apply bg-transparent px-0 py-0;
 }
 
-/* Accordion animations */
+/* ─────────────────────────────────────────────────────────
+   Accordion
+   ───────────────────────────────────────────────────────── */
 @keyframes accordion-down {
   from { height: 0; }
   to { height: var(--radix-accordion-content-height); }
@@ -305,11 +424,18 @@ html {
   to { height: 0; }
 }
 
-/* Respect prefers-reduced-motion */
+/* ─────────────────────────────────────────────────────────
+   Reduced motion — respect user preferences
+   ───────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :root {
+    --anim-duration-superfast: 0ms;
+    --anim-duration-fast: 0ms;
+    --anim-duration-moderate: 0ms;
+    --anim-duration-slow: 0ms;
+  }
+
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -317,11 +443,13 @@ html {
   }
 }
 
-/* Focus visible ring — skip form elements */
+/* ─────────────────────────────────────────────────────────
+   Focus — clean, Cupertino-style ring
+   ───────────────────────────────────────────────────────── */
 :focus-visible:not(input):not(textarea):not(select) {
-  outline: 2px solid oklch(0.55 0.15 30);
+  outline: 2px solid oklch(0.57 0.18 285 / 0.5);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 input:focus-visible,
@@ -332,84 +460,32 @@ select:focus-visible {
   ring: none;
 }
 
-/* Subtle chat grid background */
-.chat-grid-bg {
-  background-image:
-    linear-gradient(var(--border) 0.5px, transparent 0.5px),
-    linear-gradient(90deg, var(--border) 0.5px, transparent 0.5px);
-  background-size: 20px 20px;
-  opacity: 0.08;
+/* ─────────────────────────────────────────────────────────
+   Thinking Indicator — pixel brain with gentle shake
+   ───────────────────────────────────────────────────────── */
+@keyframes thinking-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15% { transform: translateX(-1.5px) rotate(-1.5deg); }
+  30% { transform: translateX(1px) rotate(1deg); }
+  45% { transform: translateX(-1px) rotate(-0.5deg); }
+  60% { transform: translateX(1.5px) rotate(1.5deg); }
+  75% { transform: translateX(-0.5px) rotate(-1deg); }
+  90% { transform: translateX(0.5px) rotate(0.5deg); }
 }
 
-.dark .chat-grid-bg {
-  opacity: 0.04;
+@keyframes thinking-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
-/* Dot grid background for engineering pages */
-.dot-grid-bg {
-  background-image: radial-gradient(circle, var(--border) 0.5px, transparent 0.5px);
-  background-size: 16px 16px;
-  opacity: 0.25;
+.thinking-indicator {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  color: var(--color-pfc-violet);
+  animation: thinking-pulse 2s var(--anim-motion-cupertino) infinite;
 }
 
-.dark .dot-grid-bg {
-  opacity: 0.08;
-}
-
-/* Shimmer animation for active elements */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    oklch(0.65 0.15 30 / 0.06) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
-}
-
-/* Falling code rain animation */
-@keyframes code-fall {
-  0% {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  5% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: translateY(100vh);
-    opacity: 0;
-  }
-}
-
-@keyframes code-fall-glow {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.6); }
-}
-
-.animate-code-fall {
-  animation: code-fall var(--fall-duration, 6s) var(--fall-delay, 0s) linear infinite;
-}
-
-.animate-code-glow {
-  animation: code-fall-glow 3s ease-in-out infinite;
-}
-
-/* Reveal button pulse for "Here's what I really mean" */
-@keyframes reveal-pulse {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.15); }
-}
-
-.animate-reveal-pulse {
-  animation: reveal-pulse 2s ease-in-out infinite;
+.thinking-indicator svg {
+  animation: thinking-shake 0.8s var(--anim-motion-cupertino) infinite;
 }

@@ -1,0 +1,20 @@
+{
+  "name": "meta-analytical-pfc",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "pfc-app"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=pfc-app",
+    "build": "npm run build --workspace=pfc-app",
+    "start": "npm run start --workspace=pfc-app",
+    "lint": "npm run lint --workspace=pfc-app",
+    "install:app": "npm install --workspace=pfc-app"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/typography": "^0.5.19",
+    "tailwindcss": "^4.1.18"
+  }
+}
