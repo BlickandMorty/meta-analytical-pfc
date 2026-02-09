@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, memo, useCallback } from 'react';
+import { useState, useEffect, memo, useCallback, Fragment } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
-  SearchIcon,
+  MessageSquareIcon,
   BarChart3Icon,
   SettingsIcon,
   BookOpenIcon,
@@ -29,18 +29,26 @@ interface NavItem {
   icon: LucideIcon;
   /** Minimum tier needed. Default: 'notes' (always available) */
   minTier?: TierGate;
+  /** Visual grouping for separator dots */
+  group: 'core' | 'tools' | 'utility';
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Search', icon: SearchIcon },
-  { href: '/notes', label: 'Notes', icon: PenLineIcon },
-  { href: '/dev-tools', label: 'Dev Tools', icon: WrenchIcon, minTier: 'programming' },
-  { href: '/code-analyzer', label: 'Analyzer', icon: CodeIcon, minTier: 'programming' },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full' },
-  { href: '/research-library', label: 'Library', icon: LibraryIcon },
-  { href: '/export', label: 'Export', icon: DownloadIcon },
-  { href: '/settings', label: 'Settings', icon: SettingsIcon },
-  { href: '/docs', label: 'Docs', icon: BookOpenIcon },
+  // ── Pillar 1: Chat ──
+  { href: '/', label: 'Chat', icon: MessageSquareIcon, group: 'core' },
+  // ── Pillar 2: Notes ──
+  { href: '/notes', label: 'Notes', icon: PenLineIcon, group: 'core' },
+  // ── Pillar 3: Research ──
+  { href: '/research-library', label: 'Library', icon: LibraryIcon, group: 'core' },
+  // ── Programming (tier-gated) ──
+  { href: '/dev-tools', label: 'Dev Tools', icon: WrenchIcon, minTier: 'programming', group: 'tools' },
+  { href: '/code-analyzer', label: 'Analyzer', icon: CodeIcon, minTier: 'programming', group: 'tools' },
+  // ── Measurement (tier-gated) ──
+  { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full', group: 'tools' },
+  // ── Utilities ──
+  { href: '/export', label: 'Export', icon: DownloadIcon, group: 'utility' },
+  { href: '/settings', label: 'Settings', icon: SettingsIcon, group: 'utility' },
+  { href: '/docs', label: 'Docs', icon: BookOpenIcon, group: 'utility' },
 ];
 
 /** Check if a tier meets the minimum requirement */
@@ -195,19 +203,31 @@ export function TopNav() {
           ? '1px solid rgba(255,255,255,0.04)'
           : '1px solid rgba(0,0,0,0.04)',
       }}>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.map((item, idx) => {
+          const prev = idx > 0 ? NAV_ITEMS[idx - 1] : null;
+          const showSep = prev && prev.group !== item.group;
           const minTier = item.minTier ?? 'notes';
           const meetsRequirement = tierMeetsMinimum(suiteTier, minTier);
           return (
-            <NavBubble
-              key={item.href}
-              item={item}
-              isActive={pathname === item.href}
-              isDark={isDark}
-              onNavigate={handleNavigate}
-              disabled={!meetsRequirement}
-              disabledReason={tierGateLabel(minTier)}
-            />
+            <Fragment key={item.href}>
+              {showSep && (
+                <div style={{
+                  width: '3px',
+                  height: '3px',
+                  borderRadius: '50%',
+                  background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
+                  flexShrink: 0,
+                }} />
+              )}
+              <NavBubble
+                item={item}
+                isActive={pathname === item.href}
+                isDark={isDark}
+                onNavigate={handleNavigate}
+                disabled={!meetsRequirement}
+                disabledReason={tierGateLabel(minTier)}
+              />
+            </Fragment>
           );
         })}
       </div>

@@ -1,12 +1,44 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import {
+  memo,
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XIcon, CodeIcon, TerminalIcon, EyeIcon, ChevronLeftIcon, CopyIcon, CheckIcon } from 'lucide-react';
+import {
+  XIcon,
+  CodeIcon,
+  EyeIcon,
+  PencilIcon,
+  ChevronLeftIcon,
+  CopyIcon,
+  CheckIcon,
+  FileTextIcon,
+  ChevronUpIcon,
+  PlusIcon,
+  SendIcon,
+} from 'lucide-react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import { useState } from 'react';
+import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
+
+const PFC_VIOLET = '#8B7CF6';
+const PFC_GREEN = '#34D399';
+const PFC_EMBER = '#E07850';
+
+// ---------------------------------------------------------------------------
+// PortalSidebar (main export)
+// ---------------------------------------------------------------------------
 
 export const PortalSidebar = memo(function PortalSidebar() {
   const showPortal = usePFCStore((s) => s.showPortal);
@@ -15,104 +47,388 @@ export const PortalSidebar = memo(function PortalSidebar() {
   const closePortal = usePFCStore((s) => s.closePortal);
   const goBack = usePFCStore((s) => s.goBack);
   const setPortalDisplayMode = usePFCStore((s) => s.setPortalDisplayMode);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
-  const currentView = useMemo(() => portalStack[portalStack.length - 1], [portalStack]);
+  // Local edit mode (extends store's 'code' | 'preview' with 'edit')
+  const [localMode, setLocalMode] = useState<'preview' | 'code' | 'edit'>('preview');
+
+  useEffect(() => setMounted(true), []);
+
+  const isDark = mounted ? resolvedTheme === 'dark' : true;
+
+  const currentView = useMemo(
+    () => portalStack[portalStack.length - 1],
+    [portalStack],
+  );
   const canGoBack = portalStack.length > 1;
+
+  // Sync local mode with store display mode when store changes
+  useEffect(() => {
+    if (displayMode === 'code' || displayMode === 'preview') {
+      setLocalMode(displayMode);
+    }
+  }, [displayMode]);
+
+  // Handle mode switching — sync back to store for code/preview
+  const handleModeChange = useCallback(
+    (mode: 'preview' | 'code' | 'edit') => {
+      setLocalMode(mode);
+      if (mode === 'code' || mode === 'preview') {
+        setPortalDisplayMode(mode);
+      }
+    },
+    [setPortalDisplayMode],
+  );
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!showPortal) return;
+
+    const handler = (e: KeyboardEvent) => {
+      // Escape closes portal
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closePortal();
+        return;
+      }
+      // Cmd/Ctrl+E toggles edit mode
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        e.preventDefault();
+        setLocalMode((prev) => (prev === 'edit' ? 'preview' : 'edit'));
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showPortal, closePortal]);
 
   if (!showPortal || !currentView) return null;
 
+  const artifact = currentView.artifact;
+  const isArtifact = currentView.type === 'artifact' && !!artifact;
+
+  // Glass panel styles
+  const panelBg = isDark
+    ? 'rgba(10, 10, 12, 0.88)'
+    : 'rgba(255, 255, 255, 0.82)';
+  const borderColor = isDark
+    ? 'rgba(255, 255, 255, 0.06)'
+    : 'rgba(0, 0, 0, 0.08)';
+  const headerBg = isDark
+    ? 'rgba(255, 255, 255, 0.02)'
+    : 'rgba(0, 0, 0, 0.02)';
+  const mutedText = isDark
+    ? 'rgba(255, 255, 255, 0.45)'
+    : 'rgba(0, 0, 0, 0.45)';
+  const fgText = isDark
+    ? 'rgba(255, 255, 255, 0.88)'
+    : 'rgba(0, 0, 0, 0.88)';
+
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ x: '100%', opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: '100%', opacity: 0 }}
-        transition={{ duration: 0.35, ease: CUPERTINO }}
-        className="fixed top-0 right-0 h-full w-[420px] max-w-[90vw] z-50
-                   flex flex-col
-                   backdrop-blur-2xl bg-black/80 dark:bg-black/90
-                   border-l border-white/[0.06]
-                   shadow-[-8px_0_32px_rgba(0,0,0,0.3)]"
-      >
-        {/* Header */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
-          {canGoBack && (
-            <button
-              onClick={goBack}
-              className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
+      {showPortal && (
+        <>
+          {/* Backdrop on small screens */}
+          <motion.div
+            key="portal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: CUPERTINO }}
+            onClick={closePortal}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 49,
+              background: 'rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+            }}
+            className="lg:hidden"
+          />
+
+          {/* Main panel */}
+          <motion.div
+            key="portal-panel"
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ duration: 0.4, ease: CUPERTINO }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              height: '100%',
+              width: '50%',
+              maxWidth: '720px',
+              minWidth: '380px',
+              zIndex: 50,
+              display: 'flex',
+              flexDirection: 'column',
+              background: panelBg,
+              backdropFilter: 'blur(40px) saturate(1.8)',
+              WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
+              borderLeft: `1px solid ${borderColor}`,
+              boxShadow: isDark
+                ? '-12px 0 48px rgba(0, 0, 0, 0.5)'
+                : '-12px 0 48px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            {/* ── Header ─────────────────────────────────────── */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                borderBottom: `1px solid ${borderColor}`,
+                background: headerBg,
+                flexShrink: 0,
+              }}
             >
-              <ChevronLeftIcon className="w-4 h-4 text-muted-foreground" />
-            </button>
-          )}
+              {/* Back button */}
+              {canGoBack && (
+                <button
+                  onClick={goBack}
+                  style={{
+                    padding: '6px',
+                    borderRadius: '8px',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: mutedText,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = isDark
+                      ? 'rgba(255,255,255,0.06)'
+                      : 'rgba(0,0,0,0.06)')
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = 'transparent')
+                  }
+                >
+                  <ChevronLeftIcon size={16} />
+                </button>
+              )}
 
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-foreground/90 truncate">
-              {currentView.artifact?.title || 'Portal'}
-            </h3>
-            {currentView.artifact?.language && (
-              <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">
-                {currentView.artifact.language}
-              </span>
-            )}
-          </div>
+              {/* Title + language badge */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: fgText,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {artifact?.title || 'Code Portal'}
+                  </h3>
+                  {artifact?.language && (
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 500,
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        background: `${PFC_VIOLET}20`,
+                        color: PFC_VIOLET,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {artifact.language}
+                    </span>
+                  )}
+                </div>
+              </div>
 
-          {/* Display mode toggle */}
-          {currentView.type === 'artifact' && (
-            <div className="flex items-center rounded-lg bg-white/[0.04] p-0.5">
+              {/* Mode toggle buttons */}
+              {isArtifact && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '10px',
+                    padding: '2px',
+                    background: isDark
+                      ? 'rgba(255,255,255,0.04)'
+                      : 'rgba(0,0,0,0.04)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <ModeButton
+                    active={localMode === 'preview'}
+                    onClick={() => handleModeChange('preview')}
+                    icon={<EyeIcon size={14} />}
+                    label="Preview"
+                    isDark={isDark}
+                  />
+                  <ModeButton
+                    active={localMode === 'code'}
+                    onClick={() => handleModeChange('code')}
+                    icon={<CodeIcon size={14} />}
+                    label="Code"
+                    isDark={isDark}
+                  />
+                  <ModeButton
+                    active={localMode === 'edit'}
+                    onClick={() => handleModeChange('edit')}
+                    icon={<PencilIcon size={14} />}
+                    label="Edit"
+                    isDark={isDark}
+                  />
+                </div>
+              )}
+
+              {/* Close button */}
               <button
-                onClick={() => setPortalDisplayMode('preview')}
-                className={`p-1.5 rounded-md transition-colors ${
-                  displayMode === 'preview'
-                    ? 'bg-pfc-violet/20 text-pfc-violet'
-                    : 'text-muted-foreground/40 hover:text-muted-foreground/60'
-                }`}
+                onClick={closePortal}
+                style={{
+                  padding: '6px',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: mutedText,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background 0.15s ease',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = isDark
+                    ? 'rgba(255,255,255,0.06)'
+                    : 'rgba(0,0,0,0.06)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = 'transparent')
+                }
               >
-                <EyeIcon className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => setPortalDisplayMode('code')}
-                className={`p-1.5 rounded-md transition-colors ${
-                  displayMode === 'code'
-                    ? 'bg-pfc-violet/20 text-pfc-violet'
-                    : 'text-muted-foreground/40 hover:text-muted-foreground/60'
-                }`}
-              >
-                <CodeIcon className="w-3.5 h-3.5" />
+                <XIcon size={16} />
               </button>
             </div>
-          )}
 
-          <button
-            onClick={closePortal}
-            className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors"
-          >
-            <XIcon className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
+            {/* ── Body ───────────────────────────────────────── */}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {isArtifact && artifact && (
+                <ArtifactEditor
+                  artifact={artifact}
+                  mode={localMode}
+                  isDark={isDark}
+                  borderColor={borderColor}
+                  mutedText={mutedText}
+                  fgText={fgText}
+                />
+              )}
+              {currentView.type === 'terminal' && (
+                <TerminalPlaceholder isDark={isDark} mutedText={mutedText} fgText={fgText} />
+              )}
+              {currentView.type === 'home' && (
+                <PortalHome isDark={isDark} mutedText={mutedText} fgText={fgText} />
+              )}
+            </div>
+          </motion.div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-hidden">
-          {currentView.type === 'artifact' && currentView.artifact && (
-            <ArtifactView
-              artifact={currentView.artifact}
-              displayMode={displayMode}
-            />
-          )}
-          {currentView.type === 'terminal' && (
-            <TerminalPlaceholder />
-          )}
-          {currentView.type === 'home' && (
-            <PortalHome />
-          )}
-        </div>
-      </motion.div>
+          {/* Responsive override: full-width on small screens */}
+          <style>{`
+            @media (max-width: 1023px) {
+              [data-portal-panel] {
+                width: 100% !important;
+                min-width: unset !important;
+                max-width: unset !important;
+              }
+            }
+          `}</style>
+        </>
+      )}
     </AnimatePresence>
   );
 });
 
-// ── Artifact View ─────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// ModeButton
+// ---------------------------------------------------------------------------
 
-interface ArtifactViewProps {
+interface ModeButtonProps {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  isDark: boolean;
+}
+
+const ModeButton = memo<ModeButtonProps>(function ModeButton({
+  active,
+  onClick,
+  icon,
+  label,
+  isDark,
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '4px 8px',
+        borderRadius: '8px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '11px',
+        fontWeight: 500,
+        transition: 'all 0.15s ease',
+        background: active ? `${PFC_VIOLET}20` : 'transparent',
+        color: active
+          ? PFC_VIOLET
+          : isDark
+            ? 'rgba(255,255,255,0.35)'
+            : 'rgba(0,0,0,0.35)',
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.color = isDark
+            ? 'rgba(255,255,255,0.6)'
+            : 'rgba(0,0,0,0.6)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.color = isDark
+            ? 'rgba(255,255,255,0.35)'
+            : 'rgba(0,0,0,0.35)';
+        }
+      }}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// ArtifactEditor
+// ---------------------------------------------------------------------------
+
+interface ArtifactEditorProps {
   artifact: {
     messageId: string;
     identifier: string;
@@ -121,88 +437,667 @@ interface ArtifactViewProps {
     language?: string;
     content: string;
   };
-  displayMode: 'code' | 'preview';
+  mode: 'preview' | 'code' | 'edit';
+  isDark: boolean;
+  borderColor: string;
+  mutedText: string;
+  fgText: string;
 }
 
-const ArtifactView = memo<ArtifactViewProps>(function ArtifactView({ artifact, displayMode }) {
+const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
+  artifact,
+  mode,
+  isDark,
+  borderColor,
+  mutedText,
+  fgText,
+}) {
+  const router = useRouter();
+  const notePages = usePFCStore((s) => s.notePages);
+  const createPage = usePFCStore((s) => s.createPage);
+  const createBlock = usePFCStore((s) => s.createBlock);
+  const setActivePage = usePFCStore((s) => s.setActivePage);
+
+  // Local edited content
+  const [editedContent, setEditedContent] = useState(artifact.content);
+  const [hasEdited, setHasEdited] = useState(false);
+
+  // Track previous artifact content for streaming detection
+  const prevContentRef = useRef(artifact.content);
+
+  // Auto-scroll ref for preview/code modes
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Copy state
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(artifact.content);
+  // Send-to-notes dropdown state
+  const [notesOpen, setNotesOpen] = useState(false);
+  const notesDropdownRef = useRef<HTMLDivElement>(null);
+
+  // When artifact content changes (streaming), update if user hasn't edited
+  useEffect(() => {
+    const contentChanged = artifact.content !== prevContentRef.current;
+    prevContentRef.current = artifact.content;
+
+    if (contentChanged && !hasEdited) {
+      setEditedContent(artifact.content);
+    }
+
+    // Auto-scroll in preview/code modes during streaming
+    if (contentChanged && mode !== 'edit' && scrollRef.current) {
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
+    }
+  }, [artifact.content, hasEdited, mode]);
+
+  // Reset edit state when switching artifacts
+  useEffect(() => {
+    setEditedContent(artifact.content);
+    setHasEdited(false);
+  }, [artifact.identifier]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!notesOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        notesDropdownRef.current &&
+        !notesDropdownRef.current.contains(e.target as Node)
+      ) {
+        setNotesOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notesOpen]);
+
+  // The content to use for copy / send operations
+  const activeContent = hasEdited ? editedContent : artifact.content;
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(activeContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
+  }, [activeContent]);
+
+  const handleEdit = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setEditedContent(e.target.value);
+      setHasEdited(true);
+    },
+    [],
+  );
+
+  const handleCreateNewNote = useCallback(() => {
+    const title = artifact.title || 'Untitled Artifact';
+    const pageId = createPage(title);
+    createBlock(pageId, null, null, activeContent);
+    setActivePage(pageId);
+    setNotesOpen(false);
+    router.push('/notes');
+  }, [artifact.title, activeContent, createPage, createBlock, setActivePage, router]);
+
+  const handleSendToExistingNote = useCallback(
+    (pageId: string) => {
+      createBlock(pageId, null, null, activeContent);
+      setActivePage(pageId);
+      setNotesOpen(false);
+      router.push('/notes');
+    },
+    [activeContent, createBlock, setActivePage, router],
+  );
+
+  // Generate line numbers for code view
+  const lines = (mode === 'code' ? artifact.content : '').split('\n');
+
+  const recentPages = useMemo(
+    () => notePages.slice(-5).reverse(),
+    [notePages],
+  );
+
+  // ── Shared inline colors ──
+  const codeBg = isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.03)';
+  const lineNumColor = isDark
+    ? 'rgba(255,255,255,0.15)'
+    : 'rgba(0,0,0,0.2)';
+  const actionBarBg = isDark
+    ? 'rgba(255,255,255,0.02)'
+    : 'rgba(0,0,0,0.02)';
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Copy button bar */}
-      <div className="flex items-center justify-end px-3 py-1.5 border-b border-white/[0.04]">
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px]
-                     text-muted-foreground/50 hover:text-muted-foreground/80
-                     hover:bg-white/[0.04] transition-colors"
-        >
-          {copied ? (
-            <>
-              <CheckIcon className="w-3 h-3 text-pfc-green" />
-              <span className="text-pfc-green">Copied</span>
-            </>
-          ) : (
-            <>
-              <CopyIcon className="w-3 h-3" />
-              <span>Copy</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-4 scrollbar-thin scrollbar-thumb-white/10">
-        {displayMode === 'code' ? (
-          <pre className="text-xs leading-relaxed font-mono text-foreground/80 whitespace-pre-wrap break-words">
-            <code>{artifact.content}</code>
-          </pre>
-        ) : (
-          <div className="text-sm text-foreground/80 leading-relaxed">
-            <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-4">
-              <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+    <>
+      {/* ── Content area ───────────────────────────────── */}
+      <div
+        ref={scrollRef}
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          position: 'relative',
+        }}
+      >
+        {/* Preview mode */}
+        {mode === 'preview' && (
+          <div style={{ padding: '20px' }}>
+            <div
+              style={{
+                borderRadius: '12px',
+                border: `1px solid ${borderColor}`,
+                background: isDark
+                  ? 'rgba(255,255,255,0.02)'
+                  : 'rgba(0,0,0,0.01)',
+                padding: '20px',
+              }}
+            >
+              <pre
+                style={{
+                  margin: 0,
+                  fontFamily:
+                    'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                  fontSize: '13px',
+                  lineHeight: 1.7,
+                  color: fgText,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  tabSize: 2,
+                }}
+              >
                 {artifact.content}
               </pre>
             </div>
           </div>
         )}
+
+        {/* Code mode — with line numbers */}
+        {mode === 'code' && (
+          <div
+            style={{
+              display: 'flex',
+              background: codeBg,
+              minHeight: '100%',
+            }}
+          >
+            {/* Line numbers gutter */}
+            <div
+              style={{
+                padding: '16px 0',
+                textAlign: 'right',
+                userSelect: 'none',
+                flexShrink: 0,
+                minWidth: '48px',
+                borderRight: `1px solid ${borderColor}`,
+              }}
+            >
+              {lines.map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    fontFamily:
+                      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                    fontSize: '12px',
+                    lineHeight: '20px',
+                    color: lineNumColor,
+                    paddingRight: '12px',
+                    paddingLeft: '12px',
+                  }}
+                >
+                  {i + 1}
+                </div>
+              ))}
+            </div>
+            {/* Code content */}
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: '16px',
+                  fontFamily:
+                    'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                  fontSize: '12px',
+                  lineHeight: '20px',
+                  color: fgText,
+                  whiteSpace: 'pre',
+                  tabSize: 2,
+                }}
+              >
+                <code>{artifact.content}</code>
+              </pre>
+            </div>
+          </div>
+        )}
+
+        {/* Edit mode — full textarea */}
+        {mode === 'edit' && (
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {hasEdited && (
+              <div
+                style={{
+                  padding: '6px 16px',
+                  fontSize: '11px',
+                  color: PFC_EMBER,
+                  background: `${PFC_EMBER}10`,
+                  borderBottom: `1px solid ${borderColor}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  flexShrink: 0,
+                }}
+              >
+                <PencilIcon size={12} />
+                <span>Locally edited — changes are not saved to the conversation</span>
+              </div>
+            )}
+            <textarea
+              value={editedContent}
+              onChange={handleEdit}
+              spellCheck={false}
+              style={{
+                flex: 1,
+                width: '100%',
+                resize: 'none',
+                border: 'none',
+                outline: 'none',
+                padding: '16px',
+                fontFamily:
+                  'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+                fontSize: '12px',
+                lineHeight: '20px',
+                color: fgText,
+                background: isDark
+                  ? 'rgba(0, 0, 0, 0.5)'
+                  : 'rgba(0, 0, 0, 0.02)',
+                tabSize: 2,
+                caretColor: PFC_VIOLET,
+              }}
+            />
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* ── Bottom action bar ──────────────────────────── */}
+      <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 16px',
+            borderTop: `1px solid ${borderColor}`,
+            background: actionBarBg,
+            flexShrink: 0,
+          }}
+        >
+          {/* Copy button */}
+          <ActionButton
+            onClick={handleCopy}
+            isDark={isDark}
+            icon={
+              copied ? (
+                <CheckIcon size={14} style={{ color: PFC_GREEN }} />
+              ) : (
+                <CopyIcon size={14} />
+              )
+            }
+            label={copied ? 'Copied!' : 'Copy'}
+            labelColor={copied ? PFC_GREEN : undefined}
+          />
+
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* Send to Notes dropdown */}
+          <div
+            ref={notesDropdownRef}
+            style={{ position: 'relative' }}
+          >
+            <ActionButton
+              onClick={() => setNotesOpen((p) => !p)}
+              isDark={isDark}
+              icon={<SendIcon size={14} />}
+              label="Send to Notes"
+              rightIcon={
+                <ChevronUpIcon
+                  size={12}
+                  style={{
+                    transition: 'transform 0.2s ease',
+                    transform: notesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  }}
+                />
+              }
+            />
+
+            {/* Dropdown popover */}
+            <AnimatePresence>
+              {notesOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.18, ease: CUPERTINO }}
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    right: 0,
+                    marginBottom: '6px',
+                    minWidth: '220px',
+                    maxWidth: '280px',
+                    borderRadius: '12px',
+                    border: `1px solid ${borderColor}`,
+                    background: isDark
+                      ? 'rgba(22, 22, 26, 0.96)'
+                      : 'rgba(255, 255, 255, 0.96)',
+                    backdropFilter: 'blur(20px) saturate(1.6)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
+                    boxShadow: isDark
+                      ? '0 8px 32px rgba(0,0,0,0.5)'
+                      : '0 8px 32px rgba(0,0,0,0.12)',
+                    overflow: 'hidden',
+                    zIndex: 60,
+                  }}
+                >
+                  {/* Create new note option */}
+                  <button
+                    onClick={handleCreateNewNote}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: PFC_GREEN,
+                      textAlign: 'left',
+                      transition: 'background 0.12s ease',
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = isDark
+                        ? 'rgba(255,255,255,0.04)'
+                        : 'rgba(0,0,0,0.04)')
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = 'transparent')
+                    }
+                  >
+                    <PlusIcon size={14} />
+                    <span>Create new note</span>
+                  </button>
+
+                  {/* Divider + recent notes */}
+                  {recentPages.length > 0 && (
+                    <>
+                      <div
+                        style={{
+                          height: '1px',
+                          background: borderColor,
+                        }}
+                      />
+                      <div
+                        style={{
+                          padding: '6px 14px 4px',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          color: mutedText,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                        }}
+                      >
+                        Recent notes
+                      </div>
+                      {recentPages.map((page) => (
+                        <button
+                          key={page.id}
+                          onClick={() => handleSendToExistingNote(page.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            width: '100%',
+                            padding: '8px 14px',
+                            border: 'none',
+                            background: 'transparent',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            color: fgText,
+                            textAlign: 'left',
+                            overflow: 'hidden',
+                            transition: 'background 0.12s ease',
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = isDark
+                              ? 'rgba(255,255,255,0.04)'
+                              : 'rgba(0,0,0,0.04)')
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = 'transparent')
+                          }
+                        >
+                          <FileTextIcon
+                            size={13}
+                            style={{ color: mutedText, flexShrink: 0 }}
+                          />
+                          <span
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {page.name || 'Untitled'}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+    </>
   );
 });
 
-// ── Terminal Placeholder ──────────────────────────────────────
+// ---------------------------------------------------------------------------
+// ActionButton
+// ---------------------------------------------------------------------------
 
-function TerminalPlaceholder() {
+interface ActionButtonProps {
+  onClick: () => void;
+  isDark: boolean;
+  icon: React.ReactNode;
+  label: string;
+  labelColor?: string;
+  rightIcon?: React.ReactNode;
+}
+
+const ActionButton = memo<ActionButtonProps>(function ActionButton({
+  onClick,
+  isDark,
+  icon,
+  label,
+  labelColor,
+  rightIcon,
+}) {
+  const mutedText = isDark
+    ? 'rgba(255,255,255,0.5)'
+    : 'rgba(0,0,0,0.5)';
+
   return (
-    <div className="h-full flex flex-col items-center justify-center text-center p-8">
-      <div className="w-12 h-12 rounded-xl bg-white/[0.04] flex items-center justify-center mb-4">
-        <TerminalIcon className="w-6 h-6 text-pfc-green/60" />
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '6px 12px',
+        borderRadius: '8px',
+        border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}`,
+        background: isDark
+          ? 'rgba(255,255,255,0.04)'
+          : 'rgba(0,0,0,0.03)',
+        cursor: 'pointer',
+        fontSize: '12px',
+        fontWeight: 500,
+        color: labelColor || mutedText,
+        transition: 'all 0.15s ease',
+        whiteSpace: 'nowrap',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = isDark
+          ? 'rgba(255,255,255,0.08)'
+          : 'rgba(0,0,0,0.06)';
+        if (!labelColor) {
+          e.currentTarget.style.color = isDark
+            ? 'rgba(255,255,255,0.7)'
+            : 'rgba(0,0,0,0.7)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = isDark
+          ? 'rgba(255,255,255,0.04)'
+          : 'rgba(0,0,0,0.03)';
+        if (!labelColor) {
+          e.currentTarget.style.color = mutedText;
+        }
+      }}
+    >
+      {icon}
+      <span>{label}</span>
+      {rightIcon}
+    </button>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// TerminalPlaceholder
+// ---------------------------------------------------------------------------
+
+interface PlaceholderProps {
+  isDark: boolean;
+  mutedText: string;
+  fgText: string;
+}
+
+function TerminalPlaceholder({ isDark, mutedText, fgText }: PlaceholderProps) {
+  return (
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        padding: '32px',
+      }}
+    >
+      <div
+        style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '14px',
+          background: isDark
+            ? 'rgba(255,255,255,0.04)'
+            : 'rgba(0,0,0,0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '16px',
+        }}
+      >
+        <CodeIcon size={24} style={{ color: `${PFC_GREEN}99` }} />
       </div>
-      <h4 className="text-sm font-medium text-foreground/70 mb-1">Terminal</h4>
-      <p className="text-xs text-muted-foreground/40 max-w-[240px]">
+      <h4
+        style={{
+          margin: '0 0 4px',
+          fontSize: '14px',
+          fontWeight: 600,
+          color: fgText,
+          opacity: 0.7,
+        }}
+      >
+        Terminal
+      </h4>
+      <p
+        style={{
+          margin: 0,
+          fontSize: '12px',
+          color: mutedText,
+          maxWidth: '240px',
+          lineHeight: 1.5,
+        }}
+      >
         Terminal integration coming soon. Execute code suggestions directly.
       </p>
     </div>
   );
 }
 
-// ── Portal Home ──────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// PortalHome
+// ---------------------------------------------------------------------------
 
-function PortalHome() {
+function PortalHome({ isDark, mutedText, fgText }: PlaceholderProps) {
   return (
-    <div className="h-full flex flex-col items-center justify-center text-center p-8">
-      <div className="w-12 h-12 rounded-xl bg-white/[0.04] flex items-center justify-center mb-4">
-        <CodeIcon className="w-6 h-6 text-pfc-violet/60" />
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        padding: '32px',
+      }}
+    >
+      <div
+        style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '14px',
+          background: isDark
+            ? 'rgba(255,255,255,0.04)'
+            : 'rgba(0,0,0,0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '16px',
+        }}
+      >
+        <CodeIcon size={24} style={{ color: `${PFC_VIOLET}99` }} />
       </div>
-      <h4 className="text-sm font-medium text-foreground/70 mb-1">Code Portal</h4>
-      <p className="text-xs text-muted-foreground/40 max-w-[240px]">
+      <h4
+        style={{
+          margin: '0 0 4px',
+          fontSize: '14px',
+          fontWeight: 600,
+          color: fgText,
+          opacity: 0.7,
+        }}
+      >
+        Code Portal
+      </h4>
+      <p
+        style={{
+          margin: 0,
+          fontSize: '12px',
+          color: mutedText,
+          maxWidth: '240px',
+          lineHeight: 1.5,
+        }}
+      >
         Code suggestions and artifacts from the AI will appear here automatically.
       </p>
     </div>

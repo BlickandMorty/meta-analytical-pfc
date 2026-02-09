@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { TopNav } from './top-nav';
 import type { InferenceMode, ApiProvider } from '@/lib/engine/llm/config';
-import type { SuiteTier, ResearchPaper, CodebaseAnalysis } from '@/lib/research/types';
+import type { SuiteTier, ResearchPaper, ResearchBook, CodebaseAnalysis } from '@/lib/research/types';
 import { detectDevice, cacheDeviceProfile } from '@/lib/device-detection';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -66,6 +66,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         for (const paper of papers) {
           usePFCStore.getState().addResearchPaper(paper);
         }
+      }
+    } catch { /* ignore corrupt data */ }
+
+    // --- Load research books ---
+    try {
+      const storedBooks = localStorage.getItem('pfc-research-books');
+      if (storedBooks) {
+        const books = JSON.parse(storedBooks) as ResearchBook[];
+        usePFCStore.setState({ researchBooks: books });
       }
     } catch { /* ignore corrupt data */ }
 
