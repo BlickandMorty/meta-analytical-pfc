@@ -178,15 +178,6 @@ export function TopNav() {
         pointerEvents: 'none',
       }}
     >
-      {/* Two-tone accent strip */}
-      <div style={{
-        height: '2px',
-        background: isDark
-          ? 'linear-gradient(90deg, #8B7CF6 0%, #22D3EE 50%, #E07850 100%)'
-          : 'linear-gradient(90deg, #7C6CF0 0%, #34D399 50%, #E07850 100%)',
-        opacity: isDark ? 0.4 : 0.35,
-      }} />
-
       {/* Navigation bar */}
       <div style={{
         display: 'flex',

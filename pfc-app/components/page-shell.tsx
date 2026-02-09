@@ -53,17 +53,23 @@ export function PageShell({
   return (
     <div
       style={{
-        minHeight: '100vh',
+        height: '100vh',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
         background: 'var(--chat-surface)',
         color: 'var(--foreground)',
       }}
     >
       <div
         style={{
+          flex: 1,
+          overflow: 'auto',
           maxWidth: '52rem',
           marginLeft: 'auto',
           marginRight: 'auto',
           padding: '3rem 1.5rem 4rem 3.5rem',
+          width: '100%',
         }}
       >
         {/* ── Page header ── */}

@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (!mounted) return null;
 
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="relative h-screen overflow-hidden bg-background">
       <TopNav />
       {children}
     </div>
