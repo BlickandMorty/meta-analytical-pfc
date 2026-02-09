@@ -37,6 +37,7 @@ export interface NotesSliceActions {
   deletePage: (pageId: string) => void;
   renamePage: (pageId: string, newTitle: string) => void;
   setActivePage: (pageId: string | null) => void;
+  ensurePage: (title: string) => string;
   togglePageFavorite: (pageId: string) => void;
   togglePagePin: (pageId: string) => void;
 
@@ -147,6 +148,16 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   setActivePage: (pageId: string | null) => set({ activePageId: pageId, editingBlockId: null }),
+
+  // Get existing page by title or create it if missing (for [[page link]] navigation)
+  ensurePage: (title: string): string => {
+    const s = get();
+    const normalized = normalizePageName(title);
+    const existing = s.notePages.find((p: NotePage) => p.name === normalized);
+    if (existing) return existing.id;
+    // Create the page
+    return get().createPage(title);
+  },
 
   togglePageFavorite: (pageId: string) => {
     set((s: any) => ({

@@ -59,17 +59,8 @@ const selectEditingBlockId = (s: any) => s.editingBlockId as string | null | und
 const selectNoteAI = (s: any) =>
   s.noteAI as { isGenerating: boolean; targetBlockId: string | null; streamedText?: string } | undefined;
 
-const selectActions = (s: any) => ({
-  createBlock: s.createBlock as (pageId: string, parentId: string | null, afterBlockId: string | null, content: string) => string,
-  updateBlockContent: s.updateBlockContent as (blockId: string, content: string) => void,
-  deleteBlock: s.deleteBlock as (blockId: string) => void,
-  indentBlock: s.indentBlock as (blockId: string) => void,
-  outdentBlock: s.outdentBlock as (blockId: string) => void,
-  toggleBlockCollapse: s.toggleBlockCollapse as (blockId: string) => void,
-  setEditingBlock: s.setEditingBlock as (blockId: string | null) => void,
-  setActivePage: s.setActivePage as ((pageId: string) => void) | undefined,
-  ensurePage: s.ensurePage as ((title: string) => string) | undefined,
-});
+// Actions are selected individually below (in BlockEditor) to avoid
+// creating a new object on every store read, which causes infinite loops.
 
 // ── Markdown helpers ───────────────────────────────────────────────
 
@@ -179,7 +170,28 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
   const allBlocks = usePFCStore(selectNoteBlocks) ?? [];
   const editingBlockId = usePFCStore(selectEditingBlockId) ?? null;
   const noteAI = usePFCStore(selectNoteAI);
-  const actions = usePFCStore(selectActions);
+
+  // Select each action individually — stable function refs, no new objects
+  const createBlock = usePFCStore((s) => s.createBlock);
+  const updateBlockContent = usePFCStore((s) => s.updateBlockContent);
+  const deleteBlock = usePFCStore((s) => s.deleteBlock);
+  const indentBlock = usePFCStore((s) => s.indentBlock);
+  const outdentBlock = usePFCStore((s) => s.outdentBlock);
+  const toggleBlockCollapse = usePFCStore((s) => s.toggleBlockCollapse);
+  const setEditingBlock = usePFCStore((s) => s.setEditingBlock);
+  const setActivePage = usePFCStore((s) => s.setActivePage);
+  const ensurePage = usePFCStore((s) => s.ensurePage);
+
+  // Bundle into a stable ref for passing to children
+  const actionsRef = useRef({
+    createBlock, updateBlockContent, deleteBlock, indentBlock, outdentBlock,
+    toggleBlockCollapse, setEditingBlock, setActivePage, ensurePage,
+  });
+  actionsRef.current = {
+    createBlock, updateBlockContent, deleteBlock, indentBlock, outdentBlock,
+    toggleBlockCollapse, setEditingBlock, setActivePage, ensurePage,
+  };
+  const actions = actionsRef.current;
 
   // Build the block tree and flatten for rendering
   const childMap = useMemo(() => buildBlockTree(allBlocks, pageId), [allBlocks, pageId]);
@@ -284,7 +296,17 @@ interface BlockItemProps {
   isEditing: boolean;
   hasChildBlocks: boolean;
   noteAI: { isGenerating: boolean; targetBlockId: string | null; streamedText?: string } | undefined;
-  actions: ReturnType<typeof selectActions>;
+  actions: {
+    createBlock: (pageId: string, parentId: string | null, afterBlockId: string | null, content: string) => string;
+    updateBlockContent: (blockId: string, content: string) => void;
+    deleteBlock: (blockId: string) => void;
+    indentBlock: (blockId: string) => void;
+    outdentBlock: (blockId: string) => void;
+    toggleBlockCollapse: (blockId: string) => void;
+    setEditingBlock: (blockId: string | null) => void;
+    setActivePage: (pageId: string | null) => void;
+    ensurePage?: (title: string) => string;
+  };
   pageId: string;
   flatBlocks: NoteBlock[];
   index: number;
