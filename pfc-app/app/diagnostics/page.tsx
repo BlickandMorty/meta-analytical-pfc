@@ -24,6 +24,10 @@ import { PageShell, GlassSection } from '@/components/page-shell';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
+import { EducationalTooltipButton } from '@/components/educational-tooltip';
+import { SIGNAL_TOOLTIPS } from '@/lib/research/educational-data';
+import { useTheme } from 'next-themes';
+import { useState, useEffect } from 'react';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -207,6 +211,10 @@ export default function DiagnosticsPage() {
   const totalTraces = usePFCStore((s) => s.totalTraces);
   const skillGapsDetected = usePFCStore((s) => s.skillGapsDetected);
   const signalHistory = usePFCStore((s) => s.signalHistory);
+  const { resolvedTheme } = useTheme();
+  const [thMounted, setThMounted] = useState(false);
+  useEffect(() => { setThMounted(true); }, []);
+  const isDark = thMounted ? resolvedTheme === 'dark' : true;
 
   const anomalies = getAnomalies({ entropy, dissonance, healthScore, riskScore, confidence });
 
@@ -266,6 +274,7 @@ export default function DiagnosticsPage() {
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <TargetIcon className="h-3.5 w-3.5" />
                 Confidence
+                {SIGNAL_TOOLTIPS.confidence && <EducationalTooltipButton tooltip={SIGNAL_TOOLTIPS.confidence} isDark={isDark} />}
               </span>
               <TrendArrow data={signalHistory.map((h) => h.confidence)} />
             </div>
@@ -280,6 +289,7 @@ export default function DiagnosticsPage() {
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <ZapIcon className="h-3.5 w-3.5" />
                 Entropy
+                {SIGNAL_TOOLTIPS.entropy && <EducationalTooltipButton tooltip={SIGNAL_TOOLTIPS.entropy} isDark={isDark} />}
               </span>
               <TrendArrow data={signalHistory.map((h) => h.entropy)} />
             </div>
@@ -294,6 +304,7 @@ export default function DiagnosticsPage() {
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <BrainIcon className="h-3.5 w-3.5" />
                 Dissonance
+                {SIGNAL_TOOLTIPS.dissonance && <EducationalTooltipButton tooltip={SIGNAL_TOOLTIPS.dissonance} isDark={isDark} />}
               </span>
               <TrendArrow data={signalHistory.map((h) => h.dissonance)} />
             </div>

@@ -4,11 +4,14 @@ import { useState, useEffect, memo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
+import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
   SearchIcon,
   BarChart3Icon,
   SettingsIcon,
   BookOpenIcon,
+  LibraryIcon,
+  DownloadIcon,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -18,11 +21,15 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** If true, grayed out when measurement is disabled */
+  measurementOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Search', icon: SearchIcon },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3Icon },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, measurementOnly: true },
+  { href: '/research-library', label: 'Library', icon: LibraryIcon },
+  { href: '/export', label: 'Export', icon: DownloadIcon },
   { href: '/settings', label: 'Settings', icon: SettingsIcon },
   { href: '/docs', label: 'Docs', icon: BookOpenIcon },
 ];
@@ -32,28 +39,31 @@ const NavBubble = memo(function NavBubble({
   isActive,
   isDark,
   onNavigate,
+  disabled,
 }: {
   item: NavItem;
   isActive: boolean;
   isDark: boolean;
   onNavigate: (href: string) => void;
+  disabled?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
-  const expanded = hovered || isActive;
+  const expanded = (hovered || isActive) && !disabled;
   const Icon = item.icon;
 
   return (
     <motion.button
-      onClick={() => onNavigate(item.href)}
+      onClick={() => !disabled && onNavigate(item.href)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      whileTap={{ scale: 0.92 }}
+      whileTap={disabled ? undefined : { scale: 0.92 }}
+      title={disabled ? `${item.label} — enable Measurement Suite in Settings` : item.label}
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: expanded ? '0.375rem' : '0rem',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         border: 'none',
         borderRadius: '9999px',
         padding: expanded ? '0.375rem 0.75rem' : '0.375rem',
@@ -62,15 +72,20 @@ const NavBubble = memo(function NavBubble({
         fontSize: '0.75rem',
         fontWeight: isActive ? 600 : 500,
         letterSpacing: '-0.01em',
-        color: isActive
-          ? (isDark ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.9)')
-          : (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)'),
-        background: isActive
-          ? (isDark ? 'rgba(139,124,246,0.15)' : 'rgba(139,124,246,0.10)')
-          : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+        opacity: disabled ? 0.35 : 1,
+        color: disabled
+          ? (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)')
+          : isActive
+            ? (isDark ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.9)')
+            : (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)'),
+        background: disabled
+          ? (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)')
+          : isActive
+            ? (isDark ? 'rgba(139,124,246,0.15)' : 'rgba(139,124,246,0.10)')
+            : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
         backdropFilter: 'blur(12px) saturate(1.3)',
         WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
-        transition: 'padding 0.28s cubic-bezier(0.32,0.72,0,1), gap 0.28s cubic-bezier(0.32,0.72,0,1), min-width 0.28s cubic-bezier(0.32,0.72,0,1), background 0.15s, color 0.15s',
+        transition: 'padding 0.28s cubic-bezier(0.32,0.72,0,1), gap 0.28s cubic-bezier(0.32,0.72,0,1), min-width 0.28s cubic-bezier(0.32,0.72,0,1), background 0.15s, color 0.15s, opacity 0.2s',
         overflow: 'hidden',
         whiteSpace: 'nowrap',
       }}
@@ -103,6 +118,7 @@ export function TopNav() {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
 
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? resolvedTheme === 'dark' : true;
@@ -160,6 +176,7 @@ export function TopNav() {
             isActive={pathname === item.href}
             isDark={isDark}
             onNavigate={handleNavigate}
+            disabled={item.measurementOnly && !measurementEnabled}
           />
         ))}
       </div>

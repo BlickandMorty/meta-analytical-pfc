@@ -15,6 +15,9 @@ import {
   CheckCircle2Icon,
   MonitorIcon,
   TerminalIcon,
+  FlaskConicalIcon,
+  GaugeIcon,
+  LayersIcon,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -43,7 +46,7 @@ const LINE_DELAY_MS = 65;
 // Main page — bubble-style onboarding
 // ═══════════════════════════════════════════════════════════════════════
 
-type Phase = 'boot' | 'apikey' | 'launching';
+type Phase = 'boot' | 'suite-select' | 'apikey' | 'launching';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -53,6 +56,7 @@ export default function OnboardingPage() {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [selectedSuite, setSelectedSuite] = useState<'research-only' | 'full'>('full');
 
   useEffect(() => setMounted(true), []);
 
@@ -69,10 +73,16 @@ export default function OnboardingPage() {
       const timer = setTimeout(() => setVisibleCount((v) => v + 1), LINE_DELAY_MS);
       return () => clearTimeout(timer);
     } else {
-      const timer = setTimeout(() => setPhase('apikey'), 400);
+      const timer = setTimeout(() => setPhase('suite-select'), 400);
       return () => clearTimeout(timer);
     }
   }, [visibleCount, phase]);
+
+  const handleSuiteSelect = useCallback(() => {
+    localStorage.setItem('pfc-suite-mode', selectedSuite);
+    localStorage.setItem('pfc-measurement-enabled', selectedSuite === 'full' ? 'true' : 'false');
+    setPhase('apikey');
+  }, [selectedSuite]);
 
   const handleSaveKey = useCallback(() => {
     if (apiKey.trim()) {
@@ -212,6 +222,143 @@ export default function OnboardingPage() {
               {visibleCount > 0 && visibleCount < BOOT_LINES.length && (
                 <span style={{ color: 'var(--color-pfc-green)' }}>{'\u2588'}</span>
               )}
+            </motion.div>
+          )}
+
+          {/* ─── Suite Selection ─── */}
+          {phase === 'suite-select' && (
+            <motion.div
+              key="suite-select"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.35 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+            >
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                <motion.div
+                  initial={{ scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.08, duration: 0.35 }}
+                >
+                  <div
+                    style={{
+                      height: '3.5rem',
+                      width: '3.5rem',
+                      borderRadius: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: isDark
+                        ? 'linear-gradient(135deg, rgba(224,120,80,0.2), rgba(139,124,246,0.2))'
+                        : 'linear-gradient(135deg, rgba(224,120,80,0.1), rgba(139,124,246,0.1))',
+                      border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)',
+                    }}
+                  >
+                    <LayersIcon
+                      style={{
+                        height: '1.5rem',
+                        width: '1.5rem',
+                        color: 'var(--color-pfc-violet)',
+                      }}
+                    />
+                  </div>
+                </motion.div>
+                <h1 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? 'rgba(255,255,255,0.95)' : 'var(--foreground)' }}>
+                  Choose Your Suite
+                </h1>
+                <p style={{ fontSize: '0.6875rem', color: textDim, maxWidth: '20rem' }}>
+                  Select which capabilities to enable. Lighter devices can run Research Suite only to skip heavy computation.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {([
+                  {
+                    value: 'research-only' as const,
+                    icon: FlaskConicalIcon,
+                    label: 'Research Suite',
+                    desc: 'Deep research, AI copilot, citation library, thought visualizer, data export',
+                    color: 'var(--color-pfc-green)',
+                    hint: 'Lightweight — works on all devices',
+                  },
+                  {
+                    value: 'full' as const,
+                    icon: GaugeIcon,
+                    label: 'Research + Measurement Suite',
+                    desc: 'Everything above plus 10-stage pipeline, signals, TDA, causal inference, meta-analysis',
+                    color: 'var(--color-pfc-violet)',
+                    hint: 'Full power — requires more resources',
+                  },
+                ] as const).map((opt) => {
+                  const Icon = opt.icon;
+                  const isSelected = selectedSuite === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSelectedSuite(opt.value)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.75rem',
+                        padding: '0.875rem',
+                        borderRadius: '0.875rem',
+                        border: isSelected
+                          ? `2px solid ${opt.color}`
+                          : isDark ? '1.5px solid rgba(255,255,255,0.08)' : '1.5px solid rgba(0,0,0,0.08)',
+                        background: isSelected
+                          ? (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)')
+                          : 'transparent',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'border 0.2s, background 0.2s',
+                        color: 'inherit',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '2.25rem',
+                          height: '2.25rem',
+                          borderRadius: '0.625rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                        }}
+                      >
+                        <Icon style={{ height: '1.125rem', width: '1.125rem', color: isSelected ? opt.color : textDim }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.9)' : 'var(--foreground)' }}>
+                            {opt.label}
+                          </span>
+                          {isSelected && (
+                            <CheckCircle2Icon style={{ height: '0.875rem', width: '0.875rem', color: opt.color }} />
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.625rem', lineHeight: 1.5, color: textDim, marginTop: '0.125rem' }}>
+                          {opt.desc}
+                        </p>
+                        <p style={{ fontSize: '0.5625rem', color: textFaint, marginTop: '0.25rem', fontStyle: 'italic' }}>
+                          {opt.hint}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <GlassBubbleButton
+                onClick={handleSuiteSelect}
+                color="ember"
+                size="lg"
+                fullWidth
+              >
+                Continue
+                <ArrowRightIcon style={{ height: '1rem', width: '1rem' }} />
+              </GlassBubbleButton>
             </motion.div>
           )}
 

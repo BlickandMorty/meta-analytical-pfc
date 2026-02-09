@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
   ActivityIcon,
   BarChart3Icon,
@@ -34,14 +35,14 @@ const PipelinePage = dynamic(() => import('../pipeline/page'), { ssr: false });
    ═══════════════════════════════════════════════════════════ */
 
 const TABS = [
-  { key: 'pipeline', label: 'Pipeline', icon: NetworkIcon },
-  { key: 'signals', label: 'Signals', icon: ActivityIcon },
-  { key: 'visualizer', label: 'Visualizer', icon: BarChart3Icon },
-  { key: 'evaluate', label: 'Evaluate', icon: MicroscopeIcon },
-  { key: 'concepts', label: 'Concepts', icon: BrainIcon },
-  { key: 'steering', label: 'Steering', icon: CompassIcon },
-  { key: 'research', label: 'Research', icon: FlaskConicalIcon },
-  { key: 'archive', label: 'Archive', icon: ArchiveIcon },
+  { key: 'pipeline', label: 'Pipeline', icon: NetworkIcon, measurementOnly: true },
+  { key: 'signals', label: 'Signals', icon: ActivityIcon, measurementOnly: true },
+  { key: 'visualizer', label: 'Visualizer', icon: BarChart3Icon, measurementOnly: true },
+  { key: 'evaluate', label: 'Evaluate', icon: MicroscopeIcon, measurementOnly: true },
+  { key: 'concepts', label: 'Concepts', icon: BrainIcon, measurementOnly: true },
+  { key: 'steering', label: 'Steering', icon: CompassIcon, measurementOnly: true },
+  { key: 'research', label: 'Research', icon: FlaskConicalIcon, measurementOnly: false },
+  { key: 'archive', label: 'Archive', icon: ArchiveIcon, measurementOnly: false },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -56,6 +57,7 @@ export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('pipeline');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? resolvedTheme === 'dark' : true;
 
@@ -86,13 +88,16 @@ export default function AnalyticsPage() {
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
+            const disabled = tab.measurementOnly && !measurementEnabled;
             return (
               <GlassBubbleButton
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                active={isActive}
+                onClick={() => !disabled && setActiveTab(tab.key)}
+                active={isActive && !disabled}
                 color="violet"
                 size="sm"
+                disabled={disabled}
+                className={disabled ? 'opacity-35 cursor-not-allowed' : ''}
               >
                 <Icon style={{ height: '0.8125rem', width: '0.8125rem' }} />
                 {tab.label}

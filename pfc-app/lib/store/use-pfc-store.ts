@@ -17,6 +17,16 @@ import type {
 } from '@/lib/engine/types';
 import type { InferenceConfig, InferenceMode, ApiProvider, OpenAIModel, AnthropicModel } from '@/lib/engine/llm/config';
 import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
+import type {
+  SuiteMode,
+  ChatViewMode,
+  ThinkingPlayState,
+  ThinkingSpeed,
+  ResearchPaper,
+  Citation,
+  ThoughtGraph,
+  RerouteInstruction,
+} from '@/lib/research/types';
 
 // --- Pipeline helpers ---
 
@@ -216,6 +226,23 @@ export interface PFCState {
     healthScore: number | null;
   };
 
+  // --- Research Suite ---
+  suiteMode: SuiteMode;
+  measurementEnabled: boolean;
+  researchChatMode: boolean;
+  chatViewMode: ChatViewMode;
+  thinkingPlayState: ThinkingPlayState;
+  thinkingSpeed: ThinkingSpeed;
+  researchPapers: ResearchPaper[];
+  currentCitations: Citation[];
+  currentThoughtGraph: ThoughtGraph | null;
+  pendingReroute: RerouteInstruction | null;
+  researchModeControls: {
+    autoExtractCitations: boolean;
+    showVisualizationPreview: boolean;
+    deepResearchEnabled: boolean;
+  };
+
   // actions
   setCurrentChat: (chatId: string) => void;
   submitQuery: (query: string) => void;
@@ -283,6 +310,21 @@ export interface PFCState {
   resetAllConceptWeights: () => void;
   toggleConceptHierarchy: () => void;
   getEffectiveConceptWeights: () => Record<string, number>;
+
+  // --- Research Suite actions ---
+  setSuiteMode: (mode: SuiteMode) => void;
+  setMeasurementEnabled: (enabled: boolean) => void;
+  toggleResearchChatMode: () => void;
+  setChatViewMode: (mode: ChatViewMode) => void;
+  setThinkingPlayState: (state: ThinkingPlayState) => void;
+  setThinkingSpeed: (speed: ThinkingSpeed) => void;
+  addResearchPaper: (paper: ResearchPaper) => void;
+  removeResearchPaper: (id: string) => void;
+  updateResearchPaper: (id: string, updates: Partial<ResearchPaper>) => void;
+  setCurrentCitations: (citations: Citation[]) => void;
+  setCurrentThoughtGraph: (graph: ThoughtGraph | null) => void;
+  setPendingReroute: (instruction: RerouteInstruction | null) => void;
+  setResearchModeControls: (controls: Partial<PFCState['researchModeControls']>) => void;
 
   clearMessages: () => void;
   reset: () => void;
@@ -362,6 +404,23 @@ const initialState = {
     entropy: null,
     dissonance: null,
     healthScore: null,
+  },
+
+  // Research Suite
+  suiteMode: 'full' as SuiteMode,
+  measurementEnabled: true,
+  researchChatMode: false,
+  chatViewMode: 'chat' as ChatViewMode,
+  thinkingPlayState: 'stopped' as ThinkingPlayState,
+  thinkingSpeed: 1 as ThinkingSpeed,
+  researchPapers: [] as ResearchPaper[],
+  currentCitations: [] as Citation[],
+  currentThoughtGraph: null as ThoughtGraph | null,
+  pendingReroute: null as RerouteInstruction | null,
+  researchModeControls: {
+    autoExtractCitations: true,
+    showVisualizationPreview: false,
+    deepResearchEnabled: false,
   },
 };
 
@@ -751,9 +810,43 @@ export const usePFCStore = create<PFCState>((set, get) => ({
     return result;
   },
 
+  // --- Research Suite ---
+  setSuiteMode: (mode) => {
+    set({ suiteMode: mode, measurementEnabled: mode === 'full' });
+    if (typeof window !== 'undefined') localStorage.setItem('pfc-suite-mode', mode);
+  },
+  setMeasurementEnabled: (enabled) => {
+    set({ measurementEnabled: enabled });
+    if (typeof window !== 'undefined') localStorage.setItem('pfc-measurement-enabled', String(enabled));
+  },
+  toggleResearchChatMode: () => set((s) => ({ researchChatMode: !s.researchChatMode })),
+  setChatViewMode: (mode) => set({ chatViewMode: mode }),
+  setThinkingPlayState: (state) => set({ thinkingPlayState: state }),
+  setThinkingSpeed: (speed) => set({ thinkingSpeed: speed }),
+  addResearchPaper: (paper) => set((s) => {
+    const updated = [paper, ...s.researchPapers].slice(0, 500);
+    if (typeof window !== 'undefined') localStorage.setItem('pfc-research-papers', JSON.stringify(updated));
+    return { researchPapers: updated };
+  }),
+  removeResearchPaper: (id) => set((s) => {
+    const updated = s.researchPapers.filter((p) => p.id !== id);
+    if (typeof window !== 'undefined') localStorage.setItem('pfc-research-papers', JSON.stringify(updated));
+    return { researchPapers: updated };
+  }),
+  updateResearchPaper: (id, updates) => set((s) => {
+    const updated = s.researchPapers.map((p) => p.id === id ? { ...p, ...updates } : p);
+    if (typeof window !== 'undefined') localStorage.setItem('pfc-research-papers', JSON.stringify(updated));
+    return { researchPapers: updated };
+  }),
+  setCurrentCitations: (citations) => set({ currentCitations: citations }),
+  setCurrentThoughtGraph: (graph) => set({ currentThoughtGraph: graph }),
+  setPendingReroute: (instruction) => set({ pendingReroute: instruction }),
+  setResearchModeControls: (controls) =>
+    set((s) => ({ researchModeControls: { ...s.researchModeControls, ...controls } })),
+
   clearMessages: () => set(() => ({ messages: [], currentChatId: null, isProcessing: false, isStreaming: false, streamingText: '', pipelineStages: freshPipeline(), activeStage: null })),
 
-  reset: () => set((s) => ({ ...initialState, pipelineStages: freshPipeline(), signalHistory: [], cortexArchive: s.cortexArchive, conceptWeights: {}, queryConceptHistory: [], userSignalOverrides: { confidence: null, entropy: null, dissonance: null, healthScore: null } })),
+  reset: () => set((s) => ({ ...initialState, pipelineStages: freshPipeline(), signalHistory: [], cortexArchive: s.cortexArchive, conceptWeights: {}, queryConceptHistory: [], userSignalOverrides: { confidence: null, entropy: null, dissonance: null, healthScore: null }, researchPapers: [], currentCitations: [], currentThoughtGraph: null, pendingReroute: null })),
 }));
 
 // --- Standalone utility: get effective signal value ---

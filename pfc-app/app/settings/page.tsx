@@ -22,6 +22,8 @@ import {
   GaugeIcon,
   WrenchIcon,
   CircleIcon,
+  FlaskConicalIcon,
+  LayersIcon,
 } from 'lucide-react';
 import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
 import { formatBytes } from '@/lib/engine/llm/ollama';
@@ -90,6 +92,10 @@ export default function SettingsPage() {
   const ollamaHardware = usePFCStore((s) => s.ollamaHardware);
   const setOllamaHardware = usePFCStore((s) => s.setOllamaHardware);
   const reset = usePFCStore((s) => s.reset);
+  const suiteMode = usePFCStore((s) => s.suiteMode);
+  const setSuiteMode = usePFCStore((s) => s.setSuiteMode);
+  const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
+  const setMeasurementEnabled = usePFCStore((s) => s.setMeasurementEnabled);
 
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState('');
@@ -390,6 +396,63 @@ export default function SettingsPage() {
                     </div>
                   </>
                 )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </GlassSection>
+
+        {/* Suite Mode */}
+        <GlassSection title="Suite Configuration">
+          <p className="text-xs text-muted-foreground/50 mb-4">
+            Control which feature sets are active. Disable the Measurement Suite on lighter devices to skip heavy computation.
+          </p>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {([
+              { value: 'research-only' as const, label: 'Research Only', desc: 'AI copilot, citations, export', icon: FlaskConicalIcon, color: 'green' as const },
+              { value: 'full' as const, label: 'Full Suite', desc: 'Research + Measurement', icon: LayersIcon, color: 'violet' as const },
+            ]).map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <GlassBubbleButton
+                  key={opt.value}
+                  onClick={() => {
+                    setSuiteMode(opt.value);
+                    setMeasurementEnabled(opt.value === 'full');
+                  }}
+                  active={suiteMode === opt.value}
+                  color={opt.color}
+                  size="lg"
+                  fullWidth
+                  className="flex-col"
+                >
+                  <Icon style={{ height: 20, width: 20 }} />
+                  <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{opt.label}</span>
+                  <span style={{ fontSize: '0.625rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
+                </GlassBubbleButton>
+              );
+            })}
+          </div>
+          <AnimatePresence>
+            {suiteMode === 'full' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="pt-3 border-t border-border/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">Measurement Suite</p>
+                    <p className="text-[10px] text-muted-foreground/40">Toggle to temporarily disable measurement features without switching modes</p>
+                  </div>
+                  <button
+                    onClick={() => setMeasurementEnabled(!measurementEnabled)}
+                    className={cn(
+                      'relative h-6 w-11 rounded-full transition-colors',
+                      measurementEnabled ? 'bg-pfc-green' : 'bg-muted-foreground/20',
+                    )}
+                  >
+                    <div className={cn(
+                      'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform shadow-sm',
+                      measurementEnabled ? 'translate-x-5' : 'translate-x-0.5',
+                    )} />
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

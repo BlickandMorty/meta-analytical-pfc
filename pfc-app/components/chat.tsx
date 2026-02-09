@@ -12,6 +12,9 @@ import { ConceptHierarchyPanel } from './concept-hierarchy-panel';
 import { CodeRainCanvas, CodeRainOverlays } from './code-rain-canvas';
 import { BrainMascot } from './brain-mascot';
 import { FeatureButtons } from './feature-buttons';
+import { ResearchModeBar } from './research-mode-bar';
+import { ThinkingControls } from './thinking-controls';
+import { ThoughtVisualizer } from './thought-visualizer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 
@@ -257,6 +260,10 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
 export function Chat() {
   const messages = usePFCStore((s) => s.messages);
   const isProcessing = usePFCStore((s) => s.isProcessing);
+  const isStreaming = usePFCStore((s) => s.isStreaming);
+  const researchChatMode = usePFCStore((s) => s.researchChatMode);
+  const chatViewMode = usePFCStore((s) => s.chatViewMode);
+  const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
   const { sendQuery, abort } = useChatStream();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -266,6 +273,7 @@ export function Chat() {
 
   const isEmpty = messages.length === 0;
   const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const showThoughtViz = researchChatMode && chatViewMode === 'visualize-thought' && !isEmpty;
 
   return (
     <div style={{ position: 'relative', display: 'flex', height: '100%', flexDirection: 'column' }}>
@@ -406,19 +414,41 @@ export function Chat() {
             <div style={{ margin: '0 auto', maxWidth: '56rem', width: '100%', padding: '0.75rem 1rem 0' }}>
               <ChatHeader />
             </div>
-            <Messages />
+
+            {/* Thought Visualizer (mind-map mode) */}
+            {showThoughtViz ? (
+              <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                <ThoughtVisualizer isDark={isDark} />
+              </div>
+            ) : (
+              <Messages />
+            )}
+
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0 1rem' }}>
                 <SynthesisCard />
               </div>
-              <LiveControls />
-              <ConceptHierarchyPanel />
-              <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.5rem 1rem 1rem' }}>
+
+              {/* Thinking Controls (play/pause/stop) — shown during processing */}
+              {(isProcessing || isStreaming) && researchChatMode && (
+                <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.375rem 1rem' }}>
+                  <ThinkingControls isDark={isDark} />
+                </div>
+              )}
+
+              {measurementEnabled && <LiveControls />}
+              {measurementEnabled && <ConceptHierarchyPanel />}
+
+              {/* Research Mode Bar + Input */}
+              <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.5rem 1rem 0.5rem' }}>
+                <div style={{ position: 'relative', marginBottom: '0.375rem' }}>
+                  <ResearchModeBar isDark={isDark} />
+                </div>
                 <MultimodalInput
                   onSubmit={sendQuery}
                   onStop={abort}
                   isProcessing={isProcessing}
-                  showControlsToggle
+                  showControlsToggle={measurementEnabled}
                 />
               </div>
             </div>

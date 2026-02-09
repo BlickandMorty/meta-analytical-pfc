@@ -22,6 +22,10 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { EducationalTooltipButton } from '@/components/educational-tooltip';
+import { PIPELINE_TOOLTIPS } from '@/lib/research/educational-data';
+import { useTheme } from 'next-themes';
+import { useState, useEffect } from 'react';
 
 function StatusIcon({ status }: { status: StageStatus }) {
   switch (status) {
@@ -36,8 +40,9 @@ function StatusIcon({ status }: { status: StageStatus }) {
   }
 }
 
-function StageRow({ result, index }: { result: StageResult; index: number }) {
+function StageRow({ result, index, isDark }: { result: StageResult; index: number; isDark: boolean }) {
   const { stage, status, detail, value } = result;
+  const tooltip = PIPELINE_TOOLTIPS[stage];
 
   return (
     <motion.div
@@ -65,9 +70,12 @@ function StageRow({ result, index }: { result: StageResult; index: number }) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-base font-semibold">{STAGE_LABELS[stage]}</p>
-            <p className="text-xs text-muted-foreground/50 mt-0.5">{STAGE_DESCRIPTIONS[stage]}</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <p className="text-base font-semibold">{STAGE_LABELS[stage]}</p>
+              <p className="text-xs text-muted-foreground/50 mt-0.5">{STAGE_DESCRIPTIONS[stage]}</p>
+            </div>
+            {tooltip && <EducationalTooltipButton tooltip={tooltip} isDark={isDark} position="right" />}
           </div>
           <StatusIcon status={status} />
         </div>
@@ -96,6 +104,10 @@ export default function PipelinePage() {
   const ready = useSetupGuard();
   const pipelineStages = usePFCStore((s) => s.pipelineStages);
   const isProcessing = usePFCStore((s) => s.isProcessing);
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted ? resolvedTheme === 'dark' : true;
 
   const completedCount = pipelineStages.filter((s) => s.status === 'complete').length;
   const overallProgress = (completedCount / STAGES.length) * 100;
@@ -141,7 +153,7 @@ export default function PipelinePage() {
         <div className="space-y-1">
           <AnimatePresence mode="popLayout">
             {pipelineStages.map((result, i) => (
-              <StageRow key={result.stage} result={result} index={i} />
+              <StageRow key={result.stage} result={result} index={i} isDark={isDark} />
             ))}
           </AnimatePresence>
         </div>
