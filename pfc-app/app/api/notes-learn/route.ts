@@ -170,6 +170,83 @@ function parseStepResponse(
   }
 }
 
+// ── Simulation mode: generate mock responses ──
+function generateSimulatedResponse(stepType: LearningStepType, noteContent: string): string {
+  const pageCount = (noteContent.match(/^## /gm) || []).length;
+  const wordCount = noteContent.split(/\s+/).length;
+
+  switch (stepType) {
+    case 'inventory':
+      return JSON.stringify({
+        topics: [
+          { name: 'Primary concepts', coverage: wordCount > 200 ? 'moderate' : 'sparse', pageCount },
+          { name: 'Supporting details', coverage: 'sparse', pageCount: Math.max(1, pageCount - 1) },
+        ],
+        concepts: ['analysis', 'synthesis', 'evaluation', 'cross-reference'],
+        orphanTopics: ['methodology', 'future directions'],
+        connectionDensity: 0.3,
+      });
+    case 'gap-analysis':
+      return JSON.stringify({
+        gaps: [
+          { topic: 'Primary concepts', severity: 'important', reason: 'Missing foundational definitions', suggestedAction: 'Add definitions and context' },
+          { topic: 'Supporting details', severity: 'minor', reason: 'Could benefit from examples', suggestedAction: 'Add concrete examples' },
+        ],
+        weakConnections: [{ topicA: 'Primary concepts', topicB: 'Supporting details', relationship: 'Conceptual prerequisite' }],
+        missingContext: [{ assumption: 'Domain terminology', usedIn: 'Multiple pages', explanation: 'Key terms are used without definition' }],
+      });
+    case 'deep-dive':
+      return JSON.stringify({
+        generatedContent: [{
+          pageTitle: 'Knowledge Expansion',
+          gapAddressed: 'Missing foundational definitions',
+          blocks: [
+            '## Foundational Concepts\n\nBased on the analysis of your notes, several key concepts would benefit from deeper exploration.',
+            'The core ideas in your notes revolve around interconnected themes that build on each other in meaningful ways.',
+          ],
+        }],
+      });
+    case 'cross-reference':
+      return JSON.stringify({
+        connections: [{
+          sourcePageTitle: 'Notes',
+          targetPageTitle: 'Analysis',
+          relationship: 'Shared conceptual framework',
+          connectionType: 'shared-concept',
+          suggestedLinkText: 'See also: [[Analysis]] for related concepts',
+        }],
+      });
+    case 'synthesis':
+      return JSON.stringify({
+        synthPages: [{
+          title: 'Synthesis Overview',
+          summary: 'An integrated view of the key themes across your notes.',
+          blocks: [
+            '## Synthesis\n\nYour notes reveal several interconnected themes worth consolidating.',
+            'The connections between topics suggest a coherent narrative that ties your learning together.',
+          ],
+        }],
+      });
+    case 'questions':
+      return JSON.stringify({
+        questions: [
+          { question: 'What are the practical applications of these concepts?', relatedTopics: ['Primary concepts'], depth: 'analytical', whyItMatters: 'Connects theory to practice' },
+          { question: 'How do these ideas relate to broader frameworks?', relatedTopics: ['Supporting details'], depth: 'philosophical', whyItMatters: 'Provides wider context' },
+        ],
+      });
+    case 'iterate':
+      return JSON.stringify({
+        shouldContinue: false,
+        reason: 'Initial pass provides good coverage for the current note density.',
+        confidenceScore: 0.75,
+        focusAreas: [],
+        diminishingReturnsRisk: 'moderate',
+      });
+    default:
+      return '{"insights": ["Analysis complete"]}';
+  }
+}
+
 // ── POST handler ──
 export async function POST(request: NextRequest) {
   let notes: { pages: NotePage[]; blocks: NoteBlock[] };
@@ -192,15 +269,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Resolve the LLM provider
-  let model;
-  try {
-    model = resolveProvider(inferenceConfig);
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to resolve provider' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+  // Resolve the LLM provider (null for simulation mode)
+  const isSimulation = !inferenceConfig || inferenceConfig.mode === 'simulation';
+  let model: Awaited<ReturnType<typeof resolveProvider>> | null = null;
+  if (!isSimulation) {
+    try {
+      model = resolveProvider(inferenceConfig);
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to resolve provider' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
   }
 
   // Build the note content string
@@ -242,26 +322,35 @@ export async function POST(request: NextRequest) {
           emit({ type: 'step-start', stepIndex, stepType: step.type });
 
           try {
-            // Build the prompt for this step
-            const prompt = buildPromptForStep(
-              step.type,
-              effectiveNoteContent,
-              capturedSession,
-              previousStepOutputs,
-            );
+            let responseText: string;
 
-            const temperature = getTemperature(step.type);
+            if (isSimulation || !capturedModel) {
+              // ── Simulation mode: generate mock insights with delays ──
+              responseText = generateSimulatedResponse(step.type, effectiveNoteContent);
+              // Simulate processing time
+              await new Promise((r) => setTimeout(r, 600 + Math.random() * 800));
+            } else {
+              // ── LLM mode: call the real provider ──
+              // Build the prompt for this step
+              const prompt = buildPromptForStep(
+                step.type,
+                effectiveNoteContent,
+                capturedSession,
+                previousStepOutputs,
+              );
 
-            // Generate text via the resolved provider
-            const result = await generateText({
-              model: capturedModel,
-              system: prompt.system,
-              prompt: prompt.user,
-              maxOutputTokens: step.type === 'deep-dive' || step.type === 'synthesis' ? 4096 : 2048,
-              temperature,
-            });
+              const temperature = getTemperature(step.type);
 
-            const responseText = result.text;
+              const result = await generateText({
+                model: capturedModel,
+                system: prompt.system,
+                prompt: prompt.user,
+                maxOutputTokens: step.type === 'deep-dive' || step.type === 'synthesis' ? 4096 : 2048,
+                temperature,
+              });
+
+              responseText = result.text;
+            }
 
             // Emit the response text as stream chunks
             // Break into chunks for progressive display

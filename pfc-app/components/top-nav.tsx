@@ -32,11 +32,17 @@ interface NavItem {
   minTier?: TierGate;
   /** Visual grouping for separator dots */
   group: 'core' | 'tools' | 'utility';
+  /** Custom active-check: match prefix instead of exact path */
+  activePrefix?: string;
+  /** Never highlight as active (e.g. Home is always a quick-nav, not a destination) */
+  neverActive?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  // ── Home / Landing ──
-  { href: '/', label: 'Home', icon: HomeIcon, group: 'core' },
+  // ── Home (landing) ──
+  { href: '/', label: 'Home', icon: HomeIcon, group: 'core', neverActive: true },
+  // ── Pillar 1: Chat ──
+  { href: '/', label: 'Chat', icon: MessageSquareIcon, group: 'core', activePrefix: '/chat' },
   // ── Pillar 2: Notes ──
   { href: '/notes', label: 'Notes', icon: PenLineIcon, group: 'core' },
   // ── Pillar 3: Research ──
@@ -213,7 +219,13 @@ export function TopNav() {
               )}
               <NavBubble
                 item={item}
-                isActive={pathname === item.href}
+                isActive={
+                  item.neverActive
+                    ? false
+                    : item.activePrefix
+                      ? (pathname === '/' || pathname.startsWith(item.activePrefix))
+                      : pathname === item.href
+                }
                 isDark={isDark}
                 onNavigate={handleNavigate}
                 disabled={!meetsRequirement}
