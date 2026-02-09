@@ -1,15 +1,38 @@
 // ═══════════════════════════════════════════════════════════════════
-// Research Suite — Core Types
+// Suite Architecture — 3-Tier System
 // ═══════════════════════════════════════════════════════════════════
 
-/** Which suites are enabled */
-export type SuiteMode = 'research-only' | 'full';
+import type { InferenceMode } from '@/lib/engine/llm/config';
+
+/**
+ * Three suite tiers, ontologically separated by device capability:
+ *
+ * 'notes'        → Phones, tablets, weak laptops. AI chat + notes + research library.
+ *                   No heavy computation. Minimal memory footprint.
+ *
+ * 'programming'  → Desktops, dev machines. Adds code analysis, language tools,
+ *                   codebase suggestions, steering lab.
+ *
+ * 'full'         → GPU machines, power users. Adds pipeline measurement, TDA,
+ *                   signal diagnostics, cortex archive, live controls.
+ */
+export type SuiteTier = 'notes' | 'programming' | 'full';
+
+/** Legacy alias — kept for migration */
+export type SuiteMode = SuiteTier;
 
 /** Research chat mode toggle */
 export type ChatViewMode = 'chat' | 'visualize-thought';
 
 /** Thinking playback state */
 export type ThinkingPlayState = 'playing' | 'paused' | 'stopped';
+
+/** Thinking speed multiplier */
+export type ThinkingSpeed = 0.25 | 0.5 | 1 | 1.5 | 2;
+
+// ═══════════════════════════════════════════════════════════════════
+// Research Types
+// ═══════════════════════════════════════════════════════════════════
 
 /** A saved research article / paper reference */
 export interface ResearchPaper {
@@ -23,9 +46,7 @@ export interface ResearchPaper {
   abstract?: string;
   tags: string[];
   savedAt: number;
-  /** Which chat message sourced this */
   sourceMessageId?: string;
-  /** User notes */
   notes?: string;
 }
 
@@ -82,30 +103,67 @@ export interface RerouteInstruction {
   detail?: string;
 }
 
-/** Thinking speed multiplier */
-export type ThinkingSpeed = 0.25 | 0.5 | 1 | 1.5 | 2;
+// ═══════════════════════════════════════════════════════════════════
+// Code Language Analyzer Types
+// ═══════════════════════════════════════════════════════════════════
+
+/** Supported programming languages for analysis */
+export type ProgrammingLanguage =
+  | 'typescript' | 'javascript' | 'python' | 'rust' | 'go'
+  | 'java' | 'kotlin' | 'swift' | 'c' | 'cpp'
+  | 'csharp' | 'ruby' | 'php' | 'dart' | 'elixir'
+  | 'zig' | 'lua' | 'scala' | 'haskell' | 'ocaml';
+
+/** Project category that influences language recommendation */
+export type ProjectCategory =
+  | 'web-frontend' | 'web-backend' | 'mobile-native' | 'mobile-cross'
+  | 'desktop-app' | 'cli-tool' | 'game-engine' | 'game-scripting'
+  | 'ml-training' | 'ml-inference' | 'data-pipeline' | 'embedded'
+  | 'systems' | 'blockchain' | 'api-service' | 'devtools'
+  | 'library' | 'compiler' | 'database' | 'networking';
+
+/** Language fitness score for a category */
+export interface LanguageFitScore {
+  language: ProgrammingLanguage;
+  overallScore: number;         // 0-100
+  performanceScore: number;     // 0-100
+  ecosystemScore: number;       // 0-100
+  devExperienceScore: number;   // 0-100
+  maintainabilityScore: number; // 0-100
+  hiringPoolScore: number;      // 0-100
+  reasoning: string;
+  bestFor: string[];
+  tradeoffs: string[];
+  recommendedLibs: string[];
+  recommendedRepos: string[];
+}
+
+/** A codebase analysis result */
+export interface CodebaseAnalysis {
+  id: string;
+  timestamp: number;
+  projectName: string;
+  currentLanguage: ProgrammingLanguage;
+  category: ProjectCategory;
+  scores: LanguageFitScore[];
+  topRecommendation: ProgrammingLanguage;
+  migrationComplexity: 'trivial' | 'moderate' | 'significant' | 'massive';
+  estimatedFiles: number;
+  aiSummary: string;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // Inference-Mode Feature Gating
 // ═══════════════════════════════════════════════════════════════════
 
-import type { InferenceMode } from '@/lib/engine/llm/config';
-
 /** Which features are available per inference mode */
 export interface InferenceModeFeatures {
-  /** Play/Pause thinking — genuine on local, fake on API */
   playPause: boolean;
-  /** Speed control for generation/rendering */
   speedControl: boolean;
-  /** Stop / abort thinking stream */
   stopThinking: boolean;
-  /** Reroute thinking via follow-up prompt */
   rerouteThinking: boolean;
-  /** Deep research mode */
   deepResearch: boolean;
-  /** Label for why limited features */
   modeLabel: string;
-  /** Short description of limitations */
   modeHint: string;
 }
 
@@ -142,6 +200,123 @@ export function getInferenceModeFeatures(mode: InferenceMode): InferenceModeFeat
         deepResearch: false,
         modeLabel: 'Simulation',
         modeHint: 'Simulated inference — connect a model for full features',
+      };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Suite Tier Feature Matrix
+// ═══════════════════════════════════════════════════════════════════
+
+/** Complete feature availability for a suite tier */
+export interface SuiteTierFeatures {
+  // Core (always on)
+  chat: boolean;
+  researchLibrary: boolean;
+  citations: boolean;
+  dataExport: boolean;
+  educationalTooltips: boolean;
+
+  // Research-level
+  thoughtVisualizer: 'off' | 'simplified' | 'full';
+  researchMode: boolean;
+  deepResearch: boolean;
+
+  // Programming-level
+  codeAnalyzer: boolean;
+  codebaseTools: boolean;
+  steeringLab: boolean;
+
+  // Measurement-level
+  pipelineVisualizer: boolean;
+  signalDiagnostics: boolean;
+  tdaTopology: boolean;
+  liveControls: boolean;
+  cortexArchive: boolean;
+  conceptHierarchy: boolean;
+  signalOverrides: boolean;
+
+  // Meta
+  tierLabel: string;
+  tierDescription: string;
+  tierColor: string;
+}
+
+/** Get feature set for a suite tier */
+export function getSuiteTierFeatures(tier: SuiteTier): SuiteTierFeatures {
+  switch (tier) {
+    case 'notes':
+      return {
+        chat: true,
+        researchLibrary: true,
+        citations: true,
+        dataExport: true,
+        educationalTooltips: true,
+        thoughtVisualizer: 'simplified',
+        researchMode: true,
+        deepResearch: false,
+        codeAnalyzer: false,
+        codebaseTools: false,
+        steeringLab: false,
+        pipelineVisualizer: false,
+        signalDiagnostics: false,
+        tdaTopology: false,
+        liveControls: false,
+        cortexArchive: false,
+        conceptHierarchy: false,
+        signalOverrides: false,
+        tierLabel: 'Notes & Research',
+        tierDescription: 'AI chat, research library, notes, and citations. Optimized for mobile and low-power devices.',
+        tierColor: 'pfc-green',
+      };
+    case 'programming':
+      return {
+        chat: true,
+        researchLibrary: true,
+        citations: true,
+        dataExport: true,
+        educationalTooltips: true,
+        thoughtVisualizer: 'full',
+        researchMode: true,
+        deepResearch: true,
+        codeAnalyzer: true,
+        codebaseTools: true,
+        steeringLab: true,
+        pipelineVisualizer: false,
+        signalDiagnostics: false,
+        tdaTopology: false,
+        liveControls: false,
+        cortexArchive: false,
+        conceptHierarchy: false,
+        signalOverrides: false,
+        tierLabel: 'Programming Suite',
+        tierDescription: 'Research + code analysis, language tools, codebase suggestions, and AI steering.',
+        tierColor: 'pfc-violet',
+      };
+    case 'full':
+    default:
+      return {
+        chat: true,
+        researchLibrary: true,
+        citations: true,
+        dataExport: true,
+        educationalTooltips: true,
+        thoughtVisualizer: 'full',
+        researchMode: true,
+        deepResearch: true,
+        codeAnalyzer: true,
+        codebaseTools: true,
+        steeringLab: true,
+        pipelineVisualizer: true,
+        signalDiagnostics: true,
+        tdaTopology: true,
+        liveControls: true,
+        cortexArchive: true,
+        conceptHierarchy: true,
+        signalOverrides: true,
+        tierLabel: 'Full Measurement',
+        tierDescription: 'Everything — pipeline analysis, signal diagnostics, TDA topology, cortex archive.',
+        tierColor: 'pfc-ember',
       };
   }
 }

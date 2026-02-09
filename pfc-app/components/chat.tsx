@@ -1,24 +1,30 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { ChatHeader } from './chat-header';
 import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
 import { SynthesisCard } from './synthesis-card';
-import { LiveControls } from './live-controls';
-import { ConceptHierarchyPanel } from './concept-hierarchy-panel';
 import { CodeRainCanvas, CodeRainOverlays } from './code-rain-canvas';
 import { BrainMascot } from './brain-mascot';
 import { FeatureButtons } from './feature-buttons';
 import { ResearchModeBar } from './research-mode-bar';
 import { ThinkingControls } from './thinking-controls';
-import { ThoughtVisualizer } from './thought-visualizer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { getInferenceModeFeatures } from '@/lib/research/types';
 import { CpuIcon, CloudIcon, MonitorIcon } from 'lucide-react';
+
+// ═══════════════════════════════════════════════════════════════════
+// Dynamic imports — only loaded when the tier enables them
+// ═══════════════════════════════════════════════════════════════════
+
+const LiveControls = dynamic(() => import('./live-controls').then((m) => ({ default: m.LiveControls })), { ssr: false });
+const ConceptHierarchyPanel = dynamic(() => import('./concept-hierarchy-panel').then((m) => ({ default: m.ConceptHierarchyPanel })), { ssr: false });
+const ThoughtVisualizer = dynamic(() => import('./thought-visualizer').then((m) => ({ default: m.ThoughtVisualizer })), { ssr: false });
 
 const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -265,7 +271,7 @@ export function Chat() {
   const isStreaming = usePFCStore((s) => s.isStreaming);
   const researchChatMode = usePFCStore((s) => s.researchChatMode);
   const chatViewMode = usePFCStore((s) => s.chatViewMode);
-  const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
+  const tierFeatures = usePFCStore((s) => s.tierFeatures);
   const inferenceMode = usePFCStore((s) => s.inferenceMode);
   const { sendQuery, abort } = useChatStream();
   const { resolvedTheme } = useTheme();
@@ -277,7 +283,7 @@ export function Chat() {
 
   const isEmpty = messages.length === 0;
   const isDark = mounted ? resolvedTheme === 'dark' : true;
-  const showThoughtViz = researchChatMode && chatViewMode === 'visualize-thought' && !isEmpty;
+  const showThoughtViz = researchChatMode && chatViewMode === 'visualize-thought' && tierFeatures.thoughtVisualizer !== 'off' && !isEmpty;
   const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
   const showModeHint = researchChatMode && !features.playPause && !modeHintDismissed && !isEmpty;
 
@@ -491,8 +497,8 @@ export function Chat() {
                 </div>
               )}
 
-              {measurementEnabled && <LiveControls />}
-              {measurementEnabled && <ConceptHierarchyPanel />}
+              {tierFeatures.liveControls && <LiveControls />}
+              {tierFeatures.conceptHierarchy && <ConceptHierarchyPanel />}
 
               {/* Research Mode Bar + Input */}
               <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.5rem 1rem 0.5rem' }}>
@@ -503,7 +509,7 @@ export function Chat() {
                   onSubmit={sendQuery}
                   onStop={abort}
                   isProcessing={isProcessing}
-                  showControlsToggle={measurementEnabled}
+                  showControlsToggle={tierFeatures.liveControls}
                 />
               </div>
             </div>

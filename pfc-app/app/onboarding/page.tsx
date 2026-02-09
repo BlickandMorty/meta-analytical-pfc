@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,9 +16,16 @@ import {
   MonitorIcon,
   TerminalIcon,
   FlaskConicalIcon,
+  CodeIcon,
   GaugeIcon,
   LayersIcon,
+  SmartphoneIcon,
+  TabletIcon,
+  LaptopIcon,
+  CpuIcon,
 } from 'lucide-react';
+import type { SuiteTier } from '@/lib/research/types';
+import { detectDevice, cacheDeviceProfile, type DeviceProfile } from '@/lib/device-detection';
 
 // ═══════════════════════════════════════════════════════════════════════
 // Boot lines
@@ -37,16 +44,67 @@ const BOOT_LINES = [
   { text: '  \u251C\u2500 synthesis.module ........... [OK]', type: 'module' },
   { text: '  \u251C\u2500 adversarial.module ......... [OK]', type: 'module' },
   { text: '  \u2514\u2500 calibration.module ......... [OK]', type: 'module' },
+  { text: 'DETECTING DEVICE CAPABILITIES', type: 'title' },
   { text: 'ALL SYSTEMS NOMINAL', type: 'success' },
 ];
 
-const LINE_DELAY_MS = 65;
+const LINE_DELAY_MS = 55;
+
+// ═══════════════════════════════════════════════════════════════════════
+// Suite tier options
+// ═══════════════════════════════════════════════════════════════════════
+
+const SUITE_OPTIONS: {
+  value: SuiteTier;
+  icon: typeof FlaskConicalIcon;
+  label: string;
+  desc: string;
+  color: string;
+  hint: string;
+  features: string[];
+}[] = [
+  {
+    value: 'notes',
+    icon: FlaskConicalIcon,
+    label: 'Notes & Research',
+    desc: 'AI chat, research library, citation tracking, thought visualization, data export',
+    color: 'var(--color-pfc-green)',
+    hint: 'Optimized for phones, tablets & low-power devices',
+    features: ['AI Chat', 'Research Library', 'Citations', 'Export', 'Thought Maps'],
+  },
+  {
+    value: 'programming',
+    icon: CodeIcon,
+    label: 'Programming Suite',
+    desc: 'Everything above plus code language analyzer, codebase tools, AI steering lab',
+    color: 'var(--color-pfc-violet)',
+    hint: 'For desktops & development machines',
+    features: ['Code Analyzer', 'Codebase Tools', 'Steering Lab', 'Deep Research'],
+  },
+  {
+    value: 'full',
+    icon: GaugeIcon,
+    label: 'Full Measurement',
+    desc: 'All features — 10-stage pipeline, signal diagnostics, TDA topology, cortex archive',
+    color: 'var(--color-pfc-ember)',
+    hint: 'Maximum power — local GPU recommended',
+    features: ['Pipeline Analysis', 'Signal Diagnostics', 'TDA', 'Live Controls'],
+  },
+];
 
 // ═══════════════════════════════════════════════════════════════════════
 // Main page — bubble-style onboarding
 // ═══════════════════════════════════════════════════════════════════════
 
 type Phase = 'boot' | 'suite-select' | 'apikey' | 'launching';
+
+const DEVICE_ICON: Record<string, typeof SmartphoneIcon> = {
+  phone: SmartphoneIcon,
+  tablet: TabletIcon,
+  laptop: LaptopIcon,
+  desktop: MonitorIcon,
+  unknown: CpuIcon,
+};
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -56,9 +114,19 @@ export default function OnboardingPage() {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [selectedSuite, setSelectedSuite] = useState<'research-only' | 'full'>('full');
+  const [selectedTier, setSelectedTier] = useState<SuiteTier>('programming');
+  const [deviceProfile, setDeviceProfile] = useState<DeviceProfile | null>(null);
 
   useEffect(() => setMounted(true), []);
+
+  // Detect device on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const profile = detectDevice();
+    cacheDeviceProfile(profile);
+    setDeviceProfile(profile);
+    setSelectedTier(profile.recommendedTier);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -79,10 +147,11 @@ export default function OnboardingPage() {
   }, [visibleCount, phase]);
 
   const handleSuiteSelect = useCallback(() => {
-    localStorage.setItem('pfc-suite-mode', selectedSuite);
-    localStorage.setItem('pfc-measurement-enabled', selectedSuite === 'full' ? 'true' : 'false');
+    localStorage.setItem('pfc-suite-tier', selectedTier);
+    localStorage.setItem('pfc-suite-mode', selectedTier);
+    localStorage.setItem('pfc-measurement-enabled', selectedTier === 'full' ? 'true' : 'false');
     setPhase('apikey');
-  }, [selectedSuite]);
+  }, [selectedTier]);
 
   const handleSaveKey = useCallback(() => {
     if (apiKey.trim()) {
@@ -100,7 +169,6 @@ export default function OnboardingPage() {
 
   const isDark = mounted ? resolvedTheme === 'dark' : true;
 
-  // Shared bubble glass style
   const bubbleGlass: React.CSSProperties = {
     background: isDark ? 'rgba(12,12,16,0.88)' : 'rgba(255,255,255,0.88)',
     backdropFilter: 'blur(120px) saturate(2.4)',
@@ -115,6 +183,8 @@ export default function OnboardingPage() {
   const textDim = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.4)';
   const textFaint = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.2)';
 
+  const DevIcon = deviceProfile ? (DEVICE_ICON[deviceProfile.deviceClass] || CpuIcon) : CpuIcon;
+
   return (
     <div
       style={{
@@ -128,11 +198,9 @@ export default function OnboardingPage() {
         background: isDark ? '#050508' : '#FCFAF8',
       }}
     >
-      {/* Canvas code rain + overlays */}
       {mounted && <CodeRainCanvas isDark={isDark} />}
       <CodeRainOverlays isDark={isDark} />
 
-      {/* Skip button */}
       <button
         onClick={handleSkip}
         style={{
@@ -162,7 +230,6 @@ export default function OnboardingPage() {
         Skip &gt;&gt;
       </button>
 
-      {/* Main bubble card */}
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -172,7 +239,7 @@ export default function OnboardingPage() {
           position: 'relative',
           zIndex: 10,
           width: '100%',
-          maxWidth: '28rem',
+          maxWidth: '32rem',
           padding: '1.5rem 1.75rem',
         }}
       >
@@ -225,7 +292,7 @@ export default function OnboardingPage() {
             </motion.div>
           )}
 
-          {/* ─── Suite Selection ─── */}
+          {/* ─── Suite Selection (3-tier) ─── */}
           {phase === 'suite-select' && (
             <motion.div
               key="suite-select"
@@ -233,7 +300,7 @@ export default function OnboardingPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96 }}
               transition={{ duration: 0.35 }}
-              style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
             >
               <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                 <motion.div
@@ -256,52 +323,65 @@ export default function OnboardingPage() {
                     }}
                   >
                     <LayersIcon
-                      style={{
-                        height: '1.5rem',
-                        width: '1.5rem',
-                        color: 'var(--color-pfc-violet)',
-                      }}
+                      style={{ height: '1.5rem', width: '1.5rem', color: 'var(--color-pfc-violet)' }}
                     />
                   </div>
                 </motion.div>
                 <h1 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? 'rgba(255,255,255,0.95)' : 'var(--foreground)' }}>
                   Choose Your Suite
                 </h1>
-                <p style={{ fontSize: '0.6875rem', color: textDim, maxWidth: '20rem' }}>
-                  Select which capabilities to enable. Lighter devices can run Research Suite only to skip heavy computation.
+                <p style={{ fontSize: '0.6875rem', color: textDim, maxWidth: '22rem' }}>
+                  Each tier includes everything below it. Select based on your device and workflow.
                 </p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {([
-                  {
-                    value: 'research-only' as const,
-                    icon: FlaskConicalIcon,
-                    label: 'Research Suite',
-                    desc: 'Deep research, AI copilot, citation library, thought visualizer, data export',
-                    color: 'var(--color-pfc-green)',
-                    hint: 'Lightweight — works on all devices',
-                  },
-                  {
-                    value: 'full' as const,
-                    icon: GaugeIcon,
-                    label: 'Research + Measurement Suite',
-                    desc: 'Everything above plus 10-stage pipeline, signals, TDA, causal inference, meta-analysis',
-                    color: 'var(--color-pfc-violet)',
-                    hint: 'Full power — requires more resources',
-                  },
-                ] as const).map((opt) => {
+              {/* Device Detection Badge */}
+              {deviceProfile && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '0.625rem',
+                    background: isDark ? 'rgba(139,124,246,0.06)' : 'rgba(139,124,246,0.04)',
+                    border: isDark ? '1px solid rgba(139,124,246,0.12)' : '1px solid rgba(139,124,246,0.08)',
+                  }}
+                >
+                  <DevIcon style={{ height: '0.875rem', width: '0.875rem', color: '#8B7CF6', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '0.625rem', fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }}>
+                      Detected: {deviceProfile.summary}
+                    </p>
+                    <p style={{ fontSize: '0.5625rem', color: '#8B7CF6' }}>
+                      Recommended: {SUITE_OPTIONS.find((o) => o.value === deviceProfile.recommendedTier)?.label}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* 3 Tier Options */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {SUITE_OPTIONS.map((opt, idx) => {
                   const Icon = opt.icon;
-                  const isSelected = selectedSuite === opt.value;
+                  const isSelected = selectedTier === opt.value;
+                  const isRecommended = deviceProfile?.recommendedTier === opt.value;
+
                   return (
-                    <button
+                    <motion.button
                       key={opt.value}
-                      onClick={() => setSelectedSuite(opt.value)}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + idx * 0.06 }}
+                      onClick={() => setSelectedTier(opt.value)}
                       style={{
                         display: 'flex',
                         alignItems: 'flex-start',
                         gap: '0.75rem',
-                        padding: '0.875rem',
+                        padding: '0.75rem',
                         borderRadius: '0.875rem',
                         border: isSelected
                           ? `2px solid ${opt.color}`
@@ -330,22 +410,55 @@ export default function OnboardingPage() {
                         <Icon style={{ height: '1.125rem', width: '1.125rem', color: isSelected ? opt.color : textDim }} />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: isDark ? 'rgba(255,255,255,0.9)' : 'var(--foreground)' }}>
                             {opt.label}
                           </span>
                           {isSelected && (
                             <CheckCircle2Icon style={{ height: '0.875rem', width: '0.875rem', color: opt.color }} />
                           )}
+                          {isRecommended && !isSelected && (
+                            <span style={{
+                              fontSize: '0.5rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              padding: '0.0625rem 0.3rem',
+                              borderRadius: '0.25rem',
+                              background: isDark ? 'rgba(139,124,246,0.12)' : 'rgba(139,124,246,0.08)',
+                              color: '#8B7CF6',
+                            }}>
+                              Recommended
+                            </span>
+                          )}
                         </div>
-                        <p style={{ fontSize: '0.625rem', lineHeight: 1.5, color: textDim, marginTop: '0.125rem' }}>
+                        <p style={{ fontSize: '0.5625rem', lineHeight: 1.5, color: textDim, marginTop: '0.125rem' }}>
                           {opt.desc}
                         </p>
-                        <p style={{ fontSize: '0.5625rem', color: textFaint, marginTop: '0.25rem', fontStyle: 'italic' }}>
+                        {/* Feature pills */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.375rem' }}>
+                          {opt.features.map((f) => (
+                            <span
+                              key={f}
+                              style={{
+                                fontSize: '0.4375rem',
+                                fontWeight: 600,
+                                padding: '0.0625rem 0.3rem',
+                                borderRadius: '0.25rem',
+                                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                                color: isSelected ? opt.color : textFaint,
+                                transition: 'color 0.2s',
+                              }}
+                            >
+                              {f}
+                            </span>
+                          ))}
+                        </div>
+                        <p style={{ fontSize: '0.5rem', color: textFaint, marginTop: '0.25rem', fontStyle: 'italic' }}>
                           {opt.hint}
                         </p>
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -372,7 +485,6 @@ export default function OnboardingPage() {
               transition={{ duration: 0.35 }}
               style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}
             >
-              {/* Logo */}
               <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                 <motion.div
                   initial={{ scale: 0.85, opacity: 0 }}
@@ -411,11 +523,10 @@ export default function OnboardingPage() {
                   Meta-Analytical PFC Engine
                 </h1>
                 <p style={{ fontSize: '0.6875rem', color: textDim }}>
-                  10-stage analytical pipeline for stress-testing claims
+                  Connect an API key for AI-powered analysis, or run in simulation mode
                 </p>
               </div>
 
-              {/* Key input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.6875rem', color: textDim }}>
                   <KeyIcon style={{ height: '0.875rem', width: '0.875rem' }} />
@@ -449,55 +560,10 @@ export default function OnboardingPage() {
 
                 <p style={{ fontSize: '0.5625rem', lineHeight: 1.6, color: textFaint }}>
                   Stored locally in your browser. Without a key the engine runs in simulation mode.
+                  For full control, use local inference (Ollama) — configurable in Settings.
                 </p>
               </div>
 
-              {/* Platform info bubble */}
-              <div
-                style={{
-                  borderRadius: '0.75rem',
-                  padding: '0.75rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
-                  border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
-                }}
-              >
-                <p style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500, color: textFaint }}>
-                  Works on all platforms
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                  {[
-                    { label: 'macOS', icon: TerminalIcon, cmd: 'brew install node' },
-                    { label: 'Linux', icon: TerminalIcon, cmd: 'apt install nodejs' },
-                    { label: 'Windows', icon: MonitorIcon, cmd: 'winget install Node' },
-                  ].map((platform) => (
-                    <div
-                      key={platform.label}
-                      style={{
-                        borderRadius: '0.5rem',
-                        padding: '0.5rem',
-                        textAlign: 'center',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                      }}
-                    >
-                      <platform.icon style={{ height: '0.875rem', width: '0.875rem', color: textDim }} />
-                      <p style={{ fontSize: '0.5625rem', fontWeight: 500, color: textDim }}>{platform.label}</p>
-                      <p style={{ fontSize: '0.4375rem', fontFamily: 'var(--font-mono)', color: isDark ? 'rgba(139,124,246,0.4)' : 'rgba(139,124,246,0.5)' }}>{platform.cmd}</p>
-                    </div>
-                  ))}
-                </div>
-                <p style={{ fontSize: '0.5rem', lineHeight: 1.6, color: textFaint }}>
-                  Requires Node.js 18+. Run <span style={{ fontFamily: 'var(--font-mono)' }}>npm run dev</span> to start.
-                </p>
-              </div>
-
-              {/* Action */}
               <GlassBubbleButton
                 onClick={handleSaveKey}
                 color="ember"

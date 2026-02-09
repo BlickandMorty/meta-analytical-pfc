@@ -19,6 +19,7 @@ import type { InferenceConfig, InferenceMode, ApiProvider, OpenAIModel, Anthropi
 import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
 import type {
   SuiteMode,
+  SuiteTier,
   ChatViewMode,
   ThinkingPlayState,
   ThinkingSpeed,
@@ -26,7 +27,10 @@ import type {
   Citation,
   ThoughtGraph,
   RerouteInstruction,
+  CodebaseAnalysis,
+  SuiteTierFeatures,
 } from '@/lib/research/types';
+import { getSuiteTierFeatures } from '@/lib/research/types';
 
 // --- Pipeline helpers ---
 
@@ -226,9 +230,14 @@ export interface PFCState {
     healthScore: number | null;
   };
 
-  // --- Research Suite ---
-  suiteMode: SuiteMode;
+  // --- Suite Tier System ---
+  suiteTier: SuiteTier;
+  suiteMode: SuiteMode; // legacy alias = suiteTier
   measurementEnabled: boolean;
+  programmingEnabled: boolean;
+  tierFeatures: SuiteTierFeatures;
+
+  // --- Research ---
   researchChatMode: boolean;
   chatViewMode: ChatViewMode;
   thinkingPlayState: ThinkingPlayState;
@@ -242,6 +251,9 @@ export interface PFCState {
     showVisualizationPreview: boolean;
     deepResearchEnabled: boolean;
   };
+
+  // --- Programming Suite ---
+  codebaseAnalyses: CodebaseAnalysis[];
 
   // actions
   setCurrentChat: (chatId: string) => void;
@@ -311,9 +323,12 @@ export interface PFCState {
   toggleConceptHierarchy: () => void;
   getEffectiveConceptWeights: () => Record<string, number>;
 
-  // --- Research Suite actions ---
-  setSuiteMode: (mode: SuiteMode) => void;
+  // --- Suite Tier actions ---
+  setSuiteTier: (tier: SuiteTier) => void;
+  setSuiteMode: (mode: SuiteMode) => void; // legacy alias
   setMeasurementEnabled: (enabled: boolean) => void;
+
+  // --- Research actions ---
   toggleResearchChatMode: () => void;
   setChatViewMode: (mode: ChatViewMode) => void;
   setThinkingPlayState: (state: ThinkingPlayState) => void;
@@ -325,6 +340,10 @@ export interface PFCState {
   setCurrentThoughtGraph: (graph: ThoughtGraph | null) => void;
   setPendingReroute: (instruction: RerouteInstruction | null) => void;
   setResearchModeControls: (controls: Partial<PFCState['researchModeControls']>) => void;
+
+  // --- Programming Suite actions ---
+  addCodebaseAnalysis: (analysis: CodebaseAnalysis) => void;
+  removeCodebaseAnalysis: (id: string) => void;
 
   clearMessages: () => void;
   reset: () => void;
@@ -406,9 +425,14 @@ const initialState = {
     healthScore: null,
   },
 
-  // Research Suite
-  suiteMode: 'full' as SuiteMode,
-  measurementEnabled: true,
+  // Suite Tier
+  suiteTier: 'programming' as SuiteTier,
+  suiteMode: 'programming' as SuiteMode,
+  measurementEnabled: false,
+  programmingEnabled: true,
+  tierFeatures: getSuiteTierFeatures('programming'),
+
+  // Research
   researchChatMode: false,
   chatViewMode: 'chat' as ChatViewMode,
   thinkingPlayState: 'stopped' as ThinkingPlayState,
@@ -422,6 +446,9 @@ const initialState = {
     showVisualizationPreview: false,
     deepResearchEnabled: false,
   },
+
+  // Programming Suite
+  codebaseAnalyses: [] as CodebaseAnalysis[],
 };
 
 // --- Store ---
@@ -810,10 +837,26 @@ export const usePFCStore = create<PFCState>((set, get) => ({
     return result;
   },
 
-  // --- Research Suite ---
+  // --- Suite Tier ---
+  setSuiteTier: (tier) => {
+    const features = getSuiteTierFeatures(tier);
+    set({
+      suiteTier: tier,
+      suiteMode: tier,
+      measurementEnabled: features.pipelineVisualizer,
+      programmingEnabled: features.codeAnalyzer,
+      tierFeatures: features,
+    });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pfc-suite-tier', tier);
+      localStorage.setItem('pfc-suite-mode', tier);
+      localStorage.setItem('pfc-measurement-enabled', String(features.pipelineVisualizer));
+    }
+  },
   setSuiteMode: (mode) => {
-    set({ suiteMode: mode, measurementEnabled: mode === 'full' });
-    if (typeof window !== 'undefined') localStorage.setItem('pfc-suite-mode', mode);
+    // Legacy: delegates to setSuiteTier
+    const tier = mode as SuiteTier;
+    usePFCStore.getState().setSuiteTier(tier);
   },
   setMeasurementEnabled: (enabled) => {
     set({ measurementEnabled: enabled });
@@ -844,9 +887,21 @@ export const usePFCStore = create<PFCState>((set, get) => ({
   setResearchModeControls: (controls) =>
     set((s) => ({ researchModeControls: { ...s.researchModeControls, ...controls } })),
 
+  // --- Programming Suite ---
+  addCodebaseAnalysis: (analysis) => set((s) => {
+    const updated = [analysis, ...s.codebaseAnalyses].slice(0, 100);
+    if (typeof window !== 'undefined') localStorage.setItem('pfc-codebase-analyses', JSON.stringify(updated));
+    return { codebaseAnalyses: updated };
+  }),
+  removeCodebaseAnalysis: (id) => set((s) => {
+    const updated = s.codebaseAnalyses.filter((a) => a.id !== id);
+    if (typeof window !== 'undefined') localStorage.setItem('pfc-codebase-analyses', JSON.stringify(updated));
+    return { codebaseAnalyses: updated };
+  }),
+
   clearMessages: () => set(() => ({ messages: [], currentChatId: null, isProcessing: false, isStreaming: false, streamingText: '', pipelineStages: freshPipeline(), activeStage: null })),
 
-  reset: () => set((s) => ({ ...initialState, pipelineStages: freshPipeline(), signalHistory: [], cortexArchive: s.cortexArchive, conceptWeights: {}, queryConceptHistory: [], userSignalOverrides: { confidence: null, entropy: null, dissonance: null, healthScore: null }, researchPapers: [], currentCitations: [], currentThoughtGraph: null, pendingReroute: null })),
+  reset: () => set((s) => ({ ...initialState, pipelineStages: freshPipeline(), signalHistory: [], cortexArchive: s.cortexArchive, conceptWeights: {}, queryConceptHistory: [], userSignalOverrides: { confidence: null, entropy: null, dissonance: null, healthScore: null }, researchPapers: [], currentCitations: [], currentThoughtGraph: null, pendingReroute: null, suiteTier: s.suiteTier, suiteMode: s.suiteMode, measurementEnabled: s.measurementEnabled, programmingEnabled: s.programmingEnabled, tierFeatures: s.tierFeatures, codebaseAnalyses: s.codebaseAnalyses })),
 }));
 
 // --- Standalone utility: get effective signal value ---

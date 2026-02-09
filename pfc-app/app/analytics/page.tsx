@@ -34,15 +34,18 @@ const PipelinePage = dynamic(() => import('../pipeline/page'), { ssr: false });
    Tab definitions
    ═══════════════════════════════════════════════════════════ */
 
+type MinTier = 'notes' | 'programming' | 'full';
+const TIER_ORDER: Record<string, number> = { notes: 0, programming: 1, full: 2 };
+
 const TABS = [
-  { key: 'pipeline', label: 'Pipeline', icon: NetworkIcon, measurementOnly: true },
-  { key: 'signals', label: 'Signals', icon: ActivityIcon, measurementOnly: true },
-  { key: 'visualizer', label: 'Visualizer', icon: BarChart3Icon, measurementOnly: true },
-  { key: 'evaluate', label: 'Evaluate', icon: MicroscopeIcon, measurementOnly: true },
-  { key: 'concepts', label: 'Concepts', icon: BrainIcon, measurementOnly: true },
-  { key: 'steering', label: 'Steering', icon: CompassIcon, measurementOnly: true },
-  { key: 'research', label: 'Research', icon: FlaskConicalIcon, measurementOnly: false },
-  { key: 'archive', label: 'Archive', icon: ArchiveIcon, measurementOnly: false },
+  { key: 'research', label: 'Research', icon: FlaskConicalIcon, minTier: 'notes' as MinTier },
+  { key: 'archive', label: 'Archive', icon: ArchiveIcon, minTier: 'notes' as MinTier },
+  { key: 'steering', label: 'Steering', icon: CompassIcon, minTier: 'programming' as MinTier },
+  { key: 'pipeline', label: 'Pipeline', icon: NetworkIcon, minTier: 'full' as MinTier },
+  { key: 'signals', label: 'Signals', icon: ActivityIcon, minTier: 'full' as MinTier },
+  { key: 'visualizer', label: 'Visualizer', icon: BarChart3Icon, minTier: 'full' as MinTier },
+  { key: 'evaluate', label: 'Evaluate', icon: MicroscopeIcon, minTier: 'full' as MinTier },
+  { key: 'concepts', label: 'Concepts', icon: BrainIcon, minTier: 'full' as MinTier },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -54,10 +57,10 @@ const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
    ═══════════════════════════════════════════════════════════ */
 
 export default function AnalyticsPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>('pipeline');
+  const [activeTab, setActiveTab] = useState<TabKey>('research');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
+  const suiteTier = usePFCStore((s) => s.suiteTier);
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? resolvedTheme === 'dark' : true;
 
@@ -88,7 +91,7 @@ export default function AnalyticsPage() {
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
-            const disabled = tab.measurementOnly && !measurementEnabled;
+            const disabled = (TIER_ORDER[suiteTier] ?? 0) < (TIER_ORDER[tab.minTier] ?? 0);
             return (
               <GlassBubbleButton
                 key={tab.key}

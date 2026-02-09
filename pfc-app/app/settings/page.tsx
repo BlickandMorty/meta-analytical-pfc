@@ -24,6 +24,7 @@ import {
   CircleIcon,
   FlaskConicalIcon,
   LayersIcon,
+  CodeIcon,
 } from 'lucide-react';
 import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
 import { formatBytes } from '@/lib/engine/llm/ollama';
@@ -92,8 +93,8 @@ export default function SettingsPage() {
   const ollamaHardware = usePFCStore((s) => s.ollamaHardware);
   const setOllamaHardware = usePFCStore((s) => s.setOllamaHardware);
   const reset = usePFCStore((s) => s.reset);
-  const suiteMode = usePFCStore((s) => s.suiteMode);
-  const setSuiteMode = usePFCStore((s) => s.setSuiteMode);
+  const suiteTier = usePFCStore((s) => s.suiteTier);
+  const setSuiteTier = usePFCStore((s) => s.setSuiteTier);
   const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
   const setMeasurementEnabled = usePFCStore((s) => s.setMeasurementEnabled);
 
@@ -401,44 +402,42 @@ export default function SettingsPage() {
           </AnimatePresence>
         </GlassSection>
 
-        {/* Suite Mode */}
-        <GlassSection title="Suite Configuration">
+        {/* Suite Tier */}
+        <GlassSection title="Suite Tier">
           <p className="text-xs text-muted-foreground/50 mb-4">
-            Control which feature sets are active. Disable the Measurement Suite on lighter devices to skip heavy computation.
+            Each tier includes everything below it. Lower tiers skip heavy computation for mobile and low-power devices.
           </p>
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-3 gap-3 mb-4">
             {([
-              { value: 'research-only' as const, label: 'Research Only', desc: 'AI copilot, citations, export', icon: FlaskConicalIcon, color: 'green' as const },
-              { value: 'full' as const, label: 'Full Suite', desc: 'Research + Measurement', icon: LayersIcon, color: 'violet' as const },
+              { value: 'notes' as const, label: 'Notes & Research', desc: 'Chat, library, export', icon: FlaskConicalIcon, color: 'green' as const },
+              { value: 'programming' as const, label: 'Programming', desc: '+ Code tools, steering', icon: CodeIcon, color: 'violet' as const },
+              { value: 'full' as const, label: 'Full Measurement', desc: '+ Pipeline, signals, TDA', icon: LayersIcon, color: 'ember' as const },
             ]).map((opt) => {
               const Icon = opt.icon;
               return (
                 <GlassBubbleButton
                   key={opt.value}
-                  onClick={() => {
-                    setSuiteMode(opt.value);
-                    setMeasurementEnabled(opt.value === 'full');
-                  }}
-                  active={suiteMode === opt.value}
+                  onClick={() => setSuiteTier(opt.value)}
+                  active={suiteTier === opt.value}
                   color={opt.color}
                   size="lg"
                   fullWidth
                   className="flex-col"
                 >
                   <Icon style={{ height: 20, width: 20 }} />
-                  <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{opt.label}</span>
-                  <span style={{ fontSize: '0.625rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{opt.label}</span>
+                  <span style={{ fontSize: '0.5625rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
                 </GlassBubbleButton>
               );
             })}
           </div>
           <AnimatePresence>
-            {suiteMode === 'full' && (
+            {suiteTier === 'full' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="pt-3 border-t border-border/20">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold">Measurement Suite</p>
-                    <p className="text-[10px] text-muted-foreground/40">Toggle to temporarily disable measurement features without switching modes</p>
+                    <p className="text-[10px] text-muted-foreground/40">Toggle to temporarily disable heavy measurement without switching tiers</p>
                   </div>
                   <button
                     onClick={() => setMeasurementEnabled(!measurementEnabled)}

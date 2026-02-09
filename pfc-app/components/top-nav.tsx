@@ -12,27 +12,49 @@ import {
   BookOpenIcon,
   LibraryIcon,
   DownloadIcon,
+  CodeIcon,
+  WrenchIcon,
   type LucideIcon,
 } from 'lucide-react';
 
 const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
 
+/** Minimum tier required to access a nav item */
+type TierGate = 'notes' | 'programming' | 'full';
+
 interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** If true, grayed out when measurement is disabled */
-  measurementOnly?: boolean;
+  /** Minimum tier needed. Default: 'notes' (always available) */
+  minTier?: TierGate;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Search', icon: SearchIcon },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, measurementOnly: true },
+  { href: '/dev-tools', label: 'Dev Tools', icon: WrenchIcon, minTier: 'programming' },
+  { href: '/code-analyzer', label: 'Analyzer', icon: CodeIcon, minTier: 'programming' },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full' },
   { href: '/research-library', label: 'Library', icon: LibraryIcon },
   { href: '/export', label: 'Export', icon: DownloadIcon },
   { href: '/settings', label: 'Settings', icon: SettingsIcon },
   { href: '/docs', label: 'Docs', icon: BookOpenIcon },
 ];
+
+/** Check if a tier meets the minimum requirement */
+function tierMeetsMinimum(current: string, minimum: TierGate): boolean {
+  const ORDER: Record<string, number> = { notes: 0, programming: 1, full: 2 };
+  return (ORDER[current] ?? 0) >= (ORDER[minimum] ?? 0);
+}
+
+/** Get a human-readable label for a tier gate */
+function tierGateLabel(gate: TierGate): string {
+  switch (gate) {
+    case 'programming': return 'Programming Suite';
+    case 'full': return 'Full Measurement Suite';
+    default: return '';
+  }
+}
 
 const NavBubble = memo(function NavBubble({
   item,
@@ -40,12 +62,14 @@ const NavBubble = memo(function NavBubble({
   isDark,
   onNavigate,
   disabled,
+  disabledReason,
 }: {
   item: NavItem;
   isActive: boolean;
   isDark: boolean;
   onNavigate: (href: string) => void;
   disabled?: boolean;
+  disabledReason?: string;
 }) {
   const [hovered, setHovered] = useState(false);
   const expanded = (hovered || isActive) && !disabled;
@@ -57,7 +81,7 @@ const NavBubble = memo(function NavBubble({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       whileTap={disabled ? undefined : { scale: 0.92 }}
-      title={disabled ? `${item.label} — enable Measurement Suite in Settings` : item.label}
+      title={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -118,7 +142,7 @@ export function TopNav() {
   const pathname = usePathname();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const measurementEnabled = usePFCStore((s) => s.measurementEnabled);
+  const suiteTier = usePFCStore((s) => s.suiteTier);
 
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? resolvedTheme === 'dark' : true;
@@ -169,16 +193,21 @@ export function TopNav() {
           ? '1px solid rgba(255,255,255,0.04)'
           : '1px solid rgba(0,0,0,0.04)',
       }}>
-        {NAV_ITEMS.map((item) => (
-          <NavBubble
-            key={item.href}
-            item={item}
-            isActive={pathname === item.href}
-            isDark={isDark}
-            onNavigate={handleNavigate}
-            disabled={item.measurementOnly && !measurementEnabled}
-          />
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const minTier = item.minTier ?? 'notes';
+          const meetsRequirement = tierMeetsMinimum(suiteTier, minTier);
+          return (
+            <NavBubble
+              key={item.href}
+              item={item}
+              isActive={pathname === item.href}
+              isDark={isDark}
+              onNavigate={handleNavigate}
+              disabled={!meetsRequirement}
+              disabledReason={tierGateLabel(minTier)}
+            />
+          );
+        })}
       </div>
     </motion.nav>
   );
