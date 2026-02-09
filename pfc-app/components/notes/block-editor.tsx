@@ -47,9 +47,9 @@ interface NoteBlock {
 
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
 const INDENT_PX = 24;
-const VIOLET = '#7C6CF0';
-const VIOLET_FAINT = 'rgba(124, 108, 240, 0.08)';
-const VIOLET_BORDER = 'rgba(124, 108, 240, 0.25)';
+const VIOLET = '#C4956A';
+const VIOLET_FAINT = 'rgba(196, 149, 106, 0.08)';
+const VIOLET_BORDER = 'rgba(196, 149, 106, 0.25)';
 const VIOLET_BADGE_BG = 'rgba(124, 108, 240, 0.15)';
 
 // ── Store selectors (stable references) ────────────────────────────

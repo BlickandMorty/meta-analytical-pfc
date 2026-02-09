@@ -15,7 +15,7 @@ interface ThoughtVisualizerProps {
 
 const NODE_COLORS: Record<ThoughtNode['type'], string> = {
   query: '#E07850',
-  reasoning: '#8B7CF6',
+  reasoning: '#C4956A',
   evidence: '#34D399',
   conclusion: '#22D3EE',
   counter: '#F87171',
@@ -246,7 +246,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
               y1={from.y}
               x2={to.x}
               y2={to.y}
-              stroke={isHighlighted ? '#8B7CF6' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')}
+              stroke={isHighlighted ? '#C4956A' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)')}
               strokeWidth={isHighlighted ? 2 : 1}
               strokeDasharray={edge.label === 'weakness' ? '4 4' : undefined}
               style={{ transition: 'stroke 0.2s, stroke-width 0.2s' }}

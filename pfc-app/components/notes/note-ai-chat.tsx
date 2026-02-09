@@ -328,7 +328,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
             fontSize: '0.75rem',
             fontWeight: 500,
             letterSpacing: '-0.01em',
-            color: '#7C6CF0',
+            color: '#C4956A',
             background: glassBackground,
             border: `1px solid ${glassBorder}`,
             borderRadius: '1.25rem',
@@ -405,7 +405,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
             }}
           >
             <Sparkles
-              style={{ width: 13, height: 13, color: '#7C6CF0' }}
+              style={{ width: 13, height: 13, color: '#C4956A' }}
             />
             Notes AI
           </div>
@@ -529,7 +529,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                       width: 6,
                       height: 13,
                       marginLeft: 2,
-                      background: '#7C6CF0',
+                      background: '#C4956A',
                       borderRadius: 1.5,
                       verticalAlign: 'text-bottom',
                     }}
@@ -681,7 +681,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                     : inputBorder
                 }`,
                 cursor: inputValue.trim() ? 'pointer' : 'default',
-                color: inputValue.trim() ? '#7C6CF0' : subtleText,
+                color: inputValue.trim() ? '#C4956A' : subtleText,
                 flexShrink: 0,
                 opacity: inputValue.trim() ? 1 : 0.5,
                 transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',

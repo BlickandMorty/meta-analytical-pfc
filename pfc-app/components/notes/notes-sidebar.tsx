@@ -187,12 +187,12 @@ export const NotesSidebar = memo(function NotesSidebar() {
             display: 'flex',
             flexDirection: 'column',
             background: isDark
-              ? 'rgba(0, 0, 0, 0.60)'
+              ? 'rgba(31, 30, 27, 0.95)'
               : 'rgba(255, 255, 255, 0.40)',
             backdropFilter: 'blur(40px) saturate(1.6)',
             WebkitBackdropFilter: 'blur(40px) saturate(1.6)',
             borderRight: isDark
-              ? '1px solid rgba(255, 255, 255, 0.06)'
+              ? '1px solid rgba(62, 61, 57, 0.5)'
               : '1px solid rgba(0, 0, 0, 0.06)',
           }}
         >
@@ -294,7 +294,7 @@ const SidebarHeader = memo(function SidebarHeader({
       style={{
         padding: '0.75rem 0.75rem 0.5rem',
         borderBottom: isDark
-          ? '1px solid rgba(255, 255, 255, 0.04)'
+          ? '1px solid rgba(62, 61, 57, 0.5)'
           : '1px solid rgba(0, 0, 0, 0.04)',
         display: 'flex',
         flexDirection: 'column',
@@ -311,7 +311,7 @@ const SidebarHeader = memo(function SidebarHeader({
             transform: 'translateY(-50%)',
             width: '0.75rem',
             height: '0.75rem',
-            color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)',
+            color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.3)',
             pointerEvents: 'none',
           }}
         />
@@ -331,23 +331,23 @@ const SidebarHeader = memo(function SidebarHeader({
             letterSpacing: '-0.005em',
             borderRadius: '0.75rem',
             border: isDark
-              ? '1px solid rgba(255,255,255,0.06)'
+              ? '1px solid rgba(62,61,57,0.5)'
               : '1px solid rgba(0,0,0,0.06)',
             background: isDark
-              ? 'rgba(255,255,255,0.04)'
+              ? 'rgba(196,149,106,0.08)'
               : 'rgba(0,0,0,0.03)',
-            color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.75)',
+            color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.75)',
             outline: 'none',
             transition: 'border-color 0.15s, background 0.15s',
           }}
           onFocus={(e) => {
             e.currentTarget.style.borderColor = isDark
-              ? 'rgba(139,124,246,0.3)'
+              ? 'rgba(196,149,106,0.3)'
               : 'rgba(124,108,240,0.3)';
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = isDark
-              ? 'rgba(255,255,255,0.06)'
+              ? 'rgba(62,61,57,0.5)'
               : 'rgba(0,0,0,0.06)';
           }}
         />
@@ -366,8 +366,8 @@ const SidebarHeader = memo(function SidebarHeader({
               justifyContent: 'center',
               borderRadius: '50%',
               border: 'none',
-              background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-              color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)',
+              background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.06)',
+              color: isDark ? 'rgba(232,228,222,0.4)' : 'rgba(0,0,0,0.35)',
               cursor: 'pointer',
               padding: 0,
             }}
@@ -424,9 +424,9 @@ const SidebarHeader = memo(function SidebarHeader({
             borderRadius: '0.5rem',
             border: 'none',
             background: isDark
-              ? 'rgba(139,124,246,0.12)'
+              ? 'rgba(196,149,106,0.12)'
               : 'rgba(124,108,240,0.12)',
-            color: '#7C6CF0',
+            color: '#C4956A',
             cursor: 'pointer',
             transition: 'background 0.15s',
           }}
@@ -461,7 +461,7 @@ const ViewTabBar = memo(function ViewTabBar({
         gap: '0.125rem',
         padding: '0.375rem 0.75rem',
         borderBottom: isDark
-          ? '1px solid rgba(255,255,255,0.04)'
+          ? '1px solid rgba(62,61,57,0.5)'
           : '1px solid rgba(0,0,0,0.04)',
       }}
     >
@@ -489,11 +489,11 @@ const ViewTabBar = memo(function ViewTabBar({
               cursor: 'pointer',
               transition: 'background 0.15s, color 0.15s',
               background: isActive
-                ? (isDark ? 'rgba(139,124,246,0.14)' : 'rgba(124,108,240,0.10)')
+                ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(124,108,240,0.10)')
                 : 'transparent',
               color: isActive
-                ? '#7C6CF0'
-                : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)'),
+                ? '#C4956A'
+                : (isDark ? 'rgba(232,228,222,0.35)' : 'rgba(0,0,0,0.35)'),
             }}
           >
             <Icon style={{ width: '0.6875rem', height: '0.6875rem' }} />
@@ -530,7 +530,7 @@ function SectionLabel({ isDark, icon: Icon, label, count }: SectionLabelProps) {
         style={{
           width: '0.5625rem',
           height: '0.5625rem',
-          color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
+          color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.25)',
         }}
       />
       <span
@@ -539,7 +539,7 @@ function SectionLabel({ isDark, icon: Icon, label, count }: SectionLabelProps) {
           fontWeight: 600,
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
-          color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
+          color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.25)',
         }}
       >
         {label}
@@ -548,7 +548,7 @@ function SectionLabel({ isDark, icon: Icon, label, count }: SectionLabelProps) {
         style={{
           fontSize: '0.5625rem',
           fontWeight: 500,
-          color: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+          color: isDark ? 'rgba(232,228,222,0.15)' : 'rgba(0,0,0,0.15)',
           marginLeft: 'auto',
         }}
       >
@@ -613,12 +613,12 @@ const PageRow = memo(function PageRow({
         cursor: 'pointer',
         transition: 'background 0.12s',
         background: isActive
-          ? (isDark ? 'rgba(124,108,240,0.10)' : 'rgba(124,108,240,0.08)')
+          ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(124,108,240,0.08)')
           : hovered
-            ? (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')
+            ? (isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.03)')
             : 'transparent',
         borderLeft: isActive
-          ? '2px solid #7C6CF0'
+          ? '2px solid #C4956A'
           : '2px solid transparent',
         position: 'relative',
       }}
@@ -634,8 +634,8 @@ const PageRow = memo(function PageRow({
           flexShrink: 0,
           borderRadius: '0.25rem',
           background: isActive
-            ? (isDark ? 'rgba(124,108,240,0.15)' : 'rgba(124,108,240,0.10)')
-            : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
+            ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(124,108,240,0.10)')
+            : (isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)'),
         }}
       >
         {pageIcon ? (
@@ -645,7 +645,7 @@ const PageRow = memo(function PageRow({
             style={{
               width: '0.625rem',
               height: '0.625rem',
-              color: isActive ? '#7C6CF0' : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'),
+              color: isActive ? '#C4956A' : (isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)'),
             }}
           />
         ) : (
@@ -653,7 +653,7 @@ const PageRow = memo(function PageRow({
             style={{
               width: '0.625rem',
               height: '0.625rem',
-              color: isActive ? '#7C6CF0' : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'),
+              color: isActive ? '#C4956A' : (isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)'),
             }}
           />
         )}
@@ -667,8 +667,8 @@ const PageRow = memo(function PageRow({
             fontWeight: isActive ? 550 : 450,
             lineHeight: 1.3,
             color: isActive
-              ? (isDark ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.9)')
-              : (isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.6)'),
+              ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+              : (isDark ? 'rgba(232,228,222,0.65)' : 'rgba(0,0,0,0.6)'),
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -681,7 +681,7 @@ const PageRow = memo(function PageRow({
             style={{
               fontSize: '0.625rem',
               fontWeight: 400,
-              color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)',
+              color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.25)',
               marginTop: '0.0625rem',
             }}
           >
@@ -703,13 +703,13 @@ const PageRow = memo(function PageRow({
             style={{
               width: '0.5rem',
               height: '0.5rem',
-              color: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+              color: isDark ? 'rgba(232,228,222,0.15)' : 'rgba(0,0,0,0.15)',
             }}
           />
           <span
             style={{
               fontSize: '0.5625rem',
-              color: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
+              color: isDark ? 'rgba(232,228,222,0.15)' : 'rgba(0,0,0,0.15)',
             }}
           >
             {page.tags.length}
@@ -769,8 +769,8 @@ const PageContextMenu = memo(function PageContextMenu({
             justifyContent: 'center',
             borderRadius: '0.25rem',
             border: 'none',
-            background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-            color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)',
+            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.04)',
+            color: isDark ? 'rgba(232,228,222,0.4)' : 'rgba(0,0,0,0.35)',
             cursor: 'pointer',
             flexShrink: 0,
             padding: 0,
@@ -786,7 +786,7 @@ const PageContextMenu = memo(function PageContextMenu({
         style={{
           background: isDark ? 'rgba(20,20,20,0.95)' : 'rgba(255,255,255,0.95)',
           backdropFilter: 'blur(20px)',
-          border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+          border: isDark ? '1px solid rgba(62,61,57,0.5)' : '1px solid rgba(0,0,0,0.08)',
           borderRadius: '0.5rem',
           padding: '0.25rem',
         }}
@@ -813,7 +813,7 @@ const PageContextMenu = memo(function PageContextMenu({
             style={{
               width: '0.75rem',
               height: '0.75rem',
-              color: page.pinned ? '#7C6CF0' : 'currentColor',
+              color: page.pinned ? '#C4956A' : 'currentColor',
             }}
           />
           {page.pinned ? 'Unpin' : 'Pin to top'}
@@ -981,12 +981,12 @@ function JournalsView({
               cursor: 'pointer',
               transition: 'background 0.12s',
               background: isActive
-                ? (isDark ? 'rgba(124,108,240,0.10)' : 'rgba(124,108,240,0.08)')
+                ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(124,108,240,0.08)')
                 : isTodayEntry
                   ? (isDark ? 'rgba(52,211,153,0.06)' : 'rgba(52,211,153,0.05)')
                   : 'transparent',
               borderLeft: isActive
-                ? '2px solid #7C6CF0'
+                ? '2px solid #C4956A'
                 : isTodayEntry
                   ? '2px solid rgba(52,211,153,0.4)'
                   : '2px solid transparent',
@@ -1004,7 +1004,7 @@ function JournalsView({
                 borderRadius: '0.375rem',
                 background: isTodayEntry
                   ? (isDark ? 'rgba(52,211,153,0.12)' : 'rgba(52,211,153,0.10)')
-                  : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
+                  : (isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)'),
               }}
             >
               <CalendarIcon
@@ -1014,8 +1014,8 @@ function JournalsView({
                   color: isTodayEntry
                     ? '#34D399'
                     : isActive
-                      ? '#7C6CF0'
-                      : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'),
+                      ? '#C4956A'
+                      : (isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)'),
                 }}
               />
             </div>
@@ -1030,8 +1030,8 @@ function JournalsView({
                   color: isTodayEntry
                     ? '#34D399'
                     : isActive
-                      ? (isDark ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.9)')
-                      : (isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.6)'),
+                      ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+                      : (isDark ? 'rgba(232,228,222,0.65)' : 'rgba(0,0,0,0.6)'),
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -1043,7 +1043,7 @@ function JournalsView({
                 style={{
                   fontSize: '0.625rem',
                   fontWeight: 400,
-                  color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                  color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.2)',
                   marginTop: '0.0625rem',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -1122,10 +1122,10 @@ function BooksView({ isDark, books }: BooksViewProps) {
               fontWeight: 550,
               borderRadius: '0.5rem',
               border: isDark
-                ? '1px dashed rgba(255,255,255,0.08)'
+                ? '1px dashed rgba(62,61,57,0.5)'
                 : '1px dashed rgba(0,0,0,0.10)',
               background: 'transparent',
-              color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)',
               cursor: 'pointer',
               transition: 'border-color 0.15s, color 0.15s',
             }}
@@ -1156,7 +1156,7 @@ function BooksView({ isDark, books }: BooksViewProps) {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = isDark
-              ? 'rgba(255,255,255,0.04)'
+              ? 'rgba(196,149,106,0.08)'
               : 'rgba(0,0,0,0.03)';
           }}
           onMouseLeave={(e) => {
@@ -1194,7 +1194,7 @@ function BooksView({ isDark, books }: BooksViewProps) {
                 fontSize: '0.8125rem',
                 fontWeight: 500,
                 lineHeight: 1.3,
-                color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.65)',
+                color: isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.65)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -1207,7 +1207,7 @@ function BooksView({ isDark, books }: BooksViewProps) {
                 style={{
                   fontSize: '0.625rem',
                   fontWeight: 400,
-                  color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                  color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.2)',
                   marginTop: '0.0625rem',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -1227,9 +1227,9 @@ function BooksView({ isDark, books }: BooksViewProps) {
               padding: '0.125rem 0.375rem',
               borderRadius: '9999px',
               background: isDark
-                ? 'rgba(255,255,255,0.06)'
+                ? 'rgba(196,149,106,0.08)'
                 : 'rgba(0,0,0,0.05)',
-              color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)',
+              color: isDark ? 'rgba(232,228,222,0.35)' : 'rgba(0,0,0,0.35)',
               flexShrink: 0,
             }}
           >
@@ -1254,10 +1254,10 @@ function BooksView({ isDark, books }: BooksViewProps) {
             fontWeight: 550,
             borderRadius: '0.5rem',
             border: isDark
-              ? '1px dashed rgba(255,255,255,0.08)'
+              ? '1px dashed rgba(62,61,57,0.5)'
               : '1px dashed rgba(0,0,0,0.10)',
             background: 'transparent',
-            color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+            color: isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)',
             cursor: 'pointer',
             transition: 'border-color 0.15s, color 0.15s',
           }}
@@ -1320,7 +1320,7 @@ function GraphPlaceholder({ isDark }: { isDark: boolean }) {
           style={{
             fontSize: '0.8125rem',
             fontWeight: 550,
-            color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)',
+            color: isDark ? 'rgba(232,228,222,0.6)' : 'rgba(0,0,0,0.55)',
             marginBottom: '0.25rem',
           }}
         >
@@ -1330,7 +1330,7 @@ function GraphPlaceholder({ isDark }: { isDark: boolean }) {
           style={{
             fontSize: '0.6875rem',
             fontWeight: 400,
-            color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)',
+            color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.3)',
             lineHeight: 1.5,
             maxWidth: '11rem',
           }}
@@ -1404,13 +1404,13 @@ function SearchResultsView({
               cursor: 'pointer',
               transition: 'background 0.12s',
               background: isActive
-                ? (isDark ? 'rgba(124,108,240,0.10)' : 'rgba(124,108,240,0.08)')
+                ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(124,108,240,0.08)')
                 : 'transparent',
             }}
             onMouseEnter={(e) => {
               if (!isActive) {
                 e.currentTarget.style.background = isDark
-                  ? 'rgba(255,255,255,0.04)'
+                  ? 'rgba(196,149,106,0.08)'
                   : 'rgba(0,0,0,0.03)';
               }
             }}
@@ -1430,7 +1430,7 @@ function SearchResultsView({
                 justifyContent: 'center',
                 flexShrink: 0,
                 borderRadius: '0.25rem',
-                background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)',
                 marginTop: '0.0625rem',
               }}
             >
@@ -1439,7 +1439,7 @@ function SearchResultsView({
                   style={{
                     width: '0.625rem',
                     height: '0.625rem',
-                    color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                    color: isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)',
                   }}
                 />
               ) : result.type === 'page' && result.blockId ? (
@@ -1455,7 +1455,7 @@ function SearchResultsView({
                   style={{
                     width: '0.625rem',
                     height: '0.625rem',
-                    color: isActive ? '#7C6CF0' : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'),
+                    color: isActive ? '#C4956A' : (isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)'),
                   }}
                 />
               )}
@@ -1469,8 +1469,8 @@ function SearchResultsView({
                   fontWeight: 500,
                   lineHeight: 1.3,
                   color: isActive
-                    ? (isDark ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.9)')
-                    : (isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.6)'),
+                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+                    : (isDark ? 'rgba(232,228,222,0.65)' : 'rgba(0,0,0,0.6)'),
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -1483,7 +1483,7 @@ function SearchResultsView({
                   style={{
                     fontSize: '0.625rem',
                     fontWeight: 400,
-                    color: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
+                    color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.25)',
                     marginTop: '0.125rem',
                     lineHeight: 1.4,
                     display: '-webkit-box',
@@ -1512,7 +1512,7 @@ function highlightQuery(text: string, query: string, isDark: boolean): string {
   const regex = new RegExp(`(${escaped})`, 'gi');
   return escapeHtml(text).replace(
     regex,
-    `<mark style="background:rgba(124,108,240,${isDark ? '0.25' : '0.18'});color:${isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.8)'};border-radius:2px;padding:0 1px;">$1</mark>`,
+    `<mark style="background:rgba(196,149,106,${isDark ? '0.25' : '0.18'});color:${isDark ? 'rgba(232,228,222,0.85)' : 'rgba(0,0,0,0.8)'};border-radius:2px;padding:0 1px;">$1</mark>`,
   );
 }
 
@@ -1560,7 +1560,7 @@ function EmptyState({ isDark, icon: Icon, title, subtitle }: EmptyStateProps) {
           justifyContent: 'center',
           borderRadius: '0.625rem',
           background: isDark
-            ? 'rgba(255,255,255,0.04)'
+            ? 'rgba(196,149,106,0.06)'
             : 'rgba(0,0,0,0.03)',
           marginBottom: '0.625rem',
         }}
@@ -1569,7 +1569,7 @@ function EmptyState({ isDark, icon: Icon, title, subtitle }: EmptyStateProps) {
           style={{
             width: '1.125rem',
             height: '1.125rem',
-            color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+            color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.2)',
           }}
         />
       </div>
@@ -1577,7 +1577,7 @@ function EmptyState({ isDark, icon: Icon, title, subtitle }: EmptyStateProps) {
         style={{
           fontSize: '0.8125rem',
           fontWeight: 550,
-          color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+          color: isDark ? 'rgba(232,228,222,0.45)' : 'rgba(0,0,0,0.45)',
           marginBottom: '0.125rem',
         }}
       >
@@ -1587,7 +1587,7 @@ function EmptyState({ isDark, icon: Icon, title, subtitle }: EmptyStateProps) {
         style={{
           fontSize: '0.6875rem',
           fontWeight: 400,
-          color: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)',
+          color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.25)',
           maxWidth: '10rem',
           lineHeight: 1.4,
         }}

@@ -32,7 +32,7 @@ import { useRouter } from 'next/navigation';
 
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
 
-const PFC_VIOLET = '#8B7CF6';
+const PFC_VIOLET = '#C4956A';
 const PFC_GREEN = '#34D399';
 const PFC_EMBER = '#E07850';
 

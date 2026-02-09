@@ -102,7 +102,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
   const activeBtnStyle: React.CSSProperties = {
     ...btnBase,
     background: 'rgba(139,124,246,0.15)',
-    color: '#8B7CF6',
+    color: '#C4956A',
   };
 
   return (
@@ -140,7 +140,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
           color: inferenceMode === 'local'
             ? 'var(--color-pfc-green)'
             : inferenceMode === 'api'
-              ? '#8B7CF6'
+              ? '#C4956A'
               : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
         }}
         title={features.modeHint}
@@ -231,7 +231,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
                     ? (isDark ? 'rgba(139,124,246,0.2)' : 'rgba(139,124,246,0.12)')
                     : 'transparent',
                   color: thinkingSpeed === opt.value
-                    ? '#8B7CF6'
+                    ? '#C4956A'
                     : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
                   transition: 'all 0.15s',
                 }}
@@ -346,7 +346,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
                         e.currentTarget.style.background = 'transparent';
                       }}
                     >
-                      <Icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0, color: '#8B7CF6' }} />
+                      <Icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0, color: '#C4956A' }} />
                       <div>
                         <p style={{ fontSize: '0.6875rem', fontWeight: 600 }}>{opt.label}</p>
                         <p style={{ fontSize: '0.5625rem', color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)' }}>

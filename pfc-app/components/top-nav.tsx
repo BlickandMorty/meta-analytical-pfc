@@ -108,22 +108,22 @@ const NavBubble = memo(function NavBubble({
         border: 'none',
         borderRadius: '9999px',
         padding: expanded ? '0.4375rem 0.875rem' : '0.4375rem',
-        height: '2.25rem',
-        minWidth: expanded ? 'auto' : '2.25rem',
-        fontSize: '0.8125rem',
+        height: '2.5rem',
+        minWidth: expanded ? 'auto' : '2.5rem',
+        fontSize: '0.875rem',
         fontWeight: isActive ? 700 : 600,
         letterSpacing: '-0.01em',
         opacity: disabled ? 0.35 : 1,
         color: disabled
-          ? (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)')
+          ? (isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)')
           : isActive
-            ? (isDark ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.9)')
-            : (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)'),
+            ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+            : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
         background: disabled
-          ? (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)')
+          ? (isDark ? 'rgba(196,149,106,0.02)' : 'rgba(0,0,0,0.02)')
           : isActive
-            ? (isDark ? 'rgba(139,124,246,0.15)' : 'rgba(139,124,246,0.10)')
-            : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+            ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)')
+            : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)'),
         backdropFilter: 'blur(12px) saturate(1.3)',
         WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
         transition: 'padding 0.28s cubic-bezier(0.32,0.72,0,1), gap 0.28s cubic-bezier(0.32,0.72,0,1), min-width 0.28s cubic-bezier(0.32,0.72,0,1), background 0.15s, color 0.15s, opacity 0.2s',
@@ -132,10 +132,10 @@ const NavBubble = memo(function NavBubble({
       }}
     >
       <Icon style={{
-        height: '0.9375rem',
-        width: '0.9375rem',
+        height: '1.0625rem',
+        width: '1.0625rem',
         flexShrink: 0,
-        color: isActive ? '#8B7CF6' : 'inherit',
+        color: isActive ? '#C4956A' : 'inherit',
       }} />
       <AnimatePresence>
         {expanded && (
@@ -189,16 +189,16 @@ export function TopNav() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '0.5rem',
-        padding: '0.625rem 1rem',
+        gap: '0.75rem',
+        padding: '0.75rem 1.25rem',
         pointerEvents: 'auto',
         background: isDark
-          ? 'rgba(0,0,0,0.5)'
-          : 'rgba(240,232,222,0.65)',
+          ? 'rgba(31,30,27,0.85)'
+          : 'rgba(245,240,232,0.75)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         borderBottom: isDark
-          ? '1px solid rgba(255,255,255,0.04)'
+          ? '1px solid rgba(62,61,57,0.3)'
           : '1px solid rgba(0,0,0,0.04)',
       }}>
         {NAV_ITEMS.map((item, idx) => {
@@ -213,7 +213,7 @@ export function TopNav() {
                   width: '3px',
                   height: '3px',
                   borderRadius: '50%',
-                  background: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
+                  background: isDark ? 'rgba(155,150,137,0.2)' : 'rgba(0,0,0,0.1)',
                   flexShrink: 0,
                 }} />
               )}

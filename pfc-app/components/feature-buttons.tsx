@@ -84,9 +84,9 @@ export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }:
     }
   }, [onSubmit]);
 
-  const bg = isDark ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.04)';
-  const hoverBg = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
-  const textColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)';
+  const bg = isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.04)';
+  const hoverBg = isDark ? 'rgba(196,149,106,0.1)' : 'rgba(0,0,0,0.07)';
+  const textColor = isDark ? 'rgba(155,150,137,0.9)' : 'rgba(0,0,0,0.45)';
 
   return (
     <>
@@ -127,7 +127,7 @@ export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }:
                 padding: '0.5rem 0.75rem',
                 borderRadius: '0.875rem',
                 border: isDark
-                  ? '1px solid rgba(255,255,255,0.06)'
+                  ? '1px solid rgba(62,61,57,0.5)'
                   : '1px solid rgba(0,0,0,0.06)',
                 background: bg,
                 color: textColor,

@@ -72,13 +72,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* PFC brand — Cupertino-refined palette */
-  --color-pfc-ember: #E07850;
-  --color-pfc-violet: #7C6CF0;
+  /* PFC brand — Claude-inspired warm palette */
+  --color-pfc-ember: #C4956A;
+  --color-pfc-violet: #C4956A;
   --color-pfc-green: #34D399;
-  --color-pfc-yellow: #FBBF24;
-  --color-pfc-red: #F87171;
-  --color-pfc-cyan: #22D3EE;
+  --color-pfc-yellow: #D4A843;
+  --color-pfc-red: #C75E5E;
+  --color-pfc-cyan: #6B8EBF;
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
@@ -119,127 +119,127 @@
 }
 
 /* ─────────────────────────────────────────────────────────
-   Light theme — Warm parchment + Liquid Glass
+   Light theme — Claude warm cream palette
    ───────────────────────────────────────────────────────── */
 :root {
-  --background: oklch(0.935 0.018 65);
-  --foreground: oklch(0.18 0.02 55);
-  --card: oklch(0.945 0.015 60 / 0.72);
-  --card-foreground: oklch(0.18 0.02 55);
-  --popover: oklch(0.94 0.016 62 / 0.92);
-  --popover-foreground: oklch(0.18 0.02 55);
-  --primary: oklch(0.55 0.14 30);
-  --primary-foreground: oklch(0.97 0.008 60);
-  --secondary: oklch(0.91 0.016 60);
-  --secondary-foreground: oklch(0.3 0.02 55);
-  --muted: oklch(0.91 0.016 60);
-  --muted-foreground: oklch(0.48 0.015 55);
-  --accent: oklch(0.57 0.18 285);
-  --accent-foreground: oklch(0.97 0.008 60);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.97 0.008 60);
-  --border: oklch(0.86 0.018 60 / 0.5);
-  --input: oklch(0.86 0.018 60 / 0.5);
-  --ring: oklch(0.55 0.14 30);
+  --background: #F5F0E8;
+  --foreground: #2B2A27;
+  --card: rgba(250, 247, 242, 0.72);
+  --card-foreground: #2B2A27;
+  --popover: rgba(250, 247, 242, 0.92);
+  --popover-foreground: #2B2A27;
+  --primary: #C4956A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EDE8DF;
+  --secondary-foreground: #2B2A27;
+  --muted: #EDE8DF;
+  --muted-foreground: #6B6660;
+  --accent: #C4956A;
+  --accent-foreground: #FFFFFF;
+  --destructive: #C75E5E;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(214, 209, 199, 0.5);
+  --input: rgba(214, 209, 199, 0.5);
+  --ring: #C4956A;
   --radius: 0.75rem;
 
-  /* Sidebar — warm frosted vibrancy */
-  --sidebar: oklch(0.92 0.016 60 / 0.78);
-  --sidebar-foreground: oklch(0.22 0.02 55);
-  --sidebar-border: oklch(0.86 0.018 60 / 0.5);
-  --sidebar-accent: oklch(0.89 0.018 60 / 0.6);
-  --sidebar-accent-foreground: oklch(0.22 0.02 55);
-  --sidebar-ring: oklch(0.55 0.14 30);
+  /* Sidebar — warm cream frosted */
+  --sidebar: rgba(237, 232, 223, 0.78);
+  --sidebar-foreground: #2B2A27;
+  --sidebar-border: rgba(214, 209, 199, 0.5);
+  --sidebar-accent: rgba(237, 232, 223, 0.6);
+  --sidebar-accent-foreground: #2B2A27;
+  --sidebar-ring: #C4956A;
 
-  /* Liquid Glass — Warm Light (heavy frosted) */
-  --liquid-glass-background: rgba(245, 235, 220, 0.72);
-  --shadow-base: inset 1px 1px 2px rgba(255, 248, 238, 0.6),
-    inset -1px -1px 2px rgba(255, 248, 238, 0.4),
-    inset 0 4px 16px rgba(255, 248, 238, 0.03);
-  --shadow-border: 0 0 1px 0 rgba(120, 90, 50, 0.25);
+  /* Liquid Glass — Warm cream (heavy frosted) */
+  --liquid-glass-background: rgba(250, 247, 242, 0.72);
+  --shadow-base: inset 1px 1px 2px rgba(255, 252, 247, 0.6),
+    inset -1px -1px 2px rgba(255, 252, 247, 0.4),
+    inset 0 4px 16px rgba(255, 252, 247, 0.03);
+  --shadow-border: 0 0 1px 0 rgba(107, 102, 96, 0.2);
   --shadow-xs: var(--shadow-base),
-    inset 0 -8px 48px rgba(80, 50, 20, 0.02),
-    0 0 8px rgba(80, 50, 20, 0.025),
-    0 4px 48px rgba(80, 50, 20, 0.1);
+    inset 0 -8px 48px rgba(43, 42, 39, 0.02),
+    0 0 8px rgba(43, 42, 39, 0.025),
+    0 4px 48px rgba(43, 42, 39, 0.08);
   --shadow-s: var(--shadow-base),
-    inset 0 0 1px 1px rgba(255, 248, 238, 0.7),
+    inset 0 0 1px 1px rgba(255, 252, 247, 0.7),
     var(--shadow-border),
-    0 8px 16px 0 rgba(80, 50, 20, 0.12);
+    0 8px 16px 0 rgba(43, 42, 39, 0.1);
   --shadow-l: var(--shadow-border),
-    inset 0 0 1px 1px rgba(255, 248, 238, 0.7),
-    0 16px 64px 0 rgba(80, 50, 20, 0.1);
-  --shadow-tactile: rgba(80, 50, 20, 0.06) 0px 2px 8px -2px,
-    rgba(80, 50, 20, 0.04) 0px 2px 4px -2px;
+    inset 0 0 1px 1px rgba(255, 252, 247, 0.7),
+    0 16px 64px 0 rgba(43, 42, 39, 0.08);
+  --shadow-tactile: rgba(43, 42, 39, 0.06) 0px 2px 8px -2px,
+    rgba(43, 42, 39, 0.04) 0px 2px 4px -2px;
 
-  /* Glass tokens — iOS frosted glass */
+  /* Glass tokens — warm cream frosted glass */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: oklch(0.88 0.018 60 / 0.5);
-  --glass-hover: oklch(0.95 0.012 60 / 0.7);
+  --glass-border: rgba(214, 209, 199, 0.5);
+  --glass-hover: rgba(250, 247, 242, 0.7);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 
-  /* Chat surface — same as background in light mode */
-  --chat-surface: oklch(0.935 0.018 65);
+  /* Chat surface — warm cream */
+  --chat-surface: #F5F0E8;
 
 }
 
 /* ─────────────────────────────────────────────────────────
-   Dark theme — Liquid Glass dark surface system
+   Dark theme — Claude warm brown palette
    ───────────────────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.07 0.005 260);
-  --foreground: oklch(0.92 0.008 250);
-  --card: oklch(0.18 0.008 260 / 0.65);
-  --card-foreground: oklch(0.92 0.008 250);
-  --popover: oklch(0.14 0.008 260 / 0.92);
-  --popover-foreground: oklch(0.92 0.008 250);
-  --primary: oklch(0.62 0.16 30);
-  --primary-foreground: oklch(0.07 0.005 260);
-  --secondary: oklch(0.18 0.008 260);
-  --secondary-foreground: oklch(0.92 0.008 250);
-  --muted: oklch(0.18 0.008 260);
-  --muted-foreground: oklch(0.50 0.008 250);
-  --accent: oklch(0.55 0.22 285);
-  --accent-foreground: oklch(0.99 0.003 0);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.99 0.003 0);
-  --border: oklch(0.22 0.008 260 / 0.5);
-  --input: oklch(0.22 0.008 260 / 0.5);
-  --ring: oklch(0.62 0.16 30);
+  --background: #2B2A27;
+  --foreground: #E8E4DE;
+  --card: rgba(53, 52, 48, 0.65);
+  --card-foreground: #E8E4DE;
+  --popover: rgba(53, 52, 48, 0.92);
+  --popover-foreground: #E8E4DE;
+  --primary: #C4956A;
+  --primary-foreground: #2B2A27;
+  --secondary: #353430;
+  --secondary-foreground: #E8E4DE;
+  --muted: #353430;
+  --muted-foreground: #9B9689;
+  --accent: #C4956A;
+  --accent-foreground: #2B2A27;
+  --destructive: #C75E5E;
+  --destructive-foreground: #E8E4DE;
+  --border: rgba(62, 61, 57, 0.5);
+  --input: rgba(58, 56, 53, 0.5);
+  --ring: #C4956A;
 
-  /* Chat surface — dark gray instead of OLED black */
-  --chat-surface: oklch(0.16 0.006 260);
+  /* Chat surface — warm dark brown */
+  --chat-surface: #353430;
 
-  /* Sidebar dark — deep vibrancy */
-  --sidebar: oklch(0.12 0.008 260 / 0.78);
-  --sidebar-foreground: oklch(0.88 0.008 250);
-  --sidebar-border: oklch(0.22 0.008 260 / 0.4);
-  --sidebar-accent: oklch(0.18 0.008 260 / 0.5);
-  --sidebar-accent-foreground: oklch(0.88 0.008 250);
-  --sidebar-ring: oklch(0.62 0.16 30);
+  /* Sidebar dark — deeper warm brown */
+  --sidebar: rgba(31, 30, 27, 0.78);
+  --sidebar-foreground: #E8E4DE;
+  --sidebar-border: rgba(62, 61, 57, 0.4);
+  --sidebar-accent: rgba(53, 52, 48, 0.5);
+  --sidebar-accent-foreground: #E8E4DE;
+  --sidebar-ring: #C4956A;
 
-  /* Liquid Glass — Dark (heavy frosted) */
-  --liquid-glass-background: rgba(255, 255, 255, 0.07);
-  --shadow-base: inset 1px 1.5px 1px -1px rgba(255, 255, 255, 0.2),
-    inset -1px -1.5px 1px -1px rgba(255, 255, 255, 0.15),
-    inset 0 4px 16px rgba(255, 255, 255, 0.025);
-  --shadow-border: 0 0 1px 0 rgba(255, 255, 255, 0.3);
+  /* Liquid Glass — Dark warm (heavy frosted) */
+  --liquid-glass-background: rgba(255, 255, 255, 0.05);
+  --shadow-base: inset 1px 1.5px 1px -1px rgba(232, 228, 222, 0.12),
+    inset -1px -1.5px 1px -1px rgba(232, 228, 222, 0.08),
+    inset 0 4px 16px rgba(232, 228, 222, 0.02);
+  --shadow-border: 0 0 1px 0 rgba(232, 228, 222, 0.2);
   --shadow-xs: var(--shadow-base);
   --shadow-s: var(--shadow-border),
-    0 0 1px rgba(255, 255, 255, 0.5),
+    0 0 1px rgba(232, 228, 222, 0.3),
     0 0 1px 0 rgba(0, 0, 0, 0.4),
     0 8px 16px 0 rgba(0, 0, 0, 0.2);
   --shadow-l: var(--shadow-border),
-    0 0 1px rgba(255, 255, 255, 0.5),
+    0 0 1px rgba(232, 228, 222, 0.3),
     0 0 1px 0 rgba(0, 0, 0, 0.7),
     0 16px 64px 0 rgba(0, 0, 0, 0.3);
   --shadow-tactile: rgba(0, 0, 0, 0.08) 0px 2px 8px -2px,
-    rgba(255, 255, 255, 0.04) 0px 2px 4px -2px;
+    rgba(232, 228, 222, 0.03) 0px 2px 4px -2px;
 
-  /* Glass tokens (dark) — iOS frosted glass */
+  /* Glass tokens (dark) — warm brown frosted glass */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: oklch(0.3 0.008 260 / 0.35);
-  --glass-hover: oklch(0.2 0.008 260 / 0.55);
+  --glass-border: rgba(62, 61, 57, 0.35);
+  --glass-hover: rgba(53, 52, 48, 0.55);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 }
@@ -264,6 +264,22 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.011em;
+}
+
+/* ─────────────────────────────────────────────────────────
+   Grain texture — subtle film grain overlay via SVG noise
+   ───────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0.030;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  mix-blend-mode: overlay;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -326,7 +342,7 @@ html {
 }
 
 ::selection {
-  background-color: oklch(0.57 0.18 285 / 0.25);
+  background-color: rgba(196, 149, 106, 0.25);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -452,7 +468,7 @@ html {
    Focus — clean, Cupertino-style ring
    ───────────────────────────────────────────────────────── */
 :focus-visible:not(input):not(textarea):not(select) {
-  outline: 2px solid oklch(0.57 0.18 285 / 0.5);
+  outline: 2px solid rgba(196, 149, 106, 0.5);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -500,7 +516,7 @@ select:focus-visible {
   background: linear-gradient(
     90deg,
     var(--color-pfc-violet) 0%,
-    #c4b5fd 50%,
+    #E0C4A8 50%,
     var(--color-pfc-violet) 100%
   );
   background-size: 200% 100%;

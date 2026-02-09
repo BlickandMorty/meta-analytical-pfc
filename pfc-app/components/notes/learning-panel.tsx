@@ -241,31 +241,31 @@ export const LearningPanel = memo(function LearningPanel() {
   // ── Styles ──
 
   const glassBackground = isDark
-    ? 'rgba(20, 20, 28, 0.82)'
+    ? 'rgba(43, 42, 39, 0.92)'
     : 'rgba(255, 255, 255, 0.78)';
 
   const glassBorder = isDark
-    ? 'rgba(255, 255, 255, 0.08)'
+    ? 'rgba(62, 61, 57, 0.5)'
     : 'rgba(0, 0, 0, 0.08)';
 
   const subtleText = isDark
-    ? 'rgba(255, 255, 255, 0.45)'
+    ? 'rgba(155, 150, 137, 0.9)'
     : 'rgba(0, 0, 0, 0.4)';
 
   const bodyText = isDark
-    ? 'rgba(255, 255, 255, 0.8)'
+    ? 'rgba(232, 228, 222, 0.9)'
     : 'rgba(0, 0, 0, 0.75)';
 
   const inputBg = isDark
-    ? 'rgba(255, 255, 255, 0.05)'
+    ? 'rgba(196, 149, 106, 0.06)'
     : 'rgba(0, 0, 0, 0.03)';
 
   const glassShadow = isDark
-    ? '0 8px 40px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.06) inset'
+    ? '0 8px 40px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(196,149,106,0.06) inset'
     : '0 8px 40px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(255,255,255,0.6) inset';
 
   const fabShadow = isDark
-    ? '0 4px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.06) inset'
+    ? '0 4px 24px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(196,149,106,0.06) inset'
     : '0 4px 24px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(255,255,255,0.5) inset';
 
   // ════════════════════════════════════════════════════════════════
@@ -304,7 +304,7 @@ export const LearningPanel = memo(function LearningPanel() {
             style={{
               height: 2,
               width: '100%',
-              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
+              background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.04)',
               flexShrink: 0,
             }}
           >
@@ -316,7 +316,7 @@ export const LearningPanel = memo(function LearningPanel() {
                 height: '100%',
                 background: isCompleted
                   ? '#34D399'
-                  : 'linear-gradient(90deg, #7C6CF0, #8B7CF6)',
+                  : 'linear-gradient(90deg, #C4956A, #D4B896)',
                 borderRadius: 1,
               }}
             />
@@ -341,7 +341,7 @@ export const LearningPanel = memo(function LearningPanel() {
               }}
             >
               <Brain
-                style={{ width: 14, height: 14, color: '#7C6CF0' }}
+                style={{ width: 14, height: 14, color: '#C4956A' }}
               />
               <span
                 style={{
@@ -486,7 +486,7 @@ export const LearningPanel = memo(function LearningPanel() {
               overflowY: 'auto',
               scrollbarWidth: 'thin',
               scrollbarColor: isDark
-                ? 'rgba(255,255,255,0.08) transparent'
+                ? 'rgba(196,149,106,0.08) transparent'
                 : 'rgba(0,0,0,0.06) transparent',
             }}
           >
@@ -515,7 +515,7 @@ export const LearningPanel = memo(function LearningPanel() {
                     color: step.status === 'completed'
                       ? bodyText
                       : step.status === 'running'
-                        ? '#8B7CF6'
+                        ? '#D4B896'
                         : step.status === 'error'
                           ? '#F87171'
                           : subtleText,
@@ -530,8 +530,8 @@ export const LearningPanel = memo(function LearningPanel() {
                         position: 'absolute',
                         inset: 0,
                         background: isDark
-                          ? 'linear-gradient(90deg, transparent 0%, rgba(139,124,246,0.08) 50%, transparent 100%)'
-                          : 'linear-gradient(90deg, transparent 0%, rgba(124,108,240,0.06) 50%, transparent 100%)',
+                          ? 'linear-gradient(90deg, transparent 0%, rgba(196,149,106,0.08) 50%, transparent 100%)'
+                          : 'linear-gradient(90deg, transparent 0%, rgba(196,149,106,0.06) 50%, transparent 100%)',
                         animation: 'shimmer 2s ease-in-out infinite',
                       }}
                     />
@@ -576,7 +576,7 @@ export const LearningPanel = memo(function LearningPanel() {
                   fontSize: '0.625rem',
                   lineHeight: 1.5,
                   fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                  color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
+                  color: isDark ? 'rgba(232,228,222,0.35)' : 'rgba(0,0,0,0.3)',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   display: '-webkit-box',
@@ -593,7 +593,7 @@ export const LearningPanel = memo(function LearningPanel() {
                     width: 5,
                     height: 11,
                     marginLeft: 2,
-                    background: '#7C6CF0',
+                    background: '#C4956A',
                     borderRadius: 1,
                     verticalAlign: 'text-bottom',
                     animation: 'blink 1s step-end infinite',
@@ -624,7 +624,7 @@ export const LearningPanel = memo(function LearningPanel() {
                   {insightsFound}
                 </span>{' '}
                 insights found,{' '}
-                <span style={{ color: '#8B7CF6', fontWeight: 600 }}>
+                <span style={{ color: '#D4B896', fontWeight: 600 }}>
                   {pagesCreated}
                 </span>{' '}
                 pages created,{' '}
@@ -654,9 +654,9 @@ export const LearningPanel = memo(function LearningPanel() {
                     padding: '0.35rem 0.625rem',
                     fontSize: '0.6875rem',
                     fontWeight: 500,
-                    color: '#8B7CF6',
-                    background: 'rgba(139, 124, 246, 0.1)',
-                    border: '1px solid rgba(139, 124, 246, 0.2)',
+                    color: '#D4B896',
+                    background: 'rgba(196, 149, 106, 0.1)',
+                    border: '1px solid rgba(196, 149, 106, 0.2)',
                     borderRadius: '0.625rem',
                     cursor: 'pointer',
                   }}
@@ -739,7 +739,7 @@ export const LearningPanel = memo(function LearningPanel() {
               fontSize: '0.75rem',
               fontWeight: 500,
               letterSpacing: '-0.01em',
-              color: '#7C6CF0',
+              color: '#C4956A',
               background: glassBackground,
               border: `1px solid ${glassBorder}`,
               borderRadius: '1.25rem',
@@ -801,7 +801,7 @@ export const LearningPanel = memo(function LearningPanel() {
                   gap: '0.375rem',
                 }}
               >
-                <Brain style={{ width: 13, height: 13, color: '#7C6CF0' }} />
+                <Brain style={{ width: 13, height: 13, color: '#C4956A' }} />
                 <span
                   style={{
                     fontSize: '0.75rem',
@@ -870,12 +870,12 @@ export const LearningPanel = memo(function LearningPanel() {
                     padding: '0.3rem 0',
                     fontSize: '0.625rem',
                     fontWeight: depth === d ? 600 : 400,
-                    color: depth === d ? '#8B7CF6' : subtleText,
+                    color: depth === d ? '#D4B896' : subtleText,
                     background: depth === d
-                      ? (isDark ? 'rgba(139, 124, 246, 0.12)' : 'rgba(124, 108, 240, 0.1)')
+                      ? (isDark ? 'rgba(196, 149, 106, 0.12)' : 'rgba(196, 149, 106, 0.1)')
                       : 'transparent',
                     border: depth === d
-                      ? '1px solid rgba(139, 124, 246, 0.2)'
+                      ? '1px solid rgba(196, 149, 106, 0.2)'
                       : '1px solid transparent',
                     borderRadius: '0.5rem',
                     cursor: 'pointer',
@@ -914,8 +914,8 @@ export const LearningPanel = memo(function LearningPanel() {
                   borderRadius: 9,
                   padding: 2,
                   background: learningAutoRun
-                    ? 'rgba(139, 124, 246, 0.5)'
-                    : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'),
+                    ? 'rgba(196, 149, 106, 0.5)'
+                    : (isDark ? 'rgba(196,149,106,0.1)' : 'rgba(0,0,0,0.1)'),
                   border: 'none',
                   cursor: 'pointer',
                   display: 'flex',
@@ -932,7 +932,7 @@ export const LearningPanel = memo(function LearningPanel() {
                     width: 14,
                     height: 14,
                     borderRadius: 7,
-                    background: learningAutoRun ? '#8B7CF6' : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'),
+                    background: learningAutoRun ? '#D4B896' : (isDark ? 'rgba(232,228,222,0.4)' : 'rgba(0,0,0,0.3)'),
                     boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                   }}
                 />
@@ -955,11 +955,11 @@ export const LearningPanel = memo(function LearningPanel() {
                 fontWeight: 600,
                 letterSpacing: '-0.01em',
                 color: '#fff',
-                background: 'linear-gradient(135deg, #7C6CF0, #8B7CF6)',
+                background: 'linear-gradient(135deg, #C4956A, #D4B896)',
                 border: 'none',
                 borderRadius: '0.625rem',
                 cursor: 'pointer',
-                boxShadow: '0 2px 12px rgba(124, 108, 240, 0.3)',
+                boxShadow: '0 2px 12px rgba(196, 149, 106, 0.3)',
               }}
             >
               <Brain style={{ width: 13, height: 13 }} />
@@ -1005,7 +1005,7 @@ function StepIndicator({ status, isDark }: { status: StepStatus; isDark: boolean
           width: size,
           height: size,
           borderRadius: '50%',
-          background: 'rgba(139, 124, 246, 0.15)',
+          background: 'rgba(196, 149, 106, 0.15)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1013,7 +1013,7 @@ function StepIndicator({ status, isDark }: { status: StepStatus; isDark: boolean
           animation: 'pulse 1.5s ease-in-out infinite',
         }}
       >
-        <CircleDot style={{ width: 8, height: 8, color: '#8B7CF6' }} />
+        <CircleDot style={{ width: 8, height: 8, color: '#D4B896' }} />
       </div>
     );
   }
@@ -1044,8 +1044,8 @@ function StepIndicator({ status, isDark }: { status: StepStatus; isDark: boolean
         width: size,
         height: size,
         borderRadius: '50%',
-        background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-        border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+        background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.04)',
+        border: `1px solid ${isDark ? 'rgba(62,61,57,0.5)' : 'rgba(0,0,0,0.06)'}`,
         flexShrink: 0,
       }}
     />

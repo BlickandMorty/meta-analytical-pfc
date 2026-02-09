@@ -160,7 +160,7 @@ export default function NotesPage() {
             alignItems: 'center',
             gap: '0.375rem',
             padding: '0.5rem 1.25rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
+            borderBottom: `1px solid ${isDark ? 'rgba(62,61,57,0.6)' : 'rgba(0,0,0,0.04)'}`,
             flexShrink: 0,
           }}
         >
@@ -174,9 +174,9 @@ export default function NotesPage() {
               height: '1.75rem',
               borderRadius: '0.5rem',
               border: 'none',
-              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+              background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.08)',
               cursor: 'pointer',
-              color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)',
+              color: isDark ? 'rgba(232,228,222,0.5)' : 'rgba(0,0,0,0.5)',
             }}
           >
             <PanelLeftIcon style={{ width: '0.875rem', height: '0.875rem' }} />
@@ -199,7 +199,7 @@ export default function NotesPage() {
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  color: activePage.favorite ? '#FBBF24' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'),
+                  color: activePage.favorite ? '#FBBF24' : (isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.15)'),
                 }}
               >
                 <StarIcon style={{ width: '0.8rem', height: '0.8rem', fill: activePage.favorite ? '#FBBF24' : 'none' }} />
@@ -217,7 +217,7 @@ export default function NotesPage() {
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  color: activePage.pinned ? '#7C6CF0' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'),
+                  color: activePage.pinned ? '#C4956A' : (isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.15)'),
                 }}
               >
                 <PinIcon style={{ width: '0.8rem', height: '0.8rem' }} />
@@ -255,9 +255,9 @@ export default function NotesPage() {
               height: '1.75rem',
               borderRadius: '0.5rem',
               border: 'none',
-              background: isDark ? 'rgba(124,108,240,0.1)' : 'rgba(124,108,240,0.08)',
+              background: isDark ? 'rgba(196,149,106,0.1)' : 'rgba(196,149,106,0.08)',
               cursor: 'pointer',
-              color: '#7C6CF0',
+              color: '#C4956A',
             }}
           >
             <CalendarIcon style={{ width: '0.875rem', height: '0.875rem' }} />
@@ -311,8 +311,8 @@ export default function NotesPage() {
                           gap: '0.2rem',
                           fontSize: '0.625rem',
                           fontWeight: 500,
-                          color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)',
-                          background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                          color: isDark ? 'rgba(232,228,222,0.35)' : 'rgba(0,0,0,0.3)',
+                          background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)',
                           borderRadius: '4px',
                           padding: '0.125rem 0.375rem',
                         }}
@@ -338,12 +338,12 @@ export default function NotesPage() {
                       fontWeight: 700,
                       letterSpacing: '-0.03em',
                       lineHeight: 1.2,
-                      color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.85)',
+                      color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.85)',
                       background: 'transparent',
                       border: 'none',
                       outline: 'none',
                       padding: 0,
-                      caretColor: '#7C6CF0',
+                      caretColor: '#C4956A',
                       fontFamily: 'var(--font-display)',
                     }}
                   />
@@ -355,7 +355,7 @@ export default function NotesPage() {
                       fontWeight: 700,
                       letterSpacing: '-0.03em',
                       lineHeight: 1.2,
-                      color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.85)',
+                      color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.85)',
                       cursor: 'text',
                       fontFamily: 'var(--font-display)',
                       margin: 0,
@@ -402,14 +402,14 @@ export default function NotesPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                    background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)',
                   }}
                 >
                   <PenLineIcon
                     style={{
                       width: '1.5rem',
                       height: '1.5rem',
-                      color: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)',
+                      color: isDark ? 'rgba(232,228,222,0.15)' : 'rgba(0,0,0,0.12)',
                     }}
                   />
                 </div>
@@ -419,7 +419,7 @@ export default function NotesPage() {
                       fontSize: '1.125rem',
                       fontWeight: 600,
                       letterSpacing: '-0.02em',
-                      color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+                      color: isDark ? 'rgba(232,228,222,0.6)' : 'rgba(0,0,0,0.5)',
                       marginBottom: '0.375rem',
                     }}
                   >
@@ -428,7 +428,7 @@ export default function NotesPage() {
                   <p
                     style={{
                       fontSize: '0.8125rem',
-                      color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)',
+                      color: isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.25)',
                       maxWidth: '280px',
                       lineHeight: 1.5,
                     }}
@@ -466,8 +466,8 @@ export default function NotesPage() {
                       padding: '0.5rem 1rem',
                       borderRadius: '9999px',
                       border: 'none',
-                      background: isDark ? 'rgba(124,108,240,0.12)' : 'rgba(124,108,240,0.1)',
-                      color: '#7C6CF0',
+                      background: isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.1)',
+                      color: '#C4956A',
                       fontSize: '0.75rem',
                       fontWeight: 600,
                       cursor: 'pointer',

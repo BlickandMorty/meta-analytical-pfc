@@ -11,6 +11,7 @@ import { SynthesisCard } from './synthesis-card';
 import { CodeRainCanvas, CodeRainOverlays } from './code-rain-canvas';
 import { BrainMascot } from './brain-mascot';
 import { FeatureButtons } from './feature-buttons';
+import { RecentChats } from './recent-chats';
 import { ResearchModeBar } from './research-mode-bar';
 import { ThinkingControls } from './thinking-controls';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -222,8 +223,8 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
     return spans;
   }, [displayText, def]);
 
-  const fontSize = isCode ? '1.6rem' : '2.6rem';
-  const cursorHeight = isCode ? '1.6rem' : '2.4rem';
+  const fontSize = isCode ? '1.8rem' : '2.9rem';
+  const cursorHeight = isCode ? '1.8rem' : '2.7rem';
 
   return (
     <h1
@@ -251,8 +252,8 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
           width: '2px',
           height: cursorHeight,
           backgroundColor: isCode
-            ? '#8B7CF6'
-            : isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+            ? '#C4956A'
+            : isDark ? 'rgba(232,228,222,0.5)' : 'rgba(0,0,0,0.4)',
           marginLeft: '1px',
           opacity: cursorOn ? 1 : 0,
           transition: 'opacity 0.1s',
@@ -308,12 +309,12 @@ export function Chat() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            /* OLED gradient: subtle radial from pure black → dark gray center → black */
+            /* Warm background: subtle radial from dark brown center */
             background: searchFocused
-              ? (isDark ? '#000000' : '#F0E8DE')
+              ? (isDark ? '#2B2A27' : '#F5F0E8')
               : (isDark
-                ? 'radial-gradient(ellipse at 50% 50%, #0a0a0a 0%, #000000 70%)'
-                : 'radial-gradient(ellipse at 50% 50%, #F4ECE2 0%, #F0E8DE 70%)'),
+                ? 'radial-gradient(ellipse at 50% 50%, #302F2B 0%, #2B2A27 70%)'
+                : 'radial-gradient(ellipse at 50% 50%, #F8F3EB 0%, #F5F0E8 70%)'),
             transition: 'background 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
           }}
         >
@@ -368,9 +369,9 @@ export function Chat() {
                 style={{
                   borderRadius: '1.75rem',
                   overflow: 'hidden',
-                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.45)',
+                  background: isDark ? 'rgba(58,56,53,0.65)' : 'rgba(255,255,255,0.45)',
                   border: isDark
-                    ? '1.5px solid rgba(255,255,255,0.14)'
+                    ? '1.5px solid rgba(74,72,69,0.7)'
                     : '1.5px solid rgba(0,0,0,0.12)',
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
@@ -384,7 +385,7 @@ export function Chat() {
                   onFocusChange={setSearchFocused}
                   inputStyle={{
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                    fontSize: '1.05rem',
+                    fontSize: '1.125rem',
                     fontWeight: 550,
                     letterSpacing: '-0.01em',
                   }}
@@ -400,6 +401,9 @@ export function Chat() {
             >
               {mounted && <FeatureButtons isDark={isDark} onSubmit={sendQuery} />}
             </motion.div>
+
+            {/* Recent chat sessions */}
+            {mounted && <RecentChats isDark={isDark} />}
           </div>
         </motion.div>
       )}
@@ -458,15 +462,15 @@ export function Chat() {
                         gap: '0.5rem',
                         padding: '0.375rem 0.625rem',
                         borderRadius: '0.5rem',
-                        background: isDark ? 'rgba(139,124,246,0.06)' : 'rgba(139,124,246,0.04)',
-                        border: isDark ? '1px solid rgba(139,124,246,0.1)' : '1px solid rgba(139,124,246,0.08)',
+                        background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
+                        border: isDark ? '1px solid rgba(196,149,106,0.1)' : '1px solid rgba(196,149,106,0.08)',
                         fontSize: '0.625rem',
-                        color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)',
+                        color: isDark ? 'rgba(155,150,137,0.9)' : 'rgba(0,0,0,0.4)',
                       }}
                     >
                       {inferenceMode === 'api'
-                        ? <CloudIcon style={{ height: '0.625rem', width: '0.625rem', flexShrink: 0, color: '#8B7CF6' }} />
-                        : <MonitorIcon style={{ height: '0.625rem', width: '0.625rem', flexShrink: 0, color: '#8B7CF6' }} />
+                        ? <CloudIcon style={{ height: '0.625rem', width: '0.625rem', flexShrink: 0, color: '#C4956A' }} />
+                        : <MonitorIcon style={{ height: '0.625rem', width: '0.625rem', flexShrink: 0, color: '#C4956A' }} />
                       }
                       <span style={{ flex: 1 }}>
                         {features.modeHint} — Switch to local inference for full thinking controls.
@@ -478,7 +482,7 @@ export function Chat() {
                           background: 'transparent',
                           cursor: 'pointer',
                           fontSize: '0.625rem',
-                          color: '#8B7CF6',
+                          color: '#C4956A',
                           fontWeight: 600,
                           padding: '0.125rem 0.25rem',
                           borderRadius: '0.25rem',

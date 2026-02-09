@@ -219,7 +219,7 @@ function BrainButtonWithToggle({
           background: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.06)',
           color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.3)',
           boxShadow: isDark
-            ? '0 0 12px rgba(255,255,255,0.15), 0 0 24px rgba(139,124,246,0.1)'
+            ? '0 0 12px rgba(255,255,255,0.15), 0 0 24px rgba(196,149,106,0.1)'
             : 'none',
           transition: 'background 0.3s, color 0.3s, box-shadow 0.3s',
         }}
@@ -236,12 +236,12 @@ function BrainButtonWithToggle({
               opacity: [0, 1, 1, 1, 1, 0],
               scale: [0.8, 1.02, 1.02, 1.02, 1.02, 1.12],
               boxShadow: [
-                '0 0 8px rgba(139,124,246,0.7), inset 0 0 4px rgba(139,124,246,0.3)',
+                '0 0 8px rgba(196,149,106,0.7), inset 0 0 4px rgba(196,149,106,0.3)',
                 '0 0 14px rgba(34,211,238,0.7), inset 0 0 6px rgba(34,211,238,0.3)',
                 '0 0 14px rgba(52,211,153,0.7), inset 0 0 6px rgba(52,211,153,0.3)',
                 '0 0 14px rgba(224,120,80,0.7), inset 0 0 6px rgba(224,120,80,0.3)',
                 '0 0 14px rgba(251,191,36,0.7), inset 0 0 6px rgba(251,191,36,0.3)',
-                '0 0 0px rgba(139,124,246,0), inset 0 0 0px rgba(139,124,246,0)',
+                '0 0 0px rgba(196,149,106,0), inset 0 0 0px rgba(196,149,106,0)',
               ],
             }}
             exit={{ opacity: 0 }}
@@ -250,7 +250,7 @@ function BrainButtonWithToggle({
               position: 'absolute',
               inset: '-3px',
               borderRadius: '50%',
-              border: '2px solid rgba(139,124,246,0.4)',
+              border: '2px solid rgba(196,149,106,0.4)',
               pointerEvents: 'none',
             }}
           />
