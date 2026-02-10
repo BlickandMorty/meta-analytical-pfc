@@ -6,6 +6,7 @@ import type { SynthesisReport } from '@/lib/engine/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SparklesIcon, XIcon, BookOpenIcon, FlaskConicalIcon, LightbulbIcon } from 'lucide-react';
+import { PixelBook } from '@/components/pixel-book';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Markdown } from '@/components/markdown';
 import { cn } from '@/lib/utils';
@@ -79,19 +80,19 @@ export function SynthesisCard() {
       {showSynthesis && (
         <motion.div
           key="synthesis-card"
-          initial={{ opacity: 0, y: 16, filter: 'blur(8px)' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-          exit={{ opacity: 0, y: -12, filter: 'blur(8px)' }}
+          initial={{ opacity: 0, y: 16, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -12, scale: 0.97 }}
           transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
           className="flex justify-center w-full mb-3"
+          style={{ transform: 'translateZ(0)' }}
         >
           <div
             className="max-w-3xl w-full rounded-2xl border border-border/20 overflow-hidden"
             style={{
               background: 'var(--glass-bg)',
-              backdropFilter: 'blur(80px) saturate(2.2)',
-              WebkitBackdropFilter: 'blur(80px) saturate(2.2)',
-              boxShadow: 'var(--shadow-s)',
+              backdropFilter: 'blur(12px) saturate(1.3)',
+              WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
             }}
           >
             {/* Header */}
@@ -106,11 +107,10 @@ export function SynthesisCard() {
                 )}
               </div>
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.92 }}
                 onClick={toggleSynthesisView}
                 aria-label="Close synthesis"
-                className="flex h-6 w-6 items-center justify-center rounded-lg text-muted-foreground/50 hover:text-foreground cursor-pointer transition-colors"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground/50 hover:text-foreground cursor-pointer transition-colors"
               >
                 <XIcon className="h-3.5 w-3.5" />
               </motion.button>
@@ -124,17 +124,21 @@ export function SynthesisCard() {
                     Generate a synthesis from your conversation and current signals.
                   </p>
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileTap={{ scale: 0.92 }}
                     onClick={handleGenerate}
                     disabled={loading}
                     className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold cursor-pointer',
-                      'bg-pfc-violet text-white hover:bg-pfc-violet/90',
+                      'flex items-center gap-2 px-4 py-2 rounded-full text-xs cursor-pointer',
                       'transition-colors disabled:opacity-50',
                     )}
+                    style={{
+                      background: 'rgba(244,189,111,0.12)',
+                      color: 'rgba(237,224,212,0.95)',
+                      fontWeight: 700,
+                      border: 'none',
+                    }}
                   >
-                    <SparklesIcon className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+                    {loading ? <PixelBook size={16} /> : <SparklesIcon className="h-3.5 w-3.5" />}
                     {loading ? 'Generating...' : 'Generate'}
                   </motion.button>
                 </div>
@@ -149,11 +153,11 @@ export function SynthesisCard() {
                         <motion.button
                           key={tab.key}
                           onClick={() => setActiveTab(tab.key)}
-                          whileTap={{ scale: 0.95 }}
+                          whileTap={{ scale: 0.92 }}
                           className={cn(
-                            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold cursor-pointer transition-colors',
+                            'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-colors',
                             isActive
-                              ? 'bg-pfc-violet/12 text-pfc-violet'
+                              ? 'bg-[rgba(244,189,111,0.12)] text-[rgba(237,224,212,0.95)]'
                               : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40',
                           )}
                         >
@@ -173,6 +177,7 @@ export function SynthesisCard() {
                       exit={{ opacity: 0, y: -4 }}
                       transition={{ duration: 0.2, ease: CUPERTINO_EASE }}
                       className="rounded-xl bg-background/40 p-4 text-xs leading-relaxed text-foreground/80 max-h-[280px] overflow-y-auto"
+                      style={{ willChange: 'scroll-position', overscrollBehavior: 'contain', transform: 'translateZ(0)' }}
                     >
                       {activeTab === 'plain' && (
                         <Markdown>{synthesisReport.plainSummary}</Markdown>

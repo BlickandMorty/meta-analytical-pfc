@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useTheme } from 'next-themes';
 
-// Obsidian Cupertino motion curve
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+// M3 emphasized easing
+const M3_EASE = [0.2, 0, 0, 1] as const;
 
 // ---------------------------------------------------------------------------
 // Research-ready prompt generation engine
@@ -216,11 +216,9 @@ function BrainButtonWithToggle({
           cursor: 'pointer',
           border: 'none',
           /* Dark mode: brain is white with a glow. Light mode: dim, no glow */
-          background: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.06)',
-          color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.3)',
-          boxShadow: isDark
-            ? '0 0 12px rgba(255,255,255,0.15), 0 0 24px rgba(139,124,246,0.1)'
-            : 'none',
+          background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(128,86,16,0.04)',
+          color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(29,27,22,0.35)',
+          boxShadow: 'none',
           transition: 'background 0.3s, color 0.3s, box-shadow 0.3s',
         }}
       >
@@ -236,12 +234,12 @@ function BrainButtonWithToggle({
               opacity: [0, 1, 1, 1, 1, 0],
               scale: [0.8, 1.02, 1.02, 1.02, 1.02, 1.12],
               boxShadow: [
-                '0 0 8px rgba(139,124,246,0.7), inset 0 0 4px rgba(139,124,246,0.3)',
+                '0 0 8px rgba(244,189,111,0.7), inset 0 0 4px rgba(244,189,111,0.3)',
                 '0 0 14px rgba(34,211,238,0.7), inset 0 0 6px rgba(34,211,238,0.3)',
                 '0 0 14px rgba(52,211,153,0.7), inset 0 0 6px rgba(52,211,153,0.3)',
                 '0 0 14px rgba(224,120,80,0.7), inset 0 0 6px rgba(224,120,80,0.3)',
                 '0 0 14px rgba(251,191,36,0.7), inset 0 0 6px rgba(251,191,36,0.3)',
-                '0 0 0px rgba(139,124,246,0), inset 0 0 0px rgba(139,124,246,0)',
+                '0 0 0px rgba(244,189,111,0), inset 0 0 0px rgba(244,189,111,0)',
               ],
             }}
             exit={{ opacity: 0 }}
@@ -250,7 +248,7 @@ function BrainButtonWithToggle({
               position: 'absolute',
               inset: '-3px',
               borderRadius: '50%',
-              border: '2px solid rgba(139,124,246,0.4)',
+              border: '2px solid rgba(244,189,111,0.4)',
               pointerEvents: 'none',
             }}
           />
@@ -264,8 +262,8 @@ function BrainButtonWithToggle({
             position: 'absolute',
             inset: '-2px',
             borderRadius: '50%',
-            border: '1.5px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 0 8px rgba(255,255,255,0.06)',
+            border: '1.5px solid rgba(244,189,111,0.1)',
+            boxShadow: '0 0 8px rgba(244,189,111,0.06)',
             pointerEvents: 'none',
             transition: 'opacity 0.3s',
           }}
@@ -316,7 +314,7 @@ export function MultimodalInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { setThemeMounted(true); }, []);
-  const isDark = themeMounted ? resolvedTheme === 'dark' : true;
+  const isDark = themeMounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -400,20 +398,20 @@ export function MultimodalInput({
     <div className="relative">
       {/* Input container */}
       <motion.div
-        transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
+        transition={{ duration: 0.32, ease: M3_EASE }}
         className={cn(
           'relative flex w-full flex-col transition-shadow duration-200',
           hero ? 'p-3 pr-2' : 'p-3',
           hero ? 'rounded-3xl' : 'rounded-2xl',
           !hero && !className?.includes('glass') && 'border bg-card/80',
           !hero && (focused
-            ? 'shadow-[var(--shadow-s)]'
-            : 'shadow-[var(--shadow-tactile)]'),
+            ? ''
+            : ''),
           className,
         )}
         style={!hero && !className?.includes('glass') ? {
-          backdropFilter: 'blur(20px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+          backdropFilter: 'blur(12px) saturate(1.3)',
+          WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
         } : undefined}
       >
         {/* Text row */}
@@ -464,7 +462,7 @@ export function MultimodalInput({
           ) : trimmedValue ? (
             /* Active send arrow */
             <motion.button
-              whileTap={{ scale: 0.88 }}
+              whileTap={{ scale: 0.92 }}
               onClick={handleSubmit}
               style={{
                 height: '2.5rem',
@@ -476,8 +474,8 @@ export function MultimodalInput({
                 cursor: 'pointer',
                 border: 'none',
                 flexShrink: 0,
-                background: isDark ? '#FFFFFF' : '#7A3B4E',
-                color: isDark ? '#000000' : '#FFFFFF',
+                background: 'var(--m3-primary)',
+                color: 'var(--m3-on-primary)',
                 transition: 'background 0.15s',
               }}
             >
@@ -493,14 +491,14 @@ export function MultimodalInput({
         <AnimatePresence>
           {showTyping && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease: CUPERTINO_EASE }}
-              style={{ overflow: 'hidden' }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              exit={{ opacity: 0, scaleY: 0 }}
+              transition={{ duration: 0.25, ease: M3_EASE }}
+              style={{ overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
             >
               <div style={{
-                borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.2)'}`,
                 paddingTop: '0.375rem',
                 marginTop: '0.5rem',
               }}>
@@ -522,12 +520,12 @@ export function MultimodalInput({
                       cursor: 'pointer',
                       textAlign: 'left',
                       fontSize: '0.8125rem',
-                      borderRadius: '0.5rem',
-                      color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
+                      borderRadius: '9999px',
+                      color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(29,27,22,0.55)',
                       transition: 'background 0.12s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)';
+                      e.currentTarget.style.background = isDark ? 'var(--m3-surface-container-high)' : 'rgba(0,0,0,0.03)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent';
@@ -542,7 +540,7 @@ export function MultimodalInput({
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <span style={{
                         fontWeight: 600,
-                        color: isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.85)',
+                        color: isDark ? 'rgba(237,224,212,0.95)' : 'rgba(29,27,22,0.85)',
                       }}>
                         {trimmedValue}
                       </span>

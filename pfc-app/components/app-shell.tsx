@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { TopNav } from './top-nav';
 import type { InferenceMode, ApiProvider } from '@/lib/engine/llm/config';
-import type { SuiteTier, ResearchPaper, CodebaseAnalysis } from '@/lib/research/types';
+import type { SuiteTier, ResearchPaper, ResearchBook } from '@/lib/research/types';
 import { detectDevice, cacheDeviceProfile } from '@/lib/device-detection';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -69,25 +69,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     } catch { /* ignore corrupt data */ }
 
-    // --- Load codebase analyses ---
+    // --- Load research books ---
     try {
-      const storedAnalyses = localStorage.getItem('pfc-codebase-analyses');
-      if (storedAnalyses) {
-        const analyses = JSON.parse(storedAnalyses) as CodebaseAnalysis[];
-        for (const analysis of analyses) {
-          usePFCStore.getState().addCodebaseAnalysis(analysis);
-        }
+      const storedBooks = localStorage.getItem('pfc-research-books');
+      if (storedBooks) {
+        const books = JSON.parse(storedBooks) as ResearchBook[];
+        usePFCStore.setState({ researchBooks: books });
       }
     } catch { /* ignore corrupt data */ }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!mounted) return null;
 
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="relative h-screen overflow-hidden bg-background">
       <TopNav />
       {children}
+
+      {/* Grain texture overlay — SVG feTurbulence noise */}
+      <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
+        <filter id="grain-noise">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.65"
+            numOctaves="3"
+            stitchTiles="stitch"
+          />
+        </filter>
+      </svg>
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          pointerEvents: 'none',
+          opacity: 0.035,
+          filter: 'url(#grain-noise)',
+          mixBlendMode: 'overlay',
+          contain: 'layout paint',
+          transform: 'translateZ(0)',
+        }}
+      />
     </div>
   );
 }

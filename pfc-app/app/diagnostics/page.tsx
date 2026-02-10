@@ -21,6 +21,7 @@ import type { SafetyState } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { PixelBook } from '@/components/pixel-book';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
@@ -214,14 +215,14 @@ export default function DiagnosticsPage() {
   const { resolvedTheme } = useTheme();
   const [thMounted, setThMounted] = useState(false);
   useEffect(() => { setThMounted(true); }, []);
-  const isDark = thMounted ? resolvedTheme === 'dark' : true;
+  const isDark = thMounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   const anomalies = getAnomalies({ entropy, dissonance, healthScore, riskScore, confidence });
 
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <PixelBook size={40} />
       </div>
     );
   }

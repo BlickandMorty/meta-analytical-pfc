@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { PixelBook } from '@/components/pixel-book';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -134,11 +135,12 @@ function SnapshotCard({
         <AnimatePresence>
           {expanded && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              exit={{ opacity: 0, scaleY: 0 }}
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
+              style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
             >
               <CardContent className="pt-0 space-y-3">
                 <div className="border-t border-border/40 my-2" />
@@ -250,7 +252,7 @@ export default function CortexArchivePage() {
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <PixelBook size={40} />
       </div>
     );
   }

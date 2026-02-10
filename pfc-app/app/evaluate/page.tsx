@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { PixelBook } from '@/components/pixel-book';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -120,11 +121,12 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0, scaleY: 0 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
+            style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
           >
             <div className="px-4 pb-4 space-y-3 border-t border-border/30 pt-3">
               {dim.findings.length > 0 && (
@@ -240,7 +242,7 @@ export default function EvaluatePage() {
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <PixelBook size={40} />
       </div>
     );
   }
@@ -449,7 +451,7 @@ export default function EvaluatePage() {
           >
             {loading ? (
               <>
-                <div style={{ height: 16, width: 16, borderRadius: '50%', border: '2px solid rgba(224,120,80,0.3)', borderTopColor: '#E07850', animation: 'spin 1s linear infinite' }} />
+                <PixelBook size={18} />
                 Analyzing...
               </>
             ) : (

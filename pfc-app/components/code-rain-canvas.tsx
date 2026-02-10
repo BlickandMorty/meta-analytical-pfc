@@ -8,19 +8,19 @@ import { useEffect, useRef } from 'react';
 
 const TOKEN_POOL = [
   // Imports & keywords (violet)
-  { text: 'import torch', color: '#8B7CF6' },
-  { text: 'import numpy as np', color: '#8B7CF6' },
-  { text: 'import pandas as pd', color: '#8B7CF6' },
-  { text: 'from sklearn', color: '#8B7CF6' },
-  { text: 'import tensorflow', color: '#8B7CF6' },
-  { text: 'from transformers', color: '#8B7CF6' },
-  { text: 'import torch.nn', color: '#8B7CF6' },
-  { text: 'from scipy', color: '#8B7CF6' },
-  { text: 'class Model:', color: '#8B7CF6' },
-  { text: 'def forward(self)', color: '#8B7CF6' },
-  { text: 'lambda x:', color: '#8B7CF6' },
-  { text: 'yield batch', color: '#8B7CF6' },
-  { text: 'async def train', color: '#8B7CF6' },
+  { text: 'import torch', color: '#C4956A' },
+  { text: 'import numpy as np', color: '#C4956A' },
+  { text: 'import pandas as pd', color: '#C4956A' },
+  { text: 'from sklearn', color: '#C4956A' },
+  { text: 'import tensorflow', color: '#C4956A' },
+  { text: 'from transformers', color: '#C4956A' },
+  { text: 'import torch.nn', color: '#C4956A' },
+  { text: 'from scipy', color: '#C4956A' },
+  { text: 'class Model:', color: '#C4956A' },
+  { text: 'def forward(self)', color: '#C4956A' },
+  { text: 'lambda x:', color: '#C4956A' },
+  { text: 'yield batch', color: '#C4956A' },
+  { text: 'async def train', color: '#C4956A' },
   // Functions & methods (ember)
   { text: 'model.fit()', color: '#E07850' },
   { text: 'optimizer.step()', color: '#E07850' },
@@ -83,22 +83,22 @@ const TOKEN_POOL = [
 const CODE_SNIPPETS: { text: string; color: string }[][] = [
   [
     { text: '# gradient descent step', color: '#86EFAC' },
-    { text: 'W = W - lr * dW', color: '#8B7CF6' },
-    { text: 'b = b - lr * db', color: '#8B7CF6' },
+    { text: 'W = W - lr * dW', color: '#C4956A' },
+    { text: 'b = b - lr * db', color: '#C4956A' },
     { text: 'loss = np.mean(', color: '#E07850' },
     { text: '  (y_pred - y)**2)', color: '#22D3EE' },
   ],
   [
-    { text: 'import torch.nn as nn', color: '#8B7CF6' },
+    { text: 'import torch.nn as nn', color: '#C4956A' },
     { text: 'class Attention(nn.Module):', color: '#FACC15' },
     { text: '  def forward(self, Q, K, V):', color: '#E07850' },
     { text: '    scores = Q @ K.T', color: '#22D3EE' },
     { text: '    weights = F.softmax(', color: '#E07850' },
     { text: '      scores / d_k**0.5)', color: '#22D3EE' },
-    { text: '    return weights @ V', color: '#8B7CF6' },
+    { text: '    return weights @ V', color: '#C4956A' },
   ],
   [
-    { text: 'X_train, X_test =', color: '#8B7CF6' },
+    { text: 'X_train, X_test =', color: '#C4956A' },
     { text: '  train_test_split(X, y)', color: '#E07850' },
     { text: 'scaler = StandardScaler()', color: '#FACC15' },
     { text: 'X_train = scaler.fit_', color: '#E07850' },
@@ -110,19 +110,19 @@ const CODE_SNIPPETS: { text: string; color: string }[][] = [
     { text: '  vocab_size, d_model)', color: '#22D3EE' },
     { text: 'pos = positional_encoding(', color: '#E07850' },
     { text: '  seq_len, d_model)', color: '#22D3EE' },
-    { text: 'x = emb(tokens) + pos', color: '#8B7CF6' },
+    { text: 'x = emb(tokens) + pos', color: '#C4956A' },
   ],
   [
     { text: 'optimizer = Adam(', color: '#E07850' },
     { text: '  model.parameters(),', color: '#FACC15' },
     { text: '  lr=3e-5, eps=1e-8)', color: '#22D3EE' },
-    { text: 'for epoch in range(100):', color: '#8B7CF6' },
+    { text: 'for epoch in range(100):', color: '#C4956A' },
     { text: '  loss = criterion(out, y)', color: '#E07850' },
     { text: '  loss.backward()', color: '#E07850' },
     { text: '  optimizer.step()', color: '#E07850' },
   ],
   [
-    { text: 'df = pd.read_csv(path)', color: '#8B7CF6' },
+    { text: 'df = pd.read_csv(path)', color: '#C4956A' },
     { text: 'corr = df.corr()', color: '#E07850' },
     { text: 'features = df.select_dtypes(', color: '#E07850' },
     { text: '  include=[np.number])', color: '#FACC15' },
@@ -151,12 +151,12 @@ const PINATA_POOL = [
   { text: 'pd.read_csv()', color: '#E07850' },
   { text: 'df.groupby()', color: '#E07850' },
   { text: 'torch.sigmoid()', color: '#E07850' },
-  { text: 'import torch', color: '#8B7CF6' },
-  { text: 'from sklearn', color: '#8B7CF6' },
-  { text: 'class Model:', color: '#8B7CF6' },
-  { text: 'lambda x:', color: '#8B7CF6' },
-  { text: 'yield batch', color: '#8B7CF6' },
-  { text: 'def forward()', color: '#8B7CF6' },
+  { text: 'import torch', color: '#C4956A' },
+  { text: 'from sklearn', color: '#C4956A' },
+  { text: 'class Model:', color: '#C4956A' },
+  { text: 'lambda x:', color: '#C4956A' },
+  { text: 'yield batch', color: '#C4956A' },
+  { text: 'def forward()', color: '#C4956A' },
   { text: '"cross_entropy"', color: '#4ADE80' },
   { text: '"attention_mask"', color: '#4ADE80' },
   { text: '"gradient"', color: '#4ADE80' },
@@ -189,13 +189,13 @@ const PINATA_POOL = [
   { text: '!=', color: '#9CA3AF' },
   { text: '++', color: '#9CA3AF' },
   { text: '->', color: '#9CA3AF' },
-  { text: 'if', color: '#8B7CF6' },
-  { text: 'for', color: '#8B7CF6' },
-  { text: 'def', color: '#8B7CF6' },
+  { text: 'if', color: '#C4956A' },
+  { text: 'for', color: '#C4956A' },
+  { text: 'def', color: '#C4956A' },
   { text: 'int', color: '#22D3EE' },
-  { text: 'var', color: '#8B7CF6' },
-  { text: 'let', color: '#8B7CF6' },
-  { text: 'fn', color: '#8B7CF6' },
+  { text: 'var', color: '#C4956A' },
+  { text: 'let', color: '#C4956A' },
+  { text: 'fn', color: '#C4956A' },
   { text: 'nil', color: '#9CA3AF' },
   { text: 'True', color: '#22D3EE' },
   { text: 'None', color: '#9CA3AF' },
@@ -290,22 +290,22 @@ function pickSizeTier(): SizeTier {
 function applyTier(col: Partial<RainColumn>, tier: SizeTier) {
   switch (tier) {
     case 'large':
-      col.fontSize = 22 + Math.random() * 14;   // Larger sizes (was 18+8)
-      col.opacity = 0.03 + Math.random() * 0.05;
+      col.fontSize = 24 + Math.random() * 16;   // Slightly larger
+      col.opacity = 0.05 + Math.random() * 0.06;
       col.speed = 0.15 + Math.random() * 0.35;  // Slower drift
       col.blur = 4 + Math.random() * 6;          // More blur for depth
       break;
     case 'tiny':
-      col.fontSize = 6 + Math.random() * 3;
-      col.opacity = 0.06 + Math.random() * 0.10;
+      col.fontSize = 7 + Math.random() * 4;
+      col.opacity = 0.08 + Math.random() * 0.12;
       col.speed = 0.6 + Math.random() * 1.4;
       col.blur = 0.5 + Math.random() * 2;
       break;
     default:
-      col.fontSize = 10 + Math.random() * 4;
-      col.opacity = 0.08 + Math.random() * 0.14;  // Slightly less opaque
-      col.blur = Math.random() < 0.4 ? (0.5 + Math.random() * 2) : 0;  // More blur variety (was 0.25)
-      col.speed = 0.25 + Math.random() * 0.9;     // Slower overall, more varied
+      col.fontSize = 12 + Math.random() * 5;
+      col.opacity = 0.10 + Math.random() * 0.16;
+      col.blur = Math.random() < 0.4 ? (0.5 + Math.random() * 2) : 0;
+      col.speed = 0.25 + Math.random() * 0.9;
       break;
   }
 }
@@ -364,7 +364,7 @@ function createColumn(canvasWidth: number, canvasHeight: number): RainColumn {
 // Canvas rain component — original background + piñata overlay
 // ═══════════════════════════════════════════════════════════════════════
 
-export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
+export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; searchFocused?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const columnsRef = useRef<RainColumn[]>([]);
   const pinataRef = useRef<PinataParticle[]>([]);
@@ -378,6 +378,20 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
+    // Pre-cached values to avoid per-frame allocation
+    let cachedW = window.innerWidth;
+    let cachedH = window.innerHeight;
+    // Light mode gets more particles for visibility
+    const lightModeMultiplier = isDark ? 1 : 1.4;
+
+    function resetColumns() {
+      columnsRef.current = [];
+      const colCount = Math.floor((cachedW / 42) * lightModeMultiplier);
+      for (let i = 0; i < colCount; i++) {
+        columnsRef.current.push(createColumn(cachedW, cachedH));
+      }
+    }
+
     function resize() {
       if (!canvas) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -389,15 +403,16 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
 
       cachedW = window.innerWidth;
       cachedH = window.innerHeight;
-      const colCount = Math.floor(cachedW / 42); // Fewer columns for less chaos
-      columnsRef.current = [];
-      for (let i = 0; i < colCount; i++) {
-        columnsRef.current.push(createColumn(cachedW, cachedH));
-      }
+      resetColumns();
     }
 
     resize();
     window.addEventListener('resize', resize);
+
+    // Periodic reset every 20 seconds to keep syntax from getting too crowded
+    const resetInterval = setInterval(() => {
+      resetColumns();
+    }, 20000);
 
     // ── Piñata event listener ──
     function onPinata(e: Event) {
@@ -419,9 +434,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
     const CODEBLOCK_CHANCE = 0.00025;   // Less frequent (was 0.0004)
     let cursorClock = 0;
 
-    // Pre-cached values to avoid per-frame allocation
-    let cachedW = window.innerWidth;
-    let cachedH = window.innerHeight;
     const blurCache = new Map<number, string>();
     const fontCache = new Map<number, string>();
     const measureCache = new Map<string, number>();
@@ -530,8 +542,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
           const fadeOut = p > 0.7 ? 1 - easeInOut((p - 0.7) / 0.3) : 1;
           const strikeAlpha = (isDark ? 0.55 : 0.45) * fadeOut;
 
-          ctx.save();
-          if (col.blur > 0) ctx.filter = getBlurFilter(col.blur);
           ctx.fillStyle = drawColor;
           ctx.globalAlpha = strikeAlpha;
           ctx.font = getFont(col.fontSize);
@@ -550,9 +560,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
             ctx.lineTo(col.x - 2 + (textWidth + 4) * lineProgress, lineY);
             ctx.stroke();
           }
-
-          ctx.filter = 'none';
-          ctx.restore();
           col.strikeout += STRIKEOUT_SPEED * dt;
           if (col.strikeout >= 1) col.strikeout = 0;
         }
@@ -592,8 +599,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
             showCursor = false;
           }
 
-          ctx.save();
-          if (col.blur > 0) ctx.filter = getBlurFilter(col.blur);
           ctx.font = getFont(col.fontSize);
 
           if (displayText.length > 0) {
@@ -612,14 +617,11 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
             ctx.globalAlpha = editAlpha * fadeAlpha * 0.8;
             ctx.fillRect(cursorX + 1, cursorY, Math.max(1, col.fontSize * 0.07), cursorH);
           }
-
-          ctx.filter = 'none';
-          ctx.restore();
           col.editing += EDIT_SPEED * dt;
           if (col.editing >= 1) col.editing = 0;
         }
 
-        // ── Code block typewriter ──
+        // ── Code block typewriter (blurred for depth) ──
         if (col.codeblock > 0) {
           const p = col.codeblock;
           const snippet = CODE_SNIPPETS[col.codeblockIdx % CODE_SNIPPETS.length];
@@ -633,8 +635,9 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
           const fadeOut = p > 0.85 ? 1 - easeInOut((p - 0.85) / 0.15) : 1;
           const blockAlpha = (isDark ? 0.5 : 0.4) * bgFadeIn * fadeOut;
 
-          ctx.save();
           ctx.font = getFont(blockFontSize);
+          // Code blocks drawn at reduced alpha instead of blur filter
+          const cbAlpha = blockAlpha * 0.7;
 
           if (p > 0.05) {
             const typeProgress = Math.min((p - 0.05) / 0.80, 1);
@@ -652,32 +655,30 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
 
               const ly = col.codeblockY + li * lineH;
               ctx.fillStyle = line.color;
-              ctx.globalAlpha = blockAlpha;
+              ctx.globalAlpha = cbAlpha;
               ctx.fillText(visibleText, col.x, ly);
 
               if (visibleChars < line.text.length && cursorOn && fadeOut > 0.5) {
                 const cw = getMeasure(visibleText, 8);
                 ctx.fillStyle = CURSOR_COLOR;
-                ctx.globalAlpha = blockAlpha * 0.7;
+                ctx.globalAlpha = cbAlpha * 0.7;
                 ctx.fillRect(col.x + cw + 1, ly - blockFontSize * 0.7, 1, blockFontSize * 0.85);
               }
             }
           }
-
-          ctx.restore();
           col.codeblock += CODEBLOCK_SPEED * dt;
           if (col.codeblock >= 1) col.codeblock = 0;
         }
 
         // ── Normal token drawing ──
+        // No canvas filter (was causing per-column GPU composition switching = stutter)
+        // Depth is simulated via opacity + font size from applyTier()
         if (col.strikeout === 0 && col.editing === 0 && col.codeblock === 0) {
-          const alpha = isDark ? col.opacity * 0.9 : col.opacity * 0.65;
+          const blurDim = col.blur > 0 ? Math.max(0.3, 1 - col.blur * 0.06) : 1;
+          const alpha = (isDark ? col.opacity * 0.9 : col.opacity * 0.65) * blurDim;
           ctx.fillStyle = token.color;
           ctx.globalAlpha = Math.min(alpha, 1);
-
-          if (col.blur > 0) ctx.filter = getBlurFilter(col.blur);
           ctx.fillText(token.text, col.x, col.y);
-          if (col.blur > 0) ctx.filter = 'none';
         }
 
         if (Math.random() < 0.02) col.tokenIndex++;
@@ -770,13 +771,21 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
       window.removeEventListener('scroll', updateSearchBarRect);
       searchBarObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
+      clearInterval(resetInterval);
     };
   }, [isDark]);
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: 'none',
+        opacity: searchFocused ? 0 : 1,
+        transition: 'opacity 0.3s ease',
+      }}
     />
   );
 }
@@ -786,6 +795,10 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
 // ═══════════════════════════════════════════════════════════════════════
 
 export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
+  // Dark mode: no vignette — flat dark background with visible code rain
+  if (isDark) return null;
+
+  // Light mode: soft edge fade to blend rain into the cream background
   return (
     <div
       style={{
@@ -793,9 +806,7 @@ export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
         inset: 0,
         zIndex: 0,
         pointerEvents: 'none',
-        background: isDark
-          ? 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.92) 100%)'
-          : 'radial-gradient(ellipse at center, transparent 30%, rgba(240,232,222,0.92) 100%)',
+        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(250,250,248,0.92) 100%)',
       }}
     />
   );

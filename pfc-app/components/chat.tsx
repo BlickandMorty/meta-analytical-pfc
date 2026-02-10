@@ -4,19 +4,20 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useChatStream } from '@/hooks/use-chat-stream';
-import { ChatHeader } from './chat-header';
 import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
 import { SynthesisCard } from './synthesis-card';
 import { CodeRainCanvas, CodeRainOverlays } from './code-rain-canvas';
-import { BrainMascot } from './brain-mascot';
+import { PixelSun } from './pixel-sun';
 import { FeatureButtons } from './feature-buttons';
+import { RecentChats } from './recent-chats';
 import { ResearchModeBar } from './research-mode-bar';
 import { ThinkingControls } from './thinking-controls';
+import { ChatTOC } from './chat-toc';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { getInferenceModeFeatures } from '@/lib/research/types';
-import { CpuIcon, CloudIcon, MonitorIcon } from 'lucide-react';
+import { CloudIcon, MonitorIcon } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════
 // Dynamic imports — only loaded when the tier enables them
@@ -25,8 +26,11 @@ import { CpuIcon, CloudIcon, MonitorIcon } from 'lucide-react';
 const LiveControls = dynamic(() => import('./live-controls').then((m) => ({ default: m.LiveControls })), { ssr: false });
 const ConceptHierarchyPanel = dynamic(() => import('./concept-hierarchy-panel').then((m) => ({ default: m.ConceptHierarchyPanel })), { ssr: false });
 const ThoughtVisualizer = dynamic(() => import('./thought-visualizer').then((m) => ({ default: m.ThoughtVisualizer })), { ssr: false });
+const PortalSidebar = dynamic(() => import('./portal-sidebar').then((m) => ({ default: m.PortalSidebar })), { ssr: false });
 
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+/* Harmonoid-inspired spring configs */
+const PANEL_SPRING = { type: 'spring' as const, stiffness: 500, damping: 35, mass: 1.0 };
+const ENTER_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 };
 
 // ═══════════════════════════════════════════════════════════════════
 // IDE Syntax Coloring — each greeting gets language-appropriate colors
@@ -44,14 +48,6 @@ type GreetingDef = {
 };
 
 const GREETING_DEFS: GreetingDef[] = [
-  {
-    plain: 'Greetings, Researcher',
-    colored: [
-      { text: 'Greetings, ', color: '#C4B5FD' },
-      { text: 'Researcher', color: '#F9A8D4' },
-    ],
-    isCode: false,
-  },
   {
     plain: 'print("Greetings, Researcher")',
     colored: [
@@ -221,21 +217,21 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
     return spans;
   }, [displayText, def]);
 
-  const fontSize = isCode ? '1.6rem' : '2.6rem';
-  const cursorHeight = isCode ? '1.6rem' : '2.4rem';
+  const fontSize = isCode ? '2.75rem' : '3.25rem';
+  const cursorHeight = isCode ? '2.75rem' : '3.125rem';
 
   return (
     <h1
       style={{
         fontFamily: isCode
-          ? 'ui-monospace, "SF Mono", "Fira Code", monospace'
-          : '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+          ? 'var(--font-mono)'
+          : 'var(--font-display)',
         fontSize,
         letterSpacing: isCode ? '0em' : '-0.03em',
         lineHeight: 1.15,
-        fontWeight: isCode ? 400 : 500,
+        fontWeight: isCode ? 400 : 600,
         whiteSpace: 'nowrap',
-        minHeight: '3rem',
+        minHeight: '3.25rem',
         display: 'flex',
         alignItems: 'center',
         margin: 0,
@@ -250,8 +246,8 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
           width: '2px',
           height: cursorHeight,
           backgroundColor: isCode
-            ? '#8B7CF6'
-            : isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
+            ? 'var(--m3-primary)'
+            : isDark ? 'rgba(232,228,222,0.5)' : 'rgba(0,0,0,0.4)',
           marginLeft: '1px',
           opacity: cursorOn ? 1 : 0,
           transition: 'opacity 0.1s',
@@ -262,7 +258,7 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Chat — landing page ↔ chat interface
+// Chat — landing page ↔ chat interface with TOC sidebar
 // ═══════════════════════════════════════════════════════════════════
 
 export function Chat() {
@@ -279,10 +275,13 @@ export function Chat() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [modeHintDismissed, setModeHintDismissed] = useState(false);
 
+  // Ref for the messages scroll container — shared with ChatTOC
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => setMounted(true), []);
 
   const isEmpty = messages.length === 0;
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
   const showThoughtViz = researchChatMode && chatViewMode === 'visualize-thought' && tierFeatures.thoughtVisualizer !== 'off' && !isEmpty;
   const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
   const showModeHint = researchChatMode && !features.playPause && !modeHintDismissed && !isEmpty;
@@ -307,72 +306,90 @@ export function Chat() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            /* OLED gradient: subtle radial from pure black → dark gray center → black */
-            background: searchFocused
-              ? (isDark ? '#000000' : '#F0E8DE')
-              : (isDark
-                ? 'radial-gradient(ellipse at 50% 50%, #0a0a0a 0%, #000000 70%)'
-                : 'radial-gradient(ellipse at 50% 50%, #F4ECE2 0%, #F0E8DE 70%)'),
-            transition: 'background 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
+            background: 'var(--m3-surface)',
+            transform: 'translateZ(0)',
           }}
         >
-          {/* Code rain background — fades on search focus */}
-          <motion.div
-            animate={{ opacity: searchFocused ? 0 : 1 }}
-            transition={{ duration: 0.4, ease: CUPERTINO_EASE }}
-            style={{ position: 'absolute', inset: 0, willChange: 'opacity' }}
-          >
-            {mounted && <CodeRainCanvas isDark={isDark} />}
+          {/* Code rain background — clears on search focus, resets periodically */}
+          <div style={{ position: 'absolute', inset: 0 }}>
+            {mounted && <CodeRainCanvas isDark={isDark} searchFocused={searchFocused} />}
             <CodeRainOverlays isDark={isDark} />
-          </motion.div>
+          </div>
+
+          {/* Elegant backdrop blur + shadow — proper depth separation from wallpaper */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '48rem',
+              height: '32rem',
+              borderRadius: '2.5rem',
+              pointerEvents: 'none',
+              zIndex: 1,
+              backdropFilter: isDark ? 'blur(40px) saturate(1.2)' : 'blur(32px) saturate(1.3)',
+              WebkitBackdropFilter: isDark ? 'blur(40px) saturate(1.2)' : 'blur(32px) saturate(1.3)',
+              background: isDark
+                ? 'radial-gradient(ellipse at center, rgba(28,25,23,0.5) 0%, rgba(28,25,23,0.25) 50%, transparent 80%)'
+                : 'radial-gradient(ellipse at center, rgba(250,248,244,0.55) 0%, rgba(250,248,244,0.3) 50%, transparent 80%)',
+              boxShadow: isDark
+                ? '0 0 80px 20px rgba(0,0,0,0.2), inset 0 0 40px rgba(0,0,0,0.08)'
+                : '0 0 60px 15px rgba(0,0,0,0.03), inset 0 0 30px rgba(255,255,255,0.15)',
+              maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
+              WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
+            }}
+          />
 
           <div style={{
             position: 'relative',
             zIndex: 2,
             width: '100%',
-            maxWidth: '40rem',
+            maxWidth: '38rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1.5rem',
+            gap: '1.25rem',
           }}>
 
-            {/* Greeting section — orchestrated reveal with scale */}
+            {/* Greeting section — Harmonoid spring entrance */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: CUPERTINO_EASE }}
+              transition={{ ...ENTER_SPRING, delay: 0.05 }}
               style={{
                 textAlign: 'center',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.75rem',
-                filter: isDark
-                  ? 'drop-shadow(0 4px 24px rgba(0,0,0,0.4)) drop-shadow(0 1px 4px rgba(0,0,0,0.3))'
-                  : 'drop-shadow(0 4px 24px rgba(80,50,20,0.08)) drop-shadow(0 1px 4px rgba(80,50,20,0.06))',
+                transform: 'translateZ(0)',
               }}
             >
-              {mounted && <BrainMascot isDark={isDark} />}
+              {mounted && <PixelSun size={52} />}
               {mounted && <GreetingTypewriter isDark={isDark} />}
             </motion.div>
 
-            {/* Search bar — snappy entrance with spring */}
+            {/* Search bar — M3 surface container with tonal elevation */}
             <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.95 }}
+              initial={{ opacity: 0, y: 20, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.22, ease: CUPERTINO_EASE }}
+              transition={{ ...ENTER_SPRING, delay: 0.12 }}
+              style={{ transform: 'translateZ(0)' }}
             >
               <div
                 data-search-bar
                 style={{
-                  borderRadius: '1.75rem',
+                  borderRadius: 'var(--shape-full)',
                   overflow: 'hidden',
-                  background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.45)',
-                  border: isDark
-                    ? '1.5px solid rgba(255,255,255,0.14)'
-                    : '1.5px solid rgba(0,0,0,0.12)',
+                  background: isDark
+                    ? 'var(--m3-surface-container)'
+                    : 'var(--m3-surface-container-high)',
+                  border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'var(--m3-outline-variant)'}`,
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
+                  boxShadow: isDark
+                    ? 'none'
+                    : 'none',
                 }}
               >
                 <MultimodalInput
@@ -382,29 +399,33 @@ export function Chat() {
                   hero
                   onFocusChange={setSearchFocused}
                   inputStyle={{
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                    fontSize: '1.05rem',
-                    fontWeight: 550,
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '1rem',
+                    fontWeight: 500,
                     letterSpacing: '-0.01em',
                   }}
                 />
               </div>
             </motion.div>
 
-            {/* Feature buttons — final stagger element */}
+            {/* Feature buttons — M3 tonal pills */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.36, ease: CUPERTINO_EASE }}
+              transition={{ ...ENTER_SPRING, delay: 0.2 }}
+              style={{ transform: 'translateZ(0)' }}
             >
               {mounted && <FeatureButtons isDark={isDark} onSubmit={sendQuery} />}
             </motion.div>
+
+            {/* Recent chat sessions */}
+            {mounted && <RecentChats isDark={isDark} />}
           </div>
         </motion.div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════
-          Chat interface — simple fade-in
+          Chat interface — messages + TOC sidebar
           ═══════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {!isEmpty && (
@@ -412,110 +433,129 @@ export function Chat() {
             key="chat"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.55, ease: CUPERTINO_EASE }}
+            transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
             style={{
               position: 'relative',
               zIndex: 1,
               display: 'flex',
               flex: 1,
-              flexDirection: 'column',
               minHeight: 0,
-              background: 'var(--chat-surface)',
+              background: 'var(--m3-surface)',
+              transform: 'translateZ(0)',
             }}
           >
-            <div style={{ margin: '0 auto', maxWidth: '56rem', width: '100%', padding: '0.75rem 1rem 0' }}>
-              <ChatHeader />
-            </div>
-
-            {/* Thought Visualizer (mind-map mode) */}
-            {showThoughtViz ? (
-              <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-                <ThoughtVisualizer isDark={isDark} />
-              </div>
-            ) : (
-              <Messages />
-            )}
-
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0 1rem' }}>
-                <SynthesisCard />
-              </div>
-
-              {/* Mode hint — shown when research mode is on but not all controls are available */}
-              <AnimatePresence>
-                {showModeHint && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.25rem 1rem', overflow: 'hidden' }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.375rem 0.625rem',
-                        borderRadius: '0.5rem',
-                        background: isDark ? 'rgba(139,124,246,0.06)' : 'rgba(139,124,246,0.04)',
-                        border: isDark ? '1px solid rgba(139,124,246,0.1)' : '1px solid rgba(139,124,246,0.08)',
-                        fontSize: '0.625rem',
-                        color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.4)',
-                      }}
-                    >
-                      {inferenceMode === 'api'
-                        ? <CloudIcon style={{ height: '0.625rem', width: '0.625rem', flexShrink: 0, color: '#8B7CF6' }} />
-                        : <MonitorIcon style={{ height: '0.625rem', width: '0.625rem', flexShrink: 0, color: '#8B7CF6' }} />
-                      }
-                      <span style={{ flex: 1 }}>
-                        {features.modeHint} — Switch to local inference for full thinking controls.
-                      </span>
-                      <button
-                        onClick={() => setModeHintDismissed(true)}
-                        style={{
-                          border: 'none',
-                          background: 'transparent',
-                          cursor: 'pointer',
-                          fontSize: '0.625rem',
-                          color: '#8B7CF6',
-                          fontWeight: 600,
-                          padding: '0.125rem 0.25rem',
-                          borderRadius: '0.25rem',
-                        }}
-                      >
-                        Got it
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Thinking Controls (play/pause/stop/reroute) — shown during processing */}
-              {(isProcessing || isStreaming) && researchChatMode && (
-                <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.375rem 1rem' }}>
-                  <ThinkingControls isDark={isDark} />
+            {/* Main chat column */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              {/* Thought Visualizer (mind-map mode) */}
+              {showThoughtViz ? (
+                <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+                  <ThoughtVisualizer isDark={isDark} />
                 </div>
+              ) : (
+                <Messages scrollContainerRef={scrollContainerRef} />
               )}
 
-              {tierFeatures.liveControls && <LiveControls />}
-              {tierFeatures.conceptHierarchy && <ConceptHierarchyPanel />}
-
-              {/* Research Mode Bar + Input */}
-              <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.5rem 1rem 0.5rem' }}>
-                <div style={{ position: 'relative', marginBottom: '0.375rem' }}>
-                  <ResearchModeBar isDark={isDark} />
+              {/* Bottom controls area */}
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0 1rem' }}>
+                  <SynthesisCard />
                 </div>
-                <MultimodalInput
-                  onSubmit={sendQuery}
-                  onStop={abort}
-                  isProcessing={isProcessing}
-                  showControlsToggle={tierFeatures.liveControls}
-                />
+
+                {/* Mode hint — M3 tonal surface */}
+                <AnimatePresence>
+                  {showModeHint && (
+                    <motion.div
+                      initial={{ opacity: 0, scaleY: 0 }}
+                      animate={{ opacity: 1, scaleY: 1 }}
+                      exit={{ opacity: 0, scaleY: 0 }}
+                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                      style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.25rem 1rem', overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.375rem 0.75rem',
+                          borderRadius: 'var(--shape-full)',
+                          background: isDark ? 'var(--m3-surface-container)' : 'var(--m3-surface-container)',
+                          border: 'none',
+                          fontSize: 'var(--type-label-sm)',
+                          color: isDark ? 'rgba(155,150,137,0.9)' : 'rgba(0,0,0,0.4)',
+                        }}
+                      >
+                        {inferenceMode === 'api'
+                          ? <CloudIcon style={{ height: '0.6875rem', width: '0.6875rem', flexShrink: 0, color: 'var(--m3-primary)' }} />
+                          : <MonitorIcon style={{ height: '0.6875rem', width: '0.6875rem', flexShrink: 0, color: 'var(--m3-primary)' }} />
+                        }
+                        <span style={{ flex: 1 }}>
+                          {features.modeHint} — Switch to local inference for full thinking controls.
+                        </span>
+                        <button
+                          onClick={() => setModeHintDismissed(true)}
+                          style={{
+                            border: 'none',
+                            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                            cursor: 'pointer',
+                            fontSize: 'var(--type-label-sm)',
+                            color: 'var(--m3-primary)',
+                            fontWeight: 600,
+                            padding: '0.125rem 0.5rem',
+                            borderRadius: 'var(--shape-full)',
+                          }}
+                        >
+                          Got it
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Thinking Controls */}
+                {(isProcessing || isStreaming) && researchChatMode && (
+                  <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.375rem 1rem' }}>
+                    <ThinkingControls isDark={isDark} />
+                  </div>
+                )}
+
+                {tierFeatures.liveControls && <LiveControls />}
+                {tierFeatures.conceptHierarchy && <ConceptHierarchyPanel />}
+
+                {/* Research Mode Bar + Input — M3 surface container */}
+                <div style={{
+                  margin: '0 auto',
+                  maxWidth: '48rem',
+                  width: '100%',
+                  padding: '0.375rem 1rem 0.5rem',
+                }}>
+                  <div style={{ position: 'relative', marginBottom: '0.375rem' }}>
+                    <ResearchModeBar isDark={isDark} />
+                  </div>
+                  <MultimodalInput
+                    onSubmit={sendQuery}
+                    onStop={abort}
+                    isProcessing={isProcessing}
+                    showControlsToggle={tierFeatures.liveControls}
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* TOC sidebar — right side, only on wider screens */}
+            <div
+              style={{
+                borderLeft: `1px solid ${isDark ? 'rgba(50,49,45,0.2)' : 'rgba(190,183,170,0.15)'}`,
+              }}
+              className="hidden lg:block"
+            >
+              <ChatTOC scrollContainerRef={scrollContainerRef} />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Portal sidebar — code suggestions and artifacts */}
+      {mounted && <PortalSidebar />}
     </div>
   );
 }

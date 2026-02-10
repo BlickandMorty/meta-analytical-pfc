@@ -24,7 +24,7 @@ export default function ChatLayout({
 
   return (
     <div className="relative h-screen overflow-hidden">
-      <main className="absolute inset-0 overflow-hidden" style={{ paddingTop: '2.625rem' }}>
+      <main className="absolute inset-0 overflow-hidden" style={{ paddingTop: '3.25rem' }}>
         {children}
       </main>
     </div>

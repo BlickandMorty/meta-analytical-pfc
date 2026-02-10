@@ -123,6 +123,8 @@ export type PipelineEvent =
   | { type: 'stage'; stage: PipelineStage; detail: string; value: number; status: StageStatus }
   | { type: 'signals'; data: Partial<SignalUpdate> }
   | { type: 'text-delta'; text: string }
+  | { type: 'reasoning'; text: string }
+  | { type: 'soar'; event: string; data: Record<string, unknown> }
   | { type: 'complete'; dualMessage: DualMessage; truthAssessment: TruthAssessment; confidence: number; grade: string; mode: string; signals: SignalUpdate }
   | { type: 'error'; message: string };
 
@@ -141,6 +143,17 @@ export interface SignalUpdate {
   harmonyKeyDistance: number;
 }
 
+// --- Pipeline Controls (shared between store and engine) ---
+
+export interface PipelineControls {
+  focusDepthOverride: number | null;
+  temperatureOverride: number | null;
+  complexityBias: number;
+  adversarialIntensity: number;
+  bayesianPriorStrength: number;
+  conceptWeights?: Record<string, number>;
+}
+
 // --- Chat Message (for DB serialization) ---
 
 export interface ChatMessage {
@@ -155,4 +168,8 @@ export interface ChatMessage {
   attachments?: FileAttachment[];
   truthAssessment?: TruthAssessment;
   concepts?: string[];
+  reasoning?: {
+    content: string;
+    duration?: number;
+  };
 }

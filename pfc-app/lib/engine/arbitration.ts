@@ -79,9 +79,22 @@ export function generateArbitration(stageResults: StageResult[]): ArbitrationRes
 
     const detail = stageData.detail ?? stageData.summary;
     const position = determinePosition(detail, config);
-    const confidence = position === 'supports' ? 0.7 + Math.random() * 0.25
-      : position === 'opposes' ? 0.3 + Math.random() * 0.3
-      : 0.45 + Math.random() * 0.15;
+
+    // Derive confidence from keyword match density instead of random values
+    const totalKeywords = config.supportKeywords.length + config.opposeKeywords.length;
+    const supportsHit = config.supportKeywords.filter((k) =>
+      detail.toLowerCase().includes(k.toLowerCase()),
+    ).length;
+    const opposesHit = config.opposeKeywords.filter((k) =>
+      detail.toLowerCase().includes(k.toLowerCase()),
+    ).length;
+    const matchRatio = totalKeywords > 0 ? (supportsHit + opposesHit) / totalKeywords : 0;
+
+    const confidence = position === 'supports'
+      ? 0.6 + matchRatio * 0.35
+      : position === 'opposes'
+      ? 0.25 + matchRatio * 0.35
+      : 0.4 + matchRatio * 0.15;
 
     votes.push({
       engine: config.stage,

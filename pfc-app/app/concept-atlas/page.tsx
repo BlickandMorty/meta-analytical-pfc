@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { PixelBook } from '@/components/pixel-book';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -452,7 +453,7 @@ export default function ConceptAtlasPage() {
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <PixelBook size={40} />
       </div>
     );
   }

@@ -2,6 +2,10 @@
 node_modules/
 package-lock.json
 
+# Reference repos (cloned for research)
+siyuan-ref/
+aim-ref/
+
 # Environment
 .env
 .env.*
@@ -67,6 +71,9 @@ outputs/
 *.pkl
 *.joblib
 
+# Next.js build output (root level)
+.next/
+
 # Caches
 .cache/
 **/.cache/
@@ -90,3 +97,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 .claude/
+
+# Reference repos (local only)
+repos/

@@ -23,21 +23,21 @@ const CRITICAL_QUESTIONS: Record<string, string[]> = {
   ],
 };
 
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
 export function generateReflection(
   stageResults: StageResult[],
   rawText: string,
 ): ReflectionResult {
   const questions: string[] = [];
 
+  // Select questions based on stage content rather than randomly
   const analyticalStages = ['statistical', 'causal', 'meta_analysis', 'bayesian', 'adversarial'];
   for (const stage of analyticalStages) {
     const stageData = stageResults.find((s) => s.stage === stage);
     if (stageData && stageData.status !== 'idle' && CRITICAL_QUESTIONS[stage]) {
-      questions.push(pick(CRITICAL_QUESTIONS[stage]));
+      // Pick question based on detail content length (deterministic) — first if short detail, second if longer
+      const detail = stageData.detail ?? '';
+      const idx = detail.length % CRITICAL_QUESTIONS[stage].length;
+      questions.push(CRITICAL_QUESTIONS[stage][idx]);
     }
   }
 

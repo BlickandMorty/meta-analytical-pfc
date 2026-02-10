@@ -50,7 +50,7 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key'];
 
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+const M3_EASE = [0.2, 0, 0, 1] as const;
 
 /* ═══════════════════════════════════════════════════════════
    Analytics Hub — single page with all analytical tools
@@ -62,18 +62,30 @@ export default function AnalyticsPage() {
   const [mounted, setMounted] = useState(false);
   const suiteTier = usePFCStore((s) => s.suiteTier);
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+
+  // Listen for tab changes from nav bar sub-bubbles
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const key = (e as CustomEvent).detail as TabKey;
+      if (TABS.some((t) => t.key === key)) setActiveTab(key);
+    };
+    window.addEventListener('pfc-analytics-tab', handler);
+    return () => window.removeEventListener('pfc-analytics-tab', handler);
+  }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--chat-surface)' }}>
-      {/* ── Sticky tab bar ── */}
+    <div style={{ minHeight: '100vh', background: 'var(--m3-surface)' }}>
+      {/* ── Sticky tab bar (secondary, below nav sub-bubbles) ── */}
       <div
         style={{
           position: 'sticky',
           top: '2.625rem',
           zIndex: 20,
           padding: '0.75rem 1rem 0',
-          background: 'var(--chat-surface)',
+          background: 'var(--m3-surface)',
+          contain: 'layout paint',
+          transform: 'translateZ(0)',
         }}
       >
         <div
@@ -84,7 +96,7 @@ export default function AnalyticsPage() {
             gap: '0.25rem',
             overflowX: 'auto',
             paddingBottom: '0.75rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+            borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
             scrollbarWidth: 'none',
           }}
         >
@@ -117,7 +129,8 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2, ease: CUPERTINO_EASE }}
+          transition={{ duration: 0.3, ease: M3_EASE }}
+          style={{ transform: 'translateZ(0)' }}
         >
           {activeTab === 'pipeline' && <PipelinePage />}
           {activeTab === 'signals' && <DiagnosticsPage />}

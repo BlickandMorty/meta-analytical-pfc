@@ -18,6 +18,12 @@ import {
   CpuIcon,
   CloudIcon,
   MonitorIcon,
+  ActivityIcon,
+  SigmaIcon,
+  WavesIcon,
+  BrainIcon,
+  BarChart3Icon,
+  LightbulbIcon,
 } from 'lucide-react';
 import type { ThinkingPlayState, ThinkingSpeed, RerouteInstruction } from '@/lib/research/types';
 import { getInferenceModeFeatures } from '@/lib/research/types';
@@ -36,6 +42,16 @@ const REROUTE_OPTIONS: { type: RerouteInstruction['type']; label: string; icon: 
   { type: 'challenge', label: 'Challenge', icon: SwordsIcon, desc: 'Apply adversarial scrutiny' },
   { type: 'synthesize', label: 'Synthesize', icon: MergeIcon, desc: 'Combine findings into conclusion' },
   { type: 'simplify', label: 'Simplify', icon: MinimizeIcon, desc: 'Reduce complexity of reasoning' },
+];
+
+/** Steering suggestions — domain-specific hints for adjusting the model's thinking */
+const STEER_SUGGESTIONS: { label: string; icon: typeof ActivityIcon; hint: string }[] = [
+  { label: 'Signal', icon: ActivityIcon, hint: 'Adjust confidence signals and evidence weighting' },
+  { label: 'Maths', icon: SigmaIcon, hint: 'Apply more rigorous statistical reasoning' },
+  { label: 'Patterns', icon: WavesIcon, hint: 'Look for recurring patterns in the data' },
+  { label: 'Cognition', icon: BrainIcon, hint: 'Shift cognitive strategy or reasoning depth' },
+  { label: 'Metrics', icon: BarChart3Icon, hint: 'Focus on quantitative metrics and effect sizes' },
+  { label: 'Creative', icon: LightbulbIcon, hint: 'Try unconventional angles and lateral thinking' },
 ];
 
 interface ThinkingControlsProps {
@@ -74,10 +90,20 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
     setThinkingPlayState('stopped');
   }, [setThinkingPlayState]);
 
+  const [showSteer, setShowSteer] = useState(false);
+
   const handleReroute = useCallback(
     (type: RerouteInstruction['type']) => {
       setPendingReroute({ type });
       setShowReroute(false);
+    },
+    [setPendingReroute],
+  );
+
+  const handleSteer = useCallback(
+    (hint: string) => {
+      setPendingReroute({ type: 'focus', detail: hint });
+      setShowSteer(false);
     },
     [setPendingReroute],
   );
@@ -91,18 +117,18 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
     alignItems: 'center',
     justifyContent: 'center',
     border: 'none',
-    borderRadius: '0.5rem',
+    borderRadius: '9999px',
     cursor: 'pointer',
     transition: 'background 0.15s, transform 0.1s',
     padding: '0.375rem',
-    background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-    color: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.5)',
+    background: isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.04)',
+    color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
   };
 
   const activeBtnStyle: React.CSSProperties = {
     ...btnBase,
-    background: 'rgba(139,124,246,0.15)',
-    color: '#8B7CF6',
+    background: 'rgba(244,189,111,0.12)',
+    color: '#C4956A',
   };
 
   return (
@@ -115,9 +141,10 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
         alignItems: 'center',
         gap: '0.25rem',
         padding: '0.375rem 0.5rem',
-        borderRadius: '0.75rem',
-        background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-        border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+        borderRadius: '9999px',
+        background: isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)',
+        border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+        transform: 'translateZ(0)',
       }}
     >
       {/* Mode Indicator Badge */}
@@ -127,12 +154,12 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
           alignItems: 'center',
           gap: '0.25rem',
           padding: '0.125rem 0.375rem',
-          borderRadius: '0.375rem',
+          borderRadius: '9999px',
           background: inferenceMode === 'local'
             ? (isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)')
             : inferenceMode === 'api'
-              ? (isDark ? 'rgba(139,124,246,0.1)' : 'rgba(139,124,246,0.08)')
-              : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
+              ? (isDark ? 'rgba(244,189,111,0.1)' : 'rgba(244,189,111,0.08)')
+              : (isDark ? 'rgba(244,189,111,0.04)' : 'rgba(0,0,0,0.03)'),
           fontSize: '0.5rem',
           fontWeight: 600,
           textTransform: 'uppercase' as const,
@@ -140,8 +167,8 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
           color: inferenceMode === 'local'
             ? 'var(--color-pfc-green)'
             : inferenceMode === 'api'
-              ? '#8B7CF6'
-              : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
+              ? '#C4956A'
+              : (isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)'),
         }}
         title={features.modeHint}
       >
@@ -154,7 +181,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
         style={{
           width: '1px',
           height: '1rem',
-          background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+          background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)',
           margin: '0 0.125rem',
         }}
       />
@@ -165,7 +192,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.125rem' }}>
             {thinkingPlayState === 'paused' ? (
               <motion.button
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.92 }}
                 onClick={handlePlay}
                 style={activeBtnStyle}
                 title="Resume thinking"
@@ -174,7 +201,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
               </motion.button>
             ) : (
               <motion.button
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.92 }}
                 onClick={handlePause}
                 style={thinkingPlayState === 'playing' ? activeBtnStyle : btnBase}
                 title="Pause thinking"
@@ -188,7 +215,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
 
       {/* Stop — always available */}
       <motion.button
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.92 }}
         onClick={handleStop}
         style={thinkingPlayState === 'stopped' ? { ...btnBase, color: 'var(--color-pfc-red)' } : btnBase}
         title="Stop thinking"
@@ -203,7 +230,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
             style={{
               width: '1px',
               height: '1rem',
-              background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+              background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)',
               margin: '0 0.25rem',
             }}
           />
@@ -212,7 +239,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
               style={{
                 height: '0.625rem',
                 width: '0.625rem',
-                color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)',
+                color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)',
               }}
             />
             {SPEED_OPTIONS.map((opt) => (
@@ -223,16 +250,16 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
                   fontSize: '0.5625rem',
                   fontFamily: 'var(--font-mono)',
                   padding: '0.125rem 0.25rem',
-                  borderRadius: '0.25rem',
+                  borderRadius: '9999px',
                   border: 'none',
                   cursor: 'pointer',
-                  fontWeight: thinkingSpeed === opt.value ? 700 : 400,
+                  fontWeight: thinkingSpeed === opt.value ? 700 : 600,
                   background: thinkingSpeed === opt.value
-                    ? (isDark ? 'rgba(139,124,246,0.2)' : 'rgba(139,124,246,0.12)')
+                    ? (isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.08)')
                     : 'transparent',
                   color: thinkingSpeed === opt.value
-                    ? '#8B7CF6'
-                    : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)'),
+                    ? '#C4956A'
+                    : (isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)'),
                   transition: 'all 0.15s',
                 }}
               >
@@ -243,7 +270,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
               style={{
                 height: '0.625rem',
                 width: '0.625rem',
-                color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)',
+                color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)',
               }}
             />
           </div>
@@ -256,7 +283,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
           style={{
             width: '1px',
             height: '1rem',
-            background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+            background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)',
             margin: '0 0.25rem',
           }}
         />
@@ -266,7 +293,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
       {features.rerouteThinking && (
         <div style={{ position: 'relative' }}>
           <motion.button
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.92 }}
             onClick={() => setShowReroute(!showReroute)}
             style={{
               ...btnBase,
@@ -291,14 +318,13 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
                   position: 'absolute',
                   bottom: '100%',
                   left: '50%',
-                  transform: 'translateX(-50%)',
+                  transform: 'translateX(-50%) translateZ(0)',
                   marginBottom: '0.5rem',
                   padding: '0.5rem',
-                  borderRadius: '0.75rem',
-                  background: isDark ? 'rgba(20,20,24,0.95)' : 'rgba(255,255,255,0.95)',
-                  border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
-                  backdropFilter: 'blur(20px)',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                  borderRadius: '1rem',
+                  background: isDark ? 'rgba(28,27,25,0.95)' : 'rgba(255,255,255,0.95)',
+                  border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.1)',
+                  backdropFilter: 'blur(12px) saturate(1.3)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.25rem',
@@ -312,7 +338,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                    color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                    color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
                     padding: '0.25rem 0.375rem',
                   }}
                 >
@@ -329,27 +355,27 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
                         alignItems: 'center',
                         gap: '0.5rem',
                         padding: '0.375rem',
-                        borderRadius: '0.375rem',
+                        borderRadius: '9999px',
                         border: 'none',
                         cursor: 'pointer',
                         background: 'transparent',
-                        color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
+                        color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.6)',
                         textAlign: 'left',
                         transition: 'background 0.15s',
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = isDark
-                          ? 'rgba(255,255,255,0.06)'
+                          ? 'rgba(244,189,111,0.06)'
                           : 'rgba(0,0,0,0.04)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
                       }}
                     >
-                      <Icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0, color: '#8B7CF6' }} />
+                      <Icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0, color: '#C4956A' }} />
                       <div>
                         <p style={{ fontSize: '0.6875rem', fontWeight: 600 }}>{opt.label}</p>
-                        <p style={{ fontSize: '0.5625rem', color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)' }}>
+                        <p style={{ fontSize: '0.5625rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)' }}>
                           {opt.desc}
                         </p>
                       </div>
@@ -360,6 +386,114 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
             )}
           </AnimatePresence>
         </div>
+      )}
+      {/* Steer Suggestions — domain-specific steering hints */}
+      {features.rerouteThinking && (
+        <>
+          <div
+            style={{
+              width: '1px',
+              height: '1rem',
+              background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)',
+              margin: '0 0.125rem',
+            }}
+          />
+          <div style={{ position: 'relative' }}>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setShowSteer(!showSteer)}
+              style={{
+                ...btnBase,
+                gap: '0.25rem',
+                padding: '0.25rem 0.5rem',
+                fontSize: '0.625rem',
+                fontWeight: 500,
+              }}
+              title="Steering suggestions"
+            >
+              <ActivityIcon style={{ height: '0.75rem', width: '0.75rem' }} />
+              <span>Steer</span>
+            </motion.button>
+
+            <AnimatePresence>
+              {showSteer && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translateX(-50%) translateZ(0)',
+                    marginBottom: '0.5rem',
+                    padding: '0.5rem',
+                    borderRadius: '1rem',
+                    background: isDark ? 'rgba(28,27,25,0.95)' : 'rgba(255,255,255,0.95)',
+                    border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.1)',
+                    backdropFilter: 'blur(12px) saturate(1.3)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.25rem',
+                    minWidth: '13rem',
+                    zIndex: 50,
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: '0.5625rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                      padding: '0.25rem 0.375rem',
+                    }}
+                  >
+                    Suggest Changes
+                  </p>
+                  {STEER_SUGGESTIONS.map((sug) => {
+                    const Icon = sug.icon;
+                    return (
+                      <button
+                        key={sug.label}
+                        onClick={() => handleSteer(sug.hint)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.375rem',
+                          borderRadius: '9999px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: 'transparent',
+                          color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.6)',
+                          textAlign: 'left',
+                          transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isDark
+                            ? 'rgba(244,189,111,0.06)'
+                            : 'rgba(0,0,0,0.04)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <Icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0, color: '#22D3EE' }} />
+                        <div>
+                          <p style={{ fontSize: '0.6875rem', fontWeight: 600 }}>{sug.label}</p>
+                          <p style={{ fontSize: '0.5625rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)' }}>
+                            {sug.hint}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </>
       )}
     </motion.div>
   );

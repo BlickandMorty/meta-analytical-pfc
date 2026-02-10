@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { PixelBook } from '@/components/pixel-book';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -119,7 +120,7 @@ export default function ResearchLibraryPage() {
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <PixelBook size={40} />
       </div>
     );
   }
@@ -142,7 +143,7 @@ export default function ResearchLibraryPage() {
               placeholder="Search papers, authors, tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 rounded-xl text-sm"
+              className="pl-9 rounded-full text-sm"
             />
           </div>
           <GlassBubbleButton
@@ -161,7 +162,7 @@ export default function ResearchLibraryPage() {
             <FilterIcon className="h-3 w-3 text-muted-foreground/40" />
             <button
               onClick={() => setSelectedTag(null)}
-              className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${
+              className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
                 !selectedTag
                   ? 'bg-pfc-green/20 text-pfc-green'
                   : 'bg-muted/30 text-muted-foreground/50 hover:bg-muted/50'
@@ -173,7 +174,7 @@ export default function ResearchLibraryPage() {
               <button
                 key={tag}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${
+                className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
                   selectedTag === tag
                     ? 'bg-pfc-green/20 text-pfc-green'
                     : 'bg-muted/30 text-muted-foreground/50 hover:bg-muted/50'
@@ -189,91 +190,92 @@ export default function ResearchLibraryPage() {
         <AnimatePresence>
           {showAddForm && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              exit={{ opacity: 0, scaleY: 0 }}
+              style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
             >
               <GlassSection title="Add New Paper">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Title *
                     </label>
                     <Input
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="Paper title"
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Authors (comma-separated)
                     </label>
                     <Input
                       value={newAuthors}
                       onChange={(e) => setNewAuthors(e.target.value)}
                       placeholder="Smith, J., Doe, A."
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Year
                     </label>
                     <Input
                       value={newYear}
                       onChange={(e) => setNewYear(e.target.value)}
                       placeholder="2024"
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Journal
                     </label>
                     <Input
                       value={newJournal}
                       onChange={(e) => setNewJournal(e.target.value)}
                       placeholder="Nature, Science, etc."
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       DOI
                     </label>
                     <Input
                       value={newDoi}
                       onChange={(e) => setNewDoi(e.target.value)}
                       placeholder="10.1000/xyz123"
-                      className="rounded-xl text-sm font-mono"
+                      className="rounded-full text-sm font-mono"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       URL
                     </label>
                     <Input
                       value={newUrl}
                       onChange={(e) => setNewUrl(e.target.value)}
                       placeholder="https://..."
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Tags (comma-separated)
                     </label>
                     <Input
                       value={newTags}
                       onChange={(e) => setNewTags(e.target.value)}
                       placeholder="neuroscience, meta-analysis, rct"
-                      className="rounded-xl text-sm"
+                      className="rounded-full text-sm"
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Abstract
                     </label>
                     <textarea
@@ -281,7 +283,7 @@ export default function ResearchLibraryPage() {
                       onChange={(e) => setNewAbstract(e.target.value)}
                       placeholder="Paper abstract..."
                       rows={3}
-                      className="w-full rounded-xl border border-border/30 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-pfc-green/50 resize-none"
+                      className="w-full rounded-2xl border border-border/30 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-pfc-green/50 resize-none"
                     />
                   </div>
                 </div>
@@ -306,12 +308,12 @@ export default function ResearchLibraryPage() {
         {papers.length > 0 && (
           <div className="flex items-center gap-2">
             <DownloadIcon className="h-3 w-3 text-muted-foreground/40" />
-            <span className="text-[10px] text-muted-foreground/40">Export:</span>
+            <span className="text-xs text-muted-foreground/40">Export:</span>
             {(['json', 'csv', 'markdown', 'bibtex', 'ris'] as ExportFormat[]).map((fmt) => (
               <button
                 key={fmt}
                 onClick={() => handleExport(fmt)}
-                className="text-[10px] px-2 py-0.5 rounded-full bg-muted/30 text-muted-foreground/50 hover:bg-muted/50 transition-colors uppercase font-mono"
+                className="text-xs px-2 py-0.5 rounded-full bg-muted/30 text-muted-foreground/50 hover:bg-muted/50 transition-colors uppercase font-mono"
               >
                 {fmt}
               </button>
@@ -323,7 +325,7 @@ export default function ResearchLibraryPage() {
         <GlassSection
           title={`Papers (${filteredPapers.length})`}
           badge={
-            <span className="text-[10px] text-muted-foreground/40">
+            <span className="text-xs text-muted-foreground/40">
               {papers.length} total saved
             </span>
           }
@@ -400,7 +402,7 @@ export default function ResearchLibraryPage() {
                     {paper.doi && (
                       <Badge
                         variant="secondary"
-                        className="text-[9px] bg-pfc-violet/10 text-pfc-violet border-0 font-mono"
+                        className="text-xs bg-pfc-violet/10 text-pfc-violet border-0 font-mono"
                       >
                         DOI: {paper.doi}
                       </Badge>
@@ -408,7 +410,7 @@ export default function ResearchLibraryPage() {
                     {paper.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-pfc-green/10 text-pfc-green"
+                        className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-pfc-green/10 text-pfc-green"
                       >
                         <TagIcon className="h-2 w-2" />
                         {tag}
@@ -418,7 +420,7 @@ export default function ResearchLibraryPage() {
 
                   {paper.notes && editingId !== paper.id && (
                     <div className="rounded-lg bg-pfc-yellow/5 border border-pfc-yellow/10 p-2">
-                      <p className="text-[10px] text-pfc-yellow/70">{paper.notes}</p>
+                      <p className="text-xs text-pfc-yellow/70">{paper.notes}</p>
                     </div>
                   )}
 
@@ -426,10 +428,11 @@ export default function ResearchLibraryPage() {
                   <AnimatePresence>
                     {editingId === paper.id && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
+                        initial={{ opacity: 0, scaleY: 0 }}
+                        animate={{ opacity: 1, scaleY: 1 }}
+                        exit={{ opacity: 0, scaleY: 0 }}
                         className="pt-2"
+                        style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
                       >
                         <textarea
                           value={noteText}

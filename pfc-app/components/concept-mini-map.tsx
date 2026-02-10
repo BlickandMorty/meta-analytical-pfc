@@ -361,11 +361,12 @@ export function ConceptMiniMap({
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0, scaleY: 0 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0 }}
+            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
             className="overflow-hidden"
+            style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
           >
             <div className="px-3 pb-3 space-y-2">
               {/* Mini canvas visualization */}

@@ -2,45 +2,57 @@
 @import "tailwindcss/theme" theme(reference);
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, .oled *));
 
-/* ── Custom display fonts ── */
+/* ── Geist — primary app font ── */
 @font-face {
-  font-family: 'Ubuntu';
-  src: url('/fonts/Ubuntu-Bold.ttf') format('truetype');
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
-  font-family: 'MarioKartDS';
-  src: url('/fonts/Mario-Kart-DS.ttf') format('truetype');
+  font-family: 'GeistMono';
+  src: url('/fonts/geist/GeistMono-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
-  font-family: 'Frantically';
-  src: url('/fonts/Frantically-Regular.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'GeistMono';
+  src: url('/fonts/geist/GeistMono-Medium.woff2') format('woff2');
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
+/* ── Legacy display fonts ── */
 @font-face {
-  font-family: 'FuntasiLear';
-  src: url('/fonts/FuntasiLear.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Billyand';
-  src: url('/fonts/Billyand.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'Ubuntu';
+  src: url('/fonts/Ubuntu-Bold.ttf') format('truetype');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -72,17 +84,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* PFC brand — Cupertino-refined palette */
-  --color-pfc-ember: #E07850;
-  --color-pfc-violet: #7C6CF0;
+  /* PFC brand — Claude-inspired warm palette */
+  --color-pfc-ember: #C4956A;
+  --color-pfc-violet: #C4956A;
   --color-pfc-green: #34D399;
-  --color-pfc-yellow: #FBBF24;
-  --color-pfc-red: #F87171;
-  --color-pfc-cyan: #22D3EE;
+  --color-pfc-yellow: #D4A843;
+  --color-pfc-red: #C75E5E;
+  --color-pfc-cyan: #6B8EBF;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'GeistMono', "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -93,153 +105,312 @@
 }
 
 /* ─────────────────────────────────────────────────────────
-   Obsidian Liquid Glass — Motion & Duration Tokens
+   Material 3 + Harmonoid — Motion & Duration Tokens
    ───────────────────────────────────────────────────────── */
 :root {
-  /* Canonical Cupertino animation curve from Obsidian */
+  /* M3 Emphasized easing — equivalent to Cupertino */
+  --m3-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --m3-ease-emphasized-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --m3-ease-emphasized-accel: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --m3-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --m3-ease-standard-decel: cubic-bezier(0, 0, 0, 1);
+  --m3-ease-standard-accel: cubic-bezier(0.3, 0, 1, 1);
+
+  /* Legacy — kept for existing references */
   --anim-motion-cupertino: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* Duration system */
+  /* Harmonoid-inspired duration tiers */
+  --duration-short1: 50ms;
+  --duration-short2: 100ms;
+  --duration-short3: 150ms;
+  --duration-short4: 200ms;
+  --duration-medium1: 250ms;
+  --duration-medium2: 300ms;
+  --duration-medium3: 350ms;
+  --duration-medium4: 400ms;
+  --duration-long1: 450ms;
+  --duration-long2: 500ms;
+  --duration-long3: 550ms;
+  --duration-long4: 600ms;
+
+  /* Legacy duration aliases */
   --anim-duration-superfast: 80ms;
-  --anim-duration-fast: 160ms;
-  --anim-duration-moderate: 320ms;
-  --anim-duration-slow: 640ms;
+  --anim-duration-fast: 150ms;
+  --anim-duration-moderate: 300ms;
+  --anim-duration-slow: 450ms;
 
   /* Blur tiers — stripped saturate for perf, GPU-light */
   --blur-s: blur(10px);
   --blur-m: blur(16px);
   --blur-l: blur(20px);
 
-  /* Radius system — Obsidian */
+  /* M3 Shape — rounded pill system */
+  --shape-none: 0px;
+  --shape-xs: 4px;
+  --shape-sm: 8px;
+  --shape-md: 12px;
+  --shape-lg: 16px;
+  --shape-xl: 28px;
+  --shape-full: 9999px;
+
+  /* Legacy radius aliases */
   --radius-obs-s: 8px;
   --radius-obs-m: 12px;
   --radius-obs-l: 20px;
   --radius-obs-xl: 28px;
 
+  /* M3 State layer opacities */
+  --state-hover: 0.08;
+  --state-focus: 0.12;
+  --state-pressed: 0.12;
+  --state-dragged: 0.16;
+
+  /* M3 Type scale — adapted to system fonts */
+  --type-display-lg: 3.5625rem;    /* 57px */
+  --type-display-md: 2.8125rem;    /* 45px */
+  --type-display-sm: 2.25rem;      /* 36px */
+  --type-headline-lg: 2rem;        /* 32px */
+  --type-headline-md: 1.75rem;     /* 28px */
+  --type-headline-sm: 1.5rem;      /* 24px */
+  --type-title-lg: 1.375rem;       /* 22px */
+  --type-title-md: 1rem;           /* 16px */
+  --type-title-sm: 0.875rem;       /* 14px */
+  --type-body-lg: 1rem;            /* 16px */
+  --type-body-md: 0.875rem;        /* 14px */
+  --type-body-sm: 0.75rem;         /* 12px */
+  --type-label-lg: 0.875rem;       /* 14px */
+  --type-label-md: 0.75rem;        /* 12px */
+  --type-label-sm: 0.6875rem;      /* 11px */
 }
 
 /* ─────────────────────────────────────────────────────────
-   Light theme — Warm parchment + Liquid Glass
+   Light theme — warm cream with darker accents/sidebar
    ───────────────────────────────────────────────────────── */
 :root {
-  --background: oklch(0.935 0.018 65);
-  --foreground: oklch(0.18 0.02 55);
-  --card: oklch(0.945 0.015 60 / 0.72);
-  --card-foreground: oklch(0.18 0.02 55);
-  --popover: oklch(0.94 0.016 62 / 0.92);
-  --popover-foreground: oklch(0.18 0.02 55);
-  --primary: oklch(0.55 0.14 30);
-  --primary-foreground: oklch(0.97 0.008 60);
-  --secondary: oklch(0.91 0.016 60);
-  --secondary-foreground: oklch(0.3 0.02 55);
-  --muted: oklch(0.91 0.016 60);
-  --muted-foreground: oklch(0.48 0.015 55);
-  --accent: oklch(0.57 0.18 285);
-  --accent-foreground: oklch(0.97 0.008 60);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.97 0.008 60);
-  --border: oklch(0.86 0.018 60 / 0.5);
-  --input: oklch(0.86 0.018 60 / 0.5);
-  --ring: oklch(0.55 0.14 30);
+  --background: #FAFAF8;
+  --foreground: #2B2A27;
+  --card: rgba(250, 250, 248, 0.85);
+  --card-foreground: #2B2A27;
+  --popover: rgba(250, 250, 248, 0.95);
+  --popover-foreground: #2B2A27;
+  --primary: #A07850;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F0ECE4;
+  --secondary-foreground: #2B2A27;
+  --muted: #F0ECE4;
+  --muted-foreground: #6B6660;
+  --accent: #A07850;
+  --accent-foreground: #FFFFFF;
+  --destructive: #C75E5E;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(190, 183, 170, 0.3);
+  --input: rgba(190, 183, 170, 0.3);
+  --ring: #A07850;
   --radius: 0.75rem;
 
-  /* Sidebar — warm frosted vibrancy */
-  --sidebar: oklch(0.92 0.016 60 / 0.78);
-  --sidebar-foreground: oklch(0.22 0.02 55);
-  --sidebar-border: oklch(0.86 0.018 60 / 0.5);
-  --sidebar-accent: oklch(0.89 0.018 60 / 0.6);
-  --sidebar-accent-foreground: oklch(0.22 0.02 55);
-  --sidebar-ring: oklch(0.55 0.14 30);
+  /* Sidebar — warm tan for contrast against white main area */
+  --sidebar: #EDE8DE;
+  --sidebar-foreground: #2B2A27;
+  --sidebar-border: rgba(190, 183, 170, 0.35);
+  --sidebar-accent: rgba(224, 218, 206, 0.8);
+  --sidebar-accent-foreground: #2B2A27;
+  --sidebar-ring: #A07850;
 
-  /* Liquid Glass — Warm Light (heavy frosted) */
-  --liquid-glass-background: rgba(245, 235, 220, 0.72);
-  --shadow-base: inset 1px 1px 2px rgba(255, 248, 238, 0.6),
-    inset -1px -1px 2px rgba(255, 248, 238, 0.4),
-    inset 0 4px 16px rgba(255, 248, 238, 0.03);
-  --shadow-border: 0 0 1px 0 rgba(120, 90, 50, 0.25);
-  --shadow-xs: var(--shadow-base),
-    inset 0 -8px 48px rgba(80, 50, 20, 0.02),
-    0 0 8px rgba(80, 50, 20, 0.025),
-    0 4px 48px rgba(80, 50, 20, 0.1);
-  --shadow-s: var(--shadow-base),
-    inset 0 0 1px 1px rgba(255, 248, 238, 0.7),
-    var(--shadow-border),
-    0 8px 16px 0 rgba(80, 50, 20, 0.12);
-  --shadow-l: var(--shadow-border),
-    inset 0 0 1px 1px rgba(255, 248, 238, 0.7),
-    0 16px 64px 0 rgba(80, 50, 20, 0.1);
-  --shadow-tactile: rgba(80, 50, 20, 0.06) 0px 2px 8px -2px,
-    rgba(80, 50, 20, 0.04) 0px 2px 4px -2px;
+  /* Liquid Glass — light glass */
+  --liquid-glass-background: rgba(250, 250, 248, 0.80);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
 
-  /* Glass tokens — iOS frosted glass */
+  /* Glass tokens */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: oklch(0.88 0.018 60 / 0.5);
-  --glass-hover: oklch(0.95 0.012 60 / 0.7);
+  --glass-border: rgba(190, 183, 170, 0.2);
+  --glass-hover: rgba(250, 250, 248, 0.8);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 
-  /* Chat surface — same as background in light mode */
-  --chat-surface: oklch(0.935 0.018 65);
+  /* Chat surface — white, matching main area */
+  --chat-surface: #FAFAF8;
+
+  /* M3 Surface container hierarchy — near-white tones */
+  --m3-surface: #FAFAF8;
+  --m3-surface-dim: #F0ECE4;
+  --m3-surface-bright: #FFFFFF;
+  --m3-surface-container-lowest: #FFFFFF;
+  --m3-surface-container: #F5F2EC;
+  --m3-surface-container-high: #EFEBE3;
+  --m3-surface-container-highest: #E9E5DD;
+
+  /* M3 Color roles — warm brown primary */
+  --m3-primary: #7A5C3E;
+  --m3-on-primary: #FFFFFF;
+  --m3-primary-container: #F0DCC8;
+  --m3-on-primary-container: #2B1700;
+  --m3-secondary: #6F5D4B;
+  --m3-on-secondary: #FFFFFF;
+  --m3-secondary-container: #FAE1C8;
+  --m3-on-secondary-container: #27180A;
+  --m3-tertiary: #506551;
+  --m3-on-tertiary: #FFFFFF;
+  --m3-tertiary-container: #D2EBD1;
+  --m3-on-tertiary-container: #0D1F12;
+  --m3-outline: #827568;
+  --m3-outline-variant: #D5C4B4;
 
 }
 
 /* ─────────────────────────────────────────────────────────
-   Dark theme — Liquid Glass dark surface system
+   Dark theme — warm dark (not OLED) with elevated surfaces
    ───────────────────────────────────────────────────────── */
 .dark {
-  --background: oklch(0.07 0.005 260);
-  --foreground: oklch(0.92 0.008 250);
-  --card: oklch(0.18 0.008 260 / 0.65);
-  --card-foreground: oklch(0.92 0.008 250);
-  --popover: oklch(0.14 0.008 260 / 0.92);
-  --popover-foreground: oklch(0.92 0.008 250);
-  --primary: oklch(0.62 0.16 30);
-  --primary-foreground: oklch(0.07 0.005 260);
-  --secondary: oklch(0.18 0.008 260);
-  --secondary-foreground: oklch(0.92 0.008 250);
-  --muted: oklch(0.18 0.008 260);
-  --muted-foreground: oklch(0.50 0.008 250);
-  --accent: oklch(0.55 0.22 285);
-  --accent-foreground: oklch(0.99 0.003 0);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.99 0.003 0);
-  --border: oklch(0.22 0.008 260 / 0.5);
-  --input: oklch(0.22 0.008 260 / 0.5);
-  --ring: oklch(0.62 0.16 30);
+  --background: #0E0D0B;
+  --foreground: #E8E4DE;
+  --card: rgba(24, 23, 21, 0.85);
+  --card-foreground: #E8E4DE;
+  --popover: rgba(24, 23, 21, 0.95);
+  --popover-foreground: #E8E4DE;
+  --primary: #C4956A;
+  --primary-foreground: #0E0D0B;
+  --secondary: #191816;
+  --secondary-foreground: #E8E4DE;
+  --muted: #191816;
+  --muted-foreground: #9B9689;
+  --accent: #C4956A;
+  --accent-foreground: #0E0D0B;
+  --destructive: #C75E5E;
+  --destructive-foreground: #E8E4DE;
+  --border: rgba(50, 49, 45, 0.5);
+  --input: rgba(45, 44, 40, 0.5);
+  --ring: #C4956A;
 
-  /* Chat surface — dark gray instead of OLED black */
-  --chat-surface: oklch(0.16 0.006 260);
+  /* Chat surface — unified with background, no two-tone */
+  --chat-surface: #0E0D0B;
 
-  /* Sidebar dark — deep vibrancy */
-  --sidebar: oklch(0.12 0.008 260 / 0.78);
-  --sidebar-foreground: oklch(0.88 0.008 250);
-  --sidebar-border: oklch(0.22 0.008 260 / 0.4);
-  --sidebar-accent: oklch(0.18 0.008 260 / 0.5);
-  --sidebar-accent-foreground: oklch(0.88 0.008 250);
-  --sidebar-ring: oklch(0.62 0.16 30);
+  /* M3 Surface container hierarchy — warm dark tones */
+  --m3-surface: #0E0D0B;
+  --m3-surface-dim: #0A0908;
+  --m3-surface-bright: #3B3936;
+  --m3-surface-container-lowest: #080807;
+  --m3-surface-container: #181716;
+  --m3-surface-container-high: #222120;
+  --m3-surface-container-highest: #2C2B29;
 
-  /* Liquid Glass — Dark (heavy frosted) */
-  --liquid-glass-background: rgba(255, 255, 255, 0.07);
-  --shadow-base: inset 1px 1.5px 1px -1px rgba(255, 255, 255, 0.2),
-    inset -1px -1.5px 1px -1px rgba(255, 255, 255, 0.15),
-    inset 0 4px 16px rgba(255, 255, 255, 0.025);
-  --shadow-border: 0 0 1px 0 rgba(255, 255, 255, 0.3);
-  --shadow-xs: var(--shadow-base);
-  --shadow-s: var(--shadow-border),
-    0 0 1px rgba(255, 255, 255, 0.5),
-    0 0 1px 0 rgba(0, 0, 0, 0.4),
-    0 8px 16px 0 rgba(0, 0, 0, 0.2);
-  --shadow-l: var(--shadow-border),
-    0 0 1px rgba(255, 255, 255, 0.5),
-    0 0 1px 0 rgba(0, 0, 0, 0.7),
-    0 16px 64px 0 rgba(0, 0, 0, 0.3);
-  --shadow-tactile: rgba(0, 0, 0, 0.08) 0px 2px 8px -2px,
-    rgba(255, 255, 255, 0.04) 0px 2px 4px -2px;
+  /* M3 Color roles — warm brown primary (dark variant) */
+  --m3-primary: #E0B896;
+  --m3-on-primary: #442A14;
+  --m3-primary-container: #5E4028;
+  --m3-on-primary-container: #F0DCC8;
+  --m3-secondary: #DDC1A8;
+  --m3-on-secondary: #3E2D1C;
+  --m3-secondary-container: #574434;
+  --m3-on-secondary-container: #FAE1C8;
+  --m3-tertiary: #B6CFB6;
+  --m3-on-tertiary: #223625;
+  --m3-tertiary-container: #384E3A;
+  --m3-on-tertiary-container: #D2EBD1;
+  --m3-outline: #9F8D7F;
+  --m3-outline-variant: #504538;
 
-  /* Glass tokens (dark) — iOS frosted glass */
+  /* Sidebar — lighter gray for contrast against OLED bg */
+  --sidebar: rgba(28, 27, 25, 0.9);
+  --sidebar-foreground: #E8E4DE;
+  --sidebar-border: rgba(50, 49, 45, 0.3);
+  --sidebar-accent: rgba(38, 37, 34, 0.6);
+  --sidebar-accent-foreground: #E8E4DE;
+  --sidebar-ring: #C4956A;
+
+  /* No glass morphism shadows in dark — flat */
+  --liquid-glass-background: rgba(28, 27, 25, 0.75);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
+
+  /* Glass tokens (dark) — subtle, no heavy blur */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: oklch(0.3 0.008 260 / 0.35);
-  --glass-hover: oklch(0.2 0.008 260 / 0.55);
+  --glass-border: rgba(50, 49, 45, 0.3);
+  --glass-hover: rgba(38, 37, 34, 0.6);
+  --glass-blur: 20px;
+  --glass-blur-heavy: 24px;
+}
+
+/* ─────────────────────────────────────────────────────────
+   OLED theme — true black with dark gray surfaces
+   ───────────────────────────────────────────────────────── */
+.oled {
+  --background: #000000;
+  --foreground: #E8E4DE;
+  --card: rgba(22, 22, 22, 0.90);
+  --card-foreground: #E8E4DE;
+  --popover: rgba(18, 18, 18, 0.96);
+  --popover-foreground: #E8E4DE;
+  --primary: #C4956A;
+  --primary-foreground: #000000;
+  --secondary: #161616;
+  --secondary-foreground: #E8E4DE;
+  --muted: #161616;
+  --muted-foreground: #9B9689;
+  --accent: #C4956A;
+  --accent-foreground: #000000;
+  --destructive: #C75E5E;
+  --destructive-foreground: #E8E4DE;
+  --border: rgba(40, 40, 40, 0.6);
+  --input: rgba(35, 35, 35, 0.6);
+  --ring: #C4956A;
+
+  /* Chat surface — true black */
+  --chat-surface: #000000;
+
+  /* M3 Surface container hierarchy — near-black grays */
+  --m3-surface: #000000;
+  --m3-surface-dim: #000000;
+  --m3-surface-bright: #2A2A2A;
+  --m3-surface-container-lowest: #060606;
+  --m3-surface-container: #141414;
+  --m3-surface-container-high: #1E1E1E;
+  --m3-surface-container-highest: #282828;
+
+  /* M3 Color roles — same as dark */
+  --m3-primary: #E0B896;
+  --m3-on-primary: #442A14;
+  --m3-primary-container: #5E4028;
+  --m3-on-primary-container: #F0DCC8;
+  --m3-secondary: #DDC1A8;
+  --m3-on-secondary: #3E2D1C;
+  --m3-secondary-container: #574434;
+  --m3-on-secondary-container: #FAE1C8;
+  --m3-tertiary: #B6CFB6;
+  --m3-on-tertiary: #223625;
+  --m3-tertiary-container: #384E3A;
+  --m3-on-tertiary-container: #D2EBD1;
+  --m3-outline: #9F8D7F;
+  --m3-outline-variant: #504538;
+
+  /* Sidebar — dark gray for contrast against pure black */
+  --sidebar: rgba(20, 20, 20, 0.95);
+  --sidebar-foreground: #E8E4DE;
+  --sidebar-border: rgba(40, 40, 40, 0.4);
+  --sidebar-accent: rgba(30, 30, 30, 0.7);
+  --sidebar-accent-foreground: #E8E4DE;
+  --sidebar-ring: #C4956A;
+
+  /* Glass tokens — dark gray, no warm tint */
+  --liquid-glass-background: rgba(20, 20, 20, 0.80);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
+
+  --glass-bg: var(--liquid-glass-background);
+  --glass-border: rgba(40, 40, 40, 0.35);
+  --glass-hover: rgba(30, 30, 30, 0.7);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 }
@@ -251,6 +422,11 @@
   @apply border-border;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   @apply bg-background text-foreground;
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "ss02" 1;
@@ -259,6 +435,22 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.011em;
+}
+
+/* ─────────────────────────────────────────────────────────
+   Grain texture — subtle film grain overlay via SVG noise
+   ───────────────────────────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0.030;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  mix-blend-mode: overlay;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -321,7 +513,7 @@ html {
 }
 
 ::selection {
-  background-color: oklch(0.57 0.18 285 / 0.25);
+  background-color: rgba(196, 149, 106, 0.25);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -387,41 +579,154 @@ html {
 }
 
 /* ─────────────────────────────────────────────────────────
-   Prose — clean reading experience
+   M3 Surface utilities
+   ───────────────────────────────────────────────────────── */
+.m3-surface              { background: var(--m3-surface); }
+.m3-surface-container    { background: var(--m3-surface-container); }
+.m3-surface-container-high { background: var(--m3-surface-container-high); }
+.m3-surface-container-highest { background: var(--m3-surface-container-highest); }
+
+/* ─────────────────────────────────────────────────────────
+   Prose — M3-inspired reading experience
    ───────────────────────────────────────────────────────── */
 .prose-pfc {
   @apply prose prose-zinc dark:prose-invert max-w-none;
   font-family: var(--font-sans);
+  --tw-prose-headings: var(--foreground);
 }
 
-.prose-pfc h1, .prose-pfc h2, .prose-pfc h3, .prose-pfc h4 {
+.prose-pfc h1 {
   font-family: var(--font-display);
+  font-size: var(--type-headline-lg);
+  font-weight: 700;
+  letter-spacing: -0.032em;
+  line-height: 1.2;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 4rem;
+}
+
+.prose-pfc h2 {
+  font-family: var(--font-display);
+  font-size: var(--type-headline-sm);
+  font-weight: 650;
   letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin-top: 1.75rem;
+  margin-bottom: 0.625rem;
+  scroll-margin-top: 4rem;
+}
+
+.prose-pfc h3 {
+  font-family: var(--font-display);
+  font-size: var(--type-title-lg);
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1.3;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  scroll-margin-top: 4rem;
+}
+
+.prose-pfc h4 {
+  font-family: var(--font-display);
+  font-size: var(--type-title-md);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  margin-top: 1.25rem;
+  margin-bottom: 0.375rem;
+  scroll-margin-top: 4rem;
+}
+
+.prose-pfc p {
+  font-size: var(--type-body-md);
+  line-height: 1.75;
+  letter-spacing: -0.006em;
+  margin-bottom: 0.75rem;
+}
+
+.prose-pfc ul, .prose-pfc ol {
+  font-size: var(--type-body-md);
+  line-height: 1.7;
+  padding-left: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose-pfc li {
+  letter-spacing: -0.006em;
+  margin-bottom: 0.25rem;
+}
+
+.prose-pfc li::marker {
+  color: var(--m3-primary);
+}
+
+.prose-pfc blockquote {
+  border-left: 3px solid var(--m3-primary);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background: var(--m3-surface-container);
+  border-radius: 0 var(--shape-sm) var(--shape-sm) 0;
+  font-style: normal;
+}
+
+.prose-pfc strong {
+  font-weight: 650;
+  color: var(--foreground);
 }
 
 .prose-pfc code {
-  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+  @apply px-1.5 py-0.5 rounded text-sm font-mono;
+  background: var(--m3-surface-container-high);
+  font-size: 0.8125em;
 }
 
 .prose-pfc pre {
-  @apply bg-muted rounded-lg border;
+  @apply rounded-lg border;
+  background: var(--m3-surface-container);
+  padding: 1rem;
+  overflow-x: auto;
 }
 
 .prose-pfc pre code {
   @apply bg-transparent px-0 py-0;
+  font-size: 0.8125rem;
+}
+
+.prose-pfc hr {
+  border-color: var(--m3-outline-variant);
+  margin: 1.5rem 0;
+}
+
+.prose-pfc table {
+  font-size: var(--type-body-sm);
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.prose-pfc th {
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid var(--m3-outline-variant);
+}
+
+.prose-pfc td {
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid var(--m3-outline-variant);
 }
 
 /* ─────────────────────────────────────────────────────────
    Accordion
    ───────────────────────────────────────────────────────── */
 @keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
+  from { opacity: 0; transform: scaleY(0); transform-origin: top; }
+  to { opacity: 1; transform: scaleY(1); transform-origin: top; }
 }
 
 @keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+  from { opacity: 1; transform: scaleY(1); transform-origin: top; }
+  to { opacity: 0; transform: scaleY(0); transform-origin: top; }
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -447,7 +752,7 @@ html {
    Focus — clean, Cupertino-style ring
    ───────────────────────────────────────────────────────── */
 :focus-visible:not(input):not(textarea):not(select) {
-  outline: 2px solid oklch(0.57 0.18 285 / 0.5);
+  outline: 2px solid rgba(196, 149, 106, 0.5);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -488,4 +793,23 @@ select:focus-visible {
 
 .thinking-indicator svg {
   animation: thinking-shake 0.8s var(--anim-motion-cupertino) infinite;
+}
+
+/* Thinking shimmer text effect */
+.thinking-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-pfc-violet) 0%,
+    #E0C4A8 50%,
+    var(--color-pfc-violet) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: 200% center; }
+  50% { background-position: 0% center; }
 }
