@@ -2,7 +2,7 @@
 @import "tailwindcss/theme" theme(reference);
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, .oled *));
 
 /* ── Geist — primary app font ── */
 @font-face {
@@ -335,6 +335,82 @@
   --glass-bg: var(--liquid-glass-background);
   --glass-border: rgba(50, 49, 45, 0.3);
   --glass-hover: rgba(38, 37, 34, 0.6);
+  --glass-blur: 20px;
+  --glass-blur-heavy: 24px;
+}
+
+/* ─────────────────────────────────────────────────────────
+   OLED theme — true black with dark gray surfaces
+   ───────────────────────────────────────────────────────── */
+.oled {
+  --background: #000000;
+  --foreground: #E8E4DE;
+  --card: rgba(22, 22, 22, 0.90);
+  --card-foreground: #E8E4DE;
+  --popover: rgba(18, 18, 18, 0.96);
+  --popover-foreground: #E8E4DE;
+  --primary: #C4956A;
+  --primary-foreground: #000000;
+  --secondary: #161616;
+  --secondary-foreground: #E8E4DE;
+  --muted: #161616;
+  --muted-foreground: #9B9689;
+  --accent: #C4956A;
+  --accent-foreground: #000000;
+  --destructive: #C75E5E;
+  --destructive-foreground: #E8E4DE;
+  --border: rgba(40, 40, 40, 0.6);
+  --input: rgba(35, 35, 35, 0.6);
+  --ring: #C4956A;
+
+  /* Chat surface — true black */
+  --chat-surface: #000000;
+
+  /* M3 Surface container hierarchy — near-black grays */
+  --m3-surface: #000000;
+  --m3-surface-dim: #000000;
+  --m3-surface-bright: #2A2A2A;
+  --m3-surface-container-lowest: #060606;
+  --m3-surface-container: #141414;
+  --m3-surface-container-high: #1E1E1E;
+  --m3-surface-container-highest: #282828;
+
+  /* M3 Color roles — same as dark */
+  --m3-primary: #E0B896;
+  --m3-on-primary: #442A14;
+  --m3-primary-container: #5E4028;
+  --m3-on-primary-container: #F0DCC8;
+  --m3-secondary: #DDC1A8;
+  --m3-on-secondary: #3E2D1C;
+  --m3-secondary-container: #574434;
+  --m3-on-secondary-container: #FAE1C8;
+  --m3-tertiary: #B6CFB6;
+  --m3-on-tertiary: #223625;
+  --m3-tertiary-container: #384E3A;
+  --m3-on-tertiary-container: #D2EBD1;
+  --m3-outline: #9F8D7F;
+  --m3-outline-variant: #504538;
+
+  /* Sidebar — dark gray for contrast against pure black */
+  --sidebar: rgba(20, 20, 20, 0.95);
+  --sidebar-foreground: #E8E4DE;
+  --sidebar-border: rgba(40, 40, 40, 0.4);
+  --sidebar-accent: rgba(30, 30, 30, 0.7);
+  --sidebar-accent-foreground: #E8E4DE;
+  --sidebar-ring: #C4956A;
+
+  /* Glass tokens — dark gray, no warm tint */
+  --liquid-glass-background: rgba(20, 20, 20, 0.80);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
+
+  --glass-bg: var(--liquid-glass-background);
+  --glass-border: rgba(40, 40, 40, 0.35);
+  --glass-hover: rgba(30, 30, 30, 0.7);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 }

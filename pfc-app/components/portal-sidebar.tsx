@@ -55,7 +55,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
 
   useEffect(() => setMounted(true), []);
 
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   const currentView = useMemo(
     () => portalStack[portalStack.length - 1],

@@ -550,7 +550,7 @@ export default function NotesPage() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
   const c = th(isDark);
 
   // ── Store selectors ──

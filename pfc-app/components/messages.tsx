@@ -37,7 +37,7 @@ function MessagesInner({
   const isReasoning = usePFCStore(selectIsReasoning);
   const { containerRef, isAtBottom, scrollToBottom } = useScrollToBottom<HTMLDivElement>();
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
 
   // Merge the scroll-to-bottom ref with the externally provided ref for TOC
   const setRefs = (el: HTMLDivElement | null) => {

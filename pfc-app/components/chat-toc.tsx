@@ -19,7 +19,7 @@ function ChatTOCInner({ scrollContainerRef }: { scrollContainerRef: React.RefObj
   const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   // Extract all headings from assistant messages
   const headings: TocEntry[] = [];

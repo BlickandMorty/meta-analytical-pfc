@@ -29,6 +29,7 @@ import {
   ShieldCheckIcon,
   SearchIcon,
   SlidersHorizontalIcon,
+  SmartphoneIcon,
 } from 'lucide-react';
 import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
 import { formatBytes } from '@/lib/engine/llm/ollama';
@@ -672,10 +673,11 @@ export default function SettingsPage() {
 
         {/* Appearance */}
         <GlassSection title="Appearance">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             {([
               { value: 'light', label: 'Light', Icon: SunIcon },
               { value: 'dark', label: 'Dark', Icon: MoonIcon },
+              { value: 'oled', label: 'OLED', Icon: SmartphoneIcon },
               { value: 'system', label: 'System', Icon: MonitorIcon },
             ] as const).map(({ value, label, Icon }) => (
               <GlassBubbleButton

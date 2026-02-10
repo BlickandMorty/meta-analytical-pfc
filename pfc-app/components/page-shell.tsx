@@ -48,7 +48,7 @@ export function PageShell({
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   return (
     <div
@@ -171,7 +171,7 @@ export function Section({ title, badge, children, className }: SectionProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   return (
     <motion.div variants={sectionVariants} className={className} style={{ transform: 'translateZ(0)', contain: 'layout style' }}>

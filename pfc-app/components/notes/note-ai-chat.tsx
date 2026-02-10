@@ -143,7 +143,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   // ── Local UI state ──
   const [isExpanded, setIsExpanded] = useState(false);

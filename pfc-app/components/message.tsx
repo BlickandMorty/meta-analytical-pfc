@@ -35,7 +35,7 @@ function MessageInner({ message }: MessageProps) {
   const latestSynthesisKeyId = useSteeringStore(selectLatestSynthesisKeyId);
   const exemplars = useSteeringStore(selectSteeringExemplars);
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
   const isUser = message.role === 'user';
   const [deepOpen, setDeepOpen] = useState(false);
 

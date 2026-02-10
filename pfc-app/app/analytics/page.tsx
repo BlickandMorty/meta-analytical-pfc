@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
   const [mounted, setMounted] = useState(false);
   const suiteTier = usePFCStore((s) => s.suiteTier);
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   // Listen for tab changes from nav bar sub-bubbles
   useEffect(() => {

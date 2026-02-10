@@ -108,7 +108,7 @@ export default function PipelinePage() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   const completedCount = pipelineStages.filter((s) => s.status === 'complete').length;
   const overallProgress = (completedCount / STAGES.length) * 100;

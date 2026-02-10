@@ -314,7 +314,7 @@ export function MultimodalInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { setThemeMounted(true); }, []);
-  const isDark = themeMounted ? resolvedTheme === 'dark' : true;
+  const isDark = themeMounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

@@ -281,7 +281,7 @@ export function Chat() {
   useEffect(() => setMounted(true), []);
 
   const isEmpty = messages.length === 0;
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
   const showThoughtViz = researchChatMode && chatViewMode === 'visualize-thought' && tierFeatures.thoughtVisualizer !== 'off' && !isEmpty;
   const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
   const showModeHint = researchChatMode && !features.playPause && !modeHintDismissed && !isEmpty;

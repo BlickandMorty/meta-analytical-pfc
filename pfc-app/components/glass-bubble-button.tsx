@@ -56,7 +56,7 @@ export function GlassBubbleButton({
   type = 'button',
 }: GlassBubbleButtonProps) {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
 
   const c = COLOR_MAP[color];
   const s = SIZE_MAP[size];

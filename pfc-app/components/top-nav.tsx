@@ -483,7 +483,7 @@ export function TopNav() {
   const suiteTier = usePFCStore((s) => s.suiteTier);
 
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   const chatMessages = usePFCStore((s) => s.messages);
   const isOnChat = pathname.startsWith('/chat') || (pathname === '/' && chatMessages.length > 0);

@@ -35,6 +35,7 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
+          themes={['light', 'dark', 'oled']}
           disableTransitionOnChange
         >
           <AppShell>

@@ -167,7 +167,7 @@ export default function OnboardingPage() {
     router.push('/');
   }, [router]);
 
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   const bubbleGlass: React.CSSProperties = {
     background: isDark ? 'rgba(12,12,16,0.88)' : 'rgba(255,255,255,0.88)',

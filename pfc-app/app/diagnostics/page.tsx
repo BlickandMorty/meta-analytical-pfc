@@ -215,7 +215,7 @@ export default function DiagnosticsPage() {
   const { resolvedTheme } = useTheme();
   const [thMounted, setThMounted] = useState(false);
   useEffect(() => { setThMounted(true); }, []);
-  const isDark = thMounted ? resolvedTheme === 'dark' : true;
+  const isDark = thMounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   const anomalies = getAnomalies({ entropy, dissonance, healthScore, riskScore, confidence });
 

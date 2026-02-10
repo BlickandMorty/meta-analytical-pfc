@@ -160,7 +160,7 @@ export const LearningPanel = memo(function LearningPanel() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   // ── Store selectors ──
   const learningSession = usePFCStore((s) => s.learningSession);

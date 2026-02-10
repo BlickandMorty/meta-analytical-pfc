@@ -99,7 +99,7 @@ export function SignalChart({
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   // ---- Responsive width via ResizeObserver ----
   const containerRef = useRef<HTMLDivElement>(null);

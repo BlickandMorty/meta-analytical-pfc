@@ -984,7 +984,7 @@ const BlockItem = memo(function BlockItem({
 
 export function BlockEditor({ pageId }: { pageId: string }) {
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
 
   const noteBlocks = usePFCStore((s) => s.noteBlocks);
   const editingBlockId = usePFCStore((s) => s.editingBlockId);
