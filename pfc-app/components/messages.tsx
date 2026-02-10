@@ -9,7 +9,6 @@ import { ThinkingAccordion } from './thinking-accordion';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import { ArrowDownIcon } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PixelSun } from './pixel-sun';
 import { PixelBook } from './pixel-book';
 
 /* Harmonoid-inspired spring config */
@@ -68,62 +67,36 @@ function MessagesInner({
             ))}
           </AnimatePresence>
 
-          {/* Thinking / streaming — wrapped in assistant-style bubble for seamless transition */}
+          {/* Thinking / streaming indicator */}
           {(isStreaming || isProcessing) && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={HARMONOID_SPRING}
-              style={{
-                display: 'flex',
-                gap: '0.75rem',
-                width: '100%',
-                justifyContent: 'flex-start',
-              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
             >
-              {/* Avatar — matches Message assistant avatar */}
-              <div style={{ flexShrink: 0, marginTop: '0.25rem' }}>
-                <PixelSun size={26} />
-              </div>
-
-              {/* Bubble — same styling as assistant Message bubble */}
-              <div
-                style={{
-                  maxWidth: '88%',
-                  borderRadius: 'var(--shape-xl) var(--shape-xl) var(--shape-xl) var(--shape-sm)',
-                  padding: '0.875rem 1.125rem',
-                  background: 'var(--m3-surface-container-low)',
-                  color: 'var(--m3-on-surface)',
-                  border: '1px solid var(--m3-outline-variant)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                }}
-              >
-                {/* Reasoning accordion — shows AI thinking process */}
-                {(isReasoning || reasoningText) && (
-                  <ThinkingAccordion
-                    content={reasoningText}
-                    duration={reasoningDuration}
-                    isThinking={isReasoning}
-                  />
-                )}
-                {isStreaming ? (
-                  <StreamingText />
-                ) : (
-                  /* PixelBook thinking indicator */
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                    <PixelBook size={24} />
-                    <span style={{
-                      color: 'var(--m3-primary)',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                    }}>
-                      {isReasoning ? 'Reasoning...' : 'Thinking...'}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {/* Reasoning accordion — shows AI thinking process */}
+              {(isReasoning || reasoningText) && (
+                <ThinkingAccordion
+                  content={reasoningText}
+                  duration={reasoningDuration}
+                  isThinking={isReasoning}
+                />
+              )}
+              {isStreaming ? (
+                <StreamingText />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <PixelBook size={24} />
+                  <span style={{
+                    color: 'var(--m3-primary)',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                  }}>
+                    {isReasoning ? 'Reasoning...' : 'Thinking...'}
+                  </span>
+                </div>
+              )}
             </motion.div>
           )}
         </div>

@@ -149,9 +149,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 maxWidth: '100%',
                 background: isHovered
                   ? 'var(--m3-primary-container)'
-                  : (isDark ? 'rgba(32,27,19,0.6)' : 'rgba(255,255,255,0.5)'),
-                backdropFilter: 'blur(12px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+                  : (isDark ? 'rgba(244,189,111,0.05)' : 'rgba(128,86,16,0.04)'),
                 transition: 'background 0.15s ease, transform 0.15s ease',
                 overflow: 'hidden',
               }}

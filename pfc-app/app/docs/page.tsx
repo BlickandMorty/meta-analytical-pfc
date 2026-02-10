@@ -57,7 +57,7 @@ function DocSection({
           alignItems: 'center',
           gap: '0.75rem',
           width: '100%',
-          padding: '1rem 1.25rem',
+          padding: '1.125rem 1.5rem',
           border: 'none',
           background: 'transparent',
           cursor: 'pointer',
@@ -70,19 +70,19 @@ function DocSection({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            height: '2rem',
-            width: '2rem',
+            height: '2.5rem',
+            width: '2.5rem',
             borderRadius: '9999px',
             flexShrink: 0,
             background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.04)',
           }}
         >
-          <Icon style={{ height: '1rem', width: '1rem', color: iconColor }} />
+          <Icon style={{ height: '1.25rem', width: '1.25rem', color: iconColor }} />
         </div>
         <span
           style={{
             flex: 1,
-            fontSize: '0.9375rem',
+            fontSize: '1.0625rem',
             fontWeight: 650,
             letterSpacing: '-0.02em',
           }}
@@ -106,9 +106,9 @@ function DocSection({
           >
             <div
               style={{
-                padding: '0 1.25rem 1.25rem',
-                fontSize: '0.8125rem',
-                lineHeight: 1.7,
+                padding: '0 1.5rem 1.5rem',
+                fontSize: '0.9375rem',
+                lineHeight: 1.75,
                 color: isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.6)',
               }}
             >
@@ -130,8 +130,8 @@ function Code({ children }: { children: React.ReactNode }) {
     <code
       style={{
         fontFamily: 'ui-monospace, "SF Mono", monospace',
-        fontSize: '0.75rem',
-        padding: '0.125rem 0.375rem',
+        fontSize: '0.8125rem',
+        padding: '0.175rem 0.4375rem',
         borderRadius: '0.375rem',
         background: 'rgba(244,189,111,0.1)',
         color: '#C4956A',
@@ -146,11 +146,11 @@ function Heading({ children }: { children: React.ReactNode }) {
   return (
     <h3
       style={{
-        fontSize: '0.8125rem',
+        fontSize: '0.9375rem',
         fontWeight: 650,
         letterSpacing: '-0.01em',
-        marginTop: '1.25rem',
-        marginBottom: '0.5rem',
+        marginTop: '1.5rem',
+        marginBottom: '0.625rem',
         color: 'inherit',
         opacity: 0.85,
       }}
@@ -173,9 +173,9 @@ function CodeBlock({ children }: { children: string }) {
     <pre
       style={{
         fontFamily: 'ui-monospace, "SF Mono", monospace',
-        fontSize: '0.75rem',
-        lineHeight: 1.6,
-        padding: '0.875rem 1rem',
+        fontSize: '0.8125rem',
+        lineHeight: 1.65,
+        padding: '1rem 1.25rem',
         borderRadius: '0.75rem',
         background: 'rgba(0,0,0,0.3)',
         color: 'rgba(237,224,212,0.8)',
@@ -205,7 +205,7 @@ export default function DocsPage() {
       title="Documentation"
       subtitle="Everything you need to know about PFC"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
         {/* ── About PFC ── */}
         <DocSection icon={BrainCircuitIcon} iconColor="#8B7CF6" title="About PFC" defaultOpen isDark={isDark}>

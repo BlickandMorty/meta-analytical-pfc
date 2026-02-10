@@ -225,10 +225,10 @@ export default function SettingsPage() {
       <div className="space-y-6">
         {/* Inference Mode */}
         <GlassSection title="Inference Mode">
-          <p className="text-xs text-muted-foreground/50 mb-4">
+          <p className="text-sm text-muted-foreground/60 mb-5">
             Choose how PFC processes queries. Simulation uses the built-in engine; API mode connects to cloud LLMs; Local uses Ollama.
           </p>
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-3 gap-4 mb-5">
             {MODE_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const isActive = inferenceMode === opt.value;
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                 >
                   <Icon style={{ height: 20, width: 20 }} />
                   <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{opt.label}</span>
-                  <span style={{ fontSize: '0.625rem', opacity: 0.5, fontWeight: 400 }}>{opt.description}</span>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 400 }}>{opt.description}</span>
                 </GlassBubbleButton>
               );
             })}
@@ -256,7 +256,7 @@ export default function SettingsPage() {
             {inferenceMode === 'api' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-4 pt-4 border-t border-border/20">
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-2 block">Provider</label>
+                  <label className="text-sm font-semibold text-muted-foreground mb-2 block">Provider</label>
                   <div className="grid grid-cols-2 gap-2">
                     {([{ value: 'openai' as const, label: 'OpenAI', hint: 'GPT-4o' }, { value: 'anthropic' as const, label: 'Anthropic', hint: 'Claude' }]).map((p) => (
                       <GlassBubbleButton
@@ -268,13 +268,13 @@ export default function SettingsPage() {
                         className="flex-col"
                       >
                         <span style={{ fontWeight: 600 }}>{p.label}</span>
-                        <span style={{ fontSize: '0.625rem', opacity: 0.5, fontWeight: 400 }}>{p.hint}</span>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 400 }}>{p.hint}</span>
                       </GlassBubbleButton>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Model</label>
+                  <label className="text-sm font-semibold text-muted-foreground mb-2 block">Model</label>
                   <select value={apiProvider === 'openai' ? openaiModel : anthropicModel} onChange={(e) => { if (apiProvider === 'openai') setOpenAIModel(e.target.value as OpenAIModel); else setAnthropicModel(e.target.value as AnthropicModel); }} className="w-full rounded-full border border-border/30 bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-pfc-violet/50">
                     {(apiProvider === 'openai' ? OPENAI_MODELS : ANTHROPIC_MODELS).map((m) => (
                       <option key={m.value} value={m.value}>{m.label}</option>
@@ -282,9 +282,9 @@ export default function SettingsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">API Key</label>
+                  <label className="text-sm font-semibold text-muted-foreground mb-2 block">API Key</label>
                   <Input type="password" placeholder={apiProvider === 'openai' ? 'sk-...' : 'sk-ant-...'} value={apiKey} onChange={(e) => handleApiKeyChange(e.target.value)} className="font-mono text-sm rounded-xl" />
-                  <p className="text-[10px] text-muted-foreground/40 mt-1">Stored locally. Never sent to our servers.</p>
+                  <p className="text-xs text-muted-foreground/50 mt-1">Stored locally. Never sent to our servers.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <GlassBubbleButton size="sm" color="violet" onClick={testConnection} disabled={!apiKey || testStatus === 'testing'}>
@@ -310,12 +310,12 @@ export default function SettingsPage() {
                   <GlassBubbleButton size="sm" color="green" onClick={checkOllama} disabled={ollamaChecking}>{ollamaChecking ? <PixelBook size={14} /> : 'Check'}</GlassBubbleButton>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Ollama URL</label>
+                  <label className="text-sm font-semibold text-muted-foreground mb-2 block">Ollama URL</label>
                   <Input type="text" placeholder="http://localhost:11434" value={ollamaBaseUrl} onChange={(e) => handleOllamaUrlChange(e.target.value)} className="font-mono text-sm rounded-xl" />
                 </div>
                 {ollamaAvailable && ollamaModels.length > 0 && (
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Model</label>
+                    <label className="text-sm font-semibold text-muted-foreground mb-2 block">Model</label>
                     <select value={ollamaModel} onChange={(e) => handleOllamaModelChange(e.target.value)} className="w-full rounded-xl border border-border/30 bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-pfc-green/50">
                       {ollamaModels.map((m) => <option key={m} value={m}>{m}</option>)}
                     </select>
@@ -404,10 +404,10 @@ export default function SettingsPage() {
 
         {/* Suite Tier */}
         <GlassSection title="Suite Tier">
-          <p className="text-xs text-muted-foreground/50 mb-4">
+          <p className="text-sm text-muted-foreground/60 mb-5">
             Each tier includes everything below it. Lower tiers skip heavy computation for mobile and low-power devices.
           </p>
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-3 gap-4 mb-5">
             {([
               { value: 'notes' as const, label: 'Notes & Research', desc: 'Chat, library, export', icon: FlaskConicalIcon, color: 'green' as const },
               { value: 'programming' as const, label: 'Programming', desc: '+ Code tools, steering', icon: CodeIcon, color: 'violet' as const },
@@ -426,7 +426,7 @@ export default function SettingsPage() {
                 >
                   <Icon style={{ height: 20, width: 20 }} />
                   <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{opt.label}</span>
-                  <span style={{ fontSize: '0.5625rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
+                  <span style={{ fontSize: '0.6875rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
                 </GlassBubbleButton>
               );
             })}
@@ -437,7 +437,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold">Measurement Suite</p>
-                    <p className="text-[10px] text-muted-foreground/40">Toggle to temporarily disable heavy measurement without switching tiers</p>
+                    <p className="text-xs text-muted-foreground/50">Toggle to temporarily disable heavy measurement without switching tiers</p>
                   </div>
                   <button
                     onClick={() => setMeasurementEnabled(!measurementEnabled)}
@@ -483,7 +483,7 @@ export default function SettingsPage() {
 
         {/* Reset */}
         <GlassSection title="Reset">
-          <p className="text-xs text-muted-foreground/50 mb-4">Clear all data and return to onboarding. This cannot be undone.</p>
+          <p className="text-sm text-muted-foreground/60 mb-5">Clear all data and return to onboarding. This cannot be undone.</p>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm" className="gap-1.5 rounded-full"><Trash2Icon className="h-3.5 w-3.5" />Reset Everything</Button>

@@ -162,7 +162,7 @@ export default function ResearchLibraryPage() {
             <FilterIcon className="h-3 w-3 text-muted-foreground/40" />
             <button
               onClick={() => setSelectedTag(null)}
-              className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${
+              className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
                 !selectedTag
                   ? 'bg-pfc-green/20 text-pfc-green'
                   : 'bg-muted/30 text-muted-foreground/50 hover:bg-muted/50'
@@ -174,7 +174,7 @@ export default function ResearchLibraryPage() {
               <button
                 key={tag}
                 onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                className={`text-[10px] px-2 py-0.5 rounded-full transition-colors ${
+                className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
                   selectedTag === tag
                     ? 'bg-pfc-green/20 text-pfc-green'
                     : 'bg-muted/30 text-muted-foreground/50 hover:bg-muted/50'
@@ -197,7 +197,7 @@ export default function ResearchLibraryPage() {
               <GlassSection title="Add New Paper">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Title *
                     </label>
                     <Input
@@ -208,7 +208,7 @@ export default function ResearchLibraryPage() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Authors (comma-separated)
                     </label>
                     <Input
@@ -219,7 +219,7 @@ export default function ResearchLibraryPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Year
                     </label>
                     <Input
@@ -230,7 +230,7 @@ export default function ResearchLibraryPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Journal
                     </label>
                     <Input
@@ -241,7 +241,7 @@ export default function ResearchLibraryPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       DOI
                     </label>
                     <Input
@@ -252,7 +252,7 @@ export default function ResearchLibraryPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       URL
                     </label>
                     <Input
@@ -263,7 +263,7 @@ export default function ResearchLibraryPage() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Tags (comma-separated)
                     </label>
                     <Input
@@ -274,7 +274,7 @@ export default function ResearchLibraryPage() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    <label className="text-sm font-semibold text-muted-foreground mb-1.5 block">
                       Abstract
                     </label>
                     <textarea
@@ -307,12 +307,12 @@ export default function ResearchLibraryPage() {
         {papers.length > 0 && (
           <div className="flex items-center gap-2">
             <DownloadIcon className="h-3 w-3 text-muted-foreground/40" />
-            <span className="text-[10px] text-muted-foreground/40">Export:</span>
+            <span className="text-xs text-muted-foreground/40">Export:</span>
             {(['json', 'csv', 'markdown', 'bibtex', 'ris'] as ExportFormat[]).map((fmt) => (
               <button
                 key={fmt}
                 onClick={() => handleExport(fmt)}
-                className="text-[10px] px-2 py-0.5 rounded-full bg-muted/30 text-muted-foreground/50 hover:bg-muted/50 transition-colors uppercase font-mono"
+                className="text-xs px-2 py-0.5 rounded-full bg-muted/30 text-muted-foreground/50 hover:bg-muted/50 transition-colors uppercase font-mono"
               >
                 {fmt}
               </button>
@@ -324,7 +324,7 @@ export default function ResearchLibraryPage() {
         <GlassSection
           title={`Papers (${filteredPapers.length})`}
           badge={
-            <span className="text-[10px] text-muted-foreground/40">
+            <span className="text-xs text-muted-foreground/40">
               {papers.length} total saved
             </span>
           }
@@ -401,7 +401,7 @@ export default function ResearchLibraryPage() {
                     {paper.doi && (
                       <Badge
                         variant="secondary"
-                        className="text-[9px] bg-pfc-violet/10 text-pfc-violet border-0 font-mono"
+                        className="text-xs bg-pfc-violet/10 text-pfc-violet border-0 font-mono"
                       >
                         DOI: {paper.doi}
                       </Badge>
@@ -409,7 +409,7 @@ export default function ResearchLibraryPage() {
                     {paper.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-pfc-green/10 text-pfc-green"
+                        className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full bg-pfc-green/10 text-pfc-green"
                       >
                         <TagIcon className="h-2 w-2" />
                         {tag}
@@ -419,7 +419,7 @@ export default function ResearchLibraryPage() {
 
                   {paper.notes && editingId !== paper.id && (
                     <div className="rounded-lg bg-pfc-yellow/5 border border-pfc-yellow/10 p-2">
-                      <p className="text-[10px] text-pfc-yellow/70">{paper.notes}</p>
+                      <p className="text-xs text-pfc-yellow/70">{paper.notes}</p>
                     </div>
                   )}
 

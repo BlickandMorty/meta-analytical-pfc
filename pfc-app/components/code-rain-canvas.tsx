@@ -794,10 +794,9 @@ export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
         inset: 0,
         zIndex: 0,
         pointerEvents: 'none',
-        /* Gentle edge vignette only — no full gradient at rest */
         background: isDark
-          ? 'radial-gradient(ellipse at center, transparent 60%, rgba(24,18,11,0.6) 100%)'
-          : 'radial-gradient(ellipse at center, transparent 60%, rgba(255,248,244,0.6) 100%)',
+          ? 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.92) 100%)'
+          : 'radial-gradient(ellipse at center, transparent 30%, rgba(240,232,222,0.92) 100%)',
       }}
     />
   );

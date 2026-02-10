@@ -184,8 +184,8 @@ export default function NotesPage() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '0.375rem',
-            padding: '0.5rem 1.25rem',
+            gap: '0.5rem',
+            padding: '0.625rem 1.5rem',
             borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.3)'}`,
             flexShrink: 0,
           }}
@@ -196,16 +196,16 @@ export default function NotesPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '1.75rem',
-              height: '1.75rem',
-              borderRadius: '9999px',
+              width: '2rem',
+              height: '2rem',
+              borderRadius: '0.5rem',
               border: 'none',
               background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.05)',
               cursor: 'pointer',
               color: isDark ? 'rgba(237,224,212,0.5)' : 'rgba(0,0,0,0.4)',
             }}
           >
-            <PanelLeftIcon style={{ width: '0.875rem', height: '0.875rem' }} />
+            <PanelLeftIcon style={{ width: '1rem', height: '1rem' }} />
           </button>
 
           <div style={{ flex: 1 }} />
@@ -275,36 +275,48 @@ export default function NotesPage() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2, ease: CUPERTINO }}
               style={{
-                maxWidth: '48rem',
+                maxWidth: '52rem',
                 margin: '0 auto',
-                padding: '2.5rem 3rem 8rem',
+                padding: '3rem 4rem 8rem',
               }}
             >
+              {/* Notion-style banner */}
+              <div
+                style={{
+                  height: '6rem',
+                  borderRadius: '0.75rem',
+                  marginBottom: '2rem',
+                  background: activePage.isJournal
+                    ? (isDark ? 'linear-gradient(135deg, rgba(52,211,153,0.12), rgba(52,211,153,0.04))' : 'linear-gradient(135deg, rgba(52,211,153,0.1), rgba(52,211,153,0.02))')
+                    : (isDark ? 'linear-gradient(135deg, rgba(244,189,111,0.08), rgba(139,124,246,0.06))' : 'linear-gradient(135deg, rgba(244,189,111,0.06), rgba(139,124,246,0.04))'),
+                }}
+              />
+
               {/* Page title */}
-              <div style={{ marginBottom: '2rem' }}>
+              <div style={{ marginBottom: '2.5rem' }}>
                 {activePage.isJournal && (
                   <div style={{
-                    display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem',
+                    display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem',
                   }}>
-                    <CalendarIcon style={{ width: '0.75rem', height: '0.75rem', color: '#34D399' }} />
+                    <CalendarIcon style={{ width: '0.875rem', height: '0.875rem', color: '#34D399' }} />
                     <span style={{
-                      fontSize: '0.75rem', fontWeight: 600, color: '#34D399',
+                      fontSize: '0.8125rem', fontWeight: 600, color: '#34D399',
                       letterSpacing: '0.03em', textTransform: 'uppercase',
                     }}>Journal</span>
                   </div>
                 )}
 
                 {activePage.tags.length > 0 && (
-                  <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                     {activePage.tags.map((tag: string) => (
                       <span key={tag} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
-                        fontSize: '0.6875rem', fontWeight: 500,
-                        color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)',
-                        background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
-                        borderRadius: '9999px', padding: '0.125rem 0.5rem',
+                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                        fontSize: '0.8125rem', fontWeight: 500,
+                        color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.4)',
+                        background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
+                        borderRadius: '9999px', padding: '0.25rem 0.75rem',
                       }}>
-                        <HashIcon style={{ width: '0.5rem', height: '0.5rem' }} />
+                        <HashIcon style={{ width: '0.625rem', height: '0.625rem' }} />
                         {tag}
                       </span>
                     ))}
@@ -321,7 +333,7 @@ export default function NotesPage() {
                     autoFocus
                     style={{
                       width: '100%',
-                      fontSize: '2.5rem',
+                      fontSize: '3rem',
                       fontWeight: 700,
                       letterSpacing: '-0.035em',
                       lineHeight: 1.15,
@@ -338,7 +350,7 @@ export default function NotesPage() {
                   <h1
                     onClick={handleTitleClick}
                     style={{
-                      fontSize: '2.5rem',
+                      fontSize: '3rem',
                       fontWeight: 700,
                       letterSpacing: '-0.035em',
                       lineHeight: 1.15,
@@ -378,14 +390,14 @@ export default function NotesPage() {
                 </div>
                 <div>
                   <h3 style={{
-                    fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em',
+                    fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em',
                     color: isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.6)',
                     marginBottom: '0.5rem',
                   }}>Notes</h3>
                   <p style={{
-                    fontSize: '0.875rem',
+                    fontSize: '1rem',
                     color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
-                    maxWidth: '300px', lineHeight: 1.6,
+                    maxWidth: '340px', lineHeight: 1.6,
                   }}>
                     Create a page or open today&apos;s journal to start taking notes.
                   </p>
@@ -396,9 +408,9 @@ export default function NotesPage() {
                     onClick={handleNewPage}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.375rem',
-                      padding: '0.5rem 1rem', borderRadius: '9999px', border: 'none',
+                      padding: '0.625rem 1.25rem', borderRadius: '9999px', border: 'none',
                       background: isDark ? 'rgba(52,211,153,0.12)' : 'rgba(52,211,153,0.1)',
-                      color: '#34D399', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
+                      color: '#34D399', fontSize: '0.9375rem', fontWeight: 600, cursor: 'pointer',
                     }}
                   >
                     <PlusIcon style={{ width: '0.75rem', height: '0.75rem' }} />
@@ -408,9 +420,9 @@ export default function NotesPage() {
                     onClick={() => getOrCreateTodayJournal()}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.375rem',
-                      padding: '0.5rem 1rem', borderRadius: '9999px', border: 'none',
+                      padding: '0.625rem 1.25rem', borderRadius: '9999px', border: 'none',
                       background: isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.1)',
-                      color: '#C4956A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
+                      color: '#C4956A', fontSize: '0.9375rem', fontWeight: 600, cursor: 'pointer',
                     }}
                   >
                     <CalendarIcon style={{ width: '0.75rem', height: '0.75rem' }} />

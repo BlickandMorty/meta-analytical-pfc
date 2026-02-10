@@ -8,7 +8,7 @@ import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
 import { SynthesisCard } from './synthesis-card';
 import { CodeRainCanvas, CodeRainOverlays } from './code-rain-canvas';
-import { LandingMascot } from './landing-mascot';
+import { PixelSun } from './pixel-sun';
 import { FeatureButtons } from './feature-buttons';
 import { RecentChats } from './recent-chats';
 import { ResearchModeBar } from './research-mode-bar';
@@ -225,8 +225,8 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
     return spans;
   }, [displayText, def]);
 
-  const fontSize = isCode ? '1.875rem' : '2.875rem';
-  const cursorHeight = isCode ? '1.875rem' : '2.8rem';
+  const fontSize = isCode ? '1.625rem' : '2.5rem';
+  const cursorHeight = isCode ? '1.625rem' : '2.4rem';
 
   return (
     <h1
@@ -314,7 +314,11 @@ export function Chat() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            background: 'var(--m3-surface)',
+            /* OLED → warm dark brown on focus in dark mode */
+            background: isDark
+              ? (searchFocused ? 'var(--m3-surface-container-low)' : 'var(--m3-surface)')
+              : 'var(--m3-surface)',
+            transition: 'background 0.5s cubic-bezier(0.2, 0, 0, 1)',
           }}
         >
           {/* Code rain background — fades on search focus */}
@@ -349,14 +353,14 @@ export function Chat() {
                 justifyContent: 'center',
                 gap: '0.75rem',
                 paddingBottom: '0.75rem',
-                /* Soft shadow under greeting — always visible in dark mode */
-                boxShadow: isDark
+                /* Soft shadow under greeting when search is focused in dark mode */
+                boxShadow: isDark && searchFocused
                   ? '0 24px 48px -16px rgba(0,0,0,0.5)'
                   : '0 0 0 0 rgba(0,0,0,0)',
                 transition: 'box-shadow 0.4s cubic-bezier(0.2, 0, 0, 1)',
               }}
             >
-              {mounted && <LandingMascot size={52} />}
+              {mounted && <PixelSun size={48} />}
               {mounted && <GreetingTypewriter isDark={isDark} />}
             </motion.div>
 
@@ -369,17 +373,10 @@ export function Chat() {
               <div
                 data-search-bar
                 style={{
-                  borderRadius: '1.5rem',
+                  borderRadius: 'var(--shape-xl)',
                   overflow: 'hidden',
-                  background: isDark
-                    ? 'rgba(32,27,19,0.75)'
-                    : 'rgba(255,255,255,0.65)',
-                  backdropFilter: 'blur(20px) saturate(1.4)',
-                  WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
-                  border: `1px solid ${isDark ? 'rgba(79,69,57,0.35)' : 'rgba(208,196,180,0.3)'}`,
-                  boxShadow: isDark
-                    ? '0 4px 24px -4px rgba(0,0,0,0.4)'
-                    : '0 4px 24px -4px rgba(128,86,16,0.08)',
+                  background: 'var(--m3-surface-container)',
+                  border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.2)'}`,
                 }}
               >
                 <MultimodalInput

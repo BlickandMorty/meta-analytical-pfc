@@ -65,10 +65,10 @@ export function PageShell({
         style={{
           flex: 1,
           overflow: 'auto',
-          maxWidth: '52rem',
+          maxWidth: '56rem',
           marginLeft: 'auto',
           marginRight: 'auto',
-          padding: '3rem 1.5rem 4rem 3.5rem',
+          padding: '3.5rem 2rem 4rem 4rem',
           width: '100%',
         }}
       >
@@ -77,25 +77,25 @@ export function PageShell({
           variants={headerVariants}
           initial="hidden"
           animate="visible"
-          style={{ marginBottom: '2.5rem' }}
+          style={{ marginBottom: '3rem' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '0.25rem' }}>
             <div
               style={{
                 display: 'flex',
-                height: '2.75rem',
-                width: '2.75rem',
+                height: '3.5rem',
+                width: '3.5rem',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '0.875rem',
+                borderRadius: '1rem',
                 flexShrink: 0,
                 background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
               }}
             >
               <Icon
                 style={{
-                  height: '1.375rem',
-                  width: '1.375rem',
+                  height: '1.75rem',
+                  width: '1.75rem',
                   color: iconColor || '#C4956A',
                 }}
               />
@@ -103,7 +103,7 @@ export function PageShell({
             <div>
               <h1
                 style={{
-                  fontSize: '1.75rem',
+                  fontSize: '2.25rem',
                   fontWeight: 700,
                   letterSpacing: '-0.03em',
                   lineHeight: 1.15,
@@ -114,9 +114,10 @@ export function PageShell({
               {subtitle && (
                 <p
                   style={{
-                    fontSize: '0.875rem',
-                    marginTop: '0.125rem',
+                    fontSize: '1rem',
+                    marginTop: '0.25rem',
                     color: isDark ? 'rgba(156,143,128,0.9)' : 'rgba(0,0,0,0.4)',
+                    lineHeight: 1.5,
                   }}
                 >
                   {subtitle}
@@ -131,7 +132,7 @@ export function PageShell({
           variants={contentVariants}
           initial="hidden"
           animate="visible"
-          style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}
         >
           {children}
         </motion.div>
@@ -177,14 +178,14 @@ export function Section({ title, badge, children, className }: SectionProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: '1rem',
-            paddingBottom: '0.625rem',
+            marginBottom: '1.25rem',
+            paddingBottom: '0.75rem',
             borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.5)' : 'rgba(0,0,0,0.06)'}`,
           }}
         >
           <h2
             style={{
-              fontSize: '0.9375rem',
+              fontSize: '1.125rem',
               fontWeight: 650,
               letterSpacing: '-0.02em',
               color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(0,0,0,0.75)',
