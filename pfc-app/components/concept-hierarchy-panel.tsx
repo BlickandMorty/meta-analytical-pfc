@@ -180,6 +180,8 @@ export function ConceptHierarchyPanel() {
             backdropFilter: 'blur(80px) saturate(2.2)',
             WebkitBackdropFilter: 'blur(80px) saturate(2.2)',
             boxShadow: 'var(--shadow-l)',
+            contain: 'layout paint',
+            transform: 'translateZ(0)',
           }}
         >
           {/* Header */}

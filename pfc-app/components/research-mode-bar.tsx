@@ -227,6 +227,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               display: 'flex',
               flexDirection: 'column',
               gap: '0.5rem',
+              transform: 'translateZ(0)',
             }}
           >
             <p style={{

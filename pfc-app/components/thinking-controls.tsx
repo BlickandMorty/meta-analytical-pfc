@@ -118,6 +118,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
         borderRadius: '9999px',
         background: isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)',
         border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+        transform: 'translateZ(0)',
       }}
     >
       {/* Mode Indicator Badge */}
@@ -291,7 +292,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark }: Think
                   position: 'absolute',
                   bottom: '100%',
                   left: '50%',
-                  transform: 'translateX(-50%)',
+                  transform: 'translateX(-50%) translateZ(0)',
                   marginBottom: '0.5rem',
                   padding: '0.5rem',
                   borderRadius: '1rem',

@@ -84,6 +84,8 @@ export default function AnalyticsPage() {
           zIndex: 20,
           padding: '0.75rem 1rem 0',
           background: 'var(--m3-surface)',
+          contain: 'layout paint',
+          transform: 'translateZ(0)',
         }}
       >
         <div
@@ -128,6 +130,7 @@ export default function AnalyticsPage() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.3, ease: M3_EASE }}
+          style={{ transform: 'translateZ(0)' }}
         >
           {activeTab === 'pipeline' && <PipelinePage />}
           {activeTab === 'signals' && <DiagnosticsPage />}

@@ -68,6 +68,7 @@ function MessageInner({ message }: MessageProps) {
         gap: '0.75rem',
         width: '100%',
         justifyContent: isUser ? 'flex-end' : 'flex-start',
+        transform: 'translateZ(0)',
       }}
     >
       {/* Assistant avatar */}

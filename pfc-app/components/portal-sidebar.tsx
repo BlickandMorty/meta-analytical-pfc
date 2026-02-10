@@ -144,6 +144,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
               background: 'rgba(0, 0, 0, 0.4)',
               backdropFilter: 'blur(4px)',
               WebkitBackdropFilter: 'blur(4px)',
+              contain: 'layout paint',
             }}
             className="lg:hidden"
           />
@@ -173,6 +174,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
               boxShadow: isDark
                 ? '-8px 0 32px rgba(0,0,0,0.3)'
                 : '-8px 0 32px rgba(0,0,0,0.06)',
+              contain: 'layout paint',
             }}
           >
             {/* ── Header ─────────────────────────────────────── */}
@@ -801,6 +803,7 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
                       : '0 4px 16px rgba(0,0,0,0.06)',
                     overflow: 'hidden',
                     zIndex: 60,
+                    transform: 'translateZ(0)',
                   }}
                 >
                   {/* Create new note option */}

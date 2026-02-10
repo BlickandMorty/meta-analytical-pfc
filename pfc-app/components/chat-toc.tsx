@@ -88,6 +88,10 @@ function ChatTOCInner({ scrollContainerRef }: { scrollContainerRef: React.RefObj
           maxHeight: 'calc(100vh - 4.5rem)',
           overflowY: 'auto',
           scrollbarWidth: 'none',
+          contain: 'layout paint',
+          willChange: 'scroll-position',
+          overscrollBehavior: 'contain',
+          transform: 'translateZ(0)',
         }}
       >
         {/* Header */}

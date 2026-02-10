@@ -82,6 +82,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
         display: 'flex',
         flexDirection: 'column',
         gap: '0.625rem',
+        transform: 'translateZ(0)',
       }}
     >
       {/* Header */}

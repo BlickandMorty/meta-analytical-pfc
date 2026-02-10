@@ -522,8 +522,9 @@ export function TopNav() {
         flexDirection: 'column',
         pointerEvents: 'none',
         opacity: mounted ? 1 : 0,
-        transform: mounted ? 'translateY(0)' : 'translateY(-8px)',
+        transform: mounted ? 'translateY(0) translateZ(0)' : 'translateY(-8px) translateZ(0)',
         transition: `opacity 0.5s ${CUP}, transform 0.5s ${CUP}`,
+        contain: 'layout paint',
       }}
     >
       <div

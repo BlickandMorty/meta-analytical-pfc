@@ -70,6 +70,9 @@ export function PageShell({
           marginRight: 'auto',
           padding: '3.5rem 2rem 4rem 4rem',
           width: '100%',
+          willChange: 'scroll-position',
+          overscrollBehavior: 'contain',
+          transform: 'translateZ(0)',
         }}
       >
         {/* ── Page header ── */}
@@ -77,7 +80,7 @@ export function PageShell({
           variants={headerVariants}
           initial="hidden"
           animate="visible"
-          style={{ marginBottom: '3rem' }}
+          style={{ marginBottom: '3rem', transform: 'translateZ(0)' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '0.25rem' }}>
             <div
@@ -132,7 +135,7 @@ export function PageShell({
           variants={contentVariants}
           initial="hidden"
           animate="visible"
-          style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem', transform: 'translateZ(0)' }}
         >
           {children}
         </motion.div>
@@ -171,7 +174,7 @@ export function Section({ title, badge, children, className }: SectionProps) {
   const isDark = mounted ? resolvedTheme === 'dark' : true;
 
   return (
-    <motion.div variants={sectionVariants} className={className}>
+    <motion.div variants={sectionVariants} className={className} style={{ transform: 'translateZ(0)', contain: 'layout style' }}>
       {title && (
         <div
           style={{

@@ -85,6 +85,7 @@ export function SynthesisCard() {
           exit={{ opacity: 0, y: -12, scale: 0.97 }}
           transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
           className="flex justify-center w-full mb-3"
+          style={{ transform: 'translateZ(0)' }}
         >
           <div
             className="max-w-3xl w-full rounded-2xl border border-border/20 overflow-hidden"
@@ -176,6 +177,7 @@ export function SynthesisCard() {
                       exit={{ opacity: 0, y: -4 }}
                       transition={{ duration: 0.2, ease: CUPERTINO_EASE }}
                       className="rounded-xl bg-background/40 p-4 text-xs leading-relaxed text-foreground/80 max-h-[280px] overflow-y-auto"
+                      style={{ willChange: 'scroll-position', overscrollBehavior: 'contain', transform: 'translateZ(0)' }}
                     >
                       {activeTab === 'plain' && (
                         <Markdown>{synthesisReport.plainSummary}</Markdown>

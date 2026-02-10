@@ -385,6 +385,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
             fontSize: '0.6875rem',
             lineHeight: 1.5,
             color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.6)',
+            transform: 'translateZ(0)',
           }}
         >
           <p

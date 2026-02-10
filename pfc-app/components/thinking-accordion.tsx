@@ -92,6 +92,7 @@ export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingA
               className="max-h-[200px] overflow-y-auto px-3 py-2
                          text-xs leading-relaxed text-muted-foreground/70
                          scrollbar-thin scrollbar-thumb-white/10"
+              style={{ willChange: 'scroll-position', overscrollBehavior: 'contain', transform: 'translateZ(0)' }}
             >
               <div className="whitespace-pre-wrap break-words">
                 {content}

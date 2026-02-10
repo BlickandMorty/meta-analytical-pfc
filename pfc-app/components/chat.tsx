@@ -307,6 +307,7 @@ export function Chat() {
             justifyContent: 'center',
             padding: '0 24px',
             background: 'var(--m3-surface)',
+            transform: 'translateZ(0)',
           }}
         >
           {/* Code rain background — fades on search focus */}
@@ -359,6 +360,7 @@ export function Chat() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.75rem',
+                transform: 'translateZ(0)',
               }}
             >
               {mounted && <PixelSun size={52} />}
@@ -370,6 +372,7 @@ export function Chat() {
               initial={{ opacity: 0, y: 20, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ ...ENTER_SPRING, delay: 0.12 }}
+              style={{ transform: 'translateZ(0)' }}
             >
               <div
                 data-search-bar
@@ -408,6 +411,7 @@ export function Chat() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...ENTER_SPRING, delay: 0.2 }}
+              style={{ transform: 'translateZ(0)' }}
             >
               {mounted && <FeatureButtons isDark={isDark} onSubmit={sendQuery} />}
             </motion.div>
@@ -435,6 +439,7 @@ export function Chat() {
               flex: 1,
               minHeight: 0,
               background: 'var(--m3-surface)',
+              transform: 'translateZ(0)',
             }}
           >
             {/* Main chat column */}

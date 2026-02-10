@@ -109,6 +109,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           opacity: 0.035,
           filter: 'url(#grain-noise)',
           mixBlendMode: 'overlay',
+          contain: 'layout paint',
+          transform: 'translateZ(0)',
         }}
       />
     </div>

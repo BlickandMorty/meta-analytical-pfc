@@ -56,6 +56,9 @@ function MessagesInner({
           height: '100%',
           overflowY: 'auto',
           padding: '1.5rem 1rem',
+          willChange: 'scroll-position',
+          overscrollBehavior: 'contain',
+          transform: 'translateZ(0)',
         }}
       >
         <div style={{
@@ -64,6 +67,8 @@ function MessagesInner({
           display: 'flex',
           flexDirection: 'column',
           gap: '1rem',
+          contain: 'layout style',
+          contentVisibility: 'auto',
         }}>
           <AnimatePresence initial={false}>
             {messages.map((message) => (
@@ -82,6 +87,7 @@ function MessagesInner({
                 gap: '0.75rem',
                 width: '100%',
                 justifyContent: 'flex-start',
+                transform: 'translateZ(0)',
               }}
             >
               {/* Avatar */}
