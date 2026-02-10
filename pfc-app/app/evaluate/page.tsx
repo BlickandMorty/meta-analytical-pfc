@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { PixelBook } from '@/components/pixel-book';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -240,7 +241,7 @@ export default function EvaluatePage() {
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <PixelBook size={40} />
       </div>
     );
   }
@@ -449,7 +450,7 @@ export default function EvaluatePage() {
           >
             {loading ? (
               <>
-                <div style={{ height: 16, width: 16, borderRadius: '50%', border: '2px solid rgba(224,120,80,0.3)', borderTopColor: '#E07850', animation: 'spin 1s linear infinite' }} />
+                <PixelBook size={18} />
                 Analyzing...
               </>
             ) : (

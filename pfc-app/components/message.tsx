@@ -11,7 +11,7 @@ import { MarkdownContent } from './markdown-content';
 import type { ChatMessage } from '@/lib/engine/types';
 import { cn } from '@/lib/utils';
 import { UserIcon, ChevronDownIcon } from 'lucide-react';
-import { BrainMascot } from './brain-mascot';
+import { PixelSun } from './pixel-sun';
 import { useTheme } from 'next-themes';
 import { ConceptMiniMap } from './concept-mini-map';
 import { SteeringFeedback } from './steering-feedback';
@@ -73,7 +73,7 @@ function MessageInner({ message }: MessageProps) {
       {/* Assistant avatar */}
       {!isUser && (
         <div style={{ flexShrink: 0, marginTop: '0.25rem' }}>
-          <BrainMascot isDark={isDark} size={26} mini />
+          <PixelSun size={26} />
         </div>
       )}
 

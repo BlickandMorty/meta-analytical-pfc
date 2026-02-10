@@ -22,6 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { PixelBook } from '@/components/pixel-book';
 import { EducationalTooltipButton } from '@/components/educational-tooltip';
 import { PIPELINE_TOOLTIPS } from '@/lib/research/educational-data';
 import { useTheme } from 'next-themes';
@@ -115,7 +116,7 @@ export default function PipelinePage() {
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <PixelBook size={40} />
       </div>
     );
   }

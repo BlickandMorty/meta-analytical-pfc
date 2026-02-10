@@ -2,7 +2,8 @@
 
 import { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDownIcon, Loader2Icon, AtomIcon } from 'lucide-react';
+import { ChevronDownIcon, AtomIcon } from 'lucide-react';
+import { PixelBook } from './pixel-book';
 
 interface ThinkingAccordionProps {
   content: string;
@@ -55,7 +56,7 @@ export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingA
         <span className="flex items-center justify-center w-5 h-5 rounded-md
                         bg-white/[0.06] dark:bg-white/[0.04]">
           {isThinking ? (
-            <Loader2Icon className="w-3 h-3 text-pfc-violet animate-spin" />
+            <PixelBook size={16} />
           ) : (
             <AtomIcon className={`w-3 h-3 ${isExpanded ? 'text-pfc-violet' : 'text-muted-foreground/50'}`} />
           )}

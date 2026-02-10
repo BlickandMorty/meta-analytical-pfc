@@ -14,7 +14,6 @@ import {
   CloudIcon,
   CheckCircle2Icon,
   XCircleIcon,
-  Loader2Icon,
   ExternalLinkIcon,
   HardDriveIcon,
   RefreshCwIcon,
@@ -53,6 +52,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { PixelBook } from '@/components/pixel-book';
 
 const MODE_OPTIONS: {
   value: InferenceMode;
@@ -215,7 +215,7 @@ export default function SettingsPage() {
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <div className="h-8 w-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        <PixelBook size={40} />
       </div>
     );
   }
@@ -288,7 +288,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <GlassBubbleButton size="sm" color="violet" onClick={testConnection} disabled={!apiKey || testStatus === 'testing'}>
-                    {testStatus === 'testing' && <Loader2Icon className="h-3 w-3 animate-spin" />}
+                    {testStatus === 'testing' && <PixelBook size={14} />}
                     Test Connection
                   </GlassBubbleButton>
                   {testStatus === 'success' && <span className="flex items-center gap-1 text-xs text-pfc-green"><CheckCircle2Icon className="h-3.5 w-3.5" />Connected</span>}
@@ -307,7 +307,7 @@ export default function SettingsPage() {
                     <div className={cn('h-2 w-2 rounded-full', ollamaChecking ? 'bg-pfc-yellow animate-pulse' : ollamaAvailable ? 'bg-pfc-green' : 'bg-pfc-red')} />
                     <span className="text-sm text-muted-foreground">{ollamaChecking ? 'Checking...' : ollamaAvailable ? `Ollama running (${ollamaModels.length} models)` : 'Ollama not detected'}</span>
                   </div>
-                  <GlassBubbleButton size="sm" color="green" onClick={checkOllama} disabled={ollamaChecking}>{ollamaChecking ? <Loader2Icon className="h-3 w-3 animate-spin" /> : 'Check'}</GlassBubbleButton>
+                  <GlassBubbleButton size="sm" color="green" onClick={checkOllama} disabled={ollamaChecking}>{ollamaChecking ? <PixelBook size={14} /> : 'Check'}</GlassBubbleButton>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Ollama URL</label>
@@ -335,7 +335,7 @@ export default function SettingsPage() {
                   <>
                     <div className="flex items-center gap-3">
                       <GlassBubbleButton size="sm" color="green" onClick={testConnection} disabled={testStatus === 'testing'}>
-                        {testStatus === 'testing' && <Loader2Icon className="h-3 w-3 animate-spin" />}Test Inference
+                        {testStatus === 'testing' && <PixelBook size={14} />}Test Inference
                       </GlassBubbleButton>
                       {testStatus === 'success' && <span className="flex items-center gap-1 text-xs text-pfc-green"><CheckCircle2Icon className="h-3.5 w-3.5" />Working</span>}
                       {testStatus === 'error' && <span className="flex items-center gap-1 text-xs text-pfc-red"><XCircleIcon className="h-3.5 w-3.5" />{testError || 'Failed'}</span>}
@@ -349,7 +349,7 @@ export default function SettingsPage() {
                           <span className="text-sm font-semibold">Hardware</span>
                         </div>
                         <GlassBubbleButton size="sm" color="cyan" onClick={fetchHardwareStatus} disabled={hwLoading}>
-                          {hwLoading ? <Loader2Icon className="h-3 w-3 animate-spin" /> : <RefreshCwIcon className="h-3 w-3" />}
+                          {hwLoading ? <PixelBook size={14} /> : <RefreshCwIcon className="h-3 w-3" />}
                         </GlassBubbleButton>
                       </div>
                       {ollamaHardware?.gpu && (

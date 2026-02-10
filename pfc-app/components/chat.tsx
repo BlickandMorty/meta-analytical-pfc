@@ -8,7 +8,7 @@ import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
 import { SynthesisCard } from './synthesis-card';
 import { CodeRainCanvas, CodeRainOverlays } from './code-rain-canvas';
-import { BrainMascot } from './brain-mascot';
+import { PixelSun } from './pixel-sun';
 import { FeatureButtons } from './feature-buttons';
 import { RecentChats } from './recent-chats';
 import { ResearchModeBar } from './research-mode-bar';
@@ -225,8 +225,8 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
     return spans;
   }, [displayText, def]);
 
-  const fontSize = isCode ? '1.625rem' : '2.5rem';
-  const cursorHeight = isCode ? '1.625rem' : '2.4rem';
+  const fontSize = isCode ? '1.875rem' : '2.875rem';
+  const cursorHeight = isCode ? '1.875rem' : '2.8rem';
 
   return (
     <h1
@@ -314,11 +314,7 @@ export function Chat() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            /* OLED → warm dark brown on focus in dark mode */
-            background: isDark
-              ? (searchFocused ? 'var(--m3-surface-container-low)' : 'var(--m3-surface)')
-              : 'var(--m3-surface)',
-            transition: 'background 0.5s cubic-bezier(0.2, 0, 0, 1)',
+            background: 'var(--m3-surface)',
           }}
         >
           {/* Code rain background — fades on search focus */}
@@ -360,7 +356,7 @@ export function Chat() {
                 transition: 'box-shadow 0.4s cubic-bezier(0.2, 0, 0, 1)',
               }}
             >
-              {mounted && <BrainMascot isDark={isDark} />}
+              {mounted && <PixelSun size={52} />}
               {mounted && <GreetingTypewriter isDark={isDark} />}
             </motion.div>
 

@@ -258,10 +258,10 @@
 }
 
 /* ─────────────────────────────────────────────────────────
-   Dark theme — True OLED black + Reply M3 warm containers
+   Dark theme — Reply M3 warm brown (seed #825500)
    ───────────────────────────────────────────────────────── */
 .dark {
-  --background: #000000;
+  --background: #18120B;
   --foreground: #EDE0D4;
   --card: rgba(37,31,23,0.85);
   --card-foreground: #EDE0D4;
@@ -281,18 +281,18 @@
   --input: rgba(79,69,57,0.5);
   --ring: #F4BD6F;
 
-  /* Chat surface — OLED black */
-  --chat-surface: #000000;
+  /* Chat surface */
+  --chat-surface: #18120B;
 
-  /* M3 Surface container hierarchy — OLED base, Reply warm containers */
-  --m3-surface: #000000;
-  --m3-surface-dim: #0A0805;
+  /* M3 Surface container hierarchy — Reply warm brown */
+  --m3-surface: #18120B;
+  --m3-surface-dim: #120D07;
   --m3-surface-bright: #3F3830;
   --m3-on-surface: #EDE0D4;
   --m3-on-surface-variant: #D0C4B4;
-  --m3-surface-container-lowest: #060402;
-  --m3-surface-container-low: #18120B;
-  --m3-surface-container: #201B13;
+  --m3-surface-container-lowest: #120D07;
+  --m3-surface-container-low: #201B13;
+  --m3-surface-container: #251F17;
   --m3-surface-container-high: #2F2921;
   --m3-surface-container-highest: #3B342B;
 
@@ -592,7 +592,10 @@ html {
 .prose-pfc {
   @apply prose prose-zinc dark:prose-invert max-w-none;
   font-family: var(--font-sans);
+  --tw-prose-body: var(--foreground);
   --tw-prose-headings: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-links: var(--m3-primary);
 }
 
 .prose-pfc h1 {
@@ -813,3 +816,12 @@ select:focus-visible {
   0%, 100% { background-position: 200% center; }
   50% { background-position: 0% center; }
 }
+
+/* Pixel book sparkle animations */
+@keyframes sparkle-1 { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+@keyframes sparkle-2 { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+@keyframes sparkle-3 { 0%, 100% { opacity: 0.5; } 33% { opacity: 1; } 66% { opacity: 0.1; } }
+.sparkle-1 { animation: sparkle-1 1.4s ease-in-out infinite; }
+.sparkle-2 { animation: sparkle-2 1.4s ease-in-out infinite 0.3s; }
+.sparkle-3 { animation: sparkle-3 1.4s ease-in-out infinite 0.6s; }
+.sparkle-4 { animation: sparkle-1 1.4s ease-in-out infinite 0.9s; }

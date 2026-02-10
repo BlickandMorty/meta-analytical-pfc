@@ -6,6 +6,7 @@ import type { SynthesisReport } from '@/lib/engine/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SparklesIcon, XIcon, BookOpenIcon, FlaskConicalIcon, LightbulbIcon } from 'lucide-react';
+import { PixelBook } from '@/components/pixel-book';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Markdown } from '@/components/markdown';
 import { cn } from '@/lib/utils';
@@ -136,7 +137,7 @@ export function SynthesisCard() {
                       border: 'none',
                     }}
                   >
-                    <SparklesIcon className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+                    {loading ? <PixelBook size={16} /> : <SparklesIcon className="h-3.5 w-3.5" />}
                     {loading ? 'Generating...' : 'Generate'}
                   </motion.button>
                 </div>
