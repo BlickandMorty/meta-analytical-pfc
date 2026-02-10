@@ -2,20 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import {
-  ActivityIcon,
-  BarChart3Icon,
-  MicroscopeIcon,
-  BrainIcon,
-  CompassIcon,
-  ArchiveIcon,
-  FlaskConicalIcon,
-  NetworkIcon,
-} from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════
    Dynamic imports — lazy-load each analytics sub-page
@@ -31,98 +19,46 @@ const ResearchCopilotPage = dynamic(() => import('../research-copilot/page'), { 
 const PipelinePage = dynamic(() => import('../pipeline/page'), { ssr: false });
 
 /* ═══════════════════════════════════════════════════════════
-   Tab definitions
+   Tab definitions (shared with top-nav analytics sub-bubbles)
    ═══════════════════════════════════════════════════════════ */
 
-type MinTier = 'notes' | 'programming' | 'full';
-const TIER_ORDER: Record<string, number> = { notes: 0, programming: 1, full: 2 };
-
 const TABS = [
-  { key: 'research', label: 'Research', icon: FlaskConicalIcon, minTier: 'notes' as MinTier },
-  { key: 'archive', label: 'Archive', icon: ArchiveIcon, minTier: 'notes' as MinTier },
-  { key: 'steering', label: 'Steering', icon: CompassIcon, minTier: 'programming' as MinTier },
-  { key: 'pipeline', label: 'Pipeline', icon: NetworkIcon, minTier: 'full' as MinTier },
-  { key: 'signals', label: 'Signals', icon: ActivityIcon, minTier: 'full' as MinTier },
-  { key: 'visualizer', label: 'Visualizer', icon: BarChart3Icon, minTier: 'full' as MinTier },
-  { key: 'evaluate', label: 'Evaluate', icon: MicroscopeIcon, minTier: 'full' as MinTier },
-  { key: 'concepts', label: 'Concepts', icon: BrainIcon, minTier: 'full' as MinTier },
+  'research', 'archive', 'steering', 'pipeline',
+  'signals', 'visualizer', 'evaluate', 'concepts',
 ] as const;
 
-type TabKey = (typeof TABS)[number]['key'];
+type TabKey = (typeof TABS)[number];
 
 const M3_EASE = [0.2, 0, 0, 1] as const;
 
 /* ═══════════════════════════════════════════════════════════
-   Analytics Hub — single page with all analytical tools
+   Analytics Hub — navigation lives in TopNav, content here
    ═══════════════════════════════════════════════════════════ */
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('research');
-  const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const suiteTier = usePFCStore((s) => s.suiteTier);
   useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   // Listen for tab changes from nav bar sub-bubbles
   useEffect(() => {
     const handler = (e: Event) => {
       const key = (e as CustomEvent).detail as TabKey;
-      if (TABS.some((t) => t.key === key)) setActiveTab(key);
+      if (TABS.includes(key)) setActiveTab(key);
     };
     window.addEventListener('pfc-analytics-tab', handler);
     return () => window.removeEventListener('pfc-analytics-tab', handler);
   }, []);
 
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--m3-surface)' }}>
-      {/* ── Sticky tab bar (secondary, below nav sub-bubbles) ── */}
-      <div
-        style={{
-          position: 'sticky',
-          top: '2.625rem',
-          zIndex: 20,
-          padding: '0.75rem 1rem 0',
-          background: 'var(--m3-surface)',
-          contain: 'layout paint',
-          transform: 'translateZ(0)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '56rem',
-            margin: '0 auto',
-            display: 'flex',
-            gap: '0.25rem',
-            overflowX: 'auto',
-            paddingBottom: '0.75rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
-            scrollbarWidth: 'none',
-          }}
-        >
-          {TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.key;
-            const disabled = (TIER_ORDER[suiteTier] ?? 0) < (TIER_ORDER[tab.minTier] ?? 0);
-            return (
-              <GlassBubbleButton
-                key={tab.key}
-                onClick={() => !disabled && setActiveTab(tab.key)}
-                active={isActive && !disabled}
-                color="violet"
-                size="sm"
-                disabled={disabled}
-                className={disabled ? 'opacity-35 cursor-not-allowed' : ''}
-              >
-                <Icon style={{ height: '0.8125rem', width: '0.8125rem' }} />
-                {tab.label}
-              </GlassBubbleButton>
-            );
-          })}
-        </div>
-      </div>
+  // Broadcast active tab to nav bar so it can highlight the right sub-bubble
+  useEffect(() => {
+    if (!mounted) return;
+    window.dispatchEvent(new CustomEvent('pfc-analytics-active', { detail: activeTab }));
+  }, [activeTab, mounted]);
 
-      {/* ── Tab content ── */}
+  return (
+    <div style={{ minHeight: '100vh', paddingTop: '3.5rem', background: 'var(--m3-surface)' }}>
+      {/* ── Tab content — nav lives in TopNav ── */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}

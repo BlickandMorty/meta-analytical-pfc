@@ -895,13 +895,13 @@ export default function VisualizerPage() {
 
       <GlassSection title="Visualizations" className="">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="mb-6 flex w-full overflow-x-auto">
+          <TabsList className="mb-6 flex w-full overflow-x-auto gap-1 px-1">
             {TAB_DEFS.map((t) => {
               const Icon = t.icon;
               return (
                 <TabsTrigger key={t.value} value={t.value} className="flex items-center gap-1.5 shrink-0">
                   <Icon className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t.label}</span>
+                  {t.label}
                 </TabsTrigger>
               );
             })}

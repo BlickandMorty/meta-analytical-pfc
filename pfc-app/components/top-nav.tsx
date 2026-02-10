@@ -194,10 +194,12 @@ const selectToggleSynthesis = (s: PFCState) => s.toggleSynthesisView;
 const HomePFCBubble = memo(function HomePFCBubble({
   isDark,
   isOnChat,
+  isOnHome,
   onNavigate,
 }: {
   isDark: boolean;
   isOnChat: boolean;
+  isOnHome: boolean;
   onNavigate: (href: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
@@ -214,7 +216,7 @@ const HomePFCBubble = memo(function HomePFCBubble({
 
   // PFC mode: on chat page with messages
   const pfcMode = isOnChat && hasMessages;
-  const showLabel = hovered || pfcMode;
+  const showLabel = hovered || pfcMode || isOnHome;
 
   return (
     <button
@@ -231,10 +233,10 @@ const HomePFCBubble = memo(function HomePFCBubble({
         padding: showLabel ? '0.5rem 1rem' : '0.5rem 0.625rem',
         height: '2.5rem',
         fontSize: '0.875rem',
-        fontWeight: pfcMode ? 650 : 500,
+        fontWeight: (pfcMode || isOnHome) ? 650 : 500,
         letterSpacing: '-0.01em',
-        color: bubbleColor(pfcMode || hovered, isDark),
-        background: bubbleBg(pfcMode, isDark),
+        color: bubbleColor(pfcMode || isOnHome || hovered, isDark),
+        background: bubbleBg(pfcMode || isOnHome, isDark),
         backdropFilter: 'blur(12px) saturate(1.4)',
         WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
         whiteSpace: 'nowrap',
@@ -247,7 +249,7 @@ const HomePFCBubble = memo(function HomePFCBubble({
         height: '1.0625rem',
         width: '1.0625rem',
         flexShrink: 0,
-        color: pfcMode ? '#C4956A' : hovered ? '#C4956A' : 'inherit',
+        color: (pfcMode || isOnHome || hovered) ? '#C4956A' : 'inherit',
         transition: 'color 0.15s',
       }} />
 
@@ -354,45 +356,54 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   disabledReason?: string;
 }) {
   const [hovered, setHovered] = useState(false);
-  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState<string>('research');
   const Icon = item.icon;
 
-  // When active, show the sub-tabs
+  // Listen for active tab broadcasts from the analytics page
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setActiveSubTab((e as CustomEvent).detail as string);
+    };
+    window.addEventListener('pfc-analytics-active', handler);
+    return () => window.removeEventListener('pfc-analytics-active', handler);
+  }, []);
+
+  // When active, show the sub-tabs with labels always visible
   if (isActive && !disabled) {
     return (
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.1875rem',
+        gap: '0.25rem',
       }}>
         {ANALYTICS_TABS.map((tab) => {
           const TabIcon = tab.icon;
-          const isTabHovered = hoveredTab === tab.key;
+          const isTabActive = activeSubTab === tab.key;
           return (
             <button
               key={tab.key}
-              onMouseEnter={() => setHoveredTab(tab.key)}
-              onMouseLeave={() => setHoveredTab(null)}
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('pfc-analytics-tab', { detail: tab.key }));
+                setActiveSubTab(tab.key);
               }}
               title={tab.label}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: isTabHovered ? '0.25rem' : '0rem',
+                gap: '0.375rem',
                 border: 'none',
                 borderRadius: '9999px',
-                padding: isTabHovered ? '0.3125rem 0.5rem' : '0.3125rem',
-                height: '1.75rem',
+                padding: '0.4375rem 0.75rem',
+                height: '2rem',
                 cursor: 'pointer',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                color: isTabHovered
-                  ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
-                  : (isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)'),
-                background: isTabHovered
+                fontSize: '0.75rem',
+                fontWeight: isTabActive ? 650 : 500,
+                letterSpacing: '-0.01em',
+                color: isTabActive
+                  ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+                  : (isDark ? 'rgba(155,150,137,0.65)' : 'rgba(0,0,0,0.4)'),
+                background: isTabActive
                   ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
                   : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
                 backdropFilter: 'blur(12px) saturate(1.4)',
@@ -407,19 +418,10 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 height: '0.8125rem',
                 width: '0.8125rem',
                 flexShrink: 0,
-                color: isTabHovered ? '#C4956A' : 'inherit',
+                color: isTabActive ? '#C4956A' : 'inherit',
                 transition: 'color 0.15s',
               }} />
-              <span style={{
-                display: 'inline-block',
-                maxWidth: isTabHovered ? '5rem' : '0rem',
-                opacity: isTabHovered ? 1 : 0,
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-                transition: T_LABEL,
-              }}>
-                {tab.label}
-              </span>
+              {tab.label}
             </button>
           );
         })}
@@ -549,6 +551,7 @@ export function TopNav() {
         <HomePFCBubble
           isDark={isDark}
           isOnChat={isOnChat}
+          isOnHome={pathname === '/'}
           onNavigate={handleNavigate}
         />
 
