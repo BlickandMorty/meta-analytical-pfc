@@ -364,12 +364,23 @@ function createColumn(canvasWidth: number, canvasHeight: number): RainColumn {
 // Canvas rain component — original background + piñata overlay
 // ═══════════════════════════════════════════════════════════════════════
 
-export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
+export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; searchFocused?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const columnsRef = useRef<RainColumn[]>([]);
   const pinataRef = useRef<PinataParticle[]>([]);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
+  const resetTimerRef = useRef<number>(0);
+  const clearedRef = useRef(false);
+
+  // Clear wallpaper when search is focused — don't restore on unfocus
+  useEffect(() => {
+    if (searchFocused) {
+      columnsRef.current = [];
+      pinataRef.current = [];
+      clearedRef.current = true;
+    }
+  }, [searchFocused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -381,6 +392,17 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
     // Pre-cached values to avoid per-frame allocation
     let cachedW = window.innerWidth;
     let cachedH = window.innerHeight;
+    // Light mode gets more particles for visibility
+    const lightModeMultiplier = isDark ? 1 : 1.4;
+
+    function resetColumns() {
+      columnsRef.current = [];
+      const colCount = Math.floor((cachedW / 42) * lightModeMultiplier);
+      for (let i = 0; i < colCount; i++) {
+        columnsRef.current.push(createColumn(cachedW, cachedH));
+      }
+      clearedRef.current = false;
+    }
 
     function resize() {
       if (!canvas) return;
@@ -393,15 +415,20 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
 
       cachedW = window.innerWidth;
       cachedH = window.innerHeight;
-      const colCount = Math.floor(cachedW / 42); // Fewer columns for less chaos
-      columnsRef.current = [];
-      for (let i = 0; i < colCount; i++) {
-        columnsRef.current.push(createColumn(cachedW, cachedH));
+      if (!clearedRef.current) {
+        resetColumns();
       }
     }
 
     resize();
     window.addEventListener('resize', resize);
+
+    // Periodic reset every 20 seconds to keep syntax from getting too crowded
+    const resetInterval = setInterval(() => {
+      if (!clearedRef.current) {
+        resetColumns();
+      }
+    }, 20000);
 
     // ── Piñata event listener ──
     function onPinata(e: Event) {
@@ -760,6 +787,7 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
       window.removeEventListener('scroll', updateSearchBarRect);
       searchBarObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
+      clearInterval(resetInterval);
     };
   }, [isDark]);
 

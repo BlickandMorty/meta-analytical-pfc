@@ -310,32 +310,34 @@ export function Chat() {
             transform: 'translateZ(0)',
           }}
         >
-          {/* Code rain background — fades on search focus */}
-          <motion.div
-            animate={{ opacity: searchFocused ? 0 : 1 }}
-            transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
-            style={{ position: 'absolute', inset: 0, willChange: 'opacity' }}
-          >
-            {mounted && <CodeRainCanvas isDark={isDark} />}
+          {/* Code rain background — clears on search focus, resets periodically */}
+          <div style={{ position: 'absolute', inset: 0 }}>
+            {mounted && <CodeRainCanvas isDark={isDark} searchFocused={searchFocused} />}
             <CodeRainOverlays isDark={isDark} />
-          </motion.div>
+          </div>
 
-          {/* Subtle blended shadow behind UI — creates depth separation from wallpaper */}
+          {/* Elegant backdrop blur + shadow — proper depth separation from wallpaper */}
           <div
             style={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '52rem',
-              height: '36rem',
-              borderRadius: '50%',
-              background: isDark
-                ? 'radial-gradient(ellipse at center, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)'
-                : 'radial-gradient(ellipse at center, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.025) 40%, transparent 70%)',
+              width: '48rem',
+              height: '32rem',
+              borderRadius: '2.5rem',
               pointerEvents: 'none',
               zIndex: 1,
-              filter: 'blur(30px)',
+              backdropFilter: isDark ? 'blur(40px) saturate(1.2)' : 'blur(32px) saturate(1.3)',
+              WebkitBackdropFilter: isDark ? 'blur(40px) saturate(1.2)' : 'blur(32px) saturate(1.3)',
+              background: isDark
+                ? 'radial-gradient(ellipse at center, rgba(28,25,23,0.5) 0%, rgba(28,25,23,0.25) 50%, transparent 80%)'
+                : 'radial-gradient(ellipse at center, rgba(250,248,244,0.55) 0%, rgba(250,248,244,0.3) 50%, transparent 80%)',
+              boxShadow: isDark
+                ? '0 0 80px 20px rgba(0,0,0,0.2), inset 0 0 40px rgba(0,0,0,0.08)'
+                : '0 0 60px 15px rgba(0,0,0,0.03), inset 0 0 30px rgba(255,255,255,0.15)',
+              maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
+              WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
             }}
           />
 
@@ -377,17 +379,17 @@ export function Chat() {
               <div
                 data-search-bar
                 style={{
-                  borderRadius: '1.5rem',
+                  borderRadius: 'var(--shape-full)',
                   overflow: 'hidden',
                   background: isDark
                     ? 'var(--m3-surface-container)'
-                    : 'rgba(255,255,255,0.82)',
-                  border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(190,183,170,0.15)'}`,
+                    : 'var(--m3-surface-container-high)',
+                  border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'var(--m3-outline-variant)'}`,
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
                   boxShadow: isDark
                     ? 'none'
-                    : '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
+                    : 'none',
                 }}
               >
                 <MultimodalInput

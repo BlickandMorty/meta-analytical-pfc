@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef, startTransition } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
@@ -28,6 +29,7 @@ import {
   FileTextIcon,
   EyeIcon,
   PencilIcon,
+  HomeIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -228,7 +230,7 @@ function NoteTitleTypewriter({
       onClick={onClick}
       style={{
         fontFamily: isCode ? 'var(--font-mono)' : 'var(--font-display)',
-        fontSize: isCode ? '1.75rem' : '3rem',
+        fontSize: isCode ? '2.25rem' : '3rem',
         letterSpacing: isCode ? '0em' : '-0.035em',
         lineHeight: 1.15,
         fontWeight: isCode ? 400 : 700,
@@ -252,7 +254,7 @@ function NoteTitleTypewriter({
           style={{
             display: 'inline-block',
             width: '2px',
-            height: isCode ? '1.75rem' : '2.75rem',
+            height: isCode ? '2.25rem' : '2.75rem',
             marginLeft: '2px',
             background: '#C4956A',
             opacity: cursorOn ? cursorOpacity : 0,
@@ -534,9 +536,9 @@ function ToolbarBtn({
 // Sidebar Dimensions
 // ═══════════════════════════════════════════════════════════════════
 
-const DEFAULT_SIDEBAR_WIDTH = 260;
-const MIN_SIDEBAR_WIDTH = 200;
-const MAX_SIDEBAR_WIDTH = 420;
+const DEFAULT_SIDEBAR_WIDTH = 300;
+const MIN_SIDEBAR_WIDTH = 240;
+const MAX_SIDEBAR_WIDTH = 480;
 
 // ═══════════════════════════════════════════════════════════════════
 // Main Notes Page
@@ -544,6 +546,7 @@ const MAX_SIDEBAR_WIDTH = 420;
 
 export default function NotesPage() {
   const ready = useSetupGuard();
+  const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -739,6 +742,18 @@ export default function NotesPage() {
             contain: 'layout style',
           }}
         >
+          {/* Home button */}
+          <ToolbarBtn
+            onClick={() => router.push('/')}
+            title="Back to home"
+            bgColor={c.toolbarBtnBg}
+            activeColor={c.accent}
+            inactiveColor={c.muted}
+            isActive
+          >
+            <HomeIcon style={{ width: '1rem', height: '1rem' }} />
+          </ToolbarBtn>
+
           {/* Sidebar toggle */}
           <ToolbarBtn
             onClick={toggleNotesSidebar}
@@ -878,67 +893,43 @@ export default function NotesPage() {
                 style={{
                   maxWidth: zenMode ? '42rem' : '52rem',
                   margin: '0 auto',
-                  padding: zenMode ? '4rem 2rem 8rem' : '3rem 4rem 8rem',
+                  padding: zenMode ? '4rem 2rem 8rem' : '2rem 4rem 8rem',
                   transition: 'max-width 0.3s cubic-bezier(0.32,0.72,0,1), padding 0.3s cubic-bezier(0.32,0.72,0,1)',
                 }}
               >
-                {/* Notebook breadcrumb */}
-                <Breadcrumb page={activePage} c={c} />
-
-                {/* Title header — centered with book GIF */}
+                {/* Title header — centered at top with stable height */}
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   textAlign: 'center',
                   marginBottom: '2.5rem',
-                  paddingTop: '0.5rem',
+                  paddingTop: '1rem',
                 }}>
-                  {/* Journal badge */}
+                  {/* Journal badge — small indicator only */}
                   {activePage.isJournal && (
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem',
+                      display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.5rem',
                     }}>
-                      <CalendarIcon style={{ width: '0.875rem', height: '0.875rem', color: c.green }} />
+                      <CalendarIcon style={{ width: '0.75rem', height: '0.75rem', color: c.green }} />
                       <span style={{
-                        fontSize: '0.8125rem', fontWeight: 600, color: c.green,
-                        letterSpacing: '0.03em', textTransform: 'uppercase',
+                        fontSize: '0.6875rem', fontWeight: 600, color: c.green,
+                        letterSpacing: '0.04em', textTransform: 'uppercase',
                       }}>Journal</span>
                     </div>
                   )}
 
-                  {/* Tags */}
-                  {activePage.tags.length > 0 && (
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                      {activePage.tags.map((tag: string) => (
-                        <motion.span
-                          key={tag}
-                          whileHover={{ scale: 1.05 }}
-                          transition={spring.snappy}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                            fontSize: '0.8125rem', fontWeight: 500,
-                            color: c.muted,
-                            background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
-                            borderRadius: '9999px', padding: '0.25rem 0.75rem',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <HashIcon style={{ width: '0.625rem', height: '0.625rem' }} />
-                          {tag}
-                        </motion.span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Title row — book GIF + title centered */}
+                  {/* Title row — book GIF + title centered, stable height wrapper */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.75rem',
+                    minHeight: '4rem',
                   }}>
-                    <PixelBook size={48} />
+                    <div style={{ flexShrink: 0, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <PixelBook size={48} />
+                    </div>
 
                     {/* Title — editable always, typewriter only in read mode */}
                     {isEditingTitle ? (
@@ -989,6 +980,30 @@ export default function NotesPage() {
                       </h1>
                     )}
                   </div>
+
+                  {/* Tags — below title */}
+                  {activePage.tags.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {activePage.tags.map((tag: string) => (
+                        <motion.span
+                          key={tag}
+                          whileHover={{ scale: 1.05 }}
+                          transition={spring.snappy}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                            fontSize: '0.8125rem', fontWeight: 500,
+                            color: c.muted,
+                            background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
+                            borderRadius: '9999px', padding: '0.25rem 0.75rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <HashIcon style={{ width: '0.625rem', height: '0.625rem' }} />
+                          {tag}
+                        </motion.span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Block editor */}

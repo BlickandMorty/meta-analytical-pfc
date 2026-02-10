@@ -199,7 +199,7 @@ export const NotesSidebar = memo(function NotesSidebar() {
         background: c.bg,
         borderRight: `1px solid ${c.border}`,
         fontFamily: 'var(--font-sans)',
-        fontSize: '13px',
+        fontSize: '14px',
         color: c.text,
         userSelect: 'none',
         overflow: 'hidden',
@@ -235,11 +235,11 @@ export const NotesSidebar = memo(function NotesSidebar() {
             onBlur={() => setSearchFocused(false)}
             style={{
               width: '100%',
-              height: 28,
+              height: 30,
               paddingLeft: 28,
               paddingRight: searchQuery ? 26 : 8,
-              fontSize: '12px',
-              fontWeight: 400,
+              fontSize: '13px',
+              fontWeight: 500,
               fontFamily: 'var(--font-sans)',
               borderRadius: 6,
               border: `1px solid ${searchFocused ? c.accent + '40' : c.border}`,
@@ -294,9 +294,9 @@ export const NotesSidebar = memo(function NotesSidebar() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '4px',
-                  height: 24,
-                  fontSize: '11px',
-                  fontWeight: view === tab.id ? 600 : 500,
+                  height: 26,
+                  fontSize: '12px',
+                  fontWeight: view === tab.id ? 700 : 550,
                   fontFamily: 'var(--font-sans)',
                   borderRadius: 4,
                   border: 'none',
@@ -717,7 +717,7 @@ function SectionLabel({ c, label, icon }: { c: ReturnType<typeof t>; label: stri
       display: 'flex',
       alignItems: 'center',
       gap: 4,
-      fontSize: '10px',
+      fontSize: '11px',
       fontWeight: 700,
       letterSpacing: '0.06em',
       textTransform: 'uppercase',
@@ -810,8 +810,8 @@ const FolderItem = memo(function FolderItem({
         }} />
         <span style={{
           flex: 1,
-          fontSize: '13px',
-          fontWeight: 600,
+          fontSize: '14px',
+          fontWeight: 700,
           color: c.text,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -974,13 +974,13 @@ const FileItem = memo(function FileItem({
       ) : (
         <span style={{
           flex: 1,
-          fontSize: '12.5px',
-          fontWeight: isActive ? 600 : 450,
+          fontSize: '13.5px',
+          fontWeight: isActive ? 700 : 550,
           color: c.text,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          opacity: isActive ? 1 : 0.78,
+          opacity: isActive ? 1 : 0.82,
         }}>
           {page.title || 'Untitled'}
         </span>
@@ -1061,10 +1061,10 @@ const JournalItem = memo(function JournalItem({ c, page, isActive, onSelect, onD
       }} />
       <span style={{
         flex: 1,
-        fontSize: '12.5px',
-        fontWeight: isActive ? 600 : 450,
+        fontSize: '13.5px',
+        fontWeight: isActive ? 700 : 550,
         color: c.text,
-        opacity: isActive ? 1 : 0.78,
+        opacity: isActive ? 1 : 0.82,
       }}>
         {dateLabel}
       </span>
@@ -1264,7 +1264,7 @@ const SearchResultItem = memo(function SearchResultItem({
       }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: '12.5px', fontWeight: 600, color: c.text,
+          fontSize: '13.5px', fontWeight: 700, color: c.text,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           opacity: isActive ? 1 : 0.85,
         }}>
@@ -1350,9 +1350,9 @@ function BottomButton({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 5,
-        height: 28,
-        fontSize: '12px',
-        fontWeight: 600,
+        height: 30,
+        fontSize: '13px',
+        fontWeight: 700,
         fontFamily: 'var(--font-sans)',
         borderRadius: 5,
         border: 'none',
