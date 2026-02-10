@@ -132,8 +132,8 @@ const CanvasTextBox = memo(function CanvasTextBox({
         background: isDark ? 'rgba(28,26,23,0.92)' : 'rgba(255,255,255,0.92)',
         border: `1.5px solid ${isFocused ? focusBorder : border}`,
         borderRadius: 10,
-        backdropFilter: 'blur(16px) saturate(1.3)',
-        WebkitBackdropFilter: 'blur(16px) saturate(1.3)',
+        backdropFilter: 'blur(10px) saturate(1.2)',
+        WebkitBackdropFilter: 'blur(10px) saturate(1.2)',
         boxShadow: isFocused
           ? `0 0 0 2px ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)'}, 0 8px 32px rgba(0,0,0,0.12)`
           : '0 2px 12px rgba(0,0,0,0.06)',

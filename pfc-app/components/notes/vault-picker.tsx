@@ -91,8 +91,8 @@ export const VaultPicker = memo(function VaultPicker({ onClose }: VaultPickerPro
         alignItems: 'center',
         justifyContent: 'center',
         background: glassBackground,
-        backdropFilter: 'blur(40px) saturate(1.5)',
-        WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
+        backdropFilter: 'blur(16px) saturate(1.3)',
+        WebkitBackdropFilter: 'blur(16px) saturate(1.3)',
       }}
     >
       <motion.div

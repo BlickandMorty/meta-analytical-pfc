@@ -1254,7 +1254,7 @@ const ItemContextMenu = memo(function ItemContextMenu({
           borderRadius: 8,
           padding: 4,
           fontSize: '12px',
-          backdropFilter: 'blur(20px)',
+          backdropFilter: 'blur(12px)',
         }}
       >
         <DropdownMenuItem

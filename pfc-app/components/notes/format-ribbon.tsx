@@ -135,8 +135,8 @@ export const FormatRibbon = memo(function FormatRibbon({
         background: bg,
         border: `1px solid ${border}`,
         borderRadius: 12,
-        backdropFilter: 'blur(16px) saturate(1.4)',
-        WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+        backdropFilter: 'blur(10px) saturate(1.3)',
+        WebkitBackdropFilter: 'blur(10px) saturate(1.3)',
       }}
     >
       {groups.map((group, gi) => (

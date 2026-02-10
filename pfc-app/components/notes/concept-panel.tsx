@@ -119,8 +119,8 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
           background: glassBg,
           border: `1px solid ${border}`,
           borderRadius: 16,
-          backdropFilter: 'blur(24px) saturate(1.3)',
-          WebkitBackdropFilter: 'blur(24px) saturate(1.3)',
+          backdropFilter: 'blur(12px) saturate(1.2)',
+          WebkitBackdropFilter: 'blur(12px) saturate(1.2)',
           overflow: 'hidden',
         }}
       >

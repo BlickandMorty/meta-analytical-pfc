@@ -329,8 +329,8 @@ export function Chat() {
                 borderRadius: '2.5rem',
                 pointerEvents: 'none',
                 zIndex: 1,
-                backdropFilter: 'blur(32px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(32px) saturate(1.3)',
+                backdropFilter: 'blur(16px) saturate(1.2)',
+                WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
                 background: 'radial-gradient(ellipse at center, rgba(250,248,244,0.55) 0%, rgba(250,248,244,0.3) 50%, transparent 80%)',
                 boxShadow: '0 0 60px 15px rgba(0,0,0,0.03), inset 0 0 30px rgba(255,255,255,0.15)',
                 maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
@@ -383,8 +383,8 @@ export function Chat() {
                     ? 'var(--m3-surface-container)'
                     : 'var(--m3-surface-container-high)',
                   border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'var(--m3-outline-variant)'}`,
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
                   boxShadow: 'none',
                 }}
               >

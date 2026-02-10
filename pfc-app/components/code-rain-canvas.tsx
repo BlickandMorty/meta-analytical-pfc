@@ -506,6 +506,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
   const pinataRef = useRef<PinataParticle[]>([]);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
+  const frameSkipRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -615,6 +616,10 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
       if (tabHidden) { rafRef.current = requestAnimationFrame(draw); return; }
       if (reducedMotion) { rafRef.current = requestAnimationFrame(draw); return; }
+
+      // 30fps throttle — skip every other frame
+      frameSkipRef.current = !frameSkipRef.current;
+      if (frameSkipRef.current) { rafRef.current = requestAnimationFrame(draw); return; }
 
       const delta = timestamp - lastTimeRef.current;
       lastTimeRef.current = timestamp;

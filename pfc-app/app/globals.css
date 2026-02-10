@@ -140,9 +140,9 @@
   --anim-duration-slow: 450ms;
 
   /* Blur tiers — stripped saturate for perf, GPU-light */
-  --blur-s: blur(10px);
-  --blur-m: blur(16px);
-  --blur-l: blur(20px);
+  --blur-s: blur(8px);
+  --blur-m: blur(12px);
+  --blur-l: blur(14px);
 
   /* M3 Shape — rounded pill system */
   --shape-none: 0px;
@@ -230,7 +230,7 @@
   --glass-border: rgba(190, 183, 170, 0.2);
   --glass-hover: rgba(250, 250, 248, 0.8);
   --glass-blur: 20px;
-  --glass-blur-heavy: 24px;
+  --glass-blur-heavy: 14px;
 
   /* Chat surface — white, matching main area */
   --chat-surface: #FAFAF8;
@@ -336,7 +336,7 @@
   --glass-border: rgba(50, 49, 45, 0.3);
   --glass-hover: rgba(38, 37, 34, 0.6);
   --glass-blur: 20px;
-  --glass-blur-heavy: 24px;
+  --glass-blur-heavy: 14px;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -412,7 +412,7 @@
   --glass-border: rgba(40, 40, 40, 0.35);
   --glass-hover: rgba(30, 30, 30, 0.7);
   --glass-blur: 20px;
-  --glass-blur-heavy: 24px;
+  --glass-blur-heavy: 14px;
 }
 
 /* ─────────────────────────────────────────────────────────

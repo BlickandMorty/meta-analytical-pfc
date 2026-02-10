@@ -786,8 +786,8 @@ export default function NotesPage() {
                   padding: '0.375rem 1rem',
                   borderRadius: '9999px',
                   background: isDark ? 'rgba(20,19,17,0.85)' : 'rgba(248,244,238,0.85)',
-                  backdropFilter: 'blur(16px) saturate(1.4)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+                  backdropFilter: 'blur(12px) saturate(1.3)',
+                  WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
                   border: `1px solid ${c.border}`,
                 }}>
                   {activePage.isJournal && (
@@ -1251,8 +1251,8 @@ export default function NotesPage() {
                 background: isDark ? 'rgba(20,19,17,0.96)' : 'rgba(248,244,238,0.96)',
                 border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.3)'}`,
                 borderRadius: '1rem',
-                backdropFilter: 'blur(20px) saturate(1.4)',
-                WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+                backdropFilter: 'blur(12px) saturate(1.3)',
+                WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
                 overflow: 'hidden',
                 zIndex: 39,
               }}

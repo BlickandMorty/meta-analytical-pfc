@@ -166,8 +166,8 @@ function MessagesInner({
                 fontWeight: 500,
                 background: 'var(--m3-surface-container-highest)',
                 color: 'var(--foreground)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
               }}
             >
               <ArrowDownIcon style={{ height: '0.625rem', width: '0.625rem' }} />
