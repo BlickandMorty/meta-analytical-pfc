@@ -216,8 +216,8 @@ function BrainButtonWithToggle({
           cursor: 'pointer',
           border: 'none',
           /* Dark mode: brain is white with a glow. Light mode: dim, no glow */
-          background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.04)',
-          color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.35)',
+          background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(128,86,16,0.04)',
+          color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(29,27,22,0.35)',
           boxShadow: 'none',
           transition: 'background 0.3s, color 0.3s, box-shadow 0.3s',
         }}
@@ -234,12 +234,12 @@ function BrainButtonWithToggle({
               opacity: [0, 1, 1, 1, 1, 0],
               scale: [0.8, 1.02, 1.02, 1.02, 1.02, 1.12],
               boxShadow: [
-                '0 0 8px rgba(196,149,106,0.7), inset 0 0 4px rgba(196,149,106,0.3)',
+                '0 0 8px rgba(244,189,111,0.7), inset 0 0 4px rgba(244,189,111,0.3)',
                 '0 0 14px rgba(34,211,238,0.7), inset 0 0 6px rgba(34,211,238,0.3)',
                 '0 0 14px rgba(52,211,153,0.7), inset 0 0 6px rgba(52,211,153,0.3)',
                 '0 0 14px rgba(224,120,80,0.7), inset 0 0 6px rgba(224,120,80,0.3)',
                 '0 0 14px rgba(251,191,36,0.7), inset 0 0 6px rgba(251,191,36,0.3)',
-                '0 0 0px rgba(196,149,106,0), inset 0 0 0px rgba(196,149,106,0)',
+                '0 0 0px rgba(244,189,111,0), inset 0 0 0px rgba(244,189,111,0)',
               ],
             }}
             exit={{ opacity: 0 }}
@@ -248,7 +248,7 @@ function BrainButtonWithToggle({
               position: 'absolute',
               inset: '-3px',
               borderRadius: '50%',
-              border: '2px solid rgba(196,149,106,0.4)',
+              border: '2px solid rgba(244,189,111,0.4)',
               pointerEvents: 'none',
             }}
           />
@@ -262,8 +262,8 @@ function BrainButtonWithToggle({
             position: 'absolute',
             inset: '-2px',
             borderRadius: '50%',
-            border: '1.5px solid rgba(196,149,106,0.1)',
-            boxShadow: '0 0 8px rgba(196,149,106,0.06)',
+            border: '1.5px solid rgba(244,189,111,0.1)',
+            boxShadow: '0 0 8px rgba(244,189,111,0.06)',
             pointerEvents: 'none',
             transition: 'opacity 0.3s',
           }}
@@ -498,7 +498,7 @@ export function MultimodalInput({
               style={{ overflow: 'hidden' }}
             >
               <div style={{
-                borderTop: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
+                borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.2)'}`,
                 paddingTop: '0.375rem',
                 marginTop: '0.5rem',
               }}>
@@ -521,7 +521,7 @@ export function MultimodalInput({
                       textAlign: 'left',
                       fontSize: '0.8125rem',
                       borderRadius: '9999px',
-                      color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.55)',
+                      color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(29,27,22,0.55)',
                       transition: 'background 0.12s',
                     }}
                     onMouseEnter={(e) => {
@@ -540,7 +540,7 @@ export function MultimodalInput({
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <span style={{
                         fontWeight: 600,
-                        color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)',
+                        color: isDark ? 'rgba(237,224,212,0.95)' : 'rgba(29,27,22,0.85)',
                       }}>
                         {trimmedValue}
                       </span>

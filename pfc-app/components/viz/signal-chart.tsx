@@ -323,9 +323,9 @@ export function SignalChart({
   }, [brushState, scaleX, plotW]);
 
   // ---- Style tokens ----
-  const gridColor = isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)';
-  const textColor = isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.4)';
-  const labelColor = isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.75)';
+  const gridColor = isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.4)';
+  const labelColor = isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.75)';
 
   return (
     <div
@@ -335,8 +335,8 @@ export function SignalChart({
         width: '100%',
         borderRadius: '0.75rem',
         overflow: 'hidden',
-        background: isDark ? 'rgba(196,149,106,0.02)' : 'rgba(0,0,0,0.015)',
-        border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
+        background: isDark ? 'rgba(244,189,111,0.02)' : 'rgba(0,0,0,0.015)',
+        border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
       }}
     >
       {/* ── Header row: label + zoom controls ── */}
@@ -368,7 +368,7 @@ export function SignalChart({
                 padding: '0.15rem 0.5rem',
                 borderRadius: '9999px',
                 border: 'none',
-                background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)',
+                background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
                 color: textColor,
                 cursor: 'pointer',
                 backdropFilter: 'blur(12px)',
@@ -383,7 +383,7 @@ export function SignalChart({
                 padding: '0.15rem 0.5rem',
                 borderRadius: '9999px',
                 border: 'none',
-                background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)',
+                background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
                 color: textColor,
                 cursor: 'pointer',
                 backdropFilter: 'blur(12px)',
@@ -532,7 +532,7 @@ export function SignalChart({
               x2={nearestPoint.x}
               y1={PADDING.top}
               y2={PADDING.top + plotH}
-              stroke={isDark ? 'rgba(155,150,137,0.2)' : 'rgba(0,0,0,0.12)'}
+              stroke={isDark ? 'rgba(156,143,128,0.2)' : 'rgba(0,0,0,0.12)'}
               strokeWidth={1}
               strokeDasharray="3 3"
             />
@@ -542,7 +542,7 @@ export function SignalChart({
               x2={PADDING.left + plotW}
               y1={nearestPoint.y}
               y2={nearestPoint.y}
-              stroke={isDark ? 'rgba(155,150,137,0.15)' : 'rgba(0,0,0,0.08)'}
+              stroke={isDark ? 'rgba(156,143,128,0.15)' : 'rgba(0,0,0,0.08)'}
               strokeWidth={1}
               strokeDasharray="3 3"
             />
@@ -596,7 +596,7 @@ export function SignalChart({
                 : 'rgba(255, 255, 255, 0.85)',
               backdropFilter: 'blur(12px) saturate(1.3)',
               WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
-              border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
+              border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
               zIndex: 10,
               minWidth: '7rem',
             }}

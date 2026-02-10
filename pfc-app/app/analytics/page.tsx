@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
             gap: '0.25rem',
             overflowX: 'auto',
             paddingBottom: '0.75rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
+            borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
             scrollbarWidth: 'none',
           }}
         >

@@ -185,7 +185,7 @@ export default function NotesPage() {
             alignItems: 'center',
             gap: '0.375rem',
             padding: '0.5rem 1.25rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(190,183,170,0.3)'}`,
+            borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.3)'}`,
             flexShrink: 0,
           }}
         >
@@ -199,9 +199,9 @@ export default function NotesPage() {
               height: '1.75rem',
               borderRadius: '9999px',
               border: 'none',
-              background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.05)',
+              background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.05)',
               cursor: 'pointer',
-              color: isDark ? 'rgba(232,228,222,0.5)' : 'rgba(0,0,0,0.4)',
+              color: isDark ? 'rgba(237,224,212,0.5)' : 'rgba(0,0,0,0.4)',
             }}
           >
             <PanelLeftIcon style={{ width: '0.875rem', height: '0.875rem' }} />
@@ -218,7 +218,7 @@ export default function NotesPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   width: '1.75rem', height: '1.75rem', borderRadius: '9999px',
                   border: 'none', background: 'transparent', cursor: 'pointer',
-                  color: activePage.favorite ? '#FBBF24' : (isDark ? 'rgba(155,150,137,0.3)' : 'rgba(0,0,0,0.15)'),
+                  color: activePage.favorite ? '#FBBF24' : (isDark ? 'rgba(156,143,128,0.3)' : 'rgba(0,0,0,0.15)'),
                 }}
               >
                 <StarIcon style={{ width: '0.8rem', height: '0.8rem', fill: activePage.favorite ? '#FBBF24' : 'none' }} />
@@ -230,7 +230,7 @@ export default function NotesPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   width: '1.75rem', height: '1.75rem', borderRadius: '9999px',
                   border: 'none', background: 'transparent', cursor: 'pointer',
-                  color: activePage.pinned ? '#C4956A' : (isDark ? 'rgba(155,150,137,0.3)' : 'rgba(0,0,0,0.15)'),
+                  color: activePage.pinned ? '#C4956A' : (isDark ? 'rgba(156,143,128,0.3)' : 'rgba(0,0,0,0.15)'),
                 }}
               >
                 <PinIcon style={{ width: '0.8rem', height: '0.8rem' }} />
@@ -257,7 +257,7 @@ export default function NotesPage() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: '1.75rem', height: '1.75rem', borderRadius: '9999px',
-              border: 'none', background: isDark ? 'rgba(196,149,106,0.1)' : 'rgba(196,149,106,0.08)',
+              border: 'none', background: isDark ? 'rgba(244,189,111,0.1)' : 'rgba(244,189,111,0.08)',
               cursor: 'pointer', color: '#C4956A',
             }}
           >
@@ -299,8 +299,8 @@ export default function NotesPage() {
                       <span key={tag} style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
                         fontSize: '0.6875rem', fontWeight: 500,
-                        color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.35)',
-                        background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)',
+                        color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)',
+                        background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
                         borderRadius: '9999px', padding: '0.125rem 0.5rem',
                       }}>
                         <HashIcon style={{ width: '0.5rem', height: '0.5rem' }} />
@@ -324,7 +324,7 @@ export default function NotesPage() {
                       fontWeight: 700,
                       letterSpacing: '-0.035em',
                       lineHeight: 1.15,
-                      color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)',
+                      color: isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.85)',
                       background: 'transparent',
                       border: 'none',
                       outline: 'none',
@@ -341,7 +341,7 @@ export default function NotesPage() {
                       fontWeight: 700,
                       letterSpacing: '-0.035em',
                       lineHeight: 1.15,
-                      color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)',
+                      color: isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.85)',
                       cursor: 'text',
                       fontFamily: 'var(--font-display)',
                       margin: 0,
@@ -368,22 +368,22 @@ export default function NotesPage() {
                 <div style={{
                   width: '3.5rem', height: '3.5rem', borderRadius: '1rem',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)',
+                  background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
                 }}>
                   <PenLineIcon style={{
                     width: '1.5rem', height: '1.5rem',
-                    color: isDark ? 'rgba(155,150,137,0.3)' : 'rgba(0,0,0,0.15)',
+                    color: isDark ? 'rgba(156,143,128,0.3)' : 'rgba(0,0,0,0.15)',
                   }} />
                 </div>
                 <div>
                   <h3 style={{
                     fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em',
-                    color: isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.6)',
+                    color: isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.6)',
                     marginBottom: '0.5rem',
                   }}>Notes</h3>
                   <p style={{
                     fontSize: '0.875rem',
-                    color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+                    color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
                     maxWidth: '300px', lineHeight: 1.6,
                   }}>
                     Create a page or open today&apos;s journal to start taking notes.
@@ -408,7 +408,7 @@ export default function NotesPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.375rem',
                       padding: '0.5rem 1rem', borderRadius: '9999px', border: 'none',
-                      background: isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.1)',
+                      background: isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.1)',
                       color: '#C4956A', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer',
                     }}
                   >

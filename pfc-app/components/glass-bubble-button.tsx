@@ -29,13 +29,13 @@ interface GlassBubbleButtonProps {
 }
 
 const COLOR_MAP: Record<BubbleColor, { accent: string; activeBg: string; activeBgLight: string }> = {
-  violet:  { accent: '#C4956A', activeBg: 'rgba(196,149,106,0.12)', activeBgLight: 'rgba(196,149,106,0.10)' },
-  ember:   { accent: '#C4956A', activeBg: 'rgba(196,149,106,0.12)', activeBgLight: 'rgba(196,149,106,0.10)' },
+  violet:  { accent: '#C4956A', activeBg: 'rgba(244,189,111,0.12)', activeBgLight: 'rgba(244,189,111,0.10)' },
+  ember:   { accent: '#C4956A', activeBg: 'rgba(244,189,111,0.12)', activeBgLight: 'rgba(244,189,111,0.10)' },
   green:   { accent: '#34D399', activeBg: 'rgba(52,211,153,0.12)',  activeBgLight: 'rgba(52,211,153,0.10)' },
   cyan:    { accent: '#22D3EE', activeBg: 'rgba(34,211,238,0.12)',  activeBgLight: 'rgba(34,211,238,0.10)' },
   red:     { accent: '#F87171', activeBg: 'rgba(248,113,113,0.12)', activeBgLight: 'rgba(248,113,113,0.10)' },
   yellow:  { accent: '#FBBF24', activeBg: 'rgba(251,191,36,0.12)',  activeBgLight: 'rgba(251,191,36,0.10)' },
-  neutral: { accent: '#C4956A', activeBg: 'rgba(196,149,106,0.12)', activeBgLight: 'rgba(196,149,106,0.10)' },
+  neutral: { accent: '#C4956A', activeBg: 'rgba(244,189,111,0.12)', activeBgLight: 'rgba(244,189,111,0.10)' },
 };
 
 const SIZE_MAP = {
@@ -82,15 +82,15 @@ export function GlassBubbleButton({
         width: fullWidth ? '100%' : 'auto',
         border: 'none',
         background: disabled
-          ? (isDark ? 'rgba(196,149,106,0.02)' : 'rgba(0,0,0,0.02)')
+          ? (isDark ? 'rgba(244,189,111,0.02)' : 'rgba(0,0,0,0.02)')
           : active
             ? (isDark ? c.activeBg : c.activeBgLight)
-            : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)'),
+            : (isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.04)'),
         color: disabled
-          ? (isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)')
+          ? (isDark ? 'rgba(156,143,128,0.35)' : 'rgba(0,0,0,0.2)')
           : active
-            ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-            : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
+            ? (isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.9)')
+            : (isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)'),
         backdropFilter: 'blur(12px) saturate(1.3)',
         WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
         transition: 'background 0.15s, color 0.15s, opacity 0.2s',

@@ -174,11 +174,11 @@ export default function OnboardingPage() {
     backdropFilter: 'blur(12px) saturate(1.3)',
     WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
     borderRadius: '1.5rem',
-    border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.06)',
+    border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
   };
 
-  const textDim = isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)';
-  const textFaint = isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.2)';
+  const textDim = isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.4)';
+  const textFaint = isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.2)';
 
   const DevIcon = deviceProfile ? (DEVICE_ICON[deviceProfile.deviceClass] || CpuIcon) : CpuIcon;
 
@@ -216,8 +216,8 @@ export default function OnboardingPage() {
           transition: 'color 0.2s, background 0.2s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.color = isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.5)';
-          e.currentTarget.style.background = isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.03)';
+          e.currentTarget.style.color = isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.5)';
+          e.currentTarget.style.background = isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.03)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.color = textFaint;
@@ -316,7 +316,7 @@ export default function OnboardingPage() {
                       background: isDark
                         ? 'linear-gradient(135deg, rgba(224,120,80,0.2), rgba(139,124,246,0.2))'
                         : 'linear-gradient(135deg, rgba(224,120,80,0.1), rgba(139,124,246,0.1))',
-                      border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.05)',
                     }}
                   >
                     <LayersIcon
@@ -324,7 +324,7 @@ export default function OnboardingPage() {
                     />
                   </div>
                 </motion.div>
-                <h1 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? 'rgba(232,228,222,0.95)' : 'var(--foreground)' }}>
+                <h1 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? 'rgba(237,224,212,0.95)' : 'var(--foreground)' }}>
                   Choose Your Suite
                 </h1>
                 <p style={{ fontSize: '0.6875rem', color: textDim, maxWidth: '22rem' }}>
@@ -345,12 +345,12 @@ export default function OnboardingPage() {
                     padding: '0.5rem 0.75rem',
                     borderRadius: '0.625rem',
                     background: isDark ? 'rgba(139,124,246,0.06)' : 'rgba(139,124,246,0.04)',
-                    border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(139,124,246,0.08)',
+                    border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(139,124,246,0.08)',
                   }}
                 >
                   <DevIcon style={{ height: '0.875rem', width: '0.875rem', color: '#8B7CF6', flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '0.625rem', fontWeight: 600, color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.6)' }}>
+                    <p style={{ fontSize: '0.625rem', fontWeight: 600, color: isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.6)' }}>
                       Detected: {deviceProfile.summary}
                     </p>
                     <p style={{ fontSize: '0.5625rem', color: '#8B7CF6' }}>
@@ -382,7 +382,7 @@ export default function OnboardingPage() {
                         borderRadius: '9999px',
                         border: 'none',
                         background: isSelected
-                          ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(0,0,0,0.02)')
+                          ? (isDark ? 'rgba(244,189,111,0.12)' : 'rgba(0,0,0,0.02)')
                           : 'transparent',
                         cursor: 'pointer',
                         textAlign: 'left',
@@ -399,14 +399,14 @@ export default function OnboardingPage() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           flexShrink: 0,
-                          background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.03)',
+                          background: isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.03)',
                         }}
                       >
                         <Icon style={{ height: '1.125rem', width: '1.125rem', color: isSelected ? opt.color : textDim }} />
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: isDark ? 'rgba(232,228,222,0.95)' : 'var(--foreground)' }}>
+                          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: isDark ? 'rgba(237,224,212,0.95)' : 'var(--foreground)' }}>
                             {opt.label}
                           </span>
                           {isSelected && (
@@ -440,7 +440,7 @@ export default function OnboardingPage() {
                                 fontWeight: 600,
                                 padding: '0.0625rem 0.3rem',
                                 borderRadius: '0.25rem',
-                                background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.03)',
+                                background: isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.03)',
                                 color: isSelected ? opt.color : textFaint,
                                 transition: 'color 0.2s',
                               }}
@@ -497,7 +497,7 @@ export default function OnboardingPage() {
                       background: isDark
                         ? 'linear-gradient(135deg, rgba(224,120,80,0.2), rgba(139,124,246,0.2))'
                         : 'linear-gradient(135deg, rgba(224,120,80,0.1), rgba(139,124,246,0.1))',
-                      border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.05)',
                     }}
                   >
                     <span
@@ -514,7 +514,7 @@ export default function OnboardingPage() {
                     </span>
                   </div>
                 </motion.div>
-                <h1 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? 'rgba(232,228,222,0.95)' : 'var(--foreground)' }}>
+                <h1 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? 'rgba(237,224,212,0.95)' : 'var(--foreground)' }}>
                   Meta-Analytical PFC Engine
                 </h1>
                 <p style={{ fontSize: '0.6875rem', color: textDim }}>
@@ -537,9 +537,9 @@ export default function OnboardingPage() {
                     placeholder="sk-..."
                     className="font-mono text-sm pr-10"
                     style={{
-                      background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.02)',
-                      border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.1)',
-                      color: isDark ? 'rgba(232,228,222,0.95)' : 'var(--foreground)',
+                      background: isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.02)',
+                      border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.1)',
+                      color: isDark ? 'rgba(237,224,212,0.95)' : 'var(--foreground)',
                       borderRadius: '0.625rem',
                     }}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleSaveKey(); }}

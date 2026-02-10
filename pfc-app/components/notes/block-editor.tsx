@@ -64,13 +64,13 @@ function renderMarkdown(raw: string): string {
   // Inline code
   html = html.replace(
     /`([^`]+)`/g,
-    `<code style="padding:1px 6px;border-radius:4px;font-size:0.85em;font-family:var(--font-mono);background:rgba(196,149,106,0.08);color:${ACCENT}">$1</code>`,
+    `<code style="padding:1px 6px;border-radius:4px;font-size:0.85em;font-family:var(--font-mono);background:rgba(244,189,111,0.08);color:${ACCENT}">$1</code>`,
   );
 
   // [[Page links]]
   html = html.replace(
     /\[\[([^\]]+)\]\]/g,
-    `<span class="note-page-link" data-page="$1" style="color:${ACCENT};font-weight:500;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(196,149,106,0.3);text-underline-offset:2px">$1</span>`,
+    `<span class="note-page-link" data-page="$1" style="color:${ACCENT};font-weight:500;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(244,189,111,0.3);text-underline-offset:2px">$1</span>`,
   );
 
   // Checkbox
@@ -80,7 +80,7 @@ function renderMarkdown(raw: string): string {
   );
   html = html.replace(
     /- \[ \]/g,
-    '<span class="note-checkbox" data-checked="false" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(155,150,137,0.3);margin-right:6px;cursor:pointer;vertical-align:middle"></span>',
+    '<span class="note-checkbox" data-checked="false" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(156,143,128,0.3);margin-right:6px;cursor:pointer;vertical-align:middle"></span>',
   );
 
   return html;
@@ -242,7 +242,7 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
           style={{
             padding: '1rem 0',
             fontSize: '1rem',
-            color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.25)',
+            color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.25)',
             userSelect: 'none',
           }}
         >
@@ -500,7 +500,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
         borderRadius: 6,
         transition: 'background 0.1s',
         background: isFocused
-          ? (isDark ? 'rgba(196,149,106,0.04)' : 'rgba(196,149,106,0.03)')
+          ? (isDark ? 'rgba(244,189,111,0.04)' : 'rgba(244,189,111,0.03)')
           : 'transparent',
       }}
     >
@@ -520,7 +520,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
               background: 'transparent',
               cursor: 'pointer',
               padding: 0,
-              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
               transition: 'color 0.15s',
             }}
             aria-label={block.collapsed ? 'Expand' : 'Collapse'}
@@ -545,7 +545,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
             width: 5,
             height: 5,
             borderRadius: '50%',
-            background: isFocused ? ACCENT : (isDark ? 'rgba(155,150,137,0.3)' : 'rgba(0,0,0,0.15)'),
+            background: isFocused ? ACCENT : (isDark ? 'rgba(156,143,128,0.3)' : 'rgba(0,0,0,0.15)'),
             transition: 'background 0.15s',
           }}
         />
@@ -572,7 +572,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
             fontSize: '1rem',
             lineHeight: '32px',
             minHeight: 32,
-            color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(43,42,39,0.9)',
+            color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(43,42,39,0.9)',
             caretColor: ACCENT,
             wordBreak: 'break-word',
           }}

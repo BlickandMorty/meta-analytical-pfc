@@ -89,7 +89,7 @@ export function PageShell({
                 justifyContent: 'center',
                 borderRadius: '0.875rem',
                 flexShrink: 0,
-                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.04)',
+                background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
               }}
             >
               <Icon
@@ -116,7 +116,7 @@ export function PageShell({
                   style={{
                     fontSize: '0.875rem',
                     marginTop: '0.125rem',
-                    color: isDark ? 'rgba(155,150,137,0.9)' : 'rgba(0,0,0,0.4)',
+                    color: isDark ? 'rgba(156,143,128,0.9)' : 'rgba(0,0,0,0.4)',
                   }}
                 >
                   {subtitle}
@@ -179,7 +179,7 @@ export function Section({ title, badge, children, className }: SectionProps) {
             justifyContent: 'space-between',
             marginBottom: '1rem',
             paddingBottom: '0.625rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(50,49,45,0.5)' : 'rgba(0,0,0,0.06)'}`,
+            borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.5)' : 'rgba(0,0,0,0.06)'}`,
           }}
         >
           <h2
@@ -187,7 +187,7 @@ export function Section({ title, badge, children, className }: SectionProps) {
               fontSize: '0.9375rem',
               fontWeight: 650,
               letterSpacing: '-0.02em',
-              color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.75)',
+              color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(0,0,0,0.75)',
             }}
           >
             {title}

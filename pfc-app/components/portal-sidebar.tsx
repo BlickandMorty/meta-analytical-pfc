@@ -113,16 +113,16 @@ export const PortalSidebar = memo(function PortalSidebar() {
     ? 'rgba(28,27,25,0.92)'
     : 'rgba(245,240,232,0.90)';
   const borderColor = isDark
-    ? 'rgba(50,49,45,0.3)'
+    ? 'rgba(79,69,57,0.3)'
     : 'rgba(0,0,0,0.06)';
   const headerBg = isDark
-    ? 'rgba(196,149,106,0.02)'
+    ? 'rgba(244,189,111,0.02)'
     : 'rgba(0,0,0,0.02)';
   const mutedText = isDark
-    ? 'rgba(155,150,137,0.5)'
+    ? 'rgba(156,143,128,0.5)'
     : 'rgba(0,0,0,0.4)';
   const fgText = isDark
-    ? 'rgba(232,228,222,0.9)'
+    ? 'rgba(237,224,212,0.9)'
     : 'rgba(0,0,0,0.85)';
 
   return (
@@ -205,7 +205,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
                   }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.background = isDark
-                      ? 'rgba(196,149,106,0.06)'
+                      ? 'rgba(244,189,111,0.06)'
                       : 'rgba(0,0,0,0.06)')
                   }
                   onMouseLeave={(e) =>
@@ -267,7 +267,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
                     borderRadius: '9999px',
                     padding: '2px',
                     background: isDark
-                      ? 'rgba(196,149,106,0.03)'
+                      ? 'rgba(244,189,111,0.03)'
                       : 'rgba(0,0,0,0.04)',
                     flexShrink: 0,
                   }}
@@ -314,7 +314,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
                 }}
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.background = isDark
-                    ? 'rgba(196,149,106,0.06)'
+                    ? 'rgba(244,189,111,0.06)'
                     : 'rgba(0,0,0,0.06)')
                 }
                 onMouseLeave={(e) =>
@@ -400,20 +400,20 @@ const ModeButton = memo<ModeButtonProps>(function ModeButton({
         color: active
           ? PFC_VIOLET
           : isDark
-            ? 'rgba(155,150,137,0.7)'
+            ? 'rgba(156,143,128,0.7)'
             : 'rgba(0,0,0,0.35)',
       }}
       onMouseEnter={(e) => {
         if (!active) {
           e.currentTarget.style.color = isDark
-            ? 'rgba(232,228,222,0.8)'
+            ? 'rgba(237,224,212,0.8)'
             : 'rgba(0,0,0,0.6)';
         }
       }}
       onMouseLeave={(e) => {
         if (!active) {
           e.currentTarget.style.color = isDark
-            ? 'rgba(155,150,137,0.7)'
+            ? 'rgba(156,143,128,0.7)'
             : 'rgba(0,0,0,0.35)';
         }
       }}
@@ -562,10 +562,10 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
   // ── Shared inline colors ──
   const codeBg = isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0, 0, 0, 0.03)';
   const lineNumColor = isDark
-    ? 'rgba(155,150,137,0.25)'
+    ? 'rgba(156,143,128,0.25)'
     : 'rgba(0,0,0,0.2)';
   const actionBarBg = isDark
-    ? 'rgba(196,149,106,0.02)'
+    ? 'rgba(244,189,111,0.02)'
     : 'rgba(0,0,0,0.02)';
 
   return (
@@ -823,7 +823,7 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
                     }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background = isDark
-                        ? 'rgba(196,149,106,0.06)'
+                        ? 'rgba(244,189,111,0.06)'
                         : 'rgba(0,0,0,0.04)')
                     }
                     onMouseLeave={(e) =>
@@ -876,7 +876,7 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
                           }}
                           onMouseEnter={(e) =>
                             (e.currentTarget.style.background = isDark
-                              ? 'rgba(196,149,106,0.06)'
+                              ? 'rgba(244,189,111,0.06)'
                               : 'rgba(0,0,0,0.04)')
                           }
                           onMouseLeave={(e) =>
@@ -931,7 +931,7 @@ const ActionButton = memo<ActionButtonProps>(function ActionButton({
   rightIcon,
 }) {
   const mutedText = isDark
-    ? 'rgba(155,150,137,0.7)'
+    ? 'rgba(156,143,128,0.7)'
     : 'rgba(0,0,0,0.5)';
 
   return (
@@ -945,7 +945,7 @@ const ActionButton = memo<ActionButtonProps>(function ActionButton({
         borderRadius: '9999px',
         border: 'none',
         background: isDark
-          ? 'rgba(196,149,106,0.05)'
+          ? 'rgba(244,189,111,0.05)'
           : 'rgba(0,0,0,0.03)',
         cursor: 'pointer',
         fontSize: '12px',
@@ -956,17 +956,17 @@ const ActionButton = memo<ActionButtonProps>(function ActionButton({
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = isDark
-          ? 'rgba(196,149,106,0.10)'
+          ? 'rgba(244,189,111,0.10)'
           : 'rgba(0,0,0,0.06)';
         if (!labelColor) {
           e.currentTarget.style.color = isDark
-            ? 'rgba(232,228,222,0.8)'
+            ? 'rgba(237,224,212,0.8)'
             : 'rgba(0,0,0,0.7)';
         }
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = isDark
-          ? 'rgba(196,149,106,0.05)'
+          ? 'rgba(244,189,111,0.05)'
           : 'rgba(0,0,0,0.03)';
         if (!labelColor) {
           e.currentTarget.style.color = mutedText;
@@ -1009,7 +1009,7 @@ function TerminalPlaceholder({ isDark, mutedText, fgText }: PlaceholderProps) {
           height: '48px',
           borderRadius: '1rem',
           background: isDark
-            ? 'rgba(196,149,106,0.04)'
+            ? 'rgba(244,189,111,0.04)'
             : 'rgba(0,0,0,0.04)',
           display: 'flex',
           alignItems: 'center',
@@ -1068,7 +1068,7 @@ function PortalHome({ isDark, mutedText, fgText }: PlaceholderProps) {
           height: '48px',
           borderRadius: '1rem',
           background: isDark
-            ? 'rgba(196,149,106,0.04)'
+            ? 'rgba(244,189,111,0.04)'
             : 'rgba(0,0,0,0.04)',
           display: 'flex',
           alignItems: 'center',

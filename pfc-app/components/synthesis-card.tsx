@@ -130,8 +130,8 @@ export function SynthesisCard() {
                       'transition-colors disabled:opacity-50',
                     )}
                     style={{
-                      background: 'rgba(196,149,106,0.12)',
-                      color: 'rgba(232,228,222,0.95)',
+                      background: 'rgba(244,189,111,0.12)',
+                      color: 'rgba(237,224,212,0.95)',
                       fontWeight: 700,
                       border: 'none',
                     }}
@@ -155,7 +155,7 @@ export function SynthesisCard() {
                           className={cn(
                             'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold cursor-pointer transition-colors',
                             isActive
-                              ? 'bg-[rgba(196,149,106,0.12)] text-[rgba(232,228,222,0.95)]'
+                              ? 'bg-[rgba(244,189,111,0.12)] text-[rgba(237,224,212,0.95)]'
                               : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary/40',
                           )}
                         >

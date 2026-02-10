@@ -182,7 +182,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
           justifyContent: 'center',
           height: '100%',
           minHeight: '24rem',
-          color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.2)',
+          color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.2)',
         }}
       >
         <p style={{ fontSize: '0.8125rem' }}>Send a query to visualize the thought process</p>
@@ -246,7 +246,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
               y1={from.y}
               x2={to.x}
               y2={to.y}
-              stroke={isHighlighted ? '#C4956A' : (isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.08)')}
+              stroke={isHighlighted ? '#C4956A' : (isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.08)')}
               strokeWidth={isHighlighted ? 2 : 1}
               strokeDasharray={edge.label === 'weakness' ? '4 4' : undefined}
               style={{ transition: 'stroke 0.2s, stroke-width 0.2s' }}
@@ -307,7 +307,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
                 x={pos.x}
                 y={pos.y + 8}
                 textAnchor="middle"
-                fill={isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.5)'}
+                fill={isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.5)'}
                 fontSize="6.5"
                 fontFamily="var(--font-sans)"
               >
@@ -351,7 +351,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
               alignItems: 'center',
               gap: '0.25rem',
               fontSize: '0.5625rem',
-              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
             }}
           >
             <div
@@ -380,11 +380,11 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
             padding: '0.75rem',
             borderRadius: '0.625rem',
             background: isDark ? 'rgba(28,27,25,0.95)' : 'rgba(255,255,255,0.95)',
-            border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.08)',
+            border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.08)',
             backdropFilter: 'blur(12px)',
             fontSize: '0.6875rem',
             lineHeight: 1.5,
-            color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.6)',
+            color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.6)',
           }}
         >
           <p

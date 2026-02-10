@@ -97,7 +97,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
           style={{
             height: '0.8125rem',
             width: '0.8125rem',
-            color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+            color: 'var(--m3-outline)',
           }}
         />
         <span
@@ -106,7 +106,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
             fontWeight: 600,
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
-            color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+            color: 'var(--m3-outline)',
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
           }}
         >
@@ -148,8 +148,8 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 textAlign: 'left',
                 maxWidth: '100%',
                 background: isHovered
-                  ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)')
-                  : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)'),
+                  ? 'var(--m3-primary-container)'
+                  : (isDark ? 'rgba(244,189,111,0.05)' : 'rgba(128,86,16,0.04)'),
                 transition: 'background 0.15s ease, transform 0.15s ease',
                 overflow: 'hidden',
               }}
@@ -160,8 +160,8 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                   width: '0.8125rem',
                   flexShrink: 0,
                   color: isHovered
-                    ? '#C4956A'
-                    : (isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)'),
+                    ? 'var(--m3-primary)'
+                    : 'var(--m3-outline)',
                   transition: 'color 0.15s',
                 }}
               />
@@ -170,8 +170,8 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                   fontSize: '0.8125rem',
                   fontWeight: 600,
                   color: isHovered
-                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
-                    : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
+                    ? 'var(--m3-on-primary-container)'
+                    : 'var(--m3-on-surface-variant)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -185,7 +185,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 style={{
                   fontSize: '0.625rem',
                   fontWeight: 500,
-                  color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)',
+                  color: 'var(--m3-outline)',
                   flexShrink: 0,
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
                 }}

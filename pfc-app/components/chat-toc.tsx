@@ -104,7 +104,7 @@ function ChatTOCInner({ scrollContainerRef }: { scrollContainerRef: React.RefObj
             style={{
               height: '0.75rem',
               width: '0.75rem',
-              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
             }}
           />
           <span
@@ -113,7 +113,7 @@ function ChatTOCInner({ scrollContainerRef }: { scrollContainerRef: React.RefObj
               fontWeight: 600,
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
-              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
             }}
           >
             Contents
@@ -147,12 +147,12 @@ function ChatTOCInner({ scrollContainerRef }: { scrollContainerRef: React.RefObj
                   color: isActive
                     ? 'var(--m3-primary)'
                     : isDark
-                      ? 'rgba(155,150,137,0.65)'
+                      ? 'rgba(156,143,128,0.65)'
                       : 'rgba(0,0,0,0.45)',
                   background: isActive
                     ? isDark
-                      ? 'rgba(196,149,106,0.08)'
-                      : 'rgba(196,149,106,0.06)'
+                      ? 'rgba(244,189,111,0.08)'
+                      : 'rgba(244,189,111,0.06)'
                     : 'transparent',
                   transition: 'color 0.15s, background 0.15s',
                   overflow: 'hidden',

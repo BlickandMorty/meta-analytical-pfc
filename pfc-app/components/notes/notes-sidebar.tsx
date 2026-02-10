@@ -40,14 +40,14 @@ const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
 function t(isDark: boolean) {
   return {
     bg:       isDark ? 'rgba(20,19,17,0.95)'      : 'rgba(218,212,200,0.95)',
-    text:     isDark ? 'rgba(232,228,222,0.9)'     : 'rgba(43,42,39,0.9)',
-    muted:    isDark ? 'rgba(155,150,137,0.5)'     : 'rgba(0,0,0,0.35)',
-    border:   isDark ? 'rgba(50,49,45,0.3)'        : 'rgba(190,183,170,0.3)',
-    hover:    isDark ? 'rgba(196,149,106,0.06)'    : 'rgba(0,0,0,0.04)',
-    active:   isDark ? 'rgba(196,149,106,0.12)'    : 'rgba(196,149,106,0.10)',
+    text:     isDark ? 'rgba(237,224,212,0.9)'     : 'rgba(43,42,39,0.9)',
+    muted:    isDark ? 'rgba(156,143,128,0.5)'     : 'rgba(0,0,0,0.35)',
+    border:   isDark ? 'rgba(79,69,57,0.3)'        : 'rgba(208,196,180,0.3)',
+    hover:    isDark ? 'rgba(244,189,111,0.06)'    : 'rgba(0,0,0,0.04)',
+    active:   isDark ? 'rgba(244,189,111,0.12)'    : 'rgba(244,189,111,0.10)',
     accent:   '#C4956A',
-    icon:     isDark ? 'rgba(155,150,137,0.5)'     : 'rgba(0,0,0,0.3)',
-    inputBg:  isDark ? 'rgba(50,49,45,0.3)'        : 'rgba(190,183,170,0.2)',
+    icon:     isDark ? 'rgba(156,143,128,0.5)'     : 'rgba(0,0,0,0.3)',
+    inputBg:  isDark ? 'rgba(79,69,57,0.3)'        : 'rgba(208,196,180,0.2)',
     danger:   '#E05252',
   };
 }
@@ -1098,7 +1098,7 @@ function highlightQuery(text: string, query: string, c: ReturnType<typeof t>): s
   const regex = new RegExp(`(${escaped})`, 'gi');
   return escapeHtml(text).replace(
     regex,
-    `<mark style="background:rgba(196,149,106,0.25);color:${c.text};border-radius:2px;padding:0 1px;">$1</mark>`,
+    `<mark style="background:rgba(244,189,111,0.25);color:${c.text};border-radius:2px;padding:0 1px;">$1</mark>`,
   );
 }
 

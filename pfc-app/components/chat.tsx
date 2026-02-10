@@ -255,7 +255,7 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
           height: cursorHeight,
           backgroundColor: isCode
             ? 'var(--m3-primary)'
-            : isDark ? 'rgba(232,228,222,0.5)' : 'rgba(0,0,0,0.4)',
+            : isDark ? 'rgba(237,224,212,0.5)' : 'rgba(0,0,0,0.4)',
           marginLeft: '1px',
           opacity: cursorOn ? 1 : 0,
           transition: 'opacity 0.1s',
@@ -314,7 +314,11 @@ export function Chat() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            background: 'var(--m3-surface)',
+            /* OLED → warm dark brown on focus in dark mode */
+            background: isDark
+              ? (searchFocused ? 'var(--m3-surface-container-low)' : 'var(--m3-surface)')
+              : 'var(--m3-surface)',
+            transition: 'background 0.5s cubic-bezier(0.2, 0, 0, 1)',
           }}
         >
           {/* Code rain background — fades on search focus */}
@@ -337,7 +341,7 @@ export function Chat() {
             gap: '1.25rem',
           }}>
 
-            {/* Greeting section — Harmonoid spring entrance */}
+            {/* Greeting section — Harmonoid spring entrance + shadow on focus */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -348,6 +352,12 @@ export function Chat() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.75rem',
+                paddingBottom: '0.75rem',
+                /* Soft shadow under greeting when search is focused in dark mode */
+                boxShadow: isDark && searchFocused
+                  ? '0 24px 48px -16px rgba(0,0,0,0.5)'
+                  : '0 0 0 0 rgba(0,0,0,0)',
+                transition: 'box-shadow 0.4s cubic-bezier(0.2, 0, 0, 1)',
               }}
             >
               {mounted && <BrainMascot isDark={isDark} />}
@@ -365,8 +375,8 @@ export function Chat() {
                 style={{
                   borderRadius: 'var(--shape-xl)',
                   overflow: 'hidden',
-                  background: isDark ? 'var(--m3-surface-container)' : 'var(--m3-surface-container)',
-                  border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(190,183,170,0.2)'}`,
+                  background: 'var(--m3-surface-container)',
+                  border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.2)'}`,
                 }}
               >
                 <MultimodalInput
@@ -455,7 +465,7 @@ export function Chat() {
                           background: isDark ? 'var(--m3-surface-container)' : 'var(--m3-surface-container)',
                           border: 'none',
                           fontSize: 'var(--type-label-sm)',
-                          color: isDark ? 'rgba(155,150,137,0.9)' : 'rgba(0,0,0,0.4)',
+                          color: isDark ? 'var(--m3-on-surface-variant)' : 'var(--m3-on-surface-variant)',
                         }}
                       >
                         {inferenceMode === 'api'
@@ -469,7 +479,7 @@ export function Chat() {
                           onClick={() => setModeHintDismissed(true)}
                           style={{
                             border: 'none',
-                            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                            background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(128,86,16,0.06)',
                             cursor: 'pointer',
                             fontSize: 'var(--type-label-sm)',
                             color: 'var(--m3-primary)',
@@ -518,7 +528,7 @@ export function Chat() {
             {/* TOC sidebar — right side, only on wider screens */}
             <div
               style={{
-                borderLeft: `1px solid ${isDark ? 'rgba(50,49,45,0.2)' : 'rgba(190,183,170,0.15)'}`,
+                borderLeft: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(208,196,180,0.15)'}`,
               }}
               className="hidden lg:block"
             >

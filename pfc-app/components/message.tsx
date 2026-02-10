@@ -77,7 +77,7 @@ function MessageInner({ message }: MessageProps) {
         </div>
       )}
 
-      {/* Message bubble */}
+      {/* Message bubble — M3 card hierarchy */}
       <div
         style={{
           maxWidth: isUser ? '80%' : '88%',
@@ -86,15 +86,14 @@ function MessageInner({ message }: MessageProps) {
             : 'var(--shape-xl) var(--shape-xl) var(--shape-xl) var(--shape-sm)',
           padding: isUser ? '0.625rem 1rem' : '0.875rem 1.125rem',
           background: isUser
-            ? 'var(--m3-primary)'
-            : isDark
-              ? 'var(--m3-surface-container)'
-              : 'var(--m3-surface-container)',
+            ? 'var(--m3-primary-container)'
+            : 'var(--m3-surface-container-low)',
           color: isUser
-            ? 'var(--m3-on-primary)'
-            : 'var(--foreground)',
+            ? 'var(--m3-on-primary-container)'
+            : 'var(--m3-on-surface)',
           ...(isUser ? {} : {
-            border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)'}`,
+            border: `1px solid var(--m3-outline-variant)`,
+            borderColor: isDark ? 'rgba(79,69,57,0.25)' : 'rgba(208,196,180,0.3)',
           }),
         }}
       >
@@ -128,7 +127,7 @@ function MessageInner({ message }: MessageProps) {
                 gap: '0.5rem',
                 fontSize: 'var(--type-label-sm)',
                 fontFamily: 'var(--font-mono)',
-                color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.3)',
+                color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.3)',
                 paddingTop: '0.25rem',
               }}>
                 <span>{(message.confidence * 100).toFixed(0)}% confidence</span>
@@ -158,7 +157,7 @@ function MessageInner({ message }: MessageProps) {
                   <span style={{
                     padding: '0.0625rem 0.375rem',
                     borderRadius: 'var(--shape-full)',
-                    background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
+                    background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(128,86,16,0.04)',
                     color: 'var(--m3-primary)',
                     fontSize: 'var(--type-label-sm)',
                   }}>
@@ -181,8 +180,8 @@ function MessageInner({ message }: MessageProps) {
                 cursor: 'pointer',
                 fontSize: 'var(--type-label-sm)',
                 fontWeight: 500,
-                color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.4)',
-                background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.03)',
+                color: 'var(--m3-on-surface-variant)',
+                background: isDark ? 'rgba(244,189,111,0.05)' : 'rgba(128,86,16,0.04)',
                 transition: 'color 0.15s, background 0.15s',
                 alignSelf: 'flex-start',
               }}
@@ -211,7 +210,7 @@ function MessageInner({ message }: MessageProps) {
                     flexDirection: 'column',
                     gap: '0.75rem',
                     paddingTop: '0.625rem',
-                    borderTop: `1px solid ${isDark ? 'rgba(50,49,45,0.2)' : 'rgba(190,183,170,0.15)'}`,
+                    borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(208,196,180,0.15)'}`,
                   }}>
                     {/* Full layman breakdown */}
                     <MessageLayman layman={message.dualMessage.laymanSummary} />
@@ -219,12 +218,12 @@ function MessageInner({ message }: MessageProps) {
                     {/* Research analysis with inline tags */}
                     <div style={{
                       paddingTop: '0.5rem',
-                      borderTop: `1px solid ${isDark ? 'rgba(50,49,45,0.15)' : 'rgba(190,183,170,0.1)'}`,
+                      borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.15)' : 'rgba(208,196,180,0.1)'}`,
                     }}>
                       <p style={{
                         fontSize: 'var(--type-label-sm)',
                         fontWeight: 600,
-                        color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.3)',
+                        color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.3)',
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                         marginBottom: '0.5rem',
@@ -273,7 +272,7 @@ function MessageInner({ message }: MessageProps) {
           <UserIcon style={{
             height: '0.8125rem',
             width: '0.8125rem',
-            color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)',
+            color: 'var(--m3-on-surface-variant)',
           }} />
         </div>
       )}

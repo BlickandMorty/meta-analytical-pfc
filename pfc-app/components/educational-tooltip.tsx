@@ -48,8 +48,8 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
           borderRadius: '50%',
           border: 'none',
           cursor: 'pointer',
-          background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)',
-          color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)',
+          background: isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.04)',
+          color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)',
           transition: 'background 0.15s, color 0.15s',
         }}
       >
@@ -71,7 +71,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
               padding: '0.875rem',
               borderRadius: '0.75rem',
               background: isDark ? 'rgba(28,27,25,0.97)' : 'rgba(255,255,255,0.97)',
-              border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.08)',
+              border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.08)',
               backdropFilter: 'blur(12px) saturate(1.3)',
             }}
             onMouseEnter={() => setOpen(true)}
@@ -83,7 +83,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 letterSpacing: '-0.01em',
-                color: isDark ? 'rgba(232,228,222,0.9)' : 'var(--foreground)',
+                color: isDark ? 'rgba(237,224,212,0.9)' : 'var(--foreground)',
               }}>
                 {tooltip.title}
               </h4>
@@ -107,7 +107,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
             <p style={{
               fontSize: '0.6875rem',
               lineHeight: 1.6,
-              color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.5)',
+              color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.5)',
               marginBottom: '0.625rem',
             }}>
               {tooltip.description}
@@ -127,7 +127,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
-                  color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+                  color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
                 }}>
                   What is this used for
                 </span>
@@ -142,7 +142,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
                     style={{
                       fontSize: '0.625rem',
                       lineHeight: 1.5,
-                      color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.4)',
+                      color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.4)',
                       paddingLeft: '0.75rem',
                       position: 'relative',
                     }}
@@ -166,8 +166,8 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
                 style={{
                   padding: '0.5rem',
                   borderRadius: '0.5rem',
-                  background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(0,0,0,0.02)',
-                  border: isDark ? '1px solid rgba(50,49,45,0.2)' : '1px solid rgba(0,0,0,0.04)',
+                  background: isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)',
+                  border: isDark ? '1px solid rgba(79,69,57,0.2)' : '1px solid rgba(0,0,0,0.04)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>
@@ -185,7 +185,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
                 <p style={{
                   fontSize: '0.5625rem',
                   lineHeight: 1.6,
-                  color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.35)',
+                  color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)',
                   fontStyle: 'italic',
                 }}>
                   {tooltip.learnMore}

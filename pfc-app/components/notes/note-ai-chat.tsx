@@ -509,7 +509,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                   color: bodyText,
                   scrollbarWidth: 'thin',
                   scrollbarColor: isDark
-                    ? 'rgba(196,149,106,0.15) transparent'
+                    ? 'rgba(244,189,111,0.15) transparent'
                     : 'rgba(0,0,0,0.1) transparent',
                 }}
               >

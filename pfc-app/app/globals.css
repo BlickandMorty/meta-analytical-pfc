@@ -72,9 +72,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* PFC brand — Claude-inspired warm palette */
-  --color-pfc-ember: #C4956A;
-  --color-pfc-violet: #C4956A;
+  /* PFC brand — Reply M3 warm brown palette */
+  --color-pfc-ember: #F4BD6F;
+  --color-pfc-violet: #F4BD6F;
   --color-pfc-green: #34D399;
   --color-pfc-yellow: #D4A843;
   --color-pfc-red: #C75E5E;
@@ -96,13 +96,13 @@
    Material 3 + Harmonoid — Motion & Duration Tokens
    ───────────────────────────────────────────────────────── */
 :root {
-  /* M3 Emphasized easing — equivalent to Cupertino */
-  --m3-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  /* M3 Motion — official spec easing curves */
+  --m3-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --m3-ease-standard-decel: cubic-bezier(0, 0, 0.2, 1);
+  --m3-ease-standard-accel: cubic-bezier(0.4, 0, 1, 1);
+  --m3-ease-emphasized: cubic-bezier(0.3, 0.33, 0.66, 1);
   --m3-ease-emphasized-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
   --m3-ease-emphasized-accel: cubic-bezier(0.3, 0, 0.8, 0.15);
-  --m3-ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --m3-ease-standard-decel: cubic-bezier(0, 0, 0, 1);
-  --m3-ease-standard-accel: cubic-bezier(0.3, 0, 1, 1);
 
   /* Legacy — kept for existing references */
   --anim-motion-cupertino: cubic-bezier(0.32, 0.72, 0, 1);
@@ -172,40 +172,40 @@
 }
 
 /* ─────────────────────────────────────────────────────────
-   Light theme — warm cream with darker accents/sidebar
+   Light theme — Reply M3 warm cream (seed #825500)
    ───────────────────────────────────────────────────────── */
 :root {
-  --background: #F5F0E8;
-  --foreground: #2B2A27;
-  --card: rgba(235, 229, 218, 0.72);
-  --card-foreground: #2B2A27;
-  --popover: rgba(235, 229, 218, 0.92);
-  --popover-foreground: #2B2A27;
-  --primary: #A07850;
+  --background: #FFF8F4;
+  --foreground: #1D1B16;
+  --card: rgba(249,236,223,0.72);
+  --card-foreground: #1D1B16;
+  --popover: rgba(249,236,223,0.92);
+  --popover-foreground: #1D1B16;
+  --primary: #805610;
   --primary-foreground: #FFFFFF;
-  --secondary: #E0DACF;
-  --secondary-foreground: #2B2A27;
-  --muted: #E0DACF;
-  --muted-foreground: #6B6660;
-  --accent: #A07850;
+  --secondary: #F9ECDF;
+  --secondary-foreground: #1D1B16;
+  --muted: #F3E6DA;
+  --muted-foreground: #9D8E81;
+  --accent: #805610;
   --accent-foreground: #FFFFFF;
-  --destructive: #C75E5E;
+  --destructive: #BA1A1A;
   --destructive-foreground: #FFFFFF;
-  --border: rgba(190, 183, 170, 0.4);
-  --input: rgba(190, 183, 170, 0.4);
-  --ring: #A07850;
+  --border: rgba(208,196,180,0.4);
+  --input: rgba(208,196,180,0.4);
+  --ring: #805610;
   --radius: 0.75rem;
 
-  /* Sidebar — darker cream for contrast */
-  --sidebar: rgba(218, 212, 200, 0.85);
-  --sidebar-foreground: #2B2A27;
-  --sidebar-border: rgba(190, 183, 170, 0.4);
-  --sidebar-accent: rgba(210, 204, 192, 0.7);
-  --sidebar-accent-foreground: #2B2A27;
-  --sidebar-ring: #A07850;
+  /* Sidebar */
+  --sidebar: rgba(237,224,212,0.85);
+  --sidebar-foreground: #1D1B16;
+  --sidebar-border: rgba(208,196,180,0.4);
+  --sidebar-accent: rgba(243,230,218,0.7);
+  --sidebar-accent-foreground: #1D1B16;
+  --sidebar-ring: #805610;
 
-  /* Liquid Glass — warm cream (lighter glass) */
-  --liquid-glass-background: rgba(240, 235, 225, 0.72);
+  /* Liquid Glass — warm cream */
+  --liquid-glass-background: rgba(255,248,244,0.72);
   --shadow-base: none;
   --shadow-border: none;
   --shadow-xs: none;
@@ -215,103 +215,117 @@
 
   /* Glass tokens */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: rgba(190, 183, 170, 0.3);
-  --glass-hover: rgba(240, 235, 225, 0.7);
+  --glass-border: rgba(208,196,180,0.3);
+  --glass-hover: rgba(249,236,223,0.7);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 
-  /* Chat surface — unified with background, no two-tone */
-  --chat-surface: #F5F0E8;
+  /* Chat surface */
+  --chat-surface: #FFF8F4;
 
-  /* M3 Surface container hierarchy — warm cream tones */
-  --m3-surface: #F5F0E8;
-  --m3-surface-dim: #E8E3DB;
-  --m3-surface-bright: #FFFFFF;
+  /* M3 Surface container hierarchy — Reply warm cream */
+  --m3-surface: #FFF8F4;
+  --m3-surface-dim: #E1D5C8;
+  --m3-surface-bright: #FFF8F4;
+  --m3-on-surface: #1D1B16;
+  --m3-on-surface-variant: #4F4539;
   --m3-surface-container-lowest: #FFFFFF;
-  --m3-surface-container: #EFEBE2;
-  --m3-surface-container-high: #E9E4DB;
-  --m3-surface-container-highest: #E3DED5;
+  --m3-surface-container-low: #FFF1E5;
+  --m3-surface-container: #F9ECDF;
+  --m3-surface-container-high: #F3E6DA;
+  --m3-surface-container-highest: #EDE0D4;
 
-  /* M3 Color roles — warm brown primary */
-  --m3-primary: #7A5C3E;
+  /* M3 Color roles — Reply warm brown primary */
+  --m3-primary: #805610;
   --m3-on-primary: #FFFFFF;
-  --m3-primary-container: #F0DCC8;
-  --m3-on-primary-container: #2B1700;
-  --m3-secondary: #6F5D4B;
+  --m3-primary-container: #FFDDB3;
+  --m3-on-primary-container: #291800;
+  --m3-secondary: #6F5B40;
   --m3-on-secondary: #FFFFFF;
-  --m3-secondary-container: #FAE1C8;
-  --m3-on-secondary-container: #27180A;
-  --m3-tertiary: #506551;
+  --m3-secondary-container: #FBDEBC;
+  --m3-on-secondary-container: #271904;
+  --m3-tertiary: #51643F;
   --m3-on-tertiary: #FFFFFF;
-  --m3-tertiary-container: #D2EBD1;
-  --m3-on-tertiary-container: #0D1F12;
-  --m3-outline: #827568;
-  --m3-outline-variant: #D5C4B4;
+  --m3-tertiary-container: #D4EABB;
+  --m3-on-tertiary-container: #0F2000;
+  --m3-error: #BA1A1A;
+  --m3-on-error: #FFFFFF;
+  --m3-error-container: #FFDAD6;
+  --m3-on-error-container: #410002;
+  --m3-outline: #9D8E81;
+  --m3-outline-variant: #D0C4B4;
 
 }
 
 /* ─────────────────────────────────────────────────────────
-   Dark theme — Near-OLED with dark gray elevated surfaces
+   Dark theme — True OLED black + Reply M3 warm containers
    ───────────────────────────────────────────────────────── */
 .dark {
-  --background: #111110;
-  --foreground: #E8E4DE;
-  --card: rgba(28, 27, 25, 0.85);
-  --card-foreground: #E8E4DE;
-  --popover: rgba(28, 27, 25, 0.95);
-  --popover-foreground: #E8E4DE;
-  --primary: #C4956A;
-  --primary-foreground: #111110;
-  --secondary: #1C1B19;
-  --secondary-foreground: #E8E4DE;
-  --muted: #1C1B19;
-  --muted-foreground: #9B9689;
-  --accent: #C4956A;
-  --accent-foreground: #111110;
-  --destructive: #C75E5E;
-  --destructive-foreground: #E8E4DE;
-  --border: rgba(50, 49, 45, 0.5);
-  --input: rgba(45, 44, 40, 0.5);
-  --ring: #C4956A;
+  --background: #000000;
+  --foreground: #EDE0D4;
+  --card: rgba(37,31,23,0.85);
+  --card-foreground: #EDE0D4;
+  --popover: rgba(37,31,23,0.95);
+  --popover-foreground: #EDE0D4;
+  --primary: #F4BD6F;
+  --primary-foreground: #452B00;
+  --secondary: #251F17;
+  --secondary-foreground: #EDE0D4;
+  --muted: #201B13;
+  --muted-foreground: #9C8F80;
+  --accent: #F4BD6F;
+  --accent-foreground: #452B00;
+  --destructive: #FFB4AB;
+  --destructive-foreground: #690005;
+  --border: rgba(79,69,57,0.5);
+  --input: rgba(79,69,57,0.5);
+  --ring: #F4BD6F;
 
-  /* Chat surface — unified with background, no two-tone */
-  --chat-surface: #111110;
+  /* Chat surface — OLED black */
+  --chat-surface: #000000;
 
-  /* M3 Surface container hierarchy — warm dark tones */
-  --m3-surface: #111110;
-  --m3-surface-dim: #0D0D0C;
-  --m3-surface-bright: #3B3936;
-  --m3-surface-container-lowest: #0A0A09;
-  --m3-surface-container: #1C1B19;
-  --m3-surface-container-high: #262523;
-  --m3-surface-container-highest: #312F2C;
+  /* M3 Surface container hierarchy — OLED base, Reply warm containers */
+  --m3-surface: #000000;
+  --m3-surface-dim: #0A0805;
+  --m3-surface-bright: #3F3830;
+  --m3-on-surface: #EDE0D4;
+  --m3-on-surface-variant: #D0C4B4;
+  --m3-surface-container-lowest: #060402;
+  --m3-surface-container-low: #18120B;
+  --m3-surface-container: #201B13;
+  --m3-surface-container-high: #2F2921;
+  --m3-surface-container-highest: #3B342B;
 
-  /* M3 Color roles — warm brown primary (dark variant) */
-  --m3-primary: #E0B896;
-  --m3-on-primary: #442A14;
-  --m3-primary-container: #5E4028;
-  --m3-on-primary-container: #F0DCC8;
-  --m3-secondary: #DDC1A8;
-  --m3-on-secondary: #3E2D1C;
-  --m3-secondary-container: #574434;
-  --m3-on-secondary-container: #FAE1C8;
-  --m3-tertiary: #B6CFB6;
-  --m3-on-tertiary: #223625;
-  --m3-tertiary-container: #384E3A;
-  --m3-on-tertiary-container: #D2EBD1;
-  --m3-outline: #9F8D7F;
-  --m3-outline-variant: #504538;
+  /* M3 Color roles — Reply warm brown (dark) */
+  --m3-primary: #F4BD6F;
+  --m3-on-primary: #452B00;
+  --m3-primary-container: #633F00;
+  --m3-on-primary-container: #FFDDB3;
+  --m3-secondary: #DDC2A1;
+  --m3-on-secondary: #3E2D16;
+  --m3-secondary-container: #56442A;
+  --m3-on-secondary-container: #FBDEBC;
+  --m3-tertiary: #B8CDA0;
+  --m3-on-tertiary: #253515;
+  --m3-tertiary-container: #3C4C29;
+  --m3-on-tertiary-container: #D4EABB;
+  --m3-error: #FFB4AB;
+  --m3-on-error: #690005;
+  --m3-error-container: #93000A;
+  --m3-on-error-container: #FFDAD6;
+  --m3-outline: #9C8F80;
+  --m3-outline-variant: #4F4539;
 
-  /* Sidebar — lighter gray for contrast against OLED bg */
-  --sidebar: rgba(28, 27, 25, 0.9);
-  --sidebar-foreground: #E8E4DE;
-  --sidebar-border: rgba(50, 49, 45, 0.3);
-  --sidebar-accent: rgba(38, 37, 34, 0.6);
-  --sidebar-accent-foreground: #E8E4DE;
-  --sidebar-ring: #C4956A;
+  /* Sidebar — warm container surface */
+  --sidebar: rgba(32,27,19,0.9);
+  --sidebar-foreground: #EDE0D4;
+  --sidebar-border: rgba(79,69,57,0.3);
+  --sidebar-accent: rgba(47,41,33,0.6);
+  --sidebar-accent-foreground: #EDE0D4;
+  --sidebar-ring: #F4BD6F;
 
-  /* No glass morphism shadows in dark — flat */
-  --liquid-glass-background: rgba(28, 27, 25, 0.75);
+  /* No glass in dark — flat */
+  --liquid-glass-background: rgba(32,27,19,0.75);
   --shadow-base: none;
   --shadow-border: none;
   --shadow-xs: none;
@@ -319,10 +333,10 @@
   --shadow-l: none;
   --shadow-tactile: none;
 
-  /* Glass tokens (dark) — subtle, no heavy blur */
+  /* Glass tokens (dark) */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: rgba(50, 49, 45, 0.3);
-  --glass-hover: rgba(38, 37, 34, 0.6);
+  --glass-border: rgba(79,69,57,0.3);
+  --glass-hover: rgba(47,41,33,0.6);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 }
@@ -346,7 +360,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  letter-spacing: -0.011em;
+  letter-spacing: 0.01em;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -366,28 +380,30 @@ body::after {
 }
 
 /* ─────────────────────────────────────────────────────────
-   Typography — SF Pro / Cupertino hierarchy
+   Typography — M3 Type Scale applied to HTML elements
    ───────────────────────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv01" 1;
-  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 
-h1 { letter-spacing: -0.032em; }
-h2 { letter-spacing: -0.028em; }
-h3 { letter-spacing: -0.022em; }
+/* M3 headline letter-spacing: 0 for headlines, slight negative for display */
+h1 { letter-spacing: -0.25px; font-weight: 400; }
+h2 { letter-spacing: 0; font-weight: 400; }
+h3 { letter-spacing: 0; font-weight: 500; }
+h4 { letter-spacing: 0; font-weight: 500; }
 
 nav a, nav button, aside a, aside button, aside span,
 [role="navigation"] a, [role="navigation"] button {
   font-family: var(--font-display);
-  letter-spacing: -0.012em;
+  letter-spacing: 0.1px;
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
 }
 
-[class*="badge"], [class*="chip"], [class*="uppercase tracking"] {
+[class*="badge"], [class*="chip"] {
   font-family: var(--font-display);
+  letter-spacing: 0.5px;
   font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
 }
 
@@ -397,23 +413,23 @@ nav a, nav button, aside a, aside button, aside span,
 
 input, textarea, select {
   font-family: var(--font-sans);
-  letter-spacing: -0.011em;
+  letter-spacing: 0.25px;
   font-feature-settings: "rlig" 1, "calt" 1;
 }
 
 button {
   font-family: var(--font-display);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.1px;
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
 }
 
 [class*="card"] h1, [class*="card"] h2, [class*="card"] h3, [class*="card"] h4 {
   font-family: var(--font-display);
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 
 .prose-pfc p, .prose-pfc li, .prose-pfc blockquote {
-  letter-spacing: -0.006em;
+  letter-spacing: 0.25px;
   line-height: 1.7;
 }
 
@@ -425,7 +441,7 @@ html {
 }
 
 ::selection {
-  background-color: rgba(196, 149, 106, 0.25);
+  background-color: rgba(244, 189, 111, 0.25);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -449,6 +465,78 @@ html {
   backdrop-filter: var(--blur-l);
   -webkit-backdrop-filter: var(--blur-l);
   box-shadow: var(--shadow-xs);
+}
+
+/* ─────────────────────────────────────────────────────────
+   M3 State Layer — overlay system for interactive elements
+   ───────────────────────────────────────────────────────── */
+.m3-interactive {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.m3-interactive::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  transition: background var(--duration-short2) var(--m3-ease-standard);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.m3-interactive:hover::before {
+  background: var(--m3-primary);
+  opacity: var(--state-hover);
+}
+
+.m3-interactive:focus-visible::before {
+  background: var(--m3-primary);
+  opacity: var(--state-focus);
+}
+
+.m3-interactive:active::before {
+  background: var(--m3-primary);
+  opacity: var(--state-pressed);
+}
+
+/* M3 Chip — pill-shaped interactive element */
+.m3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: var(--shape-full);
+  font-size: var(--type-label-lg);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  cursor: pointer;
+  border: none;
+  transition: background var(--duration-short2) var(--m3-ease-standard),
+              box-shadow var(--duration-short2) var(--m3-ease-standard);
+}
+
+.m3-chip--assist {
+  background: var(--m3-surface-container);
+  color: var(--foreground);
+  border: 1px solid var(--m3-outline-variant);
+}
+
+.m3-chip--suggestion {
+  background: var(--m3-surface-container-high);
+  color: var(--foreground);
+}
+
+.m3-chip--filled {
+  background: var(--m3-primary);
+  color: var(--m3-on-primary);
+}
+
+.m3-chip--tonal {
+  background: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -664,7 +752,7 @@ html {
    Focus — clean, Cupertino-style ring
    ───────────────────────────────────────────────────────── */
 :focus-visible:not(input):not(textarea):not(select) {
-  outline: 2px solid rgba(196, 149, 106, 0.5);
+  outline: 2px solid rgba(244, 189, 111, 0.5);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -711,9 +799,9 @@ select:focus-visible {
 .thinking-shimmer {
   background: linear-gradient(
     90deg,
-    var(--color-pfc-violet) 0%,
-    #E0C4A8 50%,
-    var(--color-pfc-violet) 100%
+    var(--m3-primary) 0%,
+    #FFDDB3 50%,
+    var(--m3-primary) 100%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;

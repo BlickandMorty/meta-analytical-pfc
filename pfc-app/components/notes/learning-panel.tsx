@@ -300,7 +300,7 @@ export const LearningPanel = memo(function LearningPanel() {
             style={{
               height: 2,
               width: '100%',
-              background: isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.04)',
+              background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.04)',
               flexShrink: 0,
             }}
           >
@@ -480,7 +480,7 @@ export const LearningPanel = memo(function LearningPanel() {
               overflowY: 'auto',
               scrollbarWidth: 'thin',
               scrollbarColor: isDark
-                ? 'rgba(196,149,106,0.08) transparent'
+                ? 'rgba(244,189,111,0.08) transparent'
                 : 'rgba(0,0,0,0.06) transparent',
             }}
           >
@@ -524,8 +524,8 @@ export const LearningPanel = memo(function LearningPanel() {
                         position: 'absolute',
                         inset: 0,
                         background: isDark
-                          ? 'linear-gradient(90deg, transparent 0%, rgba(196,149,106,0.08) 50%, transparent 100%)'
-                          : 'linear-gradient(90deg, transparent 0%, rgba(196,149,106,0.06) 50%, transparent 100%)',
+                          ? 'linear-gradient(90deg, transparent 0%, rgba(244,189,111,0.08) 50%, transparent 100%)'
+                          : 'linear-gradient(90deg, transparent 0%, rgba(244,189,111,0.06) 50%, transparent 100%)',
                         animation: 'shimmer 2s ease-in-out infinite',
                       }}
                     />
@@ -570,7 +570,7 @@ export const LearningPanel = memo(function LearningPanel() {
                   fontSize: '0.625rem',
                   lineHeight: 1.5,
                   fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                  color: isDark ? 'rgba(232,228,222,0.35)' : 'rgba(0,0,0,0.3)',
+                  color: isDark ? 'rgba(237,224,212,0.35)' : 'rgba(0,0,0,0.3)',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   display: '-webkit-box',
@@ -904,7 +904,7 @@ export const LearningPanel = memo(function LearningPanel() {
                   padding: 2,
                   background: learningAutoRun
                     ? 'rgba(196, 149, 106, 0.5)'
-                    : (isDark ? 'rgba(196,149,106,0.1)' : 'rgba(0,0,0,0.1)'),
+                    : (isDark ? 'rgba(244,189,111,0.1)' : 'rgba(0,0,0,0.1)'),
                   border: 'none',
                   cursor: 'pointer',
                   display: 'flex',
@@ -921,7 +921,7 @@ export const LearningPanel = memo(function LearningPanel() {
                     width: 14,
                     height: 14,
                     borderRadius: 7,
-                    background: learningAutoRun ? '#D4B896' : (isDark ? 'rgba(232,228,222,0.4)' : 'rgba(0,0,0,0.3)'),
+                    background: learningAutoRun ? '#D4B896' : (isDark ? 'rgba(237,224,212,0.4)' : 'rgba(0,0,0,0.3)'),
                     boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                   }}
                 />
@@ -1032,8 +1032,8 @@ function StepIndicator({ status, isDark }: { status: StepStatus; isDark: boolean
         width: size,
         height: size,
         borderRadius: '50%',
-        background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.04)',
-        border: `1px solid ${isDark ? 'rgba(50,49,45,0.5)' : 'rgba(0,0,0,0.06)'}`,
+        background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.04)',
+        border: `1px solid ${isDark ? 'rgba(79,69,57,0.5)' : 'rgba(0,0,0,0.06)'}`,
         flexShrink: 0,
       }}
     />
