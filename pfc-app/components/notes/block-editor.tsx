@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useTheme } from 'next-themes';
-import { motion, AnimatePresence } from 'framer-motion';
 import type { NoteBlock, BlockType, SlashCommand } from '@/lib/notes/types';
 import { SLASH_COMMANDS, SLASH_CATEGORIES, stripHtml } from '@/lib/notes/types';
 import {
@@ -788,10 +787,14 @@ const BlockItem = memo(function BlockItem({
     }
   };
 
+  // ── Drag-over visual state ──
+  const [dragOver, setDragOver] = useState(false);
+
   // ── Divider block (non-editable) ──
   if (block.type === 'divider') {
     return (
       <div
+        className="pfc-block"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -799,7 +802,12 @@ const BlockItem = memo(function BlockItem({
           alignItems: 'center',
           padding: '12px 0',
           paddingLeft: `${block.indent * 1.5}rem`,
-        }}
+          // 60fps: GPU layer + containment + skip off-screen
+          transform: 'translateZ(0)',
+          contain: 'layout style',
+          contentVisibility: 'auto',
+          containIntrinsicSize: 'auto 40px',
+        } as React.CSSProperties}
       >
         <div style={{
           flex: 1, height: '1px',
@@ -811,6 +819,7 @@ const BlockItem = memo(function BlockItem({
 
   return (
     <div
+      className="pfc-block"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       draggable={hovered && !isEditing}
@@ -822,10 +831,13 @@ const BlockItem = memo(function BlockItem({
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
+        setDragOver(true);
         onDragOver(block.id);
       }}
+      onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
         e.preventDefault();
+        setDragOver(false);
         onDrop();
       }}
       style={{
@@ -835,21 +847,58 @@ const BlockItem = memo(function BlockItem({
         paddingLeft: `${block.indent * 1.5}rem`,
         position: 'relative',
         borderRadius: '6px',
-        transition: `background 0.15s ${CUP}`,
-        background: isEditing
-          ? (isDark ? 'rgba(196,149,106,0.04)' : 'rgba(196,149,106,0.02)')
-          : 'transparent',
-      }}
+        // 60fps: GPU layer + containment + skip off-screen rendering
+        transform: 'translateZ(0)',
+        contain: 'layout style',
+        contentVisibility: isEditing ? 'visible' : 'auto',
+        containIntrinsicSize: 'auto 32px',
+      } as React.CSSProperties}
     >
-      {/* ── Gutter: drag handle + add button ── */}
+      {/* ── Focus/hover overlay — S-Tier opacity transition, no background repaint ── */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: '6px',
+          pointerEvents: 'none',
+          background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
+          opacity: isEditing ? 1 : hovered ? 0.5 : 0,
+          transition: `opacity 0.15s ${CUP}`,
+          transform: 'translateZ(0)',
+        }}
+      />
+
+      {/* ── Drag drop indicator line — S-Tier transform slide ── */}
+      {dragOver && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '-1px',
+            left: '2rem',
+            right: '0.5rem',
+            height: '2px',
+            borderRadius: '1px',
+            background: '#C4956A',
+            opacity: 0.7,
+            transform: 'translateZ(0) scaleX(1)',
+            transformOrigin: 'left',
+            animation: 'drop-line-in 0.1s cubic-bezier(0.32, 0.72, 0, 1)',
+          }}
+        />
+      )}
+
+      {/* ── Gutter: drag handle + add button — S-Tier opacity ── */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: '2px',
         opacity: hovered ? 0.6 : 0,
         transition: `opacity 0.15s ${CUP}`,
+        transform: 'translateZ(0)',
         flexShrink: 0,
         marginTop: block.type === 'heading' ? '6px' : '3px',
+        position: 'relative',
+        zIndex: 1,
       }}>
         <button
           onClick={() => {
@@ -880,7 +929,9 @@ const BlockItem = memo(function BlockItem({
       </div>
 
       {/* ── Block prefix ── */}
-      {renderPrefix()}
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start' }}>
+        {renderPrefix()}
+      </div>
 
       {/* ── Content area (contentEditable with rich formatting) ── */}
       <div
@@ -905,23 +956,23 @@ const BlockItem = memo(function BlockItem({
           color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.8)',
           caretColor: '#C4956A',
           wordBreak: 'break-word',
+          position: 'relative',
+          zIndex: 1,
           ...getBlockStyles(),
         }}
       />
 
-      {/* ── Slash menu overlay ── */}
-      <AnimatePresence>
-        {slashOpen && (
-          <SlashMenu
-            query={slashQuery}
-            position={slashPos}
-            isDark={isDark}
-            onSelect={handleSlashSelect}
-            onClose={() => setSlashOpen(false)}
-            selectedIndex={slashIdx}
-          />
-        )}
-      </AnimatePresence>
+      {/* ── Slash menu overlay — pure CSS animation, no Framer Motion ── */}
+      {slashOpen && (
+        <SlashMenu
+          query={slashQuery}
+          position={slashPos}
+          isDark={isDark}
+          onSelect={handleSlashSelect}
+          onClose={() => setSlashOpen(false)}
+          selectedIndex={slashIdx}
+        />
+      )}
     </div>
   );
 });
@@ -1074,8 +1125,14 @@ export function BlockEditor({ pageId }: { pageId: string }) {
         onFormat={handleFormat}
       />
 
-      {/* Block list */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {/* Block list — GPU-promoted container with paint containment */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+        contain: 'layout style',
+        transform: 'translateZ(0)',
+      }}>
         {pageBlocks.map((block, idx) => (
           <BlockItem
             key={block.id}
@@ -1104,8 +1161,18 @@ export function BlockEditor({ pageId }: { pageId: string }) {
         />
       </div>
 
-      {/* Placeholder styles */}
+      {/* 60fps styles: all transitions use S-Tier properties (transform, opacity) */}
       <style>{`
+        @keyframes drop-line-in {
+          from { transform: translateZ(0) scaleX(0); opacity: 0; }
+          to   { transform: translateZ(0) scaleX(1); opacity: 0.7; }
+        }
+
+        /* Drag ghost: subtle scale + opacity */
+        .pfc-block:active[draggable="true"] {
+          opacity: 0.5;
+        }
+
         [data-block-id]:empty:before {
           content: attr(data-placeholder);
           color: ${isDark ? 'rgba(155,150,137,0.25)' : 'rgba(0,0,0,0.15)'};

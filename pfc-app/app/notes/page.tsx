@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef, startTransition } from 'react';
 import dynamic from 'next/dynamic';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { useTheme } from 'next-themes';
@@ -52,6 +52,9 @@ const LearningPanel = dynamic(
   () => import('@/components/notes/learning-panel').then((m) => ({ default: m.LearningPanel })),
   { ssr: false },
 );
+
+// ── 60fps: Cupertino easing for CSS transitions (S-Tier only) ──
+const CUP_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
 
 // ═══════════════════════════════════════════════════════════════════
 // Theme helper — consistent with sidebar
@@ -683,39 +686,35 @@ export default function NotesPage() {
         contain: 'layout style',
       }}
     >
-      {/* ── Sidebar ── */}
-      <AnimatePresence mode="popLayout">
-        {showSidebar && (
-          <motion.div
-            key="sidebar"
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: sidebarWidth }}
-            exit={{ opacity: 0, width: 0 }}
-            transition={spring.settle}
-            style={{
-              position: 'relative',
-              flexShrink: 0,
-              overflow: 'hidden',
-              contain: 'layout paint',
-            }}
-          >
-            <NotesSidebar />
-            {/* Resize handle */}
-            <div
-              onMouseDown={handleResizeStart}
-              style={{
-                position: 'absolute',
-                top: 0,
-                right: -2,
-                width: 5,
-                height: '100%',
-                cursor: 'col-resize',
-                zIndex: 10,
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ── Sidebar — CSS transition + GPU layer, no Framer Motion width animation ── */}
+      <div
+        style={{
+          width: showSidebar ? sidebarWidth : 0,
+          opacity: showSidebar ? 1 : 0,
+          overflow: 'hidden',
+          flexShrink: 0,
+          position: 'relative',
+          transform: 'translateZ(0)',
+          transition: `width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
+          contain: 'layout paint',
+          willChange: showSidebar ? 'auto' : 'width, opacity',
+        } as React.CSSProperties}
+      >
+        <NotesSidebar />
+        {/* Resize handle */}
+        <div
+          onMouseDown={handleResizeStart}
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: -2,
+            width: 5,
+            height: '100%',
+            cursor: 'col-resize',
+            zIndex: 10,
+          }}
+        />
+      </div>
 
       {/* ── Main content ── */}
       <div
@@ -859,8 +858,15 @@ export default function NotesPage() {
           </ToolbarBtn>
         </div>
 
-        {/* ── Editor area ── */}
-        <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+        {/* ── Editor area — GPU scroll layer with overscroll containment ── */}
+        <div style={{
+          flex: 1,
+          overflow: 'auto',
+          position: 'relative',
+          transform: 'translateZ(0)',
+          willChange: 'scroll-position',
+          overscrollBehavior: 'contain',
+        } as React.CSSProperties}>
           <AnimatePresence mode="wait">
             {activePageId && activePage && mounted ? (
               <motion.div
