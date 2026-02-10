@@ -1,24 +1,22 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
+  FileTextIcon,
+  FolderIcon,
+  FolderOpenIcon,
   SearchIcon,
   PlusIcon,
   CalendarIcon,
-  FileTextIcon,
-  BookOpenIcon,
-  NetworkIcon,
+  ChevronRightIcon,
+  MoreHorizontalIcon,
   StarIcon,
   PinIcon,
-  MoreHorizontalIcon,
-  PencilIcon,
   TrashIcon,
+  PencilIcon,
   XIcon,
-  HashIcon,
-  TextIcon,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -28,134 +26,102 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 
-/* ═══════════════════════════════════════════════════════════════════
-   NotesSidebar — Left panel for the notes system
-
-   Displays page list, journals, notebooks, and search results.
-   Glass-morphism design with Framer Motion slide-in animation.
-   ═══════════════════════════════════════════════════════════════════ */
+/* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
 
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
+/* sidebar width is controlled by the parent (NotesPage) */
 
-const SIDEBAR_WIDTH = 260;
+/* ------------------------------------------------------------------ */
+/*  Theme helpers                                                      */
+/* ------------------------------------------------------------------ */
 
-type SidebarView = 'pages' | 'journals' | 'books' | 'graph';
-
-interface ViewTab {
-  id: SidebarView;
-  label: string;
-  icon: typeof FileTextIcon;
+function t(isDark: boolean) {
+  return {
+    bg:       isDark ? 'rgba(20,19,17,0.95)'      : 'rgba(218,212,200,0.95)',
+    text:     isDark ? 'rgba(232,228,222,0.9)'     : 'rgba(43,42,39,0.9)',
+    muted:    isDark ? 'rgba(155,150,137,0.5)'     : 'rgba(0,0,0,0.35)',
+    border:   isDark ? 'rgba(50,49,45,0.3)'        : 'rgba(190,183,170,0.3)',
+    hover:    isDark ? 'rgba(196,149,106,0.06)'    : 'rgba(0,0,0,0.04)',
+    active:   isDark ? 'rgba(196,149,106,0.12)'    : 'rgba(196,149,106,0.10)',
+    accent:   '#C4956A',
+    icon:     isDark ? 'rgba(155,150,137,0.5)'     : 'rgba(0,0,0,0.3)',
+    inputBg:  isDark ? 'rgba(50,49,45,0.3)'        : 'rgba(190,183,170,0.2)',
+    danger:   '#E05252',
+  };
 }
 
-const VIEW_TABS: ViewTab[] = [
-  { id: 'pages', label: 'Pages', icon: FileTextIcon },
-  { id: 'journals', label: 'Journals', icon: CalendarIcon },
-  { id: 'books', label: 'Books', icon: BookOpenIcon },
-  { id: 'graph', label: 'Graph', icon: NetworkIcon },
-];
-
-// ── Helper: format relative date ──────────────────────────────────
-
-function formatRelativeDate(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-function formatJournalDate(dateStr?: string): string {
-  if (!dateStr) return '';
-  const date = new Date(dateStr + 'T00:00:00');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (date.getTime() === today.getTime()) return 'Today';
-  if (date.getTime() === yesterday.getTime()) return 'Yesterday';
-
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-function isToday(dateStr?: string): boolean {
-  if (!dateStr) return false;
-  const today = new Date().toISOString().split('T')[0];
-  return dateStr === today;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Main sidebar component
-// ═══════════════════════════════════════════════════════════════════
+/* ------------------------------------------------------------------ */
+/*  Main sidebar component                                             */
+/* ------------------------------------------------------------------ */
 
 export const NotesSidebar = memo(function NotesSidebar() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const c = t(isDark);
 
-  // ── Store selectors ──
-  const notePages = usePFCStore((s) => s.notePages);
-  const noteBooks = usePFCStore((s) => s.noteBooks);
-  const activePageId = usePFCStore((s) => s.activePageId);
-  const sidebarOpen = usePFCStore((s) => s.notesSidebarOpen);
-  const currentView = usePFCStore((s) => s.notesSidebarView);
-  const searchQuery = usePFCStore((s) => s.notesSearchQuery);
-  const setActivePage = usePFCStore((s) => s.setActivePage);
-  const createPage = usePFCStore((s) => s.createPage);
-  const deletePage = usePFCStore((s) => s.deletePage);
+  // -- Store selectors --
+  const notePages          = usePFCStore((s) => s.notePages);
+  const noteBooks          = usePFCStore((s) => s.noteBooks);
+  const activePageId       = usePFCStore((s) => s.activePageId);
+  const sidebarOpen        = usePFCStore((s) => s.notesSidebarOpen);
+  const setActivePage      = usePFCStore((s) => s.setActivePage);
+  const createPage         = usePFCStore((s) => s.createPage);
+  const deletePage         = usePFCStore((s) => s.deletePage);
+  const renamePage         = usePFCStore((s) => s.renamePage);
   const togglePageFavorite = usePFCStore((s) => s.togglePageFavorite);
-  const togglePagePin = usePFCStore((s) => s.togglePagePin);
+  const togglePagePin      = usePFCStore((s) => s.togglePagePin);
+  const searchNotes        = usePFCStore((s) => s.searchNotes);
   const getOrCreateTodayJournal = usePFCStore((s) => s.getOrCreateTodayJournal);
-  const setNotesSidebarView = usePFCStore((s) => s.setNotesSidebarView);
-  const setNotesSearchQuery = usePFCStore((s) => s.setNotesSearchQuery);
-  const searchNotes = usePFCStore((s) => s.searchNotes);
+  const toggleNotesSidebar = usePFCStore((s) => s.toggleNotesSidebar);
+  const createNoteBook     = usePFCStore((s) => s.createNoteBook);
 
-  // ── Derived data ──
+  // -- Local state --
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedBooks, setExpandedBooks] = useState<Set<string>>(new Set());
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  // -- Search filtering --
   const searchResults = useMemo(
     () => (searchQuery.trim() ? searchNotes(searchQuery) : []),
     [searchQuery, searchNotes],
   );
+  const isSearching = searchQuery.trim().length > 0;
 
+  // -- Derived data: pinned, books with pages, standalone pages --
   const pinnedPages = useMemo(
     () => notePages.filter((p) => p.pinned).sort((a, b) => b.updatedAt - a.updatedAt),
     [notePages],
   );
 
-  const favoritePages = useMemo(
-    () => notePages.filter((p) => p.favorite && !p.pinned).sort((a, b) => b.updatedAt - a.updatedAt),
-    [notePages],
-  );
+  const bookPageIds = useMemo(() => {
+    const ids = new Set<string>();
+    noteBooks.forEach((b) => b.pageIds.forEach((id) => ids.add(id)));
+    return ids;
+  }, [noteBooks]);
 
-  const allPagesSorted = useMemo(
-    () => [...notePages].filter((p) => !p.pinned && !p.favorite).sort((a, b) => b.updatedAt - a.updatedAt),
-    [notePages],
-  );
-
-  const journalPages = useMemo(
+  const standalonePages = useMemo(
     () => notePages
-      .filter((p) => p.isJournal)
-      .sort((a, b) => (b.journalDate ?? '').localeCompare(a.journalDate ?? '')),
-    [notePages],
+      .filter((p) => !p.pinned && !bookPageIds.has(p.id))
+      .sort((a, b) => b.updatedAt - a.updatedAt),
+    [notePages, bookPageIds],
   );
 
-  const showSearch = searchQuery.trim().length > 0;
+  const booksWithPages = useMemo(
+    () => noteBooks.map((book) => ({
+      ...book,
+      pages: book.pageIds
+        .map((id) => notePages.find((p) => p.id === id))
+        .filter(Boolean) as typeof notePages,
+    })),
+    [noteBooks, notePages],
+  );
 
-  // ── Handlers ──
+  // -- Handlers --
   const handleNewPage = useCallback(() => {
     createPage('Untitled');
   }, [createPage]);
@@ -164,189 +130,165 @@ export const NotesSidebar = memo(function NotesSidebar() {
     getOrCreateTodayJournal();
   }, [getOrCreateTodayJournal]);
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const toggleBook = useCallback((bookId: string) => {
+    setExpandedBooks((prev) => {
+      const next = new Set(prev);
+      if (next.has(bookId)) next.delete(bookId);
+      else next.add(bookId);
+      return next;
+    });
+  }, []);
+
+  const startRename = useCallback((id: string, currentTitle: string) => {
+    setRenamingId(id);
+    setRenameValue(currentTitle);
+  }, []);
+
+  const commitRename = useCallback(() => {
+    if (renamingId && renameValue.trim()) {
+      renamePage(renamingId, renameValue.trim());
+    }
+    setRenamingId(null);
+    setRenameValue('');
+  }, [renamingId, renameValue, renamePage]);
 
   if (!sidebarOpen) return null;
 
   return (
-    <AnimatePresence>
-      {sidebarOpen && (
-        <motion.aside
-          key="notes-sidebar"
-          initial={{ x: -SIDEBAR_WIDTH, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -SIDEBAR_WIDTH, opacity: 0 }}
-          transition={{ duration: 0.32, ease: CUPERTINO }}
+        <aside
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: SIDEBAR_WIDTH,
-            zIndex: 40,
+            width: '100%',
+            height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            background: isDark
-              ? 'rgba(20, 19, 17, 0.95)'
-              : 'rgba(218, 212, 200, 0.50)',
-            backdropFilter: 'blur(12px) saturate(1.3)',
-            WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
-            borderRight: isDark
-              ? '1px solid rgba(50, 49, 45, 0.5)'
-              : '1px solid rgba(0, 0, 0, 0.06)',
+            background: c.bg,
+            borderRight: `1px solid ${c.border}`,
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            fontSize: '14px',
+            color: c.text,
+            userSelect: 'none',
+            overflow: 'hidden',
           }}
         >
-          {/* ── Header bar ── */}
+          {/* ── Header ── */}
           <SidebarHeader
-            isDark={isDark}
+            c={c}
             searchQuery={searchQuery}
-            searchInputRef={searchInputRef}
-            onSearchChange={setNotesSearchQuery}
-            onNewPage={handleNewPage}
-            onTodayJournal={handleTodayJournal}
+            onSearchChange={setSearchQuery}
           />
 
-          {/* ── View tabs ── */}
-          {!showSearch && (
-            <ViewTabBar
-              isDark={isDark}
-              currentView={currentView}
-              onViewChange={setNotesSidebarView}
-            />
-          )}
-
-          {/* ── Content area ── */}
+          {/* ── Scrollable tree area ── */}
           <div
             style={{
               flex: 1,
               overflowY: 'auto',
               overflowX: 'hidden',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
+              scrollbarWidth: 'thin',
+              padding: '6px 0',
             }}
-            className="[&::-webkit-scrollbar]:hidden"
           >
-            {showSearch ? (
-              <SearchResultsView
-                isDark={isDark}
+            {isSearching ? (
+              <SearchResults
+                c={c}
                 results={searchResults}
                 query={searchQuery}
                 activePageId={activePageId}
                 onSelectPage={setActivePage}
               />
-            ) : currentView === 'pages' ? (
-              <PagesView
-                isDark={isDark}
+            ) : (
+              <TreeView
+                c={c}
                 pinnedPages={pinnedPages}
-                favoritePages={favoritePages}
-                allPages={allPagesSorted}
+                booksWithPages={booksWithPages}
+                standalonePages={standalonePages}
+                expandedBooks={expandedBooks}
                 activePageId={activePageId}
+                renamingId={renamingId}
+                renameValue={renameValue}
+                onToggleBook={toggleBook}
                 onSelectPage={setActivePage}
                 onDelete={deletePage}
                 onToggleFavorite={togglePageFavorite}
                 onTogglePin={togglePagePin}
+                onStartRename={startRename}
+                onRenameChange={setRenameValue}
+                onCommitRename={commitRename}
               />
-            ) : currentView === 'journals' ? (
-              <JournalsView
-                isDark={isDark}
-                journals={journalPages}
-                activePageId={activePageId}
-                onSelectPage={setActivePage}
-              />
-            ) : currentView === 'books' ? (
-              <BooksView
-                isDark={isDark}
-                books={noteBooks}
-              />
-            ) : (
-              <GraphPlaceholder isDark={isDark} />
             )}
           </div>
-        </motion.aside>
-      )}
-    </AnimatePresence>
+
+          {/* ── Bottom bar ── */}
+          <BottomBar
+            c={c}
+            onNewPage={handleNewPage}
+            onTodayJournal={handleTodayJournal}
+          />
+
+        </aside>
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Sidebar Header — Search + New Page + Today
-// ═══════════════════════════════════════════════════════════════════
+/* ================================================================== */
+/*  Sidebar Header                                                     */
+/* ================================================================== */
 
 interface SidebarHeaderProps {
-  isDark: boolean;
+  c: ReturnType<typeof t>;
   searchQuery: string;
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
-  onSearchChange: (query: string) => void;
-  onNewPage: () => void;
-  onTodayJournal: () => void;
+  onSearchChange: (q: string) => void;
 }
 
 const SidebarHeader = memo(function SidebarHeader({
-  isDark,
-  searchQuery,
-  searchInputRef,
-  onSearchChange,
-  onNewPage,
-  onTodayJournal,
+  c, searchQuery, onSearchChange,
 }: SidebarHeaderProps) {
   return (
-    <div
-      style={{
-        padding: '0.75rem 0.75rem 0.5rem',
-        borderBottom: isDark
-          ? '1px solid rgba(50, 49, 45, 0.5)'
-          : '1px solid rgba(0, 0, 0, 0.04)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.5rem',
-      }}
-    >
+    <div style={{
+      padding: '14px 12px 10px',
+      borderBottom: `1px solid ${c.border}`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+    }}>
+      {/* Title */}
+      <span style={{
+        fontSize: '11px',
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: c.muted,
+      }}>
+        Files
+      </span>
+
       {/* Search input */}
       <div style={{ position: 'relative' }}>
-        <SearchIcon
-          style={{
-            position: 'absolute',
-            left: '0.5rem',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '0.75rem',
-            height: '0.75rem',
-            color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.3)',
-            pointerEvents: 'none',
-          }}
-        />
+        <SearchIcon style={{
+          position: 'absolute',
+          left: 8,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: 13,
+          height: 13,
+          color: c.icon,
+          pointerEvents: 'none',
+        }} />
         <input
-          ref={searchInputRef}
           type="text"
-          placeholder="Search notes..."
+          placeholder="Search..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           style={{
             width: '100%',
-            height: '1.75rem',
-            paddingLeft: '1.75rem',
-            paddingRight: searchQuery ? '1.75rem' : '0.5rem',
-            fontSize: '0.6875rem',
+            height: 30,
+            paddingLeft: 30,
+            paddingRight: searchQuery ? 28 : 8,
+            fontSize: '13px',
             fontWeight: 400,
-            letterSpacing: '-0.005em',
-            borderRadius: '9999px',
-            border: 'none',
-            background: isDark
-              ? 'rgba(196,149,106,0.08)'
-              : 'rgba(0,0,0,0.03)',
-            color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.75)',
+            borderRadius: 4,
+            border: `1px solid ${c.border}`,
+            background: c.inputBg,
+            color: c.text,
             outline: 'none',
-            transition: 'border-color 0.15s, background 0.15s',
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = isDark
-              ? 'rgba(196,149,106,0.3)'
-              : 'rgba(124,108,240,0.3)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = isDark
-              ? 'rgba(50,49,45,0.5)'
-              : 'rgba(0,0,0,0.06)';
           }}
         />
         {searchQuery && (
@@ -354,470 +296,573 @@ const SidebarHeader = memo(function SidebarHeader({
             onClick={() => onSearchChange('')}
             style={{
               position: 'absolute',
-              right: '0.375rem',
+              right: 6,
               top: '50%',
               transform: 'translateY(-50%)',
-              width: '1rem',
-              height: '1rem',
+              width: 18,
+              height: 18,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '50%',
+              borderRadius: 3,
               border: 'none',
-              background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.06)',
-              color: isDark ? 'rgba(232,228,222,0.4)' : 'rgba(0,0,0,0.35)',
+              background: 'transparent',
+              color: c.muted,
               cursor: 'pointer',
               padding: 0,
             }}
           >
-            <XIcon style={{ width: '0.5rem', height: '0.5rem' }} />
+            <XIcon style={{ width: 12, height: 12 }} />
           </button>
         )}
       </div>
+    </div>
+  );
+});
 
-      {/* Action buttons row */}
-      <div style={{ display: 'flex', gap: '0.375rem' }}>
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onClick={onNewPage}
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.25rem',
-            height: '1.625rem',
-            fontSize: '0.625rem',
-            fontWeight: 600,
-            letterSpacing: '-0.005em',
-            borderRadius: '9999px',
-            border: 'none',
-            background: isDark
-              ? 'rgba(52,211,153,0.12)'
-              : 'rgba(52,211,153,0.10)',
-            color: '#34D399',
-            cursor: 'pointer',
-            transition: 'background 0.15s',
-          }}
-        >
-          <PlusIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
-          New Page
-        </motion.button>
+/* ================================================================== */
+/*  Tree View                                                          */
+/* ================================================================== */
 
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onClick={onTodayJournal}
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.25rem',
-            height: '1.625rem',
-            fontSize: '0.625rem',
-            fontWeight: 600,
-            letterSpacing: '-0.005em',
-            borderRadius: '9999px',
-            border: 'none',
-            background: isDark
-              ? 'rgba(196,149,106,0.12)'
-              : 'rgba(196,149,106,0.10)',
-            color: '#C4956A',
-            cursor: 'pointer',
-            transition: 'background 0.15s',
-          }}
-        >
-          <CalendarIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
-          Today
-        </motion.button>
+interface TreePage {
+  id: string;
+  title: string;
+  icon?: string;
+  tags: string[];
+  favorite: boolean;
+  pinned: boolean;
+  isJournal: boolean;
+  journalDate?: string;
+  updatedAt: number;
+}
+
+interface BookWithPages {
+  id: string;
+  title: string;
+  description?: string;
+  pageIds: string[];
+  pages: TreePage[];
+}
+
+interface TreeViewProps {
+  c: ReturnType<typeof t>;
+  pinnedPages: TreePage[];
+  booksWithPages: BookWithPages[];
+  standalonePages: TreePage[];
+  expandedBooks: Set<string>;
+  activePageId: string | null;
+  renamingId: string | null;
+  renameValue: string;
+  onToggleBook: (id: string) => void;
+  onSelectPage: (id: string) => void;
+  onDelete: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onStartRename: (id: string, title: string) => void;
+  onRenameChange: (val: string) => void;
+  onCommitRename: () => void;
+}
+
+function TreeView({
+  c,
+  pinnedPages,
+  booksWithPages,
+  standalonePages,
+  expandedBooks,
+  activePageId,
+  renamingId,
+  renameValue,
+  onToggleBook,
+  onSelectPage,
+  onDelete,
+  onToggleFavorite,
+  onTogglePin,
+  onStartRename,
+  onRenameChange,
+  onCommitRename,
+}: TreeViewProps) {
+  const hasAnything = pinnedPages.length > 0 || booksWithPages.length > 0 || standalonePages.length > 0;
+
+  if (!hasAnything) {
+    return (
+      <div style={{
+        padding: '40px 20px',
+        textAlign: 'center',
+        color: c.muted,
+        fontSize: '13px',
+      }}>
+        No pages yet. Create one to get started.
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <>
+      {/* ── Pinned section ── */}
+      {pinnedPages.length > 0 && (
+        <div style={{ marginBottom: 4 }}>
+          <SectionHeader c={c} label="Pinned" />
+          {pinnedPages.map((page) => (
+            <FileItem
+              key={page.id}
+              c={c}
+              page={page}
+              isActive={page.id === activePageId}
+              isRenaming={page.id === renamingId}
+              renameValue={renameValue}
+              depth={0}
+              onSelect={onSelectPage}
+              onDelete={onDelete}
+              onToggleFavorite={onToggleFavorite}
+              onTogglePin={onTogglePin}
+              onStartRename={onStartRename}
+              onRenameChange={onRenameChange}
+              onCommitRename={onCommitRename}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Books (folders) ── */}
+      {booksWithPages.map((book) => (
+        <FolderItem
+          key={book.id}
+          c={c}
+          book={book}
+          isExpanded={expandedBooks.has(book.id)}
+          activePageId={activePageId}
+          renamingId={renamingId}
+          renameValue={renameValue}
+          onToggle={onToggleBook}
+          onSelectPage={onSelectPage}
+          onDelete={onDelete}
+          onToggleFavorite={onToggleFavorite}
+          onTogglePin={onTogglePin}
+          onStartRename={onStartRename}
+          onRenameChange={onRenameChange}
+          onCommitRename={onCommitRename}
+        />
+      ))}
+
+      {/* ── Standalone pages (root-level files) ── */}
+      {standalonePages.map((page) => (
+        <FileItem
+          key={page.id}
+          c={c}
+          page={page}
+          isActive={page.id === activePageId}
+          isRenaming={page.id === renamingId}
+          renameValue={renameValue}
+          depth={0}
+          onSelect={onSelectPage}
+          onDelete={onDelete}
+          onToggleFavorite={onToggleFavorite}
+          onTogglePin={onTogglePin}
+          onStartRename={onStartRename}
+          onRenameChange={onRenameChange}
+          onCommitRename={onCommitRename}
+        />
+      ))}
+    </>
   );
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// View Tab Bar
-// ═══════════════════════════════════════════════════════════════════
-
-interface ViewTabBarProps {
-  isDark: boolean;
-  currentView: SidebarView;
-  onViewChange: (view: SidebarView) => void;
 }
 
-const ViewTabBar = memo(function ViewTabBar({
-  isDark,
-  currentView,
-  onViewChange,
-}: ViewTabBarProps) {
+/* ================================================================== */
+/*  Section Header                                                     */
+/* ================================================================== */
+
+function SectionHeader({ c, label }: { c: ReturnType<typeof t>; label: string }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        gap: '0.125rem',
-        padding: '0.375rem 0.75rem',
-        borderBottom: isDark
-          ? '1px solid rgba(50,49,45,0.5)'
-          : '1px solid rgba(0,0,0,0.04)',
-      }}
-    >
-      {VIEW_TABS.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = currentView === tab.id;
-        return (
-          <motion.button
-            key={tab.id}
-            whileTap={{ scale: 0.92 }}
-            onClick={() => onViewChange(tab.id)}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.25rem',
-              height: '1.5rem',
-              fontSize: '0.5625rem',
-              fontWeight: isActive ? 700 : 600,
-              letterSpacing: '-0.005em',
-              borderRadius: '9999px',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'background 0.15s, color 0.15s',
-              background: isActive
-                ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)')
-                : 'transparent',
-              color: isActive
-                ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-                : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.35)'),
-            }}
-          >
-            <Icon style={{ width: '0.6875rem', height: '0.6875rem' }} />
-            {tab.label}
-          </motion.button>
-        );
-      })}
+    <div style={{
+      padding: '8px 12px 4px',
+      fontSize: '11px',
+      fontWeight: 700,
+      letterSpacing: '0.06em',
+      textTransform: 'uppercase',
+      color: c.muted,
+    }}>
+      {label}
     </div>
   );
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// Section Header (Pinned, Favorites, All)
-// ═══════════════════════════════════════════════════════════════════
-
-interface SectionLabelProps {
-  isDark: boolean;
-  icon: typeof StarIcon;
-  label: string;
-  count: number;
 }
 
-function SectionLabel({ isDark, icon: Icon, label, count }: SectionLabelProps) {
+/* ================================================================== */
+/*  Folder Item (Book)                                                 */
+/* ================================================================== */
+
+interface FolderItemProps {
+  c: ReturnType<typeof t>;
+  book: BookWithPages;
+  isExpanded: boolean;
+  activePageId: string | null;
+  renamingId: string | null;
+  renameValue: string;
+  onToggle: (id: string) => void;
+  onSelectPage: (id: string) => void;
+  onDelete: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onStartRename: (id: string, title: string) => void;
+  onRenameChange: (val: string) => void;
+  onCommitRename: () => void;
+}
+
+const FolderItem = memo(function FolderItem({
+  c,
+  book,
+  isExpanded,
+  activePageId,
+  renamingId,
+  renameValue,
+  onToggle,
+  onSelectPage,
+  onDelete,
+  onToggleFavorite,
+  onTogglePin,
+  onStartRename,
+  onRenameChange,
+  onCommitRename,
+}: FolderItemProps) {
+  const [hovered, setHovered] = useState(false);
+  const FolderIco = isExpanded ? FolderOpenIcon : FolderIcon;
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.375rem',
-        padding: '0.5rem 0.75rem 0.25rem',
-      }}
-    >
-      <Icon
+    <div style={{ marginBottom: 2 }}>
+      {/* Folder row */}
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => onToggle(book.id)}
         style={{
-          width: '0.5625rem',
-          height: '0.5625rem',
-          color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          padding: '4px 8px 4px 12px',
+          cursor: 'pointer',
+          borderRadius: 4,
+          margin: '0 4px',
+          transition: 'background 0.1s',
+          background: hovered ? c.hover : 'transparent',
         }}
-      />
-      <span
-        style={{
-          fontSize: '0.5625rem',
+      >
+        {/* Disclosure triangle */}
+        <ChevronRightIcon style={{
+          width: 14,
+          height: 14,
+          color: c.muted,
+          flexShrink: 0,
+          transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+          transition: 'transform 0.15s ease',
+        }} />
+
+        {/* Folder icon */}
+        <FolderIco style={{
+          width: 15,
+          height: 15,
+          color: c.accent,
+          flexShrink: 0,
+        }} />
+
+        {/* Title */}
+        <span style={{
+          flex: 1,
+          fontSize: '13px',
           fontWeight: 600,
-          letterSpacing: '0.04em',
-          textTransform: 'uppercase',
-          color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.25)',
-        }}
-      >
-        {label}
-      </span>
-      <span
-        style={{
-          fontSize: '0.5625rem',
-          fontWeight: 500,
-          color: isDark ? 'rgba(232,228,222,0.15)' : 'rgba(0,0,0,0.15)',
-          marginLeft: 'auto',
-        }}
-      >
-        {count}
-      </span>
+          color: c.text,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {book.title}
+        </span>
+
+        {/* Page count */}
+        {!hovered && (
+          <span style={{
+            fontSize: '11px',
+            fontWeight: 500,
+            color: c.muted,
+            flexShrink: 0,
+          }}>
+            {book.pageIds.length}
+          </span>
+        )}
+      </div>
+
+      {/* Children */}
+      {isExpanded && book.pages.map((page) => (
+        <FileItem
+          key={page.id}
+          c={c}
+          page={page}
+          isActive={page.id === activePageId}
+          isRenaming={page.id === renamingId}
+          renameValue={renameValue}
+          depth={1}
+          onSelect={onSelectPage}
+          onDelete={onDelete}
+          onToggleFavorite={onToggleFavorite}
+          onTogglePin={onTogglePin}
+          onStartRename={onStartRename}
+          onRenameChange={onRenameChange}
+          onCommitRename={onCommitRename}
+        />
+      ))}
     </div>
   );
-}
+});
 
-// ═══════════════════════════════════════════════════════════════════
-// Page Row
-// ═══════════════════════════════════════════════════════════════════
+/* ================================================================== */
+/*  File Item (Page)                                                   */
+/* ================================================================== */
 
-interface PageRowProps {
-  page: {
-    id: string;
-    title: string;
-    icon?: string;
-    tags: string[];
-    favorite: boolean;
-    pinned: boolean;
-    isJournal: boolean;
-    journalDate?: string;
-    updatedAt: number;
-  };
-  isDark: boolean;
+interface FileItemProps {
+  c: ReturnType<typeof t>;
+  page: TreePage;
   isActive: boolean;
+  isRenaming: boolean;
+  renameValue: string;
+  depth: number;
   onSelect: (id: string) => void;
-  onDelete?: (id: string) => void;
-  onToggleFavorite?: (id: string) => void;
-  onTogglePin?: (id: string) => void;
-  showDate?: boolean;
+  onDelete: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onStartRename: (id: string, title: string) => void;
+  onRenameChange: (val: string) => void;
+  onCommitRename: () => void;
 }
 
-const PageRow = memo(function PageRow({
+const FileItem = memo(function FileItem({
+  c,
   page,
-  isDark,
   isActive,
+  isRenaming,
+  renameValue,
+  depth,
   onSelect,
   onDelete,
   onToggleFavorite,
   onTogglePin,
-  showDate = true,
-}: PageRowProps) {
+  onStartRename,
+  onRenameChange,
+  onCommitRename,
+}: FileItemProps) {
   const [hovered, setHovered] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
-  const pageIcon = page.icon || (page.isJournal ? undefined : undefined);
+  // Focus rename input when entering rename mode
+  useEffect(() => {
+    if (isRenaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  const paddingLeft = 12 + depth * 20;
 
   return (
-    <motion.div
+    <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onSelect(page.id)}
-      whileTap={{ scale: 0.98 }}
+      onClick={() => { if (!isRenaming) onSelect(page.id); }}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        padding: '0.375rem 0.5rem',
-        margin: '0 0.375rem',
-        borderRadius: '0.5rem',
+        gap: 6,
+        padding: `3px 8px 3px ${paddingLeft}px`,
         cursor: 'pointer',
-        transition: 'background 0.12s',
-        background: isActive
-          ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(124,108,240,0.08)')
-          : hovered
-            ? (isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.03)')
-            : 'transparent',
-        borderLeft: isActive
-          ? '2px solid #C4956A'
-          : '2px solid transparent',
-        position: 'relative',
+        borderRadius: 4,
+        margin: '0 4px',
+        transition: 'background 0.1s',
+        background: isActive ? c.active : hovered ? c.hover : 'transparent',
+        minHeight: 28,
       }}
     >
-      {/* Icon */}
-      <div
-        style={{
-          width: '1.25rem',
-          height: '1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+      {/* File icon */}
+      {page.isJournal ? (
+        <CalendarIcon style={{
+          width: 14,
+          height: 14,
+          color: isActive ? c.accent : c.icon,
           flexShrink: 0,
-          borderRadius: '0.25rem',
-          background: isActive
-            ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(124,108,240,0.10)')
-            : (isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)'),
-        }}
-      >
-        {pageIcon ? (
-          <span style={{ fontSize: '0.6875rem', lineHeight: 1 }}>{pageIcon}</span>
-        ) : page.isJournal ? (
-          <CalendarIcon
-            style={{
-              width: '0.625rem',
-              height: '0.625rem',
-              color: isActive ? '#C4956A' : (isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)'),
-            }}
-          />
-        ) : (
-          <FileTextIcon
-            style={{
-              width: '0.625rem',
-              height: '0.625rem',
-              color: isActive ? '#C4956A' : (isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)'),
-            }}
-          />
-        )}
-      </div>
-
-      {/* Title + meta */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: '0.8125rem',
-            fontWeight: isActive ? 550 : 450,
-            lineHeight: 1.3,
-            color: isActive
-              ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-              : (isDark ? 'rgba(232,228,222,0.65)' : 'rgba(0,0,0,0.6)'),
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {page.title || 'Untitled'}
-        </div>
-        {showDate && (
-          <div
-            style={{
-              fontSize: '0.625rem',
-              fontWeight: 400,
-              color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.25)',
-              marginTop: '0.0625rem',
-            }}
-          >
-            {formatRelativeDate(page.updatedAt)}
-          </div>
-        )}
-      </div>
-
-      {/* Tags indicator */}
-      {page.tags.length > 0 && !hovered && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.125rem',
-          }}
-        >
-          <HashIcon
-            style={{
-              width: '0.5rem',
-              height: '0.5rem',
-              color: isDark ? 'rgba(232,228,222,0.15)' : 'rgba(0,0,0,0.15)',
-            }}
-          />
-          <span
-            style={{
-              fontSize: '0.5625rem',
-              color: isDark ? 'rgba(232,228,222,0.15)' : 'rgba(0,0,0,0.15)',
-            }}
-          >
-            {page.tags.length}
-          </span>
-        </div>
+        }} />
+      ) : (
+        <FileTextIcon style={{
+          width: 14,
+          height: 14,
+          color: isActive ? c.accent : c.icon,
+          flexShrink: 0,
+        }} />
       )}
 
-      {/* Context menu (shows on hover) */}
-      {hovered && onDelete && onToggleFavorite && onTogglePin && (
-        <PageContextMenu
-          isDark={isDark}
+      {/* Title or rename input */}
+      {isRenaming ? (
+        <input
+          ref={renameInputRef}
+          value={renameValue}
+          onChange={(e) => onRenameChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onCommitRename();
+            if (e.key === 'Escape') onCommitRename();
+          }}
+          onBlur={onCommitRename}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            flex: 1,
+            fontSize: '13px',
+            fontWeight: 600,
+            background: c.inputBg,
+            border: `1px solid ${c.accent}`,
+            borderRadius: 3,
+            color: c.text,
+            padding: '1px 4px',
+            outline: 'none',
+            minWidth: 0,
+          }}
+        />
+      ) : (
+        <span style={{
+          flex: 1,
+          fontSize: '13px',
+          fontWeight: isActive ? 600 : 500,
+          color: isActive ? c.text : (hovered ? c.text : c.text),
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          opacity: isActive ? 1 : 0.8,
+        }}>
+          {page.title || 'Untitled'}
+        </span>
+      )}
+
+      {/* Pinned indicator */}
+      {page.pinned && !hovered && (
+        <PinIcon style={{
+          width: 11,
+          height: 11,
+          color: c.accent,
+          flexShrink: 0,
+        }} />
+      )}
+
+      {/* Favorite indicator */}
+      {page.favorite && !page.pinned && !hovered && (
+        <StarIcon style={{
+          width: 11,
+          height: 11,
+          color: '#FBBF24',
+          fill: '#FBBF24',
+          flexShrink: 0,
+        }} />
+      )}
+
+      {/* Context menu (on hover) */}
+      {hovered && !isRenaming && (
+        <ItemContextMenu
+          c={c}
           page={page}
           onDelete={onDelete}
           onToggleFavorite={onToggleFavorite}
           onTogglePin={onTogglePin}
+          onStartRename={onStartRename}
         />
       )}
-    </motion.div>
+    </div>
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Page Context Menu (dropdown)
-// ═══════════════════════════════════════════════════════════════════
+/* ================================================================== */
+/*  Item Context Menu                                                  */
+/* ================================================================== */
 
-interface PageContextMenuProps {
-  isDark: boolean;
-  page: {
-    id: string;
-    favorite: boolean;
-    pinned: boolean;
-  };
+interface ItemContextMenuProps {
+  c: ReturnType<typeof t>;
+  page: TreePage;
   onDelete: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   onTogglePin: (id: string) => void;
+  onStartRename: (id: string, title: string) => void;
 }
 
-const PageContextMenu = memo(function PageContextMenu({
-  isDark,
-  page,
-  onDelete,
-  onToggleFavorite,
-  onTogglePin,
-}: PageContextMenuProps) {
+const ItemContextMenu = memo(function ItemContextMenu({
+  c, page, onDelete, onToggleFavorite, onTogglePin, onStartRename,
+}: ItemContextMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <motion.button
-          whileTap={{ scale: 0.92 }}
+        <button
           onClick={(e) => e.stopPropagation()}
           style={{
-            width: '1.25rem',
-            height: '1.25rem',
+            width: 20,
+            height: 20,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderRadius: '50%',
+            borderRadius: 3,
             border: 'none',
-            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.04)',
-            color: isDark ? 'rgba(232,228,222,0.4)' : 'rgba(0,0,0,0.35)',
+            background: 'transparent',
+            color: c.muted,
             cursor: 'pointer',
             flexShrink: 0,
             padding: 0,
+            opacity: 0.7,
           }}
         >
-          <MoreHorizontalIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
-        </motion.button>
+          <MoreHorizontalIcon style={{ width: 14, height: 14 }} />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         sideOffset={4}
-        className="min-w-[140px]"
         style={{
-          background: isDark ? 'rgba(28,27,25,0.95)' : 'rgba(255,255,255,0.95)',
-          backdropFilter: 'blur(12px) saturate(1.3)',
-          border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.06)',
-          borderRadius: '0.75rem',
-          padding: '0.25rem',
+          minWidth: 160,
+          background: c.bg,
+          border: `1px solid ${c.border}`,
+          borderRadius: 6,
+          padding: 4,
+          fontSize: '13px',
         }}
       >
         <DropdownMenuItem
-          onClick={(e) => { e.stopPropagation(); onToggleFavorite(page.id); }}
-          className="text-xs gap-2 cursor-pointer"
+          onClick={(e) => { e.stopPropagation(); onStartRename(page.id, page.title); }}
+          className="gap-2 cursor-pointer"
+          style={{ fontSize: '13px', padding: '6px 8px', borderRadius: 4 }}
         >
-          <StarIcon
-            style={{
-              width: '0.75rem',
-              height: '0.75rem',
-              fill: page.favorite ? '#FBBF24' : 'none',
-              color: page.favorite ? '#FBBF24' : 'currentColor',
-            }}
-          />
-          {page.favorite ? 'Remove favorite' : 'Add to favorites'}
+          <PencilIcon style={{ width: 14, height: 14 }} />
+          Rename
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(page.id); }}
+          className="gap-2 cursor-pointer"
+          style={{ fontSize: '13px', padding: '6px 8px', borderRadius: 4 }}
+        >
+          <StarIcon style={{
+            width: 14,
+            height: 14,
+            fill: page.favorite ? '#FBBF24' : 'none',
+            color: page.favorite ? '#FBBF24' : 'currentColor',
+          }} />
+          {page.favorite ? 'Unfavorite' : 'Favorite'}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={(e) => { e.stopPropagation(); onTogglePin(page.id); }}
-          className="text-xs gap-2 cursor-pointer"
+          className="gap-2 cursor-pointer"
+          style={{ fontSize: '13px', padding: '6px 8px', borderRadius: 4 }}
         >
-          <PinIcon
-            style={{
-              width: '0.75rem',
-              height: '0.75rem',
-              color: page.pinned ? '#C4956A' : 'currentColor',
-            }}
-          />
+          <PinIcon style={{
+            width: 14,
+            height: 14,
+            color: page.pinned ? c.accent : 'currentColor',
+          }} />
           {page.pinned ? 'Unpin' : 'Pin to top'}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator style={{ background: c.border, margin: '4px 0' }} />
         <DropdownMenuItem
           onClick={(e) => { e.stopPropagation(); onDelete(page.id); }}
-          className="text-xs gap-2 cursor-pointer text-red-400 focus:text-red-400"
+          className="gap-2 cursor-pointer"
+          style={{ fontSize: '13px', padding: '6px 8px', borderRadius: 4, color: c.danger }}
         >
-          <TrashIcon style={{ width: '0.75rem', height: '0.75rem' }} />
+          <TrashIcon style={{ width: 14, height: 14 }} />
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -825,522 +870,12 @@ const PageContextMenu = memo(function PageContextMenu({
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Pages View
-// ═══════════════════════════════════════════════════════════════════
+/* ================================================================== */
+/*  Search Results                                                     */
+/* ================================================================== */
 
-interface PagesViewProps {
-  isDark: boolean;
-  pinnedPages: Array<PageRowProps['page']>;
-  favoritePages: Array<PageRowProps['page']>;
-  allPages: Array<PageRowProps['page']>;
-  activePageId: string | null;
-  onSelectPage: (id: string) => void;
-  onDelete: (id: string) => void;
-  onToggleFavorite: (id: string) => void;
-  onTogglePin: (id: string) => void;
-}
-
-function PagesView({
-  isDark,
-  pinnedPages,
-  favoritePages,
-  allPages,
-  activePageId,
-  onSelectPage,
-  onDelete,
-  onToggleFavorite,
-  onTogglePin,
-}: PagesViewProps) {
-  const hasAnyPages = pinnedPages.length > 0 || favoritePages.length > 0 || allPages.length > 0;
-
-  if (!hasAnyPages) {
-    return (
-      <EmptyState
-        isDark={isDark}
-        icon={FileTextIcon}
-        title="No pages yet"
-        subtitle="Create a new page to get started"
-      />
-    );
-  }
-
-  return (
-    <div style={{ paddingTop: '0.25rem', paddingBottom: '0.5rem' }}>
-      {/* Pinned section */}
-      {pinnedPages.length > 0 && (
-        <div>
-          <SectionLabel isDark={isDark} icon={PinIcon} label="Pinned" count={pinnedPages.length} />
-          {pinnedPages.map((page) => (
-            <PageRow
-              key={page.id}
-              page={page}
-              isDark={isDark}
-              isActive={page.id === activePageId}
-              onSelect={onSelectPage}
-              onDelete={onDelete}
-              onToggleFavorite={onToggleFavorite}
-              onTogglePin={onTogglePin}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Favorites section */}
-      {favoritePages.length > 0 && (
-        <div style={{ marginTop: pinnedPages.length > 0 ? '0.375rem' : 0 }}>
-          <SectionLabel isDark={isDark} icon={StarIcon} label="Favorites" count={favoritePages.length} />
-          {favoritePages.map((page) => (
-            <PageRow
-              key={page.id}
-              page={page}
-              isDark={isDark}
-              isActive={page.id === activePageId}
-              onSelect={onSelectPage}
-              onDelete={onDelete}
-              onToggleFavorite={onToggleFavorite}
-              onTogglePin={onTogglePin}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* All pages */}
-      {allPages.length > 0 && (
-        <div style={{ marginTop: (pinnedPages.length > 0 || favoritePages.length > 0) ? '0.375rem' : 0 }}>
-          <SectionLabel isDark={isDark} icon={FileTextIcon} label="All Pages" count={allPages.length} />
-          {allPages.map((page) => (
-            <PageRow
-              key={page.id}
-              page={page}
-              isDark={isDark}
-              isActive={page.id === activePageId}
-              onSelect={onSelectPage}
-              onDelete={onDelete}
-              onToggleFavorite={onToggleFavorite}
-              onTogglePin={onTogglePin}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Journals View
-// ═══════════════════════════════════════════════════════════════════
-
-interface JournalsViewProps {
-  isDark: boolean;
-  journals: Array<PageRowProps['page']>;
-  activePageId: string | null;
-  onSelectPage: (id: string) => void;
-}
-
-function JournalsView({
-  isDark,
-  journals,
-  activePageId,
-  onSelectPage,
-}: JournalsViewProps) {
-  if (journals.length === 0) {
-    return (
-      <EmptyState
-        isDark={isDark}
-        icon={CalendarIcon}
-        title="No journals yet"
-        subtitle="Click 'Today' to start your first journal"
-      />
-    );
-  }
-
-  return (
-    <div style={{ paddingTop: '0.25rem', paddingBottom: '0.5rem' }}>
-      {journals.map((journal) => {
-        const isTodayEntry = isToday(journal.journalDate);
-        const isActive = journal.id === activePageId;
-        return (
-          <motion.div
-            key={journal.id}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onSelectPage(journal.id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 0.5rem',
-              margin: '0 0.375rem',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              transition: 'background 0.12s',
-              background: isActive
-                ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(124,108,240,0.08)')
-                : isTodayEntry
-                  ? (isDark ? 'rgba(52,211,153,0.06)' : 'rgba(52,211,153,0.05)')
-                  : 'transparent',
-              borderLeft: isActive
-                ? '2px solid #C4956A'
-                : isTodayEntry
-                  ? '2px solid rgba(52,211,153,0.4)'
-                  : '2px solid transparent',
-            }}
-          >
-            {/* Calendar icon */}
-            <div
-              style={{
-                width: '1.5rem',
-                height: '1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                borderRadius: '0.375rem',
-                background: isTodayEntry
-                  ? (isDark ? 'rgba(52,211,153,0.12)' : 'rgba(52,211,153,0.10)')
-                  : (isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)'),
-              }}
-            >
-              <CalendarIcon
-                style={{
-                  width: '0.6875rem',
-                  height: '0.6875rem',
-                  color: isTodayEntry
-                    ? '#34D399'
-                    : isActive
-                      ? '#C4956A'
-                      : (isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)'),
-                }}
-              />
-            </div>
-
-            {/* Date + title */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: isTodayEntry ? 600 : 450,
-                  lineHeight: 1.3,
-                  color: isTodayEntry
-                    ? '#34D399'
-                    : isActive
-                      ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-                      : (isDark ? 'rgba(232,228,222,0.65)' : 'rgba(0,0,0,0.6)'),
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {formatJournalDate(journal.journalDate)}
-              </div>
-              <div
-                style={{
-                  fontSize: '0.625rem',
-                  fontWeight: 400,
-                  color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.2)',
-                  marginTop: '0.0625rem',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {journal.title}
-              </div>
-            </div>
-
-            {/* Today badge */}
-            {isTodayEntry && (
-              <span
-                style={{
-                  fontSize: '0.5625rem',
-                  fontWeight: 600,
-                  letterSpacing: '0.02em',
-                  padding: '0.125rem 0.375rem',
-                  borderRadius: '9999px',
-                  background: isDark
-                    ? 'rgba(52,211,153,0.15)'
-                    : 'rgba(52,211,153,0.12)',
-                  color: '#34D399',
-                  flexShrink: 0,
-                }}
-              >
-                NOW
-              </span>
-            )}
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Books View
-// ═══════════════════════════════════════════════════════════════════
-
-interface BooksViewProps {
-  isDark: boolean;
-  books: Array<{
-    id: string;
-    title: string;
-    description?: string;
-    pageIds: string[];
-  }>;
-}
-
-function BooksView({ isDark, books }: BooksViewProps) {
-  const createPage = usePFCStore((s) => s.createPage);
-
-  if (books.length === 0) {
-    return (
-      <div style={{ paddingTop: '0.25rem', paddingBottom: '0.5rem' }}>
-        <EmptyState
-          isDark={isDark}
-          icon={BookOpenIcon}
-          title="No notebooks yet"
-          subtitle="Organize your pages into collections"
-        />
-        {/* Create book button */}
-        <div style={{ padding: '0 0.75rem', marginTop: '0.5rem' }}>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.375rem',
-              height: '2rem',
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              borderRadius: '9999px',
-              border: isDark
-                ? '1px dashed rgba(50,49,45,0.3)'
-                : '1px dashed rgba(0,0,0,0.08)',
-              background: 'transparent',
-              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
-              cursor: 'pointer',
-              transition: 'border-color 0.15s, color 0.15s',
-            }}
-          >
-            <PlusIcon style={{ width: '0.75rem', height: '0.75rem' }} />
-            Create Book
-          </motion.button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ paddingTop: '0.25rem', paddingBottom: '0.5rem' }}>
-      {books.map((book) => (
-        <motion.div
-          key={book.id}
-          whileTap={{ scale: 0.98 }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 0.5rem',
-            margin: '0 0.375rem',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            transition: 'background 0.12s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = isDark
-              ? 'rgba(196,149,106,0.08)'
-              : 'rgba(0,0,0,0.03)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
-        >
-          {/* Book icon */}
-          <div
-            style={{
-              width: '1.5rem',
-              height: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              borderRadius: '0.375rem',
-              background: isDark
-                ? 'rgba(224,120,80,0.10)'
-                : 'rgba(224,120,80,0.08)',
-            }}
-          >
-            <BookOpenIcon
-              style={{
-                width: '0.6875rem',
-                height: '0.6875rem',
-                color: '#E07850',
-              }}
-            />
-          </div>
-
-          {/* Title + description */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: '0.8125rem',
-                fontWeight: 500,
-                lineHeight: 1.3,
-                color: isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.65)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {book.title}
-            </div>
-            {book.description && (
-              <div
-                style={{
-                  fontSize: '0.625rem',
-                  fontWeight: 400,
-                  color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.2)',
-                  marginTop: '0.0625rem',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {book.description}
-              </div>
-            )}
-          </div>
-
-          {/* Page count badge */}
-          <span
-            style={{
-              fontSize: '0.5625rem',
-              fontWeight: 550,
-              padding: '0.125rem 0.375rem',
-              borderRadius: '9999px',
-              background: isDark
-                ? 'rgba(196,149,106,0.08)'
-                : 'rgba(0,0,0,0.05)',
-              color: isDark ? 'rgba(232,228,222,0.35)' : 'rgba(0,0,0,0.35)',
-              flexShrink: 0,
-            }}
-          >
-            {book.pageIds.length} {book.pageIds.length === 1 ? 'page' : 'pages'}
-          </span>
-        </motion.div>
-      ))}
-
-      {/* Create book button */}
-      <div style={{ padding: '0.375rem 0.75rem' }}>
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.375rem',
-            height: '2rem',
-            fontSize: '0.6875rem',
-            fontWeight: 600,
-            borderRadius: '9999px',
-            border: isDark
-              ? '1px dashed rgba(50,49,45,0.3)'
-              : '1px dashed rgba(0,0,0,0.08)',
-            background: 'transparent',
-            color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
-            cursor: 'pointer',
-            transition: 'border-color 0.15s, color 0.15s',
-          }}
-        >
-          <PlusIcon style={{ width: '0.75rem', height: '0.75rem' }} />
-          Create Book
-        </motion.button>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Graph Placeholder
-// ═══════════════════════════════════════════════════════════════════
-
-function GraphPlaceholder({ isDark }: { isDark: boolean }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        padding: '2rem 1.5rem',
-        textAlign: 'center',
-      }}
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.4, ease: CUPERTINO }}
-      >
-        <div
-          style={{
-            width: '3rem',
-            height: '3rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: '0.75rem',
-            background: isDark
-              ? 'rgba(34,211,238,0.08)'
-              : 'rgba(34,211,238,0.06)',
-            marginBottom: '0.75rem',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}
-        >
-          <NetworkIcon
-            style={{
-              width: '1.375rem',
-              height: '1.375rem',
-              color: 'rgba(34,211,238,0.5)',
-            }}
-          />
-        </div>
-        <h4
-          style={{
-            fontSize: '0.8125rem',
-            fontWeight: 550,
-            color: isDark ? 'rgba(232,228,222,0.6)' : 'rgba(0,0,0,0.55)',
-            marginBottom: '0.25rem',
-          }}
-        >
-          Knowledge Graph
-        </h4>
-        <p
-          style={{
-            fontSize: '0.6875rem',
-            fontWeight: 400,
-            color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.3)',
-            lineHeight: 1.5,
-            maxWidth: '11rem',
-          }}
-        >
-          Visualize connections between your notes, tags, and concepts. Coming soon.
-        </p>
-      </motion.div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Search Results View
-// ═══════════════════════════════════════════════════════════════════
-
-interface SearchResultsViewProps {
-  isDark: boolean;
+interface SearchResultsProps {
+  c: ReturnType<typeof t>;
   results: Array<{
     type: 'page' | 'block';
     pageId: string;
@@ -1354,158 +889,216 @@ interface SearchResultsViewProps {
   onSelectPage: (id: string) => void;
 }
 
-function SearchResultsView({
-  isDark,
-  results,
-  query,
-  activePageId,
-  onSelectPage,
-}: SearchResultsViewProps) {
+function SearchResults({ c, results, query, activePageId, onSelectPage }: SearchResultsProps) {
   if (results.length === 0) {
     return (
-      <EmptyState
-        isDark={isDark}
-        icon={SearchIcon}
-        title="No results"
-        subtitle={`Nothing found for "${query}"`}
-      />
+      <div style={{
+        padding: '40px 20px',
+        textAlign: 'center',
+        color: c.muted,
+        fontSize: '13px',
+      }}>
+        No results for &ldquo;{query}&rdquo;
+      </div>
     );
   }
 
   return (
-    <div style={{ paddingTop: '0.25rem', paddingBottom: '0.5rem' }}>
-      <SectionLabel
-        isDark={isDark}
-        icon={SearchIcon}
-        label="Results"
-        count={results.length}
-      />
+    <div>
+      <SectionHeader c={c} label={`${results.length} result${results.length !== 1 ? 's' : ''}`} />
       {results.map((result, idx) => {
         const isActive = result.pageId === activePageId;
         return (
-          <motion.div
+          <SearchResultItem
             key={`${result.pageId}-${result.blockId ?? idx}`}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onSelectPage(result.pageId)}
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '0.5rem',
-              padding: '0.375rem 0.5rem',
-              margin: '0 0.375rem',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              transition: 'background 0.12s',
-              background: isActive
-                ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(124,108,240,0.08)')
-                : 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.background = isDark
-                  ? 'rgba(196,149,106,0.08)'
-                  : 'rgba(0,0,0,0.03)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive) {
-                e.currentTarget.style.background = 'transparent';
-              }
-            }}
-          >
-            {/* Icon */}
-            <div
-              style={{
-                width: '1.25rem',
-                height: '1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                borderRadius: '0.25rem',
-                background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)',
-                marginTop: '0.0625rem',
-              }}
-            >
-              {result.type === 'block' ? (
-                <TextIcon
-                  style={{
-                    width: '0.625rem',
-                    height: '0.625rem',
-                    color: isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)',
-                  }}
-                />
-              ) : result.type === 'page' && result.blockId ? (
-                <HashIcon
-                  style={{
-                    width: '0.625rem',
-                    height: '0.625rem',
-                    color: '#22D3EE',
-                  }}
-                />
-              ) : (
-                <FileTextIcon
-                  style={{
-                    width: '0.625rem',
-                    height: '0.625rem',
-                    color: isActive ? '#C4956A' : (isDark ? 'rgba(232,228,222,0.3)' : 'rgba(0,0,0,0.3)'),
-                  }}
-                />
-              )}
-            </div>
-
-            {/* Title + snippet */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  lineHeight: 1.3,
-                  color: isActive
-                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-                    : (isDark ? 'rgba(232,228,222,0.65)' : 'rgba(0,0,0,0.6)'),
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {result.title}
-              </div>
-              {result.snippet && (
-                <div
-                  style={{
-                    fontSize: '0.625rem',
-                    fontWeight: 400,
-                    color: isDark ? 'rgba(232,228,222,0.25)' : 'rgba(0,0,0,0.25)',
-                    marginTop: '0.125rem',
-                    lineHeight: 1.4,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                  dangerouslySetInnerHTML={{
-                    __html: highlightQuery(result.snippet, query, isDark),
-                  }}
-                />
-              )}
-            </div>
-          </motion.div>
+            c={c}
+            result={result}
+            query={query}
+            isActive={isActive}
+            onSelect={onSelectPage}
+          />
         );
       })}
     </div>
   );
 }
 
-// ── Highlight matching query text in snippets ──
+/* ================================================================== */
+/*  Search Result Item                                                 */
+/* ================================================================== */
 
-function highlightQuery(text: string, query: string, isDark: boolean): string {
+interface SearchResultItemProps {
+  c: ReturnType<typeof t>;
+  result: {
+    type: 'page' | 'block';
+    pageId: string;
+    blockId?: string;
+    title: string;
+    snippet: string;
+    score: number;
+  };
+  query: string;
+  isActive: boolean;
+  onSelect: (id: string) => void;
+}
+
+const SearchResultItem = memo(function SearchResultItem({
+  c, result, query, isActive, onSelect,
+}: SearchResultItemProps) {
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={() => onSelect(result.pageId)}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 6,
+        padding: '5px 8px 5px 12px',
+        margin: '0 4px',
+        borderRadius: 4,
+        cursor: 'pointer',
+        transition: 'background 0.1s',
+        background: isActive ? c.active : hovered ? c.hover : 'transparent',
+      }}
+    >
+      <FileTextIcon style={{
+        width: 14,
+        height: 14,
+        color: isActive ? c.accent : c.icon,
+        flexShrink: 0,
+        marginTop: 2,
+      }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: '13px',
+          fontWeight: 600,
+          color: c.text,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          opacity: isActive ? 1 : 0.85,
+        }}>
+          {result.title}
+        </div>
+        {result.snippet && (
+          <div
+            style={{
+              fontSize: '12px',
+              fontWeight: 400,
+              color: c.muted,
+              marginTop: 2,
+              lineHeight: 1.4,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+            dangerouslySetInnerHTML={{
+              __html: highlightQuery(result.snippet, query, c),
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+});
+
+/* ================================================================== */
+/*  Bottom Bar                                                         */
+/* ================================================================== */
+
+interface BottomBarProps {
+  c: ReturnType<typeof t>;
+  onNewPage: () => void;
+  onTodayJournal: () => void;
+}
+
+const BottomBar = memo(function BottomBar({ c, onNewPage, onTodayJournal }: BottomBarProps) {
+  return (
+    <div style={{
+      padding: '8px 8px',
+      borderTop: `1px solid ${c.border}`,
+      display: 'flex',
+      gap: 4,
+    }}>
+      <button
+        onClick={onNewPage}
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 5,
+          height: 30,
+          fontSize: '13px',
+          fontWeight: 600,
+          borderRadius: 4,
+          border: 'none',
+          background: 'transparent',
+          color: c.muted,
+          cursor: 'pointer',
+          transition: 'background 0.1s, color 0.1s',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = c.hover;
+          e.currentTarget.style.color = c.text;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = c.muted;
+        }}
+      >
+        <PlusIcon style={{ width: 14, height: 14 }} />
+        New Page
+      </button>
+      <button
+        onClick={onTodayJournal}
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 5,
+          height: 30,
+          fontSize: '13px',
+          fontWeight: 600,
+          borderRadius: 4,
+          border: 'none',
+          background: 'transparent',
+          color: c.muted,
+          cursor: 'pointer',
+          transition: 'background 0.1s, color 0.1s',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = c.hover;
+          e.currentTarget.style.color = c.accent;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = c.muted;
+        }}
+      >
+        <CalendarIcon style={{ width: 14, height: 14 }} />
+        Today
+      </button>
+    </div>
+  );
+});
+
+/* ================================================================== */
+/*  Utilities                                                          */
+/* ================================================================== */
+
+function highlightQuery(text: string, query: string, c: ReturnType<typeof t>): string {
   if (!query.trim()) return escapeHtml(text);
-  const escaped = escapeRegex(query);
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`(${escaped})`, 'gi');
   return escapeHtml(text).replace(
     regex,
-    `<mark style="background:rgba(196,149,106,${isDark ? '0.25' : '0.18'});color:${isDark ? 'rgba(232,228,222,0.85)' : 'rgba(0,0,0,0.8)'};border-radius:2px;padding:0 1px;">$1</mark>`,
+    `<mark style="background:rgba(196,149,106,0.25);color:${c.text};border-radius:2px;padding:0 1px;">$1</mark>`,
   );
 }
 
@@ -1515,78 +1108,4 @@ function escapeHtml(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Empty State
-// ═══════════════════════════════════════════════════════════════════
-
-interface EmptyStateProps {
-  isDark: boolean;
-  icon: typeof FileTextIcon;
-  title: string;
-  subtitle: string;
-}
-
-function EmptyState({ isDark, icon: Icon, title, subtitle }: EmptyStateProps) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2.5rem 1.5rem',
-        textAlign: 'center',
-      }}
-    >
-      <div
-        style={{
-          width: '2.5rem',
-          height: '2.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '0.625rem',
-          background: isDark
-            ? 'rgba(196,149,106,0.06)'
-            : 'rgba(0,0,0,0.03)',
-          marginBottom: '0.625rem',
-        }}
-      >
-        <Icon
-          style={{
-            width: '1.125rem',
-            height: '1.125rem',
-            color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.2)',
-          }}
-        />
-      </div>
-      <h4
-        style={{
-          fontSize: '0.8125rem',
-          fontWeight: 550,
-          color: isDark ? 'rgba(232,228,222,0.45)' : 'rgba(0,0,0,0.45)',
-          marginBottom: '0.125rem',
-        }}
-      >
-        {title}
-      </h4>
-      <p
-        style={{
-          fontSize: '0.6875rem',
-          fontWeight: 400,
-          color: isDark ? 'rgba(232,228,222,0.2)' : 'rgba(0,0,0,0.25)',
-          maxWidth: '10rem',
-          lineHeight: 1.4,
-        }}
-      >
-        {subtitle}
-      </p>
-    </div>
-  );
 }

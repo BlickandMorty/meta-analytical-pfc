@@ -309,13 +309,7 @@ export function Chat() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            /* Warm background: subtle radial from dark brown center */
-            background: searchFocused
-              ? (isDark ? '#111110' : '#F5F0E8')
-              : (isDark
-                ? 'radial-gradient(ellipse at 50% 50%, #1A1918 0%, #111110 70%)'
-                : 'radial-gradient(ellipse at 50% 50%, #F8F3EB 0%, #F5F0E8 70%)'),
-            transition: 'background 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
+            background: isDark ? '#111110' : '#F5F0E8',
           }}
         >
           {/* Code rain background — fades on search focus */}
@@ -349,9 +343,7 @@ export function Chat() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.75rem',
-                filter: isDark
-                  ? 'drop-shadow(0 4px 24px rgba(0,0,0,0.4)) drop-shadow(0 1px 4px rgba(0,0,0,0.3))'
-                  : 'drop-shadow(0 4px 24px rgba(80,50,20,0.08)) drop-shadow(0 1px 4px rgba(80,50,20,0.06))',
+                filter: 'none',
               }}
             >
               {mounted && <BrainMascot isDark={isDark} />}
@@ -369,12 +361,10 @@ export function Chat() {
                 style={{
                   borderRadius: '1.75rem',
                   overflow: 'hidden',
-                  background: isDark ? 'rgba(58,56,53,0.65)' : 'rgba(255,255,255,0.45)',
+                  background: isDark ? 'rgba(28,27,25,0.8)' : 'rgba(235,229,218,0.7)',
                   border: isDark
-                    ? '1.5px solid rgba(74,72,69,0.7)'
-                    : '1.5px solid rgba(0,0,0,0.12)',
-                  backdropFilter: 'blur(12px) saturate(1.3)',
-                  WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+                    ? '1px solid rgba(50,49,45,0.5)'
+                    : '1px solid rgba(190,183,170,0.3)',
                 }}
               >
                 <MultimodalInput

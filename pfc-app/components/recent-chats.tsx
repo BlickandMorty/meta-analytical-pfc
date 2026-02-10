@@ -36,9 +36,7 @@ function formatRelativeTime(date: Date): string {
 
 function parseTimestamp(value: string | number | Date): Date {
   if (value instanceof Date) return value;
-  // Drizzle SQLite timestamps come as unix seconds (number)
   if (typeof value === 'number') {
-    // If it looks like seconds (< year 2100 in ms), multiply by 1000
     return new Date(value < 1e12 ? value * 1000 : value);
   }
   return new Date(value);
@@ -59,10 +57,10 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         if (!cancelled && data.chats) {
-          setChats(data.chats.slice(0, 10));
+          setChats(data.chats.slice(0, 8));
         }
       } catch {
-        // Silently fail — no chats to show
+        // Silently fail
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -83,7 +81,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.25rem',
+        gap: '0.625rem',
       }}
     >
       {/* Header */}
@@ -92,8 +90,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
           display: 'flex',
           alignItems: 'center',
           gap: '0.375rem',
-          padding: '0 0.25rem',
-          marginBottom: '0.25rem',
+          padding: '0 0.125rem',
         }}
       >
         <ClockIcon
@@ -113,21 +110,16 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
           }}
         >
-          Sessions
+          Recent Sessions
         </span>
       </div>
 
-      {/* Chat list */}
+      {/* NavBubble-style pill grid */}
       <div
         style={{
           display: 'flex',
-          flexDirection: 'column',
-          borderRadius: '1rem',
-          overflow: 'hidden',
-          background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(245,240,232,0.6)',
-          border: 'none',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          flexWrap: 'wrap',
+          gap: '0.375rem',
         }}
       >
         {chats.map((chat, idx) => {
@@ -136,63 +128,71 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
           const timeStr = formatRelativeTime(updatedDate);
 
           return (
-            <button
+            <motion.button
               key={chat.id}
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.28, delay: 0.5 + idx * 0.04, ease: CUPERTINO_EASE }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => router.push(`/chat/${chat.id}`)}
               onMouseEnter={() => setHoveredId(chat.id)}
               onMouseLeave={() => setHoveredId(null)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.625rem',
-                padding: '0.625rem 0.75rem',
+                gap: '0.5rem',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.75rem',
                 border: 'none',
-                borderTop: idx > 0
-                  ? (isDark ? '1px solid rgba(50,49,45,0.2)' : '1px solid rgba(0,0,0,0.04)')
-                  : 'none',
-                background: isHovered
-                  ? (isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)')
-                  : 'transparent',
                 cursor: 'pointer',
                 textAlign: 'left',
-                width: '100%',
-                transition: 'background 0.15s ease',
+                maxWidth: '100%',
+                background: isHovered
+                  ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)')
+                  : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)'),
+                transition: 'background 0.15s ease, transform 0.15s ease',
+                overflow: 'hidden',
               }}
             >
               <MessageSquareIcon
                 style={{
-                  height: '0.875rem',
-                  width: '0.875rem',
+                  height: '0.8125rem',
+                  width: '0.8125rem',
                   flexShrink: 0,
-                  color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)',
+                  color: isHovered
+                    ? '#C4956A'
+                    : (isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)'),
+                  transition: 'color 0.15s',
                 }}
               />
               <span
                 style={{
-                  flex: 1,
                   fontSize: '0.8125rem',
-                  fontWeight: 500,
-                  color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.7)',
+                  fontWeight: 600,
+                  color: isHovered
+                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
+                    : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                  transition: 'color 0.15s',
                 }}
               >
                 {chat.title}
               </span>
               <span
                 style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: 400,
-                  color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.3)',
+                  fontSize: '0.625rem',
+                  fontWeight: 500,
+                  color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)',
                   flexShrink: 0,
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
                 }}
               >
                 {timeStr}
               </span>
-            </button>
+            </motion.button>
           );
         })}
       </div>

@@ -14,20 +14,13 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRightIcon } from 'lucide-react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import { cn } from '@/lib/utils';
+import { useTheme } from 'next-themes';
 
 /* ═══════════════════════════════════════════════════════════════════
-   BlockEditor — Logseq-inspired outliner for PFC Notes
+   BlockEditor — Notion/Obsidian-inspired editor
 
-   Features:
-   - Recursive indented block tree with collapse/expand
-   - contentEditable with full keyboard navigation
-   - [[Page links]], markdown inline formatting, checkboxes
-   - AI typing animation with blinking cursor
-   - Glass-morphism design system integration
+   Clean, flat design. Large text. Minimal UI. No glass morphism.
    ═══════════════════════════════════════════════════════════════════ */
-
-// ── Types ──────────────────────────────────────────────────────────
 
 interface NoteBlock {
   id: string;
@@ -43,68 +36,51 @@ interface NoteBlock {
   updatedAt: number;
 }
 
-// ── Constants ──────────────────────────────────────────────────────
-
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
 const INDENT_PX = 24;
-const VIOLET = '#C4956A';
-const VIOLET_FAINT = 'rgba(196, 149, 106, 0.08)';
-const VIOLET_BORDER = 'rgba(196, 149, 106, 0.25)';
-const VIOLET_BADGE_BG = 'rgba(124, 108, 240, 0.15)';
-
-// ── Store selectors (stable references) ────────────────────────────
+const ACCENT = '#C4956A';
 
 const selectNoteBlocks = (s: any) => s.noteBlocks as NoteBlock[] | undefined;
 const selectEditingBlockId = (s: any) => s.editingBlockId as string | null | undefined;
 const selectNoteAI = (s: any) =>
   s.noteAI as { isGenerating: boolean; targetBlockId: string | null; streamedText?: string } | undefined;
 
-// Actions are selected individually below (in BlockEditor) to avoid
-// creating a new object on every store read, which causes infinite loops.
-
 // ── Markdown helpers ───────────────────────────────────────────────
 
-/** Convert markdown-flavoured content to HTML for display mode */
 function renderMarkdown(raw: string): string {
   let html = escapeHtml(raw);
 
-  // Headings (must be at start of block content)
-  html = html.replace(/^### (.+)$/, '<span class="text-base font-semibold text-foreground">$1</span>');
-  html = html.replace(/^## (.+)$/, '<span class="text-lg font-semibold text-foreground">$1</span>');
-  html = html.replace(/^# (.+)$/, '<span class="text-xl font-bold text-foreground">$1</span>');
+  // Headings
+  html = html.replace(/^### (.+)$/, '<span style="font-size:1rem;font-weight:600">$1</span>');
+  html = html.replace(/^## (.+)$/, '<span style="font-size:1.25rem;font-weight:600">$1</span>');
+  html = html.replace(/^# (.+)$/, '<span style="font-size:1.5rem;font-weight:700">$1</span>');
 
-  // Bold **text**
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>');
+  // Bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:600">$1</strong>');
 
-  // Italic *text* (but not inside bold)
-  html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em class="italic text-foreground/80">$1</em>');
+  // Italic
+  html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
 
-  // Inline code `text`
+  // Inline code
   html = html.replace(
     /`([^`]+)`/g,
-    '<code class="px-1.5 py-0.5 rounded-md text-xs font-mono bg-white/[0.06] text-pfc-ember border border-white/[0.08]">$1</code>',
+    `<code style="padding:1px 6px;border-radius:4px;font-size:0.85em;font-family:var(--font-mono);background:rgba(196,149,106,0.08);color:${ACCENT}">$1</code>`,
   );
 
   // [[Page links]]
   html = html.replace(
     /\[\[([^\]]+)\]\]/g,
-    '<span class="note-page-link inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium cursor-pointer select-none transition-colors duration-150" data-page="$1" style="background:' +
-      VIOLET_BADGE_BG +
-      ';color:' +
-      VIOLET +
-      ';border:1px solid ' +
-      VIOLET_BORDER +
-      '">$1</span>',
+    `<span class="note-page-link" data-page="$1" style="color:${ACCENT};font-weight:500;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(196,149,106,0.3);text-underline-offset:2px">$1</span>`,
   );
 
-  // Checkbox - [ ] / - [x]
+  // Checkbox
   html = html.replace(
     /- \[x\]/g,
-    '<span class="note-checkbox checked inline-flex items-center justify-center w-4 h-4 rounded border border-pfc-green bg-pfc-green/20 mr-1.5 cursor-pointer align-middle" data-checked="true"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#34D399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5L4 7.5L8 3"/></svg></span>',
+    '<span class="note-checkbox checked" data-checked="true" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;border:1.5px solid #34D399;background:rgba(52,211,153,0.15);margin-right:6px;cursor:pointer;vertical-align:middle"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#34D399" stroke-width="1.5" stroke-linecap="round"><path d="M2 5.5L4 7.5L8 3"/></svg></span>',
   );
   html = html.replace(
     /- \[ \]/g,
-    '<span class="note-checkbox inline-flex items-center justify-center w-4 h-4 rounded border border-white/20 bg-white/[0.04] mr-1.5 cursor-pointer align-middle" data-checked="false"></span>',
+    '<span class="note-checkbox" data-checked="false" style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(155,150,137,0.3);margin-right:6px;cursor:pointer;vertical-align:middle"></span>',
   );
 
   return html;
@@ -130,7 +106,6 @@ function buildBlockTree(blocks: NoteBlock[], pageId: string) {
     childMap.get(key)!.push(b);
   }
 
-  // Sort children by order within each group
   childMap.forEach((children) => {
     children.sort((a, b) => a.order.localeCompare(b.order));
   });
@@ -170,8 +145,9 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
   const allBlocks = usePFCStore(selectNoteBlocks) ?? [];
   const editingBlockId = usePFCStore(selectEditingBlockId) ?? null;
   const noteAI = usePFCStore(selectNoteAI);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
-  // Select each action individually — stable function refs, no new objects
   const createBlock = usePFCStore((s) => s.createBlock);
   const updateBlockContent = usePFCStore((s) => s.updateBlockContent);
   const deleteBlock = usePFCStore((s) => s.deleteBlock);
@@ -182,7 +158,6 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
   const setActivePage = usePFCStore((s) => s.setActivePage);
   const ensurePage = usePFCStore((s) => s.ensurePage);
 
-  // Bundle into a stable ref for passing to children
   const actionsRef = useRef({
     createBlock, updateBlockContent, deleteBlock, indentBlock, outdentBlock,
     toggleBlockCollapse, setEditingBlock, setActivePage, ensurePage,
@@ -193,7 +168,6 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
   };
   const actions = actionsRef.current;
 
-  // Build the block tree and flatten for rendering
   const childMap = useMemo(() => buildBlockTree(allBlocks, pageId), [allBlocks, pageId]);
   const collapsedIds = useMemo(
     () => new Set<string>(allBlocks.filter((b) => b.collapsed).map((b) => b.id)),
@@ -204,24 +178,18 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
     [childMap, collapsedIds],
   );
 
-  // Ref map so children can focus siblings
   const blockRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const registerRef = useCallback((blockId: string, el: HTMLDivElement | null) => {
-    if (el) {
-      blockRefs.current.set(blockId, el);
-    } else {
-      blockRefs.current.delete(blockId);
-    }
+    if (el) blockRefs.current.set(blockId, el);
+    else blockRefs.current.delete(blockId);
   }, []);
 
   const focusBlock = useCallback((blockId: string) => {
-    // Small delay to let React commit DOM updates
     requestAnimationFrame(() => {
       const el = blockRefs.current.get(blockId);
       if (el) {
         el.focus();
-        // Place cursor at end
         const range = document.createRange();
         const sel = window.getSelection();
         if (sel) {
@@ -234,7 +202,6 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
     });
   }, []);
 
-  // Handle creating a new block at the end when clicking empty area
   const handleContainerClick = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {
       if (e.target !== e.currentTarget) return;
@@ -248,47 +215,45 @@ export function BlockEditor({ pageId }: BlockEditorProps) {
 
   return (
     <div
-      className="relative min-h-[200px] py-2 cursor-text"
+      className="relative min-h-[300px] py-4 cursor-text"
       onClick={handleContainerClick}
+      style={{ maxWidth: '48rem', margin: '0 auto' }}
     >
-      <AnimatePresence initial={false}>
-        {flatBlocks.map((block, idx) => (
-          <BlockItem
-            key={block.id}
-            block={block}
-            depth={block.indent}
-            isEditing={editingBlockId === block.id}
-            hasChildBlocks={hasChildren(childMap, block.id)}
-            noteAI={noteAI}
-            actions={actions}
-            pageId={pageId}
-            flatBlocks={flatBlocks}
-            index={idx}
-            registerRef={registerRef}
-            focusBlock={focusBlock}
-          />
-        ))}
-      </AnimatePresence>
+      {flatBlocks.map((block, idx) => (
+        <BlockItem
+          key={block.id}
+          block={block}
+          depth={block.indent}
+          isEditing={editingBlockId === block.id}
+          hasChildBlocks={hasChildren(childMap, block.id)}
+          noteAI={noteAI}
+          actions={actions}
+          pageId={pageId}
+          flatBlocks={flatBlocks}
+          index={idx}
+          registerRef={registerRef}
+          focusBlock={focusBlock}
+          isDark={isDark}
+        />
+      ))}
 
       {flatBlocks.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, ease: CUPERTINO }}
-          className="flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground/40 select-none"
+        <div
+          style={{
+            padding: '1rem 0',
+            fontSize: '1rem',
+            color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.25)',
+            userSelect: 'none',
+          }}
         >
-          <span
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ background: VIOLET, opacity: 0.3 }}
-          />
-          Click here to start writing...
-        </motion.div>
+          Click anywhere to start writing...
+        </div>
       )}
     </div>
   );
 }
 
-// ── BlockItem (memoized) ───────────────────────────────────────────
+// ── BlockItem ───────────────────────────────────────────────────
 
 interface BlockItemProps {
   block: NoteBlock;
@@ -312,6 +277,7 @@ interface BlockItemProps {
   index: number;
   registerRef: (blockId: string, el: HTMLDivElement | null) => void;
   focusBlock: (blockId: string) => void;
+  isDark: boolean;
 }
 
 const BlockItem = memo<BlockItemProps>(function BlockItem({
@@ -326,18 +292,16 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
   index,
   registerRef,
   focusBlock,
+  isDark,
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
-  // AI typing state
   const isAITarget =
     noteAI?.isGenerating === true && noteAI.targetBlockId === block.id;
   const [displayedChars, setDisplayedChars] = useState(0);
   const aiText = isAITarget ? (noteAI?.streamedText ?? block.content) : '';
 
-  // Register the contentEditable ref for external focus
   const setRef = useCallback(
     (el: HTMLDivElement | null) => {
       (contentRef as any).current = el;
@@ -346,51 +310,41 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
     [block.id, registerRef],
   );
 
-  // Sync store content into the editable div when not focused
+  // Sync store content → DOM when not focused
   useEffect(() => {
     const el = contentRef.current;
     if (!el || isFocused) return;
     if (!isAITarget) {
-      // When not editing, show rendered markdown
       el.innerHTML = block.content ? renderMarkdown(block.content) : '';
     }
   }, [block.content, isFocused, isAITarget]);
 
-  // When entering edit mode, switch to raw text
+  // When focusing, switch to raw text for editing
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
     if (isFocused) {
-      // Show raw content for editing (plain text)
       if (el.textContent !== block.content) {
         el.textContent = block.content;
       }
     }
   }, [isFocused, block.content]);
 
-  // AI typing animation: reveal characters one by one
+  // AI typing animation
   useEffect(() => {
-    if (!isAITarget) {
-      setDisplayedChars(0);
-      return;
-    }
+    if (!isAITarget) { setDisplayedChars(0); return; }
     const target = aiText.length;
     if (displayedChars >= target) return;
-
     const timer = setTimeout(() => {
       setDisplayedChars((prev) => Math.min(prev + 1, target));
-    }, 18 + Math.random() * 12); // ~18-30ms per char for natural feel
-
+    }, 18 + Math.random() * 12);
     return () => clearTimeout(timer);
   }, [isAITarget, aiText, displayedChars]);
 
-  // Update the AI display text in the DOM
   useEffect(() => {
     if (!isAITarget || !contentRef.current) return;
     contentRef.current.textContent = aiText.slice(0, displayedChars);
   }, [isAITarget, aiText, displayedChars]);
-
-  // ── Handlers ───────────────────────────────────────────────────
 
   const handleFocus = useCallback(
     (_e: FocusEvent) => {
@@ -414,8 +368,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
   const handleInput = useCallback(() => {
     const el = contentRef.current;
     if (!el) return;
-    const text = el.textContent ?? '';
-    actions.updateBlockContent(block.id, text);
+    actions.updateBlockContent(block.id, el.textContent ?? '');
   }, [actions, block.id]);
 
   const handleKeyDown = useCallback(
@@ -424,24 +377,15 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
       if (!el) return;
       const text = el.textContent ?? '';
 
-      // ── Enter: new block below ──
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        // Save current content
         actions.updateBlockContent(block.id, text);
-        // Create sibling block after this one
-        const newId = actions.createBlock(
-          pageId,
-          block.parentId,
-          block.id,
-          '',
-        );
+        const newId = actions.createBlock(pageId, block.parentId, block.id, '');
         actions.setEditingBlock(newId);
         focusBlock(newId);
         return;
       }
 
-      // ── Backspace on empty: delete and focus previous ──
       if (e.key === 'Backspace' && text === '') {
         e.preventDefault();
         const prevBlock = index > 0 ? flatBlocks[index - 1] : null;
@@ -453,16 +397,13 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
         return;
       }
 
-      // ── Tab: indent ──
       if (e.key === 'Tab' && !e.shiftKey) {
         e.preventDefault();
         actions.indentBlock(block.id);
-        // Maintain focus after re-render
         requestAnimationFrame(() => focusBlock(block.id));
         return;
       }
 
-      // ── Shift+Tab: outdent ──
       if (e.key === 'Tab' && e.shiftKey) {
         e.preventDefault();
         actions.outdentBlock(block.id);
@@ -470,9 +411,7 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
         return;
       }
 
-      // ── Arrow Up: focus previous block ──
       if (e.key === 'ArrowUp') {
-        // Only intercept if cursor is at the start of content
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
@@ -488,7 +427,6 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
         return;
       }
 
-      // ── Arrow Down: focus next block ──
       if (e.key === 'ArrowDown') {
         const sel = window.getSelection();
         if (sel && sel.rangeCount > 0) {
@@ -511,39 +449,30 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
     [actions, block, pageId, flatBlocks, index, focusBlock],
   );
 
-  // Handle clicks on rendered elements (page links, checkboxes)
   const handleContentClick = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement;
 
-      // [[Page link]] click
       const pageLink = target.closest('.note-page-link') as HTMLElement | null;
       if (pageLink) {
         e.preventDefault();
         e.stopPropagation();
         const pageName = pageLink.getAttribute('data-page');
-        if (pageName) {
-          // Ensure page exists and navigate to it
-          if (actions.ensurePage) {
-            const targetPageId = actions.ensurePage(pageName);
-            actions.setActivePage?.(targetPageId);
-          } else {
-            actions.setActivePage?.(pageName);
-          }
+        if (pageName && actions.ensurePage) {
+          const targetPageId = actions.ensurePage(pageName);
+          actions.setActivePage?.(targetPageId);
         }
         return;
       }
 
-      // Checkbox toggle
       const checkbox = target.closest('.note-checkbox') as HTMLElement | null;
       if (checkbox) {
         e.preventDefault();
         e.stopPropagation();
         const isChecked = checkbox.getAttribute('data-checked') === 'true';
-        const currentContent = block.content;
         const updated = isChecked
-          ? currentContent.replace('- [x]', '- [ ]')
-          : currentContent.replace('- [ ]', '- [x]');
+          ? block.content.replace('- [x]', '- [ ]')
+          : block.content.replace('- [ ]', '- [x]');
         actions.updateBlockContent(block.id, updated);
         return;
       }
@@ -551,7 +480,6 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
     [actions, block],
   );
 
-  // ── Collapse toggle ──
   const handleCollapseToggle = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
@@ -560,51 +488,49 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
     [actions, block.id],
   );
 
-  // ── Render ─────────────────────────────────────────────────────
-
-  const paddingLeft = depth * INDENT_PX + 8;
+  const paddingLeft = depth * INDENT_PX + 4;
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4, height: 0, marginBottom: 0 }}
-      transition={{ duration: 0.2, ease: CUPERTINO }}
-      className={cn(
-        'group relative flex items-start gap-0 rounded-lg transition-colors duration-150',
-        isFocused && 'bg-white/[0.04] dark:bg-white/[0.03]',
-        isHovered && !isFocused && 'bg-white/[0.02] dark:bg-white/[0.015]',
-      )}
+    <div
       style={{
+        display: 'flex',
+        alignItems: 'flex-start',
         paddingLeft,
-        minHeight: 28,
-        // Violet accent line on left when focused
-        borderLeft: isFocused
-          ? `2px solid ${VIOLET}`
-          : '2px solid transparent',
+        minHeight: 32,
+        borderRadius: 6,
+        transition: 'background 0.1s',
+        background: isFocused
+          ? (isDark ? 'rgba(196,149,106,0.04)' : 'rgba(196,149,106,0.03)')
+          : 'transparent',
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      {/* ── Collapse chevron / spacer ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, minHeight: 28, flexShrink: 0, paddingTop: 5 }}>
+      {/* Collapse chevron */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20, minHeight: 32, flexShrink: 0, paddingTop: 7 }}>
         {hasChildBlocks ? (
           <button
             onClick={handleCollapseToggle}
-            className={cn(
-              'flex items-center justify-center w-4 h-4 rounded transition-all duration-200',
-              'text-muted-foreground/40 hover:text-muted-foreground/70 hover:bg-white/[0.06]',
-            )}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 16,
+              height: 16,
+              borderRadius: 4,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              padding: 0,
+              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+              transition: 'color 0.15s',
+            }}
             aria-label={block.collapsed ? 'Expand' : 'Collapse'}
-            style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
           >
             <motion.span
               animate={{ rotate: block.collapsed ? 0 : 90 }}
-              transition={{ duration: 0.2, ease: CUPERTINO }}
-              className="flex items-center justify-center"
+              transition={{ duration: 0.15, ease: CUPERTINO }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              <ChevronRightIcon className="w-3 h-3" />
+              <ChevronRightIcon style={{ width: 12, height: 12 }} />
             </motion.span>
           </button>
         ) : (
@@ -612,24 +538,22 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
         )}
       </div>
 
-      {/* ── Bullet point ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, minHeight: 28, flexShrink: 0, paddingTop: 5 }}>
+      {/* Bullet */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, minHeight: 32, flexShrink: 0, paddingTop: 7 }}>
         <span
           style={{
-            width: isFocused ? 5 : 4,
-            height: isFocused ? 5 : 4,
+            width: 5,
+            height: 5,
             borderRadius: '50%',
-            background: VIOLET,
-            opacity: isFocused ? 1 : 0.5,
-            boxShadow: isFocused ? `0 0 6px ${VIOLET_FAINT}` : 'none',
-            transition: 'all 0.2s ease',
+            background: isFocused ? ACCENT : (isDark ? 'rgba(155,150,137,0.3)' : 'rgba(0,0,0,0.15)'),
+            transition: 'background 0.15s',
           }}
         />
       </div>
 
-      {/* ── Content area ── */}
+      {/* Content */}
       <div
-        className="flex-1 min-w-0 relative"
+        style={{ flex: 1, minWidth: 0 }}
         onClick={handleContentClick}
       >
         <div
@@ -641,67 +565,29 @@ const BlockItem = memo<BlockItemProps>(function BlockItem({
           onBlur={handleBlur}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
-          data-placeholder="Type '/' for commands..."
-          className={cn(
-            'outline-none pr-2 text-sm',
-            'text-foreground/90 selection:bg-pfc-violet/20',
-            'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/30',
-            'empty:before:pointer-events-none',
-          )}
+          data-placeholder="Type to start writing..."
           style={{
+            outline: 'none',
+            paddingRight: 8,
+            fontSize: '1rem',
+            lineHeight: '32px',
+            minHeight: 32,
+            color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(43,42,39,0.9)',
+            caretColor: ACCENT,
             wordBreak: 'break-word',
-            caretColor: VIOLET,
-            minHeight: 28,
-            lineHeight: '28px',
-            padding: 0,
           }}
+          className="empty:before:content-[attr(data-placeholder)] empty:before:pointer-events-none"
+          // Only first block shows placeholder
+          {...(index === 0 ? {} : { 'data-placeholder': '' })}
         />
 
-        {/* ── AI typing cursor ── */}
         {isAITarget && (
           <span
-            className="inline-block w-[2px] h-4 ml-0.5 rounded-sm animate-blink align-middle"
-            style={{ background: VIOLET }}
+            className="inline-block animate-blink"
+            style={{ width: 2.5, height: '1em', marginLeft: 1, background: ACCENT, borderRadius: 1, verticalAlign: 'text-bottom' }}
           />
         )}
       </div>
-
-      {/* ── Hover border (faint) ── */}
-      {isHovered && !isFocused && (
-        <motion.div
-          layoutId={`hover-border-${block.id}`}
-          className="absolute inset-0 rounded-lg pointer-events-none"
-          style={{
-            border: '1px solid rgba(124, 108, 240, 0.06)',
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        />
-      )}
-
-      {/* ── Glass background when editing ── */}
-      {isFocused && (
-        <motion.div
-          className="absolute inset-0 rounded-lg pointer-events-none -z-10"
-          style={{
-            background: 'rgba(124, 108, 240, 0.03)',
-            backdropFilter: 'blur(12px) saturate(1.4)',
-            WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-            border: `1px solid rgba(124, 108, 240, 0.08)`,
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: CUPERTINO }}
-        />
-      )}
-    </motion.div>
+    </div>
   );
 });
-
-// ── Exports ────────────────────────────────────────────────────────
-
-export type { NoteBlock };
-export default BlockEditor;

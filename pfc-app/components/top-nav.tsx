@@ -185,175 +185,140 @@ const ChatNavBubble = memo(function ChatNavBubble({
   const hasMessages = messages.some((m) => m.role === 'system');
   const modeInfo = MODE_STYLES[inferenceMode] ?? MODE_STYLES.simulation;
 
-  // When active (on chat page), expand to show PFC engine bar
   const showExpanded = isActive;
   const showLabel = hovered || isActive;
 
   return (
-    <motion.div
-      layout
+    <motion.button
+      onClick={() => onNavigate(item.href)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      whileTap={{ scale: 0.95 }}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '0.375rem',
+        cursor: 'pointer',
+        border: 'none',
         borderRadius: '9999px',
+        padding: showExpanded
+          ? '0.4375rem 0.75rem'
+          : showLabel
+            ? '0.4375rem 0.875rem'
+            : '0.4375rem',
+        height: '2.5rem',
+        minWidth: showLabel ? 'auto' : '2.5rem',
+        fontSize: '0.875rem',
+        fontWeight: isActive ? 700 : 600,
+        letterSpacing: '-0.01em',
+        color: isActive
+          ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+          : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
         background: isActive
           ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)')
           : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)'),
         backdropFilter: 'blur(12px) saturate(1.3)',
         WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+        transition: 'padding 0.28s cubic-bezier(0.32,0.72,0,1), gap 0.28s cubic-bezier(0.32,0.72,0,1), min-width 0.28s cubic-bezier(0.32,0.72,0,1), background 0.15s, color 0.15s',
         overflow: 'hidden',
-        transition: 'background 0.15s',
+        whiteSpace: 'nowrap',
       }}
     >
-      {/* Chat button core */}
-      <motion.button
-        onClick={() => onNavigate(item.href)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        whileTap={{ scale: 0.92 }}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: showLabel ? '0.375rem' : '0rem',
-          cursor: 'pointer',
-          border: 'none',
-          borderRadius: '9999px',
-          padding: showLabel ? '0.4375rem 0.625rem 0.4375rem 0.875rem' : '0.4375rem',
-          height: '2.5rem',
-          minWidth: showLabel ? 'auto' : '2.5rem',
-          fontSize: '0.875rem',
-          fontWeight: isActive ? 700 : 600,
-          letterSpacing: '-0.01em',
-          color: isActive
-            ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-            : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
-          background: 'transparent',
-          transition: 'padding 0.28s cubic-bezier(0.32,0.72,0,1), gap 0.28s cubic-bezier(0.32,0.72,0,1), min-width 0.28s cubic-bezier(0.32,0.72,0,1), color 0.15s',
-          overflow: 'hidden',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <Icon style={{
-          height: '1.0625rem',
-          width: '1.0625rem',
-          flexShrink: 0,
-          color: isActive ? '#C4956A' : 'inherit',
-        }} />
-        <AnimatePresence>
-          {showLabel && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.22, ease: CUPERTINO_EASE }}
-              style={{ overflow: 'hidden', display: 'inline-block' }}
-            >
-              {showExpanded ? 'PFC' : item.label}
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </motion.button>
+      <Icon style={{
+        height: '1.0625rem',
+        width: '1.0625rem',
+        flexShrink: 0,
+        color: isActive ? '#C4956A' : 'inherit',
+      }} />
 
-      {/* Expanded PFC engine bar content — only shown on chat page */}
+      {/* Label */}
       <AnimatePresence>
-        {showExpanded && (
-          <motion.div
+        {showLabel && (
+          <motion.span
             initial={{ opacity: 0, width: 0 }}
             animate={{ opacity: 1, width: 'auto' }}
             exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              paddingRight: '0.625rem',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-            }}
+            transition={{ duration: 0.22, ease: CUPERTINO_EASE }}
+            style={{ overflow: 'hidden', display: 'inline-block' }}
           >
-            {/* Mode badge */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              padding: '0.125rem 0.375rem',
-              borderRadius: '9999px',
-              background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
-              fontSize: '0.5625rem',
-              fontFamily: 'var(--font-mono)',
-              color: isDark ? 'rgba(196,149,106,0.7)' : 'rgba(196,149,106,0.8)',
-            }}>
-              {inferenceMode === 'simulation'
-                ? <ServerIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
-                : <WifiIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
-              }
-              {modeInfo.label}
-            </div>
-
-            {/* Confidence */}
-            {confidence > 0 && (
-              <span style={{
-                fontSize: '0.5625rem',
-                fontFamily: 'var(--font-mono)',
-                color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
-              }}>
-                {(confidence * 100).toFixed(0)}%
-              </span>
-            )}
-
-            <SteeringIndicator />
-
-            {/* Active pipeline stage */}
-            {isProcessing && activeStage && (
-              <div
-                className="animate-pipeline-pulse"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  padding: '0.125rem 0.375rem',
-                  borderRadius: '9999px',
-                  background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
-                  fontSize: '0.5625rem',
-                  fontFamily: 'var(--font-mono)',
-                  color: '#C4956A',
-                }}
-              >
-                <ActivityIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
-                {activeStage.replace('_', '-')}
-              </div>
-            )}
-
-            {/* Synthesize button */}
-            {hasMessages && (
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onClick={(e) => { e.stopPropagation(); toggleSynthesis(); }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  padding: '0.1875rem 0.5rem',
-                  borderRadius: '9999px',
-                  background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '0.6875rem',
-                  fontWeight: 600,
-                  color: '#C4956A',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <SparklesIcon style={{ height: '0.625rem', width: '0.625rem' }} />
-                Synthesize
-              </motion.button>
-            )}
-          </motion.div>
+            {showExpanded ? 'PFC Engine' : item.label}
+          </motion.span>
         )}
       </AnimatePresence>
-    </motion.div>
+
+      {/* PFC engine bar items — inline with the button, no nested AnimatePresence */}
+      {showExpanded && (
+        <>
+          {/* Separator dot */}
+          <span style={{
+            width: 3, height: 3, borderRadius: '50%', flexShrink: 0,
+            background: isDark ? 'rgba(155,150,137,0.25)' : 'rgba(0,0,0,0.15)',
+          }} />
+
+          {/* Mode badge */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+            padding: '0.125rem 0.375rem', borderRadius: '9999px',
+            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+            fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
+            color: isDark ? 'rgba(196,149,106,0.7)' : 'rgba(196,149,106,0.8)',
+          }}>
+            {inferenceMode === 'simulation'
+              ? <ServerIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
+              : <WifiIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
+            }
+            {modeInfo.label}
+          </span>
+
+          {/* Confidence */}
+          {confidence > 0 && (
+            <span style={{
+              fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
+              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+            }}>
+              {(confidence * 100).toFixed(0)}%
+            </span>
+          )}
+
+          <SteeringIndicator />
+
+          {/* Active pipeline stage */}
+          {isProcessing && activeStage && (
+            <span
+              className="animate-pipeline-pulse"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                padding: '0.125rem 0.375rem', borderRadius: '9999px',
+                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
+                color: '#C4956A',
+              }}
+            >
+              <ActivityIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
+              {activeStage.replace('_', '-')}
+            </span>
+          )}
+
+          {/* Synthesize button */}
+          {hasMessages && (
+            <span
+              role="button"
+              onClick={(e) => { e.stopPropagation(); toggleSynthesis(); }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                padding: '0.1875rem 0.5rem', borderRadius: '9999px',
+                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                cursor: 'pointer', fontSize: '0.6875rem', fontWeight: 600,
+                color: '#C4956A',
+              }}
+            >
+              <SparklesIcon style={{ height: '0.625rem', width: '0.625rem' }} />
+              Synthesize
+            </span>
+          )}
+        </>
+      )}
+    </motion.button>
   );
 });
 
@@ -367,11 +332,26 @@ export function TopNav() {
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? resolvedTheme === 'dark' : true;
 
-  const isOnChat = pathname === '/' || pathname.startsWith('/chat');
+  const chatMessages = usePFCStore((s) => s.messages);
+  // Chat bubble is active only when actually chatting (has messages), not on landing
+  const isOnChat = pathname.startsWith('/chat') || (pathname === '/' && chatMessages.length > 0);
+
+  const clearMessages = usePFCStore((s) => s.clearMessages);
 
   const handleNavigate = useCallback((href: string) => {
+    if (href === '/') {
+      // Always clear chat state and go to landing
+      clearMessages();
+      // If already on / or /chat, push to / anyway to force re-render
+      if (pathname === '/' || pathname.startsWith('/chat')) {
+        router.replace('/');
+      } else {
+        router.push('/');
+      }
+      return;
+    }
     router.push(href);
-  }, [router]);
+  }, [router, clearMessages, pathname]);
 
   return (
     <motion.nav
