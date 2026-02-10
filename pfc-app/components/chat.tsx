@@ -148,15 +148,14 @@ const GREETING_DEFS: GreetingDef[] = [
 // GreetingTypewriter — IDE-colored typewriter with blinking cursor
 // ═══════════════════════════════════════════════════════════════════
 
-function GreetingTypewriter({ isDark, searchFocused }: { isDark: boolean; searchFocused: boolean }) {
+function GreetingTypewriter({ isDark }: { isDark: boolean }) {
   const [displayText, setDisplayText] = useState('');
   const [cursorOn, setCursorOn] = useState(true);
   const [variationIdx, setVariationIdx] = useState(0);
-  const [animKey, setAnimKey] = useState(0);
   const stateRef = useRef({
     variation: 0,
     charIdx: 0,
-    phase: 'typing' as 'typing' | 'pausing' | 'done',
+    phase: 'typing' as 'typing' | 'pausing' | 'deleting',
   });
 
   useEffect(() => {
@@ -164,20 +163,6 @@ function GreetingTypewriter({ isDark, searchFocused }: { isDark: boolean; search
     return () => clearInterval(id);
   }, []);
 
-  // When search is focused, pick a new random variation and restart
-  const prevFocused = useRef(false);
-  useEffect(() => {
-    if (searchFocused && !prevFocused.current) {
-      const next = Math.floor(Math.random() * GREETING_DEFS.length);
-      stateRef.current = { variation: next, charIdx: 0, phase: 'typing' };
-      setDisplayText('');
-      setVariationIdx(next);
-      setAnimKey((k) => k + 1);
-    }
-    prevFocused.current = searchFocused;
-  }, [searchFocused]);
-
-  // Type out one greeting then stop — no looping
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
 
@@ -190,17 +175,31 @@ function GreetingTypewriter({ isDark, searchFocused }: { isDark: boolean; search
           s.charIdx++;
           setDisplayText(target.slice(0, s.charIdx));
           setVariationIdx(s.variation);
-          timer = setTimeout(tick, 45);
+          timer = setTimeout(tick, s.variation === 0 ? 55 : 40);
         } else {
-          s.phase = 'done';
-          // Stop — don't delete or cycle
+          s.phase = 'pausing';
+          timer = setTimeout(tick, s.variation === 0 ? 2500 : 3200);
+        }
+      } else if (s.phase === 'pausing') {
+        s.phase = 'deleting';
+        tick();
+      } else {
+        if (s.charIdx > 0) {
+          s.charIdx--;
+          setDisplayText(target.slice(0, s.charIdx));
+          timer = setTimeout(tick, 18);
+        } else {
+          s.variation = (s.variation + 1) % GREETING_DEFS.length;
+          s.phase = 'typing';
+          setVariationIdx(s.variation);
+          timer = setTimeout(tick, 500);
         }
       }
     }
 
     timer = setTimeout(tick, 120);
     return () => clearTimeout(timer);
-  }, [animKey]);
+  }, []);
 
   const def = GREETING_DEFS[variationIdx];
   const isCode = def.isCode;
@@ -365,7 +364,7 @@ export function Chat() {
               }}
             >
               {mounted && <PixelSun size={52} />}
-              {mounted && <GreetingTypewriter isDark={isDark} searchFocused={searchFocused} />}
+              {mounted && <GreetingTypewriter isDark={isDark} />}
             </motion.div>
 
             {/* Search bar — M3 surface container with tonal elevation */}

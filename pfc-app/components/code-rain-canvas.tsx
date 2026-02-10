@@ -255,7 +255,6 @@ const PINATA_POOL = [
   { text: '# backprop', color: '#86EFAC' },
   { text: '# gradient', color: '#86EFAC' },
   { text: '# attention', color: '#86EFAC' },
-  // Single characters & short syntax tokens
   { text: '{', color: '#9CA3AF' },
   { text: '}', color: '#9CA3AF' },
   { text: '(', color: '#9CA3AF' },
@@ -329,7 +328,7 @@ function createPinataParticle(x: number, y: number): PinataParticle {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Canvas rain column — with size tiers for visual depth
+// Rain drop — types in, falls, blurs out
 // ═══════════════════════════════════════════════════════════════════════
 
 type SizeTier = 'tiny' | 'normal' | 'large';
@@ -337,57 +336,145 @@ type SizeTier = 'tiny' | 'normal' | 'large';
 const STRIKEOUT_RED = '#F87171';
 const CURSOR_COLOR = '#D4D4D8';
 
-interface RainColumn {
+interface RainDrop {
   x: number;
   y: number;
   speed: number;
   fontSize: number;
-  tokens: { text: string; color: string }[];
-  tokenIndex: number;
-  opacity: number;
-  blur: number;
+  text: string;
+  color: string;
+  typedChars: number;
+  typeTimer: number;
+  typeInterval: number;   // frames between each char appearing
+  phase: 'typing' | 'visible' | 'fading';
+  baseOpacity: number;
+  fadeProgress: number;   // 0→1 during fading
+  visibleTimer: number;   // frames to stay visible before fading
   sizeTier: SizeTier;
+  // Strikeout animation
   strikeout: number;
   strikeoutText: string;
   strikeoutOrigColor: string;
   strikeoutY: number;
+  // Code-edit animation
   editing: number;
   editOrigText: string;
   editNewText: string;
   editOrigColor: string;
   editNewColor: string;
   editY: number;
+  // Codeblock animation
   codeblock: number;
   codeblockIdx: number;
   codeblockY: number;
 }
 
-function pickSizeTier(): SizeTier {
+function pickSpeedTier(): { speed: number; tier: SizeTier } {
   const r = Math.random();
-  if (r < 0.14) return 'large';   // More large blurred elements (was 0.08)
-  if (r < 0.28) return 'tiny';
-  return 'normal';
+  if (r < 0.12) {
+    // Large: slow background depth elements
+    return { speed: 0.3 + Math.random() * 0.5, tier: 'large' };
+  }
+  if (r < 0.25) {
+    // Slow rain
+    return { speed: 1.0 + Math.random() * 1.2, tier: 'normal' };
+  }
+  if (r < 0.55) {
+    // Medium rain
+    return { speed: 2.0 + Math.random() * 1.5, tier: 'normal' };
+  }
+  // Fast rain (majority)
+  return { speed: 3.0 + Math.random() * 2.5, tier: Math.random() < 0.2 ? 'tiny' : 'normal' };
 }
 
-function applyTier(col: Partial<RainColumn>, tier: SizeTier) {
+function createDrop(w: number, h: number): RainDrop {
+  const token = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
+  const { speed, tier } = pickSpeedTier();
+
+  let fontSize: number;
+  let baseOpacity: number;
+
   switch (tier) {
     case 'large':
-      col.fontSize = 24 + Math.random() * 16;   // Slightly larger
-      col.opacity = 0.05 + Math.random() * 0.06;
-      col.speed = 0.15 + Math.random() * 0.35;  // Slower drift
-      col.blur = 4 + Math.random() * 6;          // More blur for depth
+      fontSize = 22 + Math.random() * 14;
+      baseOpacity = 0.04 + Math.random() * 0.05;
       break;
     case 'tiny':
-      col.fontSize = 7 + Math.random() * 4;
-      col.opacity = 0.08 + Math.random() * 0.12;
-      col.speed = 0.6 + Math.random() * 1.4;
-      col.blur = 0.5 + Math.random() * 2;
+      fontSize = 7 + Math.random() * 4;
+      baseOpacity = 0.08 + Math.random() * 0.10;
       break;
     default:
-      col.fontSize = 12 + Math.random() * 5;
-      col.opacity = 0.10 + Math.random() * 0.16;
-      col.blur = Math.random() < 0.4 ? (0.5 + Math.random() * 2) : 0;
-      col.speed = 0.25 + Math.random() * 0.9;
+      fontSize = 11 + Math.random() * 5;
+      baseOpacity = 0.10 + Math.random() * 0.16;
+      break;
+  }
+
+  // Faster drops type faster
+  const typeInterval = speed > 2.5 ? 1.5 + Math.random() * 1.5 : 2 + Math.random() * 3;
+
+  return {
+    x: Math.random() * w,
+    y: -Math.random() * h * 0.5 - 30,
+    speed,
+    fontSize,
+    text: token.text,
+    color: token.color,
+    typedChars: 0,
+    typeTimer: 0,
+    typeInterval,
+    phase: 'typing',
+    baseOpacity,
+    fadeProgress: 0,
+    visibleTimer: 20 + Math.random() * 60, // stay visible 20-80 frames
+    sizeTier: tier,
+    strikeout: 0,
+    strikeoutText: '',
+    strikeoutOrigColor: '',
+    strikeoutY: 0,
+    editing: 0,
+    editOrigText: '',
+    editNewText: '',
+    editOrigColor: '',
+    editNewColor: '',
+    editY: 0,
+    codeblock: 0,
+    codeblockIdx: 0,
+    codeblockY: 0,
+  };
+}
+
+function recycleDrop(drop: RainDrop, w: number) {
+  const token = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
+  const { speed, tier } = pickSpeedTier();
+
+  drop.text = token.text;
+  drop.color = token.color;
+  drop.speed = speed;
+  drop.sizeTier = tier;
+  drop.x = Math.random() * w;
+  drop.y = -Math.random() * 120 - 30;
+  drop.typedChars = 0;
+  drop.typeTimer = 0;
+  drop.typeInterval = speed > 2.5 ? 1.5 + Math.random() * 1.5 : 2 + Math.random() * 3;
+  drop.phase = 'typing';
+  drop.fadeProgress = 0;
+  drop.visibleTimer = 20 + Math.random() * 60;
+  drop.strikeout = 0;
+  drop.editing = 0;
+  drop.codeblock = 0;
+
+  switch (tier) {
+    case 'large':
+      drop.fontSize = 22 + Math.random() * 14;
+      drop.baseOpacity = 0.04 + Math.random() * 0.05;
+      break;
+    case 'tiny':
+      drop.fontSize = 7 + Math.random() * 4;
+      drop.baseOpacity = 0.08 + Math.random() * 0.10;
+      break;
+    default:
+      drop.fontSize = 11 + Math.random() * 5;
+      drop.baseOpacity = 0.10 + Math.random() * 0.16;
       break;
   }
 }
@@ -405,49 +492,17 @@ function easeInOut(t: number): number {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 }
 
-function createColumn(canvasWidth: number, canvasHeight: number): RainColumn {
-  const tier = pickSizeTier();
-  const tokenCount = 4 + Math.floor(Math.random() * 6);
-  const tokens: { text: string; color: string }[] = [];
-  for (let i = 0; i < tokenCount; i++) {
-    tokens.push(TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)]);
-  }
-
-  const col: RainColumn = {
-    x: Math.random() * canvasWidth,
-    y: -Math.random() * canvasHeight,
-    speed: 0,
-    fontSize: 0,
-    tokens,
-    tokenIndex: 0,
-    opacity: 0,
-    blur: 0,
-    sizeTier: tier,
-    strikeout: 0,
-    strikeoutText: '',
-    strikeoutOrigColor: '',
-    strikeoutY: 0,
-    editing: 0,
-    editOrigText: '',
-    editNewText: '',
-    editOrigColor: '',
-    editNewColor: '',
-    editY: 0,
-    codeblock: 0,
-    codeblockIdx: 0,
-    codeblockY: 0,
-  };
-  applyTier(col, tier);
-  return col;
+function easeOut(t: number): number {
+  return 1 - (1 - t) * (1 - t);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Canvas rain component — original background + piñata overlay
+// Canvas rain component
 // ═══════════════════════════════════════════════════════════════════════
 
 export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; searchFocused?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const columnsRef = useRef<RainColumn[]>([]);
+  const dropsRef = useRef<RainDrop[]>([]);
   const pinataRef = useRef<PinataParticle[]>([]);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
@@ -459,17 +514,15 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    // Pre-cached values to avoid per-frame allocation
     let cachedW = window.innerWidth;
     let cachedH = window.innerHeight;
-    // Light mode gets more particles for visibility
-    const densityMultiplier = isDark ? 1.5 : 2.0;
+    const densityMultiplier = isDark ? 1.3 : 1.6;
 
-    function resetColumns() {
-      columnsRef.current = [];
-      const colCount = Math.floor((cachedW / 42) * densityMultiplier);
-      for (let i = 0; i < colCount; i++) {
-        columnsRef.current.push(createColumn(cachedW, cachedH));
+    function resetDrops() {
+      dropsRef.current = [];
+      const count = Math.floor((cachedW / 48) * densityMultiplier);
+      for (let i = 0; i < count; i++) {
+        dropsRef.current.push(createDrop(cachedW, cachedH));
       }
     }
 
@@ -481,21 +534,15 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-
       cachedW = window.innerWidth;
       cachedH = window.innerHeight;
-      resetColumns();
+      resetDrops();
     }
 
     resize();
     window.addEventListener('resize', resize);
 
-    // Periodic reset every 20 seconds to keep syntax from getting too crowded
-    const resetInterval = setInterval(() => {
-      resetColumns();
-    }, 20000);
-
-    // ── Piñata event listener ──
+    // Piñata event listener
     function onPinata(e: Event) {
       const { x, y, count } = (e as CustomEvent).detail;
       const current = pinataRef.current.length;
@@ -506,13 +553,14 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     }
     window.addEventListener('pfc-pinata', onPinata);
 
-    // Cached search-bar rect
+    // Animation constants
     const STRIKEOUT_SPEED = 1 / 90;
     const STRIKEOUT_CHANCE = 0.0015;
     const EDIT_SPEED = 1 / 140;
     const EDIT_CHANCE = 0.001;
     const CODEBLOCK_SPEED = 1 / 200;
     const CODEBLOCK_CHANCE = 0.0004;
+    const FADE_SPEED = 0.035; // how fast drops blur-vanish (higher = faster)
     let cursorClock = 0;
 
     const fontCache = new Map<number, string>();
@@ -536,7 +584,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       return v;
     }
 
-    // Cache search bar rect outside rAF loop via ResizeObserver
+    // Search bar rect cache
     let searchBarRect: DOMRect | null = null;
     const searchBarEl = document.querySelector('[data-search-bar]');
     if (searchBarEl) searchBarRect = searchBarEl.getBoundingClientRect();
@@ -545,14 +593,13 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       searchBarRect = el ? el.getBoundingClientRect() : null;
     });
     if (searchBarEl) searchBarObserver.observe(searchBarEl);
-    // Also update on scroll/resize
     const updateSearchBarRect = () => {
       const el = document.querySelector('[data-search-bar]');
       searchBarRect = el ? el.getBoundingClientRect() : null;
     };
     window.addEventListener('scroll', updateSearchBarRect, { passive: true });
 
-    // Battery optimization: pause when tab hidden, throttle to ~30fps
+    // Battery: pause when tab hidden
     let tabHidden = document.hidden;
     const onVisChange = () => { tabHidden = document.hidden; };
     document.addEventListener('visibilitychange', onVisChange);
@@ -566,10 +613,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     function draw(timestamp: number) {
       if (!canvas || !ctx) return;
 
-      // Skip drawing entirely when tab is hidden (major battery saver)
       if (tabHidden) { rafRef.current = requestAnimationFrame(draw); return; }
-
-      // Skip drawing when user prefers reduced motion
       if (reducedMotion) { rafRef.current = requestAnimationFrame(draw); return; }
 
       const delta = timestamp - lastTimeRef.current;
@@ -586,177 +630,204 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       const cursorOn = Math.sin(cursorClock * 0.55) > 0;
 
       // ════════════════════════════════════════════════════════════
-      // LAYER 1: Background rain columns
-      //
-      // Two-phase rendering to eliminate canvas state thrashing:
-      //   Phase 1 — Update positions + animation state (no draws)
-      //   Phase 2 — Batch draws grouped by font size
-      //
-      // The main perf bottleneck was ctx.font = ... called once per
-      // column per frame (~30+ times). Setting ctx.font triggers
-      // font resolution in the browser, which is expensive. By
-      // grouping columns with the same font size, we only set the
-      // font ~5 times instead of ~30+.
+      // LAYER 1: Rain drops — type in, fall, blur-vanish
       // ════════════════════════════════════════════════════════════
 
-      // ── Phase 1: Update all column state (zero draws) ──
-      // Buckets for phase 2 batching. Key = rounded font size.
-      const idleBuckets = new Map<number, RainColumn[]>();
-      const animatingCols: RainColumn[] = [];
+      const idleBuckets = new Map<number, RainDrop[]>();
+      const animatingDrops: RainDrop[] = [];
 
-      for (const col of columnsRef.current) {
-        col.y += col.speed * dt;
+      for (const drop of dropsRef.current) {
+        // Fall
+        drop.y += drop.speed * dt;
 
-        // Off-screen: recycle or skip
-        if (col.y > h + 60) {
-          const tier = pickSizeTier();
-          col.sizeTier = tier;
-          applyTier(col, tier);
-          col.y = -Math.random() * 200 - 50;
-          col.x = Math.random() * w;
-          col.tokenIndex = Math.floor(Math.random() * col.tokens.length);
-          col.strikeout = 0;
-          col.editing = 0;
-          col.codeblock = 0;
+        // Off-screen: recycle
+        if (drop.y > h + 60) {
+          recycleDrop(drop, w);
           continue;
         }
-        if (col.y < -200) continue;
+        if (drop.y < -250) continue;
 
-        const isIdle = col.strikeout === 0 && col.editing === 0 && col.codeblock === 0;
+        // Phase logic
+        if (drop.phase === 'typing') {
+          drop.typeTimer += dt;
+          if (drop.typeTimer >= drop.typeInterval) {
+            drop.typeTimer = 0;
+            drop.typedChars++;
+            if (drop.typedChars >= drop.text.length) {
+              drop.typedChars = drop.text.length;
+              drop.phase = 'visible';
+            }
+          }
+        } else if (drop.phase === 'visible') {
+          drop.visibleTimer -= dt;
+          if (drop.visibleTimer <= 0) {
+            drop.phase = 'fading';
+            drop.fadeProgress = 0;
+          }
+        } else if (drop.phase === 'fading') {
+          drop.fadeProgress += FADE_SPEED * dt;
+          if (drop.fadeProgress >= 1) {
+            recycleDrop(drop, w);
+            continue;
+          }
+        }
 
-        // Trigger new animations (only for normal-tier, on-screen, idle columns)
-        if (isIdle && col.sizeTier === 'normal' && col.y > 0 && col.y < h) {
-          const token = col.tokens[col.tokenIndex % col.tokens.length];
+        const isIdle = drop.strikeout === 0 && drop.editing === 0 && drop.codeblock === 0;
+
+        // Trigger animations (only normal-tier, visible phase, on-screen)
+        if (isIdle && drop.phase === 'visible' && drop.sizeTier === 'normal' && drop.y > 0 && drop.y < h) {
           const r = Math.random();
           if (r < STRIKEOUT_CHANCE) {
-            col.strikeout = 0.001;
-            col.strikeoutText = token.text;
-            col.strikeoutOrigColor = token.color;
-            col.strikeoutY = col.y;
+            drop.strikeout = 0.001;
+            drop.strikeoutText = drop.text;
+            drop.strikeoutOrigColor = drop.color;
+            drop.strikeoutY = drop.y;
           } else if (r < STRIKEOUT_CHANCE + EDIT_CHANCE) {
             let replacement = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
-            for (let a = 0; a < 3 && replacement.text === token.text; a++) {
+            for (let a = 0; a < 3 && replacement.text === drop.text; a++) {
               replacement = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
             }
-            col.editing = 0.001;
-            col.editOrigText = token.text;
-            col.editOrigColor = token.color;
-            col.editNewText = replacement.text;
-            col.editNewColor = replacement.color;
-            col.editY = col.y;
-          } else if (col.y > 40 && col.y < h - 100 && Math.random() < CODEBLOCK_CHANCE) {
-            col.codeblock = 0.001;
-            col.codeblockIdx = Math.floor(Math.random() * CODE_SNIPPETS.length);
-            col.codeblockY = col.y;
+            drop.editing = 0.001;
+            drop.editOrigText = drop.text;
+            drop.editOrigColor = drop.color;
+            drop.editNewText = replacement.text;
+            drop.editNewColor = replacement.color;
+            drop.editY = drop.y;
+          } else if (drop.y > 40 && drop.y < h - 100 && Math.random() < CODEBLOCK_CHANCE) {
+            drop.codeblock = 0.001;
+            drop.codeblockIdx = Math.floor(Math.random() * CODE_SNIPPETS.length);
+            drop.codeblockY = drop.y;
           }
         }
 
         // Advance animation timers
-        if (col.strikeout > 0) {
-          col.strikeout += STRIKEOUT_SPEED * dt;
-          if (col.strikeout >= 1) col.strikeout = 0;
+        if (drop.strikeout > 0) {
+          drop.strikeout += STRIKEOUT_SPEED * dt;
+          if (drop.strikeout >= 1) drop.strikeout = 0;
         }
-        if (col.editing > 0) {
-          col.editing += EDIT_SPEED * dt;
-          if (col.editing >= 1) col.editing = 0;
+        if (drop.editing > 0) {
+          drop.editing += EDIT_SPEED * dt;
+          if (drop.editing >= 1) drop.editing = 0;
         }
-        if (col.codeblock > 0) {
-          col.codeblock += CODEBLOCK_SPEED * dt;
-          if (col.codeblock >= 1) col.codeblock = 0;
+        if (drop.codeblock > 0) {
+          drop.codeblock += CODEBLOCK_SPEED * dt;
+          if (drop.codeblock >= 1) drop.codeblock = 0;
         }
 
-        // Cycle tokens occasionally
-        if (Math.random() < 0.02) col.tokenIndex++;
-
-        // Bucket for phase 2
-        if (col.strikeout > 0 || col.editing > 0 || col.codeblock > 0) {
-          animatingCols.push(col);
+        // Bucket for batch drawing
+        if (drop.strikeout > 0 || drop.editing > 0 || drop.codeblock > 0) {
+          animatingDrops.push(drop);
         } else {
-          const key = Math.round(col.fontSize);
+          const key = Math.round(drop.fontSize);
           let bucket = idleBuckets.get(key);
           if (!bucket) { bucket = []; idleBuckets.set(key, bucket); }
-          bucket.push(col);
+          bucket.push(drop);
         }
       }
 
-      // ── Phase 2a: Batch-draw idle columns by font size ──
-      // This is the key optimization: ctx.font is set once per
-      // unique rounded font size instead of once per column.
-      for (const [fontSize, cols] of idleBuckets) {
-        ctx.font = getFont(fontSize); // set ONCE per bucket
-        for (const col of cols) {
-          const token = col.tokens[col.tokenIndex % col.tokens.length];
-          const blurDim = col.blur > 0 ? Math.max(0.3, 1 - col.blur * 0.06) : 1;
-          const alpha = (isDark ? col.opacity * 0.9 : col.opacity * 0.88) * blurDim;
-          ctx.fillStyle = token.color;
+      // ── Batch-draw idle drops by font size ──
+      for (const [fontSize, drops] of idleBuckets) {
+        ctx.font = getFont(fontSize);
+        for (const drop of drops) {
+          // Calculate how many chars to show
+          const chars = Math.min(drop.typedChars, drop.text.length);
+          if (chars <= 0) continue;
+
+          const displayText = drop.text.slice(0, chars);
+
+          // Calculate opacity with fade
+          let alpha = isDark ? drop.baseOpacity * 0.9 : drop.baseOpacity * 0.88;
+          if (drop.phase === 'fading') {
+            const fadeEased = easeOut(drop.fadeProgress);
+            alpha *= (1 - fadeEased);
+          }
+
+          if (alpha < 0.005) continue;
+
+          // Apply blur via filter for fading drops (CSS filter on canvas)
+          if (drop.phase === 'fading' && drop.fadeProgress > 0.1) {
+            const blurAmount = drop.fadeProgress * 6;
+            ctx.filter = `blur(${blurAmount}px)`;
+          }
+
+          ctx.fillStyle = drop.color;
           ctx.globalAlpha = Math.min(alpha, 1);
-          ctx.fillText(token.text, col.x, col.y);
+          ctx.fillText(displayText, drop.x, drop.y);
+
+          // Typing cursor
+          if (drop.phase === 'typing' && chars < drop.text.length && cursorOn) {
+            const tw = getMeasure(displayText, drop.fontSize);
+            ctx.fillStyle = CURSOR_COLOR;
+            ctx.globalAlpha = alpha * 0.6;
+            ctx.fillRect(drop.x + tw + 1, drop.y - drop.fontSize * 0.75, Math.max(1, drop.fontSize * 0.06), drop.fontSize * 0.85);
+          }
+
+          if (ctx.filter !== 'none') ctx.filter = 'none';
         }
       }
 
-      // ── Phase 2b: Draw animating columns (rare, ~1-3 at a time) ──
-      // These need per-column font changes but are so few it doesn't matter.
-      for (const col of animatingCols) {
-        ctx.font = getFont(col.fontSize);
+      // ── Draw animating drops ──
+      for (const drop of animatingDrops) {
+        ctx.font = getFont(drop.fontSize);
 
-        // ── Strikeout animation ──
-        if (col.strikeout > 0) {
-          const p = col.strikeout;
+        // Strikeout animation
+        if (drop.strikeout > 0) {
+          const p = drop.strikeout;
           const colorT = easeInOut(Math.min(p / 0.4, 1));
-          const drawColor = lerpColor(col.strikeoutOrigColor, STRIKEOUT_RED, colorT);
+          const drawColor = lerpColor(drop.strikeoutOrigColor, STRIKEOUT_RED, colorT);
           const fadeOut = p > 0.7 ? 1 - easeInOut((p - 0.7) / 0.3) : 1;
-          const strikeAlpha = (isDark ? 0.55 : 0.55) * fadeOut;
+          const strikeAlpha = 0.55 * fadeOut;
 
           ctx.fillStyle = drawColor;
           ctx.globalAlpha = strikeAlpha;
-          ctx.fillText(col.strikeoutText, col.x, col.strikeoutY);
+          ctx.fillText(drop.strikeoutText, drop.x, drop.strikeoutY);
 
           if (p > 0.3) {
             const lineProgress = easeInOut(Math.min((p - 0.3) / 0.4, 1));
-            const textWidth = getMeasure(col.strikeoutText, col.fontSize);
-            const lineY = col.strikeoutY - col.fontSize * 0.3;
+            const textWidth = getMeasure(drop.strikeoutText, drop.fontSize);
+            const lineY = drop.strikeoutY - drop.fontSize * 0.3;
             ctx.strokeStyle = STRIKEOUT_RED;
             ctx.globalAlpha = strikeAlpha * 0.9;
-            ctx.lineWidth = Math.max(1, col.fontSize * 0.08);
+            ctx.lineWidth = Math.max(1, drop.fontSize * 0.08);
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(col.x - 2, lineY);
-            ctx.lineTo(col.x - 2 + (textWidth + 4) * lineProgress, lineY);
+            ctx.moveTo(drop.x - 2, lineY);
+            ctx.lineTo(drop.x - 2 + (textWidth + 4) * lineProgress, lineY);
             ctx.stroke();
           }
         }
 
-        // ── Code-edit animation ──
-        if (col.editing > 0) {
-          const p = col.editing;
-          const editAlpha = isDark ? 0.55 : 0.55;
-          const origLen = col.editOrigText.length;
-          const newLen = col.editNewText.length;
+        // Code-edit animation
+        if (drop.editing > 0) {
+          const p = drop.editing;
+          const editAlpha = 0.55;
+          const origLen = drop.editOrigText.length;
+          const newLen = drop.editNewText.length;
 
           let displayText = '';
-          let displayColor = col.editOrigColor;
+          let displayColor = drop.editOrigColor;
           let cursorX = 0;
           let showCursor = cursorOn;
           let fadeAlpha = 1;
 
           if (p < 0.08) {
-            displayText = col.editOrigText;
-            displayColor = col.editOrigColor;
+            displayText = drop.editOrigText;
+            displayColor = drop.editOrigColor;
           } else if (p < 0.38) {
             const deleteProgress = (p - 0.08) / 0.30;
             const charsRemaining = Math.max(0, origLen - Math.floor(deleteProgress * origLen));
-            displayText = col.editOrigText.slice(0, charsRemaining);
-            displayColor = col.editOrigColor;
+            displayText = drop.editOrigText.slice(0, charsRemaining);
+            displayColor = drop.editOrigColor;
           } else if (p < 0.45) {
             displayText = '';
           } else if (p < 0.85) {
             const typeProgress = (p - 0.45) / 0.40;
             const charsTyped = Math.min(newLen, Math.floor(typeProgress * (newLen + 1)));
-            displayText = col.editNewText.slice(0, charsTyped);
-            displayColor = col.editNewColor;
+            displayText = drop.editNewText.slice(0, charsTyped);
+            displayColor = drop.editNewColor;
           } else {
-            displayText = col.editNewText;
-            displayColor = col.editNewColor;
+            displayText = drop.editNewText;
+            displayColor = drop.editNewColor;
             fadeAlpha = 1 - easeInOut((p - 0.85) / 0.15);
             showCursor = false;
           }
@@ -764,25 +835,25 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
           if (displayText.length > 0) {
             ctx.fillStyle = displayColor;
             ctx.globalAlpha = editAlpha * fadeAlpha;
-            ctx.fillText(displayText, col.x, col.editY);
-            cursorX = col.x + getMeasure(displayText, col.fontSize);
+            ctx.fillText(displayText, drop.x, drop.editY);
+            cursorX = drop.x + getMeasure(displayText, drop.fontSize);
           } else {
-            cursorX = col.x;
+            cursorX = drop.x;
           }
 
           if (showCursor) {
-            const cursorH = col.fontSize * 0.85;
-            const cursorY = col.editY - cursorH + col.fontSize * 0.15;
+            const cursorH = drop.fontSize * 0.85;
+            const cursorY = drop.editY - cursorH + drop.fontSize * 0.15;
             ctx.fillStyle = CURSOR_COLOR;
             ctx.globalAlpha = editAlpha * fadeAlpha * 0.8;
-            ctx.fillRect(cursorX + 1, cursorY, Math.max(1, col.fontSize * 0.07), cursorH);
+            ctx.fillRect(cursorX + 1, cursorY, Math.max(1, drop.fontSize * 0.07), cursorH);
           }
         }
 
-        // ── Code block typewriter ──
-        if (col.codeblock > 0) {
-          const p = col.codeblock;
-          const snippet = CODE_SNIPPETS[col.codeblockIdx % CODE_SNIPPETS.length];
+        // Code block typewriter
+        if (drop.codeblock > 0) {
+          const p = drop.codeblock;
+          const snippet = CODE_SNIPPETS[drop.codeblockIdx % CODE_SNIPPETS.length];
           const blockFontSize = 8;
           const lineH = blockFontSize * 1.5;
 
@@ -791,7 +862,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
           const bgFadeIn = Math.min(p / 0.05, 1);
           const fadeOut = p > 0.85 ? 1 - easeInOut((p - 0.85) / 0.15) : 1;
-          const blockAlpha = (isDark ? 0.5 : 0.5) * bgFadeIn * fadeOut;
+          const blockAlpha = 0.5 * bgFadeIn * fadeOut;
 
           ctx.font = getFont(blockFontSize);
           const cbAlpha = blockAlpha * 0.7;
@@ -810,16 +881,16 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
               const visibleText = line.text.slice(0, visibleChars);
               charCount += line.text.length;
 
-              const ly = col.codeblockY + li * lineH;
+              const ly = drop.codeblockY + li * lineH;
               ctx.fillStyle = line.color;
               ctx.globalAlpha = cbAlpha;
-              ctx.fillText(visibleText, col.x, ly);
+              ctx.fillText(visibleText, drop.x, ly);
 
               if (visibleChars < line.text.length && cursorOn && fadeOut > 0.5) {
                 const cw = getMeasure(visibleText, 8);
                 ctx.fillStyle = CURSOR_COLOR;
                 ctx.globalAlpha = cbAlpha * 0.7;
-                ctx.fillRect(col.x + cw + 1, ly - blockFontSize * 0.7, 1, blockFontSize * 0.85);
+                ctx.fillRect(drop.x + cw + 1, ly - blockFontSize * 0.7, 1, blockFontSize * 0.85);
               }
             }
           }
@@ -827,29 +898,23 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       }
 
       // ════════════════════════════════════════════════════════════
-      // LAYER 2: Piñata particles (separate ragdoll physics)
+      // LAYER 2: Piñata particles
       // ════════════════════════════════════════════════════════════
 
-      // searchBarRect updated outside rAF via ResizeObserver + scroll listener
-
       const particles = pinataRef.current;
-      // Hard cap particle count to prevent lag spikes
       while (particles.length > PINATA_MAX_PARTICLES) particles.pop();
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
 
-        // Physics
         p.vy += PINATA_GRAVITY * dt;
         p.vx *= 0.998;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.rotation += p.rotVel * dt;
 
-        // Life countdown
         p.life -= dtSec;
         if (p.life <= 0) { particles.splice(i, 1); continue; }
 
-        // Search bar collision
         if (!p.bounced && searchBarRect && p.vy > 0) {
           const sb = searchBarRect;
           if (p.x > sb.left - 10 && p.x < sb.right + 10 &&
@@ -863,19 +928,16 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
           }
         }
 
-        // Off screen removal
         if (p.y > h + 60 || p.x < -80 || p.x > w + 80) {
           particles.splice(i, 1);
           continue;
         }
 
-        // Alpha with fade-in/out
         const age = p.maxLife - p.life;
         const fadeIn = Math.min(1, age / 0.15);
         const fadeOut = p.life < 2 ? p.life / 2 : 1;
         const alpha = p.opacity * fadeIn * fadeOut;
 
-        // Draw with rotation — use setTransform instead of save/restore
         const cos = Math.cos(p.rotation);
         const sin = Math.sin(p.rotation);
         const dpr = window.devicePixelRatio || 1;
@@ -886,10 +948,11 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
         ctx.fillText(p.text, 0, 0);
       }
 
-      // Reset transform and alpha after particle loop
+      // Reset transform
       const dpr = window.devicePixelRatio || 1;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.globalAlpha = 1;
+      ctx.filter = 'none';
       rafRef.current = requestAnimationFrame(draw);
     }
 
@@ -903,7 +966,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       motionQuery.removeEventListener('change', onMotionChange);
       searchBarObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
-      clearInterval(resetInterval);
     };
   }, [isDark]);
 
@@ -927,10 +989,8 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 // ═══════════════════════════════════════════════════════════════════════
 
 export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
-  // Dark mode: no vignette — flat dark background with visible code rain
   if (isDark) return null;
 
-  // Light mode: soft edge fade to blend rain into the cream background
   return (
     <div
       style={{
