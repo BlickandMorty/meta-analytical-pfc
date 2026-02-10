@@ -1,41 +1,57 @@
 'use client';
 
 // ═══════════════════════════════════════════════════════════════════
-// Block-based note system inspired by SiYuan Note
-// Rich block types with WYSIWYG editing, slash commands, backlinks
+// Block-based note system — SiYuan-inspired architecture
+// Rich block types, inline formatting, transactions, undo/redo
 // ═══════════════════════════════════════════════════════════════════
 
-// ── Block Types (SiYuan-inspired) ──
+// ── Block Types ──
 
 export type BlockType =
-  | 'paragraph'     // Default text block
-  | 'heading'       // H1–H6, level stored in properties.level
-  | 'code'          // Fenced code block, language in properties.language
-  | 'math'          // LaTeX math block
-  | 'quote'         // Block quote
-  | 'callout'       // Admonition/callout (info, warning, tip, etc.)
-  | 'list-item'     // Unordered list item (bullet)
-  | 'numbered-item' // Ordered list item
-  | 'todo'          // Checkbox item, checked in properties.checked
-  | 'divider'       // Horizontal rule / thematic break
-  | 'image'         // Image block, src in properties.src
-  | 'table'         // Table block, data in content as markdown
-  | 'embed'         // Embed another block or page, ref in properties.ref
-  | 'toggle'        // Toggle/collapsible heading, children hidden when collapsed
+  | 'paragraph'
+  | 'heading'
+  | 'code'
+  | 'math'
+  | 'quote'
+  | 'callout'
+  | 'list-item'
+  | 'numbered-item'
+  | 'todo'
+  | 'divider'
+  | 'image'
+  | 'table'
+  | 'embed'
+  | 'toggle';
+
+// ── Inline Format Types (SiYuan data-type pattern) ──
+
+export type InlineFormat =
+  | 'strong'
+  | 'em'
+  | 'underline'
+  | 'strikethrough'
+  | 'code'
+  | 'mark'
+  | 'link'
+  | 'block-ref'
+  | 'tag'
+  | 'kbd'
+  | 'sup'
+  | 'sub';
 
 // ── Block Interface ──
 
 export interface NoteBlock {
   id: string;
-  type: BlockType;              // Block type — defaults to 'paragraph'
-  content: string;              // Markdown text content
-  parentId: string | null;      // null = top-level block
-  pageId: string;               // Which page this block belongs to
-  order: string;                // Fractional index string for ordering
+  type: BlockType;
+  content: string;             // HTML string — supports inline formatting
+  parentId: string | null;
+  pageId: string;
+  order: string;               // Fractional index for ordering
   collapsed: boolean;
-  indent: number;               // Nesting depth (0 = top level)
-  properties: Record<string, string>; // Type-specific properties
-  refs: string[];               // Page IDs referenced via [[links]]
+  indent: number;
+  properties: Record<string, string>;
+  refs: string[];              // Page IDs referenced via [[links]]
   createdAt: number;
   updatedAt: number;
 }
@@ -45,11 +61,11 @@ export interface NoteBlock {
 export interface NotePage {
   id: string;
   title: string;
-  name: string;                 // Lowercase normalized (for lookups)
+  name: string;
   isJournal: boolean;
-  journalDate?: string;         // YYYY-MM-DD for journal pages
-  icon?: string;                // Emoji or icon key
-  coverImage?: string;          // Banner image URL
+  journalDate?: string;
+  icon?: string;
+  coverImage?: string;
   properties: Record<string, string>;
   tags: string[];
   favorite: boolean;
@@ -58,7 +74,7 @@ export interface NotePage {
   updatedAt: number;
 }
 
-// ── Notebook (collection of pages) ──
+// ── Notebook ──
 
 export interface NoteBook {
   id: string;
@@ -127,49 +143,140 @@ export interface NoteAIState {
   prompt: string;
 }
 
-// ── Slash Commands ──
+// ═══════════════════════════════════════════════════════════════════
+// Transaction System (SiYuan-inspired)
+// Operation-based undo/redo with batching
+// ═══════════════════════════════════════════════════════════════════
+
+export type OpAction =
+  | 'insert'
+  | 'update'
+  | 'delete'
+  | 'move'
+  | 'setBlockType'
+  | 'setBlockProps';
+
+export interface IOperation {
+  action: OpAction;
+  blockId: string;
+  pageId: string;
+  /** Snapshot data for undo — shape depends on action */
+  data?: any;
+  previousData?: any;
+}
+
+export interface Transaction {
+  id: string;
+  timestamp: number;
+  doOps: IOperation[];
+  undoOps: IOperation[];
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Slash Commands (expanded, SiYuan-style categories)
+// ═══════════════════════════════════════════════════════════════════
 
 export interface SlashCommand {
   id: string;
   label: string;
   icon: string;
   description: string;
-  category: 'insert' | 'format' | 'embed' | 'ai';
+  category: 'basic' | 'list' | 'media' | 'advanced' | 'ai';
+  keywords: string[];
   action: string;
-  blockType?: BlockType;        // Target block type for conversion commands
+  blockType?: BlockType;
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
-  // ── Format ──
-  { id: 'h1', label: 'Heading 1', icon: 'heading-1', description: 'Large section heading', category: 'format', action: 'heading-1', blockType: 'heading' },
-  { id: 'h2', label: 'Heading 2', icon: 'heading-2', description: 'Medium section heading', category: 'format', action: 'heading-2', blockType: 'heading' },
-  { id: 'h3', label: 'Heading 3', icon: 'heading-3', description: 'Small section heading', category: 'format', action: 'heading-3', blockType: 'heading' },
-  { id: 'quote', label: 'Quote', icon: 'quote', description: 'Block quote', category: 'format', action: 'quote', blockType: 'quote' },
-  { id: 'callout', label: 'Callout', icon: 'alert-circle', description: 'Highlighted callout box', category: 'format', action: 'callout', blockType: 'callout' },
-  { id: 'toggle', label: 'Toggle', icon: 'chevron-right', description: 'Collapsible section', category: 'format', action: 'toggle', blockType: 'toggle' },
-  // ── Insert ──
-  { id: 'todo', label: 'To-do', icon: 'check-square', description: 'Task checkbox', category: 'insert', action: 'todo', blockType: 'todo' },
-  { id: 'bullet', label: 'Bullet list', icon: 'list', description: 'Simple bullet point', category: 'insert', action: 'bullet', blockType: 'list-item' },
-  { id: 'numbered', label: 'Numbered list', icon: 'list-ordered', description: 'Numbered item', category: 'insert', action: 'numbered', blockType: 'numbered-item' },
-  { id: 'code', label: 'Code block', icon: 'code', description: 'Fenced code block', category: 'insert', action: 'code', blockType: 'code' },
-  { id: 'math', label: 'Math block', icon: 'sigma', description: 'LaTeX math equation', category: 'insert', action: 'math', blockType: 'math' },
-  { id: 'table', label: 'Table', icon: 'table', description: 'Data table', category: 'insert', action: 'table', blockType: 'table' },
-  { id: 'divider', label: 'Divider', icon: 'minus', description: 'Horizontal rule', category: 'insert', action: 'divider', blockType: 'divider' },
-  { id: 'image', label: 'Image', icon: 'image', description: 'Insert an image', category: 'insert', action: 'image', blockType: 'image' },
-  // ── Embed ──
-  { id: 'link', label: 'Page link', icon: 'link', description: 'Link to another page [[...]]', category: 'embed', action: 'page-link' },
-  { id: 'embed', label: 'Embed page', icon: 'frame', description: 'Embed another page inline', category: 'embed', action: 'embed-page', blockType: 'embed' },
+  // ── Basic Blocks ──
+  { id: 'text', label: 'Text', icon: 'type', description: 'Plain text block', category: 'basic', keywords: ['text', 'paragraph', 'plain'], action: 'paragraph', blockType: 'paragraph' },
+  { id: 'h1', label: 'Heading 1', icon: 'heading-1', description: 'Large section heading', category: 'basic', keywords: ['h1', 'heading', 'title', 'large'], action: 'heading-1', blockType: 'heading' },
+  { id: 'h2', label: 'Heading 2', icon: 'heading-2', description: 'Medium section heading', category: 'basic', keywords: ['h2', 'heading', 'subtitle'], action: 'heading-2', blockType: 'heading' },
+  { id: 'h3', label: 'Heading 3', icon: 'heading-3', description: 'Small section heading', category: 'basic', keywords: ['h3', 'heading', 'sub'], action: 'heading-3', blockType: 'heading' },
+  { id: 'quote', label: 'Quote', icon: 'quote', description: 'Block quote', category: 'basic', keywords: ['quote', 'blockquote', 'citation'], action: 'quote', blockType: 'quote' },
+  { id: 'callout', label: 'Callout', icon: 'alert-circle', description: 'Highlighted callout box', category: 'basic', keywords: ['callout', 'alert', 'info', 'warning', 'tip', 'admonition'], action: 'callout', blockType: 'callout' },
+  { id: 'divider', label: 'Divider', icon: 'minus', description: 'Horizontal rule', category: 'basic', keywords: ['divider', 'hr', 'line', 'separator', 'rule'], action: 'divider', blockType: 'divider' },
+  { id: 'toggle', label: 'Toggle', icon: 'chevron-right', description: 'Collapsible section', category: 'basic', keywords: ['toggle', 'collapse', 'expand', 'dropdown', 'accordion'], action: 'toggle', blockType: 'toggle' },
+
+  // ── Lists ──
+  { id: 'bullet', label: 'Bullet List', icon: 'list', description: 'Unordered list item', category: 'list', keywords: ['bullet', 'list', 'unordered', 'ul'], action: 'bullet', blockType: 'list-item' },
+  { id: 'numbered', label: 'Numbered List', icon: 'list-ordered', description: 'Ordered list item', category: 'list', keywords: ['numbered', 'ordered', 'ol', '1.'], action: 'numbered', blockType: 'numbered-item' },
+  { id: 'todo', label: 'To-do', icon: 'check-square', description: 'Task checkbox', category: 'list', keywords: ['todo', 'task', 'checkbox', 'check'], action: 'todo', blockType: 'todo' },
+
+  // ── Media & Code ──
+  { id: 'code', label: 'Code Block', icon: 'code', description: 'Fenced code block', category: 'media', keywords: ['code', 'snippet', 'pre', 'fenced'], action: 'code', blockType: 'code' },
+  { id: 'math', label: 'Math Block', icon: 'sigma', description: 'LaTeX math equation', category: 'media', keywords: ['math', 'latex', 'equation', 'formula', 'katex'], action: 'math', blockType: 'math' },
+  { id: 'image', label: 'Image', icon: 'image', description: 'Insert an image', category: 'media', keywords: ['image', 'img', 'photo', 'picture'], action: 'image', blockType: 'image' },
+  { id: 'table', label: 'Table', icon: 'table', description: 'Data table', category: 'media', keywords: ['table', 'grid', 'spreadsheet'], action: 'table', blockType: 'table' },
+
+  // ── Advanced ──
+  { id: 'link', label: 'Page Link', icon: 'link', description: 'Link to another page [[...]]', category: 'advanced', keywords: ['link', 'page', 'reference', 'wikilink'], action: 'page-link' },
+  { id: 'embed', label: 'Embed Page', icon: 'frame', description: 'Embed another page inline', category: 'advanced', keywords: ['embed', 'transclusion', 'include'], action: 'embed-page', blockType: 'embed' },
+
   // ── AI ──
-  { id: 'ai-continue', label: 'AI Continue', icon: 'sparkles', description: 'AI continues writing', category: 'ai', action: 'ai-continue' },
-  { id: 'ai-summarize', label: 'AI Summarize', icon: 'book-open', description: 'AI summarizes this page', category: 'ai', action: 'ai-summarize' },
-  { id: 'ai-expand', label: 'AI Expand', icon: 'expand', description: 'AI expands on this block', category: 'ai', action: 'ai-expand' },
-  { id: 'ai-rewrite', label: 'AI Rewrite', icon: 'pen-line', description: 'AI rewrites this block', category: 'ai', action: 'ai-rewrite' },
+  { id: 'ai-continue', label: 'AI Continue', icon: 'sparkles', description: 'AI continues writing', category: 'ai', keywords: ['ai', 'continue', 'write', 'generate'], action: 'ai-continue' },
+  { id: 'ai-summarize', label: 'AI Summarize', icon: 'book-open', description: 'AI summarizes this page', category: 'ai', keywords: ['ai', 'summarize', 'summary', 'tldr'], action: 'ai-summarize' },
+  { id: 'ai-expand', label: 'AI Expand', icon: 'expand', description: 'AI expands on this block', category: 'ai', keywords: ['ai', 'expand', 'elaborate', 'detail'], action: 'ai-expand' },
+  { id: 'ai-rewrite', label: 'AI Rewrite', icon: 'pen-line', description: 'AI rewrites this block', category: 'ai', keywords: ['ai', 'rewrite', 'rephrase', 'improve'], action: 'ai-rewrite' },
 ];
+
+export const SLASH_CATEGORIES = [
+  { id: 'basic', label: 'Basic Blocks' },
+  { id: 'list', label: 'Lists' },
+  { id: 'media', label: 'Media & Code' },
+  { id: 'advanced', label: 'Advanced' },
+  { id: 'ai', label: 'AI' },
+] as const;
 
 // ── Callout types ──
 
 export const CALLOUT_TYPES = ['info', 'tip', 'warning', 'danger', 'note', 'quote'] as const;
 export type CalloutType = typeof CALLOUT_TYPES[number];
+
+export const CALLOUT_COLORS: Record<CalloutType, { bg: string; border: string; icon: string }> = {
+  info:    { bg: 'rgba(59,130,246,0.06)', border: '#3B82F6', icon: 'info' },
+  tip:     { bg: 'rgba(52,211,153,0.06)', border: '#34D399', icon: 'lightbulb' },
+  warning: { bg: 'rgba(251,191,36,0.06)', border: '#FBBF24', icon: 'alert-triangle' },
+  danger:  { bg: 'rgba(239,68,68,0.06)',  border: '#EF4444', icon: 'alert-circle' },
+  note:    { bg: 'rgba(196,149,106,0.06)', border: '#C4956A', icon: 'pen-line' },
+  quote:   { bg: 'rgba(139,124,246,0.06)', border: '#8B7CF6', icon: 'quote' },
+};
+
+// ── Keyboard Shortcuts (SiYuan-inspired) ──
+
+export interface KeyboardShortcut {
+  key: string;
+  ctrl?: boolean;
+  shift?: boolean;
+  alt?: boolean;
+  action: string;
+  description: string;
+}
+
+export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
+  // Inline formatting
+  { key: 'b', ctrl: true, action: 'bold', description: 'Bold' },
+  { key: 'i', ctrl: true, action: 'italic', description: 'Italic' },
+  { key: 'u', ctrl: true, action: 'underline', description: 'Underline' },
+  { key: 's', ctrl: true, shift: true, action: 'strikethrough', description: 'Strikethrough' },
+  { key: 'e', ctrl: true, action: 'inlineCode', description: 'Inline code' },
+  { key: 'k', ctrl: true, action: 'link', description: 'Insert link' },
+  { key: 'h', ctrl: true, shift: true, action: 'highlight', description: 'Highlight' },
+  // Block operations
+  { key: 'Enter', action: 'newBlock', description: 'New block below' },
+  { key: 'Enter', shift: true, action: 'newLine', description: 'New line in block' },
+  { key: 'Backspace', action: 'deleteOrMerge', description: 'Delete empty / merge up' },
+  { key: 'Tab', action: 'indent', description: 'Indent block' },
+  { key: 'Tab', shift: true, action: 'outdent', description: 'Outdent block' },
+  { key: '/', action: 'slashMenu', description: 'Open slash menu' },
+  // Navigation
+  { key: 'ArrowUp', action: 'prevBlock', description: 'Move to previous block' },
+  { key: 'ArrowDown', action: 'nextBlock', description: 'Move to next block' },
+  // Undo/redo
+  { key: 'z', ctrl: true, action: 'undo', description: 'Undo' },
+  { key: 'z', ctrl: true, shift: true, action: 'redo', description: 'Redo' },
+  { key: 'y', ctrl: true, action: 'redo', description: 'Redo (alt)' },
+];
 
 // ═══════════════════════════════════════════════════════════════════
 // Helpers
@@ -238,13 +345,21 @@ export function formatJournalDate(dateStr: string): string {
 }
 
 export function extractPageLinks(content: string): string[] {
+  // Strip HTML tags first, then find [[links]]
+  const text = stripHtml(content);
   const regex = /\[\[([^\]]+)\]\]/g;
   const links: string[] = [];
   let match;
-  while ((match = regex.exec(content)) !== null) {
+  while ((match = regex.exec(text)) !== null) {
     links.push(match[1]);
   }
   return links;
+}
+
+/** Strip HTML tags to get plain text (for search, word count, etc.) */
+export function stripHtml(html: string): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, '');
 }
 
 export function orderBetween(before: string | null, after: string | null): string {
@@ -257,8 +372,6 @@ export function orderBetween(before: string | null, after: string | null): strin
   }
   return before + '5';
 }
-
-// ── Block type display helpers ──
 
 export function blockTypeIcon(type: BlockType): string {
   switch (type) {
@@ -279,18 +392,18 @@ export function blockTypeIcon(type: BlockType): string {
   }
 }
 
-// Migrate old blocks without type field
 export function migrateBlock(block: any): NoteBlock {
   if (!block.type) {
-    // Detect type from content
-    if (block.content?.startsWith('# ')) return { ...block, type: 'heading', properties: { ...block.properties, level: '1' } };
-    if (block.content?.startsWith('## ')) return { ...block, type: 'heading', properties: { ...block.properties, level: '2' } };
-    if (block.content?.startsWith('### ')) return { ...block, type: 'heading', properties: { ...block.properties, level: '3' } };
-    if (block.content?.startsWith('- [ ] ') || block.content?.startsWith('- [x] ')) return { ...block, type: 'todo' };
-    if (block.content?.startsWith('- ')) return { ...block, type: 'list-item' };
-    if (block.content?.startsWith('> ')) return { ...block, type: 'quote' };
-    if (block.content?.startsWith('---')) return { ...block, type: 'divider' };
-    if (block.content?.startsWith('```')) return { ...block, type: 'code' };
+    const c = block.content ?? '';
+    const text = stripHtml(c);
+    if (text.startsWith('# ')) return { ...block, type: 'heading', properties: { ...block.properties, level: '1' } };
+    if (text.startsWith('## ')) return { ...block, type: 'heading', properties: { ...block.properties, level: '2' } };
+    if (text.startsWith('### ')) return { ...block, type: 'heading', properties: { ...block.properties, level: '3' } };
+    if (text.startsWith('- [ ] ') || text.startsWith('- [x] ')) return { ...block, type: 'todo' };
+    if (text.startsWith('- ')) return { ...block, type: 'list-item' };
+    if (text.startsWith('> ')) return { ...block, type: 'quote' };
+    if (text.startsWith('---')) return { ...block, type: 'divider' };
+    if (text.startsWith('```')) return { ...block, type: 'code' };
     return { ...block, type: 'paragraph' };
   }
   return block;

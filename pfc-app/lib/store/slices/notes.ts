@@ -3,22 +3,25 @@
 import type {
   NoteBlock, NotePage, NoteBook, PageLink,
   NoteSearchResult, NoteAIState, BlockType,
+  Transaction, IOperation,
 } from '@/lib/notes/types';
 import {
   generateBlockId, generatePageId, normalizePageName,
   createEmptyBlock, createNewPage, getTodayJournalDate,
-  extractPageLinks, orderBetween, migrateBlock,
+  extractPageLinks, orderBetween, migrateBlock, stripHtml,
 } from '@/lib/notes/types';
 
+// ═══════════════════════════════════════════════════════════════════
 // State
+// ═══════════════════════════════════════════════════════════════════
+
 export interface NotesSliceState {
-  // Core data
   notePages: NotePage[];
   noteBlocks: NoteBlock[];
   noteBooks: NoteBook[];
   pageLinks: PageLink[];
 
-  // UI state
+  // UI
   activePageId: string | null;
   activeBlockId: string | null;
   editingBlockId: string | null;
@@ -26,13 +29,20 @@ export interface NotesSliceState {
   notesSidebarView: 'pages' | 'journals' | 'books' | 'graph';
   notesSearchQuery: string;
 
-  // AI state
+  // Undo/redo (SiYuan-inspired transaction system)
+  undoStack: Transaction[];
+  redoStack: Transaction[];
+
+  // AI
   noteAI: NoteAIState;
 }
 
+// ═══════════════════════════════════════════════════════════════════
 // Actions
+// ═══════════════════════════════════════════════════════════════════
+
 export interface NotesSliceActions {
-  // Page operations
+  // Pages
   createPage: (title: string, isJournal?: boolean) => string;
   deletePage: (pageId: string) => void;
   renamePage: (pageId: string, newTitle: string) => void;
@@ -41,7 +51,7 @@ export interface NotesSliceActions {
   togglePageFavorite: (pageId: string) => void;
   togglePagePin: (pageId: string) => void;
 
-  // Block operations
+  // Blocks
   createBlock: (pageId: string, parentId?: string | null, afterBlockId?: string | null, content?: string, type?: BlockType) => string;
   updateBlockContent: (blockId: string, content: string) => void;
   deleteBlock: (blockId: string) => void;
@@ -50,6 +60,14 @@ export interface NotesSliceActions {
   moveBlock: (blockId: string, newParentId: string | null, afterBlockId: string | null) => void;
   toggleBlockCollapse: (blockId: string) => void;
   setEditingBlock: (blockId: string | null) => void;
+  changeBlockType: (blockId: string, type: BlockType, props?: Record<string, string>) => void;
+  mergeBlockUp: (blockId: string) => string | null;
+  splitBlock: (blockId: string, htmlBefore: string, htmlAfter: string) => string;
+
+  // Undo/redo
+  undo: () => void;
+  redo: () => void;
+  pushTransaction: (doOps: IOperation[], undoOps: IOperation[]) => void;
 
   // Journal
   getOrCreateTodayJournal: () => string;
@@ -62,7 +80,7 @@ export interface NotesSliceActions {
   toggleNotesSidebar: () => void;
   setNotesSidebarView: (view: 'pages' | 'journals' | 'books' | 'graph') => void;
 
-  // Books/Collections
+  // Books
   createNoteBook: (title: string, pageIds?: string[]) => string;
   addPageToBook: (bookId: string, pageId: string) => void;
   removePageFromBook: (bookId: string, pageId: string) => void;
@@ -80,14 +98,19 @@ export interface NotesSliceActions {
   getBacklinks: (pageId: string) => PageLink[];
 }
 
-// ── localStorage keys ──
+// ── Constants ──
 const STORAGE_KEY_PAGES = 'pfc-note-pages';
 const STORAGE_KEY_BLOCKS = 'pfc-note-blocks';
 const STORAGE_KEY_BOOKS = 'pfc-note-books';
+const MAX_UNDO_STACK = 64;
+const SAVE_DEBOUNCE_MS = 500;
 
-// ── Slice creator ──
+// ═══════════════════════════════════════════════════════════════════
+// Slice Creator
+// ═══════════════════════════════════════════════════════════════════
+
 export const createNotesSlice = (set: any, get: any) => ({
-  // Initial state
+  // ── Initial State ──
   notePages: [] as NotePage[],
   noteBlocks: [] as NoteBlock[],
   noteBooks: [] as NoteBook[],
@@ -100,6 +123,9 @@ export const createNotesSlice = (set: any, get: any) => ({
   notesSidebarView: 'pages' as 'pages' | 'journals' | 'books' | 'graph',
   notesSearchQuery: '',
 
+  undoStack: [] as Transaction[],
+  redoStack: [] as Transaction[],
+
   noteAI: {
     isGenerating: false,
     targetPageId: null,
@@ -108,7 +134,123 @@ export const createNotesSlice = (set: any, get: any) => ({
     prompt: '',
   } as NoteAIState,
 
-  // ── Page operations ──
+  // ═════════════════════════════════════════════════════════════════
+  // Transaction System (SiYuan-inspired)
+  // 64-entry undo stack, operation pairs for reliable undo/redo
+  // ═════════════════════════════════════════════════════════════════
+
+  pushTransaction: (doOps: IOperation[], undoOps: IOperation[]) => {
+    const txn: Transaction = {
+      id: `txn-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: Date.now(),
+      doOps,
+      undoOps,
+    };
+    set((s: any) => ({
+      undoStack: [...s.undoStack.slice(-MAX_UNDO_STACK + 1), txn],
+      redoStack: [], // Clear redo on new action
+    }));
+  },
+
+  undo: () => {
+    const s = get();
+    if (s.undoStack.length === 0) return;
+
+    const txn = s.undoStack[s.undoStack.length - 1];
+    let blocks = [...s.noteBlocks];
+
+    // Apply undo operations
+    for (const op of txn.undoOps) {
+      switch (op.action) {
+        case 'insert':
+          // Undo insert = delete the block
+          blocks = blocks.filter((b: NoteBlock) => b.id !== op.blockId);
+          break;
+        case 'delete':
+          // Undo delete = re-insert the block
+          if (op.previousData) blocks.push(op.previousData);
+          break;
+        case 'update':
+          blocks = blocks.map((b: NoteBlock) =>
+            b.id === op.blockId ? { ...b, content: op.previousData?.content ?? b.content, updatedAt: Date.now() } : b
+          );
+          break;
+        case 'setBlockType':
+          blocks = blocks.map((b: NoteBlock) =>
+            b.id === op.blockId
+              ? { ...b, type: op.previousData?.type ?? b.type, properties: op.previousData?.properties ?? b.properties, updatedAt: Date.now() }
+              : b
+          );
+          break;
+        case 'move':
+          blocks = blocks.map((b: NoteBlock) =>
+            b.id === op.blockId
+              ? { ...b, parentId: op.previousData?.parentId, order: op.previousData?.order, indent: op.previousData?.indent ?? b.indent, updatedAt: Date.now() }
+              : b
+          );
+          break;
+      }
+    }
+
+    set((s: any) => ({
+      noteBlocks: blocks,
+      undoStack: s.undoStack.slice(0, -1),
+      redoStack: [...s.redoStack, txn],
+    }));
+
+    debouncedSave(get);
+  },
+
+  redo: () => {
+    const s = get();
+    if (s.redoStack.length === 0) return;
+
+    const txn = s.redoStack[s.redoStack.length - 1];
+    let blocks = [...s.noteBlocks];
+
+    // Apply do operations
+    for (const op of txn.doOps) {
+      switch (op.action) {
+        case 'insert':
+          if (op.data) blocks.push(op.data);
+          break;
+        case 'delete':
+          blocks = blocks.filter((b: NoteBlock) => b.id !== op.blockId);
+          break;
+        case 'update':
+          blocks = blocks.map((b: NoteBlock) =>
+            b.id === op.blockId ? { ...b, content: op.data?.content ?? b.content, updatedAt: Date.now() } : b
+          );
+          break;
+        case 'setBlockType':
+          blocks = blocks.map((b: NoteBlock) =>
+            b.id === op.blockId
+              ? { ...b, type: op.data?.type ?? b.type, properties: op.data?.properties ?? b.properties, updatedAt: Date.now() }
+              : b
+          );
+          break;
+        case 'move':
+          blocks = blocks.map((b: NoteBlock) =>
+            b.id === op.blockId
+              ? { ...b, parentId: op.data?.parentId, order: op.data?.order, indent: op.data?.indent ?? b.indent, updatedAt: Date.now() }
+              : b
+          );
+          break;
+      }
+    }
+
+    set((s: any) => ({
+      noteBlocks: blocks,
+      redoStack: s.redoStack.slice(0, -1),
+      undoStack: [...s.undoStack, txn],
+    }));
+
+    debouncedSave(get);
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // Page Operations
+  // ═════════════════════════════════════════════════════════════════
 
   createPage: (title: string, isJournal: boolean = false): string => {
     const journalDate = isJournal ? getTodayJournalDate() : undefined;
@@ -121,8 +263,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       activePageId: page.id,
     }));
 
-    // Auto-save
-    setTimeout(() => get().saveNotesToStorage(), 100);
+    debouncedSave(get);
     return page.id;
   },
 
@@ -133,7 +274,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       pageLinks: s.pageLinks.filter((l: PageLink) => l.sourcePageId !== pageId && l.targetPageId !== pageId),
       activePageId: s.activePageId === pageId ? null : s.activePageId,
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+    debouncedSave(get);
   },
 
   renamePage: (pageId: string, newTitle: string) => {
@@ -144,18 +285,16 @@ export const createNotesSlice = (set: any, get: any) => ({
           : p
       ),
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+    debouncedSave(get);
   },
 
   setActivePage: (pageId: string | null) => set({ activePageId: pageId, editingBlockId: null }),
 
-  // Get existing page by title or create it if missing (for [[page link]] navigation)
   ensurePage: (title: string): string => {
     const s = get();
     const normalized = normalizePageName(title);
     const existing = s.notePages.find((p: NotePage) => p.name === normalized);
     if (existing) return existing.id;
-    // Create the page
     return get().createPage(title);
   },
 
@@ -165,7 +304,7 @@ export const createNotesSlice = (set: any, get: any) => ({
         p.id === pageId ? { ...p, favorite: !p.favorite } : p
       ),
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+    debouncedSave(get);
   },
 
   togglePagePin: (pageId: string) => {
@@ -174,14 +313,24 @@ export const createNotesSlice = (set: any, get: any) => ({
         p.id === pageId ? { ...p, pinned: !p.pinned } : p
       ),
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+    debouncedSave(get);
   },
 
-  // ── Block operations ──
+  // ═════════════════════════════════════════════════════════════════
+  // Block Operations (with transaction recording)
+  // ═════════════════════════════════════════════════════════════════
 
-  createBlock: (pageId: string, parentId: string | null = null, afterBlockId: string | null = null, content: string = '', type: BlockType = 'paragraph'): string => {
+  createBlock: (
+    pageId: string,
+    parentId: string | null = null,
+    afterBlockId: string | null = null,
+    content: string = '',
+    type: BlockType = 'paragraph',
+  ): string => {
     const s = get();
-    const siblings = s.noteBlocks.filter((b: NoteBlock) => b.pageId === pageId && b.parentId === parentId);
+    const siblings = s.noteBlocks
+      .filter((b: NoteBlock) => b.pageId === pageId && b.parentId === parentId)
+      .sort((a: NoteBlock, b: NoteBlock) => a.order.localeCompare(b.order));
 
     let order: string;
     if (afterBlockId) {
@@ -214,35 +363,44 @@ export const createNotesSlice = (set: any, get: any) => ({
       editingBlockId: block.id,
     }));
 
-    // Update page links
-    if (block.refs.length > 0) {
-      get().rebuildPageLinks();
-    }
+    // Record transaction
+    get().pushTransaction(
+      [{ action: 'insert', blockId: block.id, pageId, data: block }],
+      [{ action: 'insert', blockId: block.id, pageId }],
+    );
 
-    setTimeout(() => get().saveNotesToStorage(), 300);
+    if (block.refs.length > 0) get().rebuildPageLinks();
+    debouncedSave(get);
     return block.id;
   },
 
   updateBlockContent: (blockId: string, content: string) => {
+    const s = get();
+    const oldBlock = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
+    if (!oldBlock) return;
+
     const refs = extractPageLinks(content);
     set((s: any) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
-        b.id === blockId
-          ? { ...b, content, refs, updatedAt: Date.now() }
-          : b
+        b.id === blockId ? { ...b, content, refs, updatedAt: Date.now() } : b
       ),
     }));
-    // Debounced save (called frequently during typing)
+
+    // Batch content updates (don't push a txn for every keystroke)
+    // Transaction is pushed on blur or explicit save
     clearTimeout((globalThis as any).__notesSaveTimer);
     (globalThis as any).__notesSaveTimer = setTimeout(() => {
       get().rebuildPageLinks();
       get().saveNotesToStorage();
-    }, 500);
+    }, SAVE_DEBOUNCE_MS);
   },
 
   deleteBlock: (blockId: string) => {
     const s = get();
-    // Find all children recursively
+    const block = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
+    if (!block) return;
+
+    // Find children recursively
     const toDelete = new Set<string>([blockId]);
     let found = true;
     while (found) {
@@ -255,11 +413,140 @@ export const createNotesSlice = (set: any, get: any) => ({
       }
     }
 
+    const deletedBlocks = s.noteBlocks.filter((b: NoteBlock) => toDelete.has(b.id));
+
     set((s: any) => ({
       noteBlocks: s.noteBlocks.filter((b: NoteBlock) => !toDelete.has(b.id)),
       editingBlockId: s.editingBlockId && toDelete.has(s.editingBlockId) ? null : s.editingBlockId,
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+
+    // Record transaction
+    get().pushTransaction(
+      [{ action: 'delete', blockId, pageId: block.pageId }],
+      deletedBlocks.map((b: NoteBlock) => ({ action: 'delete', blockId: b.id, pageId: b.pageId, previousData: b })),
+    );
+
+    debouncedSave(get);
+  },
+
+  changeBlockType: (blockId: string, type: BlockType, props?: Record<string, string>) => {
+    const s = get();
+    const block = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
+    if (!block) return;
+
+    const oldType = block.type;
+    const oldProps = { ...block.properties };
+
+    set((s: any) => ({
+      noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
+        b.id === blockId
+          ? { ...b, type, properties: { ...b.properties, ...props }, content: '', updatedAt: Date.now() }
+          : b
+      ),
+    }));
+
+    get().pushTransaction(
+      [{ action: 'setBlockType', blockId, pageId: block.pageId, data: { type, properties: props } }],
+      [{ action: 'setBlockType', blockId, pageId: block.pageId, previousData: { type: oldType, properties: oldProps } }],
+    );
+
+    debouncedSave(get);
+  },
+
+  /** Merge block content into the previous block, returns the target block ID or null */
+  mergeBlockUp: (blockId: string): string | null => {
+    const s = get();
+    const block = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
+    if (!block) return null;
+
+    // Find previous sibling
+    const siblings = s.noteBlocks
+      .filter((b: NoteBlock) => b.pageId === block.pageId && b.parentId === block.parentId)
+      .sort((a: NoteBlock, b: NoteBlock) => a.order.localeCompare(b.order));
+
+    const idx = siblings.findIndex((b: NoteBlock) => b.id === blockId);
+    if (idx <= 0) return null;
+
+    const prevBlock = siblings[idx - 1];
+    if (prevBlock.type === 'divider') return null;
+
+    const mergedContent = prevBlock.content + block.content;
+
+    set((s: any) => ({
+      noteBlocks: s.noteBlocks
+        .map((b: NoteBlock) => b.id === prevBlock.id ? { ...b, content: mergedContent, updatedAt: Date.now() } : b)
+        .filter((b: NoteBlock) => b.id !== blockId),
+      editingBlockId: prevBlock.id,
+    }));
+
+    get().pushTransaction(
+      [
+        { action: 'update', blockId: prevBlock.id, pageId: block.pageId, data: { content: mergedContent } },
+        { action: 'delete', blockId, pageId: block.pageId },
+      ],
+      [
+        { action: 'update', blockId: prevBlock.id, pageId: block.pageId, previousData: { content: prevBlock.content } },
+        { action: 'delete', blockId, pageId: block.pageId, previousData: block },
+      ],
+    );
+
+    debouncedSave(get);
+    return prevBlock.id;
+  },
+
+  /** Split a block at cursor: block becomes htmlBefore, new block gets htmlAfter. Returns new block ID. */
+  splitBlock: (blockId: string, htmlBefore: string, htmlAfter: string): string => {
+    const s = get();
+    const block = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
+    if (!block) return '';
+
+    // Find next sibling order for new block
+    const siblings = s.noteBlocks
+      .filter((b: NoteBlock) => b.pageId === block.pageId && b.parentId === block.parentId)
+      .sort((a: NoteBlock, b: NoteBlock) => a.order.localeCompare(b.order));
+
+    const idx = siblings.findIndex((b: NoteBlock) => b.id === blockId);
+    const nextSibling = siblings[idx + 1];
+    const newOrder = orderBetween(block.order, nextSibling?.order ?? null);
+
+    const newBlock: NoteBlock = {
+      id: generateBlockId(),
+      type: 'paragraph',
+      content: htmlAfter,
+      parentId: block.parentId,
+      pageId: block.pageId,
+      order: newOrder,
+      collapsed: false,
+      indent: block.indent,
+      properties: {},
+      refs: extractPageLinks(htmlAfter),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    set((s: any) => ({
+      noteBlocks: [
+        ...s.noteBlocks.map((b: NoteBlock) =>
+          b.id === blockId ? { ...b, content: htmlBefore, updatedAt: Date.now() } : b
+        ),
+        newBlock,
+      ],
+      editingBlockId: newBlock.id,
+    }));
+
+    get().pushTransaction(
+      [
+        { action: 'update', blockId, pageId: block.pageId, data: { content: htmlBefore } },
+        { action: 'insert', blockId: newBlock.id, pageId: block.pageId, data: newBlock },
+      ],
+      [
+        { action: 'update', blockId, pageId: block.pageId, previousData: { content: block.content } },
+        { action: 'insert', blockId: newBlock.id, pageId: block.pageId },
+      ],
+    );
+
+    debouncedSave(get);
+    return newBlock.id;
   },
 
   indentBlock: (blockId: string) => {
@@ -267,15 +554,18 @@ export const createNotesSlice = (set: any, get: any) => ({
     const block = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
     if (!block) return;
 
-    // Find previous sibling to become new parent
     const siblings = s.noteBlocks
       .filter((b: NoteBlock) => b.pageId === block.pageId && b.parentId === block.parentId)
       .sort((a: NoteBlock, b: NoteBlock) => a.order.localeCompare(b.order));
 
     const idx = siblings.findIndex((b: NoteBlock) => b.id === blockId);
-    if (idx <= 0) return; // Can't indent first block
+    if (idx <= 0) return;
 
     const newParent = siblings[idx - 1];
+    const oldParentId = block.parentId;
+    const oldOrder = block.order;
+    const oldIndent = block.indent;
+
     set((s: any) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
         b.id === blockId
@@ -283,16 +573,26 @@ export const createNotesSlice = (set: any, get: any) => ({
           : b
       ),
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+
+    get().pushTransaction(
+      [{ action: 'move', blockId, pageId: block.pageId, data: { parentId: newParent.id, indent: (newParent.indent ?? 0) + 1 } }],
+      [{ action: 'move', blockId, pageId: block.pageId, previousData: { parentId: oldParentId, order: oldOrder, indent: oldIndent } }],
+    );
+
+    debouncedSave(get);
   },
 
   outdentBlock: (blockId: string) => {
     const s = get();
     const block = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
-    if (!block || !block.parentId) return; // Can't outdent top-level
+    if (!block || !block.parentId) return;
 
     const parent = s.noteBlocks.find((b: NoteBlock) => b.id === block.parentId);
     if (!parent) return;
+
+    const oldParentId = block.parentId;
+    const oldOrder = block.order;
+    const oldIndent = block.indent;
 
     set((s: any) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
@@ -301,14 +601,22 @@ export const createNotesSlice = (set: any, get: any) => ({
           : b
       ),
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+
+    get().pushTransaction(
+      [{ action: 'move', blockId, pageId: block.pageId, data: { parentId: parent.parentId, indent: Math.max(0, (block.indent ?? 1) - 1) } }],
+      [{ action: 'move', blockId, pageId: block.pageId, previousData: { parentId: oldParentId, order: oldOrder, indent: oldIndent } }],
+    );
+
+    debouncedSave(get);
   },
 
   moveBlock: (blockId: string, newParentId: string | null, afterBlockId: string | null) => {
     const s = get();
+    const block = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
+    if (!block) return;
+
     const siblings = s.noteBlocks.filter((b: NoteBlock) =>
-      b.pageId === s.noteBlocks.find((bb: NoteBlock) => bb.id === blockId)?.pageId &&
-      b.parentId === newParentId
+      b.pageId === block.pageId && b.parentId === newParentId
     );
 
     let order: string;
@@ -325,6 +633,10 @@ export const createNotesSlice = (set: any, get: any) => ({
       ? (s.noteBlocks.find((b: NoteBlock) => b.id === newParentId)?.indent ?? 0) + 1
       : 0;
 
+    const oldParentId = block.parentId;
+    const oldOrder = block.order;
+    const oldIndent = block.indent;
+
     set((s: any) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
         b.id === blockId
@@ -332,7 +644,13 @@ export const createNotesSlice = (set: any, get: any) => ({
           : b
       ),
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+
+    get().pushTransaction(
+      [{ action: 'move', blockId, pageId: block.pageId, data: { parentId: newParentId, order, indent: parentIndent } }],
+      [{ action: 'move', blockId, pageId: block.pageId, previousData: { parentId: oldParentId, order: oldOrder, indent: oldIndent } }],
+    );
+
+    debouncedSave(get);
   },
 
   toggleBlockCollapse: (blockId: string) => {
@@ -345,7 +663,9 @@ export const createNotesSlice = (set: any, get: any) => ({
 
   setEditingBlock: (blockId: string | null) => set({ editingBlockId: blockId }),
 
-  // ── Journal ──
+  // ═════════════════════════════════════════════════════════════════
+  // Journal
+  // ═════════════════════════════════════════════════════════════════
 
   getOrCreateTodayJournal: (): string => {
     const s = get();
@@ -355,13 +675,14 @@ export const createNotesSlice = (set: any, get: any) => ({
       set({ activePageId: existing.id });
       return existing.id;
     }
-    // Create today's journal
     const d = new Date();
     const title = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
     return get().createPage(title, true);
   },
 
-  // ── Search ──
+  // ═════════════════════════════════════════════════════════════════
+  // Search
+  // ═════════════════════════════════════════════════════════════════
 
   setNotesSearchQuery: (query: string) => set({ notesSearchQuery: query }),
 
@@ -371,7 +692,6 @@ export const createNotesSlice = (set: any, get: any) => ({
     const q = query.toLowerCase();
     const results: NoteSearchResult[] = [];
 
-    // Search pages
     for (const page of s.notePages) {
       if (page.title.toLowerCase().includes(q) || page.name.includes(q)) {
         results.push({
@@ -384,17 +704,17 @@ export const createNotesSlice = (set: any, get: any) => ({
       }
     }
 
-    // Search blocks
     for (const block of s.noteBlocks) {
-      if (block.content.toLowerCase().includes(q)) {
+      const text = stripHtml(block.content).toLowerCase();
+      if (text.includes(q)) {
         const page = s.notePages.find((p: NotePage) => p.id === block.pageId);
         results.push({
           type: 'block',
           pageId: block.pageId,
           blockId: block.id,
           title: page?.title ?? 'Unknown',
-          snippet: block.content.slice(0, 120),
-          score: block.content.toLowerCase().startsWith(q) ? 1.5 : 0.5,
+          snippet: stripHtml(block.content).slice(0, 120),
+          score: text.startsWith(q) ? 1.5 : 0.5,
         });
       }
     }
@@ -402,14 +722,18 @@ export const createNotesSlice = (set: any, get: any) => ({
     return results.sort((a, b) => b.score - a.score).slice(0, 20);
   },
 
-  // ── Sidebar ──
+  // ═════════════════════════════════════════════════════════════════
+  // Sidebar
+  // ═════════════════════════════════════════════════════════════════
 
   toggleNotesSidebar: () => set((s: any) => ({ notesSidebarOpen: !s.notesSidebarOpen })),
 
   setNotesSidebarView: (view: 'pages' | 'journals' | 'books' | 'graph') =>
     set({ notesSidebarView: view }),
 
-  // ── Books ──
+  // ═════════════════════════════════════════════════════════════════
+  // Books
+  // ═════════════════════════════════════════════════════════════════
 
   createNoteBook: (title: string, pageIds: string[] = []): string => {
     const book: NoteBook = {
@@ -422,7 +746,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       chapters: [],
     };
     set((s: any) => ({ noteBooks: [...s.noteBooks, book] }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+    debouncedSave(get);
     return book.id;
   },
 
@@ -434,7 +758,7 @@ export const createNotesSlice = (set: any, get: any) => ({
           : b
       ),
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+    debouncedSave(get);
   },
 
   removePageFromBook: (bookId: string, pageId: string) => {
@@ -445,10 +769,12 @@ export const createNotesSlice = (set: any, get: any) => ({
           : b
       ),
     }));
-    setTimeout(() => get().saveNotesToStorage(), 100);
+    debouncedSave(get);
   },
 
-  // ── AI ──
+  // ═════════════════════════════════════════════════════════════════
+  // AI
+  // ═════════════════════════════════════════════════════════════════
 
   startNoteAIGeneration: (pageId: string, blockId: string | null, prompt: string) =>
     set({
@@ -471,7 +797,9 @@ export const createNotesSlice = (set: any, get: any) => ({
       noteAI: { ...s.noteAI, isGenerating: false },
     })),
 
-  // ── Persistence ──
+  // ═════════════════════════════════════════════════════════════════
+  // Persistence
+  // ═════════════════════════════════════════════════════════════════
 
   loadNotesFromStorage: () => {
     try {
@@ -485,8 +813,6 @@ export const createNotesSlice = (set: any, get: any) => ({
       const noteBooks = booksRaw ? JSON.parse(booksRaw) : [];
 
       set({ notePages, noteBlocks, noteBooks });
-
-      // Rebuild links
       get().rebuildPageLinks();
     } catch {
       // Ignore parse errors
@@ -519,7 +845,7 @@ export const createNotesSlice = (set: any, get: any) => ({
             sourcePageId: block.pageId,
             targetPageId: targetPage.id,
             sourceBlockId: block.id,
-            context: block.content.slice(0, 100),
+            context: stripHtml(block.content).slice(0, 100),
           });
         }
       }
@@ -528,10 +854,16 @@ export const createNotesSlice = (set: any, get: any) => ({
     set({ pageLinks: links });
   },
 
-  // ── Backlinks ──
-
   getBacklinks: (pageId: string): PageLink[] => {
     const s = get();
     return s.pageLinks.filter((l: PageLink) => l.targetPageId === pageId);
   },
 });
+
+// ── Debounced save helper ──
+function debouncedSave(get: any) {
+  clearTimeout((globalThis as any).__notesSaveTimer);
+  (globalThis as any).__notesSaveTimer = setTimeout(() => {
+    get().saveNotesToStorage();
+  }, 300);
+}

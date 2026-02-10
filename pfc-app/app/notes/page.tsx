@@ -644,17 +644,22 @@ export default function NotesPage() {
     });
   }, [createPage]);
 
-  // ── Keyboard shortcut: Cmd+\ for sidebar ──
+  // ── Keyboard shortcuts ──
+  const undo = usePFCStore((s) => s.undo);
+  const redo = usePFCStore((s) => s.redo);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+      const isMod = e.metaKey || e.ctrlKey;
+      // Cmd+\ — toggle sidebar
+      if (isMod && e.key === '\\') {
         e.preventDefault();
         toggleNotesSidebar();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [toggleNotesSidebar]);
+  }, [toggleNotesSidebar, undo, redo]);
 
   // ── Loading state ──
   if (!ready) {
