@@ -197,13 +197,3 @@ export const usePFCStore = create<PFCState>()(
   })),
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// Standalone utility: get effective signal value
-// ═══════════════════════════════════════════════════════════════════
-
-export function getEffectiveSignal(signal: 'confidence' | 'entropy' | 'dissonance' | 'healthScore'): number {
-  const state = usePFCStore.getState();
-  const override = state.userSignalOverrides[signal];
-  if (override !== null) return override;
-  return state[signal];
-}
