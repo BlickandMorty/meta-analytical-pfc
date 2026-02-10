@@ -514,7 +514,7 @@ export function Chat() {
                 {/* Thinking Controls */}
                 {(isProcessing || isStreaming) && researchChatMode && (
                   <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.375rem 1rem' }}>
-                    <ThinkingControls isDark={isDark} />
+                    <ThinkingControls isDark={isDark} onStop={abort} />
                   </div>
                 )}
 

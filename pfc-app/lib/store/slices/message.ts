@@ -11,8 +11,6 @@ import type {
   SafetyState,
 } from '@/lib/engine/types';
 import type {
-  ThinkingPlayState,
-  ThinkingSpeed,
   ResearchPaper,
   Citation,
   ThoughtGraph,

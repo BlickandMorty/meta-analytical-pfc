@@ -222,7 +222,7 @@ interface PinataParticle {
 }
 
 const PINATA_GRAVITY = 0.07;
-const PINATA_MAX = 80;
+const PINATA_MAX_PARTICLES = 40;
 
 function createPinataParticle(x: number, y: number): PinataParticle {
   const token = PINATA_POOL[Math.floor(Math.random() * PINATA_POOL.length)];
@@ -263,7 +263,6 @@ interface RainColumn {
   tokenIndex: number;
   opacity: number;
   blur: number;
-  trail: { text: string; color: string; y: number; opacity: number }[];
   sizeTier: SizeTier;
   strikeout: number;
   strikeoutText: string;
@@ -340,7 +339,6 @@ function createColumn(canvasWidth: number, canvasHeight: number): RainColumn {
     tokenIndex: 0,
     opacity: 0,
     blur: 0,
-    trail: [],
     sizeTier: tier,
     strikeout: 0,
     strikeoutText: '',
@@ -418,7 +416,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     function onPinata(e: Event) {
       const { x, y, count } = (e as CustomEvent).detail;
       const current = pinataRef.current.length;
-      const toAdd = Math.min(count, PINATA_MAX - current);
+      const toAdd = Math.min(count, PINATA_MAX_PARTICLES - current);
       for (let i = 0; i < toAdd; i++) {
         pinataRef.current.push(createPinataParticle(x, y));
       }
@@ -434,16 +432,8 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     const CODEBLOCK_CHANCE = 0.00025;   // Less frequent (was 0.0004)
     let cursorClock = 0;
 
-    const blurCache = new Map<number, string>();
     const fontCache = new Map<number, string>();
     const measureCache = new Map<string, number>();
-
-    function getBlurFilter(blur: number): string {
-      const key = Math.round(blur * 10);
-      let v = blurCache.get(key);
-      if (!v) { v = `blur(${blur}px)`; blurCache.set(key, v); }
-      return v;
-    }
 
     function getFont(size: number): string {
       const key = Math.round(size);
@@ -479,13 +469,37 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     };
     window.addEventListener('scroll', updateSearchBarRect, { passive: true });
 
-    const PINATA_MAX_PARTICLES = 40;
+    // Battery optimization: pause when tab hidden, throttle to ~30fps
+    let tabHidden = document.hidden;
+    const onVisChange = () => { tabHidden = document.hidden; };
+    document.addEventListener('visibilitychange', onVisChange);
+
+    // Respect prefers-reduced-motion
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reducedMotion = motionQuery.matches;
+    const onMotionChange = (e: MediaQueryListEvent) => { reducedMotion = e.matches; };
+    motionQuery.addEventListener('change', onMotionChange);
+
+    // Frame skip counter for 30fps throttle (draw every other frame)
+    let frameSkip = false;
 
     function draw(timestamp: number) {
       if (!canvas || !ctx) return;
+
+      // Skip drawing entirely when tab is hidden (major battery saver)
+      if (tabHidden) { rafRef.current = requestAnimationFrame(draw); return; }
+
+      // Skip drawing when user prefers reduced motion
+      if (reducedMotion) { rafRef.current = requestAnimationFrame(draw); return; }
+
+      // Throttle to ~30fps: skip every other frame (halves CPU/GPU work)
+      frameSkip = !frameSkip;
+      if (frameSkip) { rafRef.current = requestAnimationFrame(draw); return; }
+
       const delta = timestamp - lastTimeRef.current;
       lastTimeRef.current = timestamp;
       if (delta > 200) { rafRef.current = requestAnimationFrame(draw); return; }
+      // dt accounts for the 2-frame gap (~33ms instead of ~16ms)
       const dt = Math.min(delta / 16.67, 3);
       const dtSec = delta / 1000;
 
@@ -769,6 +783,8 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       window.removeEventListener('resize', resize);
       window.removeEventListener('pfc-pinata', onPinata);
       window.removeEventListener('scroll', updateSearchBarRect);
+      document.removeEventListener('visibilitychange', onVisChange);
+      motionQuery.removeEventListener('change', onMotionChange);
       searchBarObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
       clearInterval(resetInterval);

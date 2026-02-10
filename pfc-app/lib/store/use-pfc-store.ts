@@ -168,8 +168,6 @@ export const usePFCStore = create<PFCState>()(
         pendingReroute: null,
         researchChatMode: freshResearch.researchChatMode,
         chatViewMode: freshResearch.chatViewMode,
-        thinkingPlayState: freshResearch.thinkingPlayState,
-        thinkingSpeed: freshResearch.thinkingSpeed,
 
         // Reset portal
         portalStack: freshPortal.portalStack,
