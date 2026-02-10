@@ -168,8 +168,8 @@ export const PortalSidebar = memo(function PortalSidebar() {
               display: 'flex',
               flexDirection: 'column',
               background: panelBg,
-              backdropFilter: 'blur(40px) saturate(1.8)',
-              WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
+              backdropFilter: 'blur(16px) saturate(1.4)',
+              WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
               borderLeft: `1px solid ${borderColor}`,
               boxShadow: isDark
                 ? '-8px 0 32px rgba(0,0,0,0.3)'

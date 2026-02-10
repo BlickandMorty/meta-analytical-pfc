@@ -12,6 +12,9 @@ import {
   generateVaultId,
 } from '@/lib/notes/types';
 
+// ── Module-scope abort controller for Note AI SSE (not in Zustand state) ──
+let _noteAIAbortController: AbortController | null = null;
+
 // ═══════════════════════════════════════════════════════════════════
 // State
 // ═══════════════════════════════════════════════════════════════════
@@ -132,6 +135,130 @@ const SAVE_DEBOUNCE_MS = 500;
 // Vault-scoped storage keys
 function vaultKey(vaultId: string, suffix: string): string {
   return `pfc-vault-${vaultId}-${suffix}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Note AI SSE connection — calls /api/notes-ai and streams response
+// Same pattern as connectLearningSSE in the learning slice
+// ═══════════════════════════════════════════════════════════════════
+
+function connectNoteAISSE(set: any, get: any) {
+  const state = get();
+  const noteAI: NoteAIState = state.noteAI;
+  if (!noteAI || !noteAI.isGenerating) return;
+
+  // Abort any existing connection
+  if (_noteAIAbortController) {
+    _noteAIAbortController.abort();
+  }
+
+  const controller = new AbortController();
+  _noteAIAbortController = controller;
+
+  // Gather note data
+  const notePages = state.notePages ?? [];
+  const noteBlocks = state.noteBlocks ?? [];
+
+  // Gather inference config
+  const inferenceConfig = state.getInferenceConfig
+    ? state.getInferenceConfig()
+    : {
+        mode: state.inferenceMode ?? 'simulation',
+        apiProvider: state.apiProvider ?? 'openai',
+        apiKey: state.apiKey ?? '',
+        openaiModel: state.openaiModel ?? 'gpt-4o',
+        anthropicModel: state.anthropicModel ?? 'claude-sonnet-4-20250514',
+        ollamaBaseUrl: state.ollamaBaseUrl ?? 'http://localhost:11434',
+        ollamaModel: state.ollamaModel ?? 'llama3.1',
+      };
+
+  (async () => {
+    try {
+      const response = await fetch('/api/notes-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pages: notePages,
+          blocks: noteBlocks,
+          prompt: noteAI.prompt,
+          targetBlockId: noteAI.targetBlockId,
+          inferenceConfig,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+
+          if (data === '[DONE]') {
+            set((s: any) => ({
+              noteAI: { ...s.noteAI, isGenerating: false },
+            }));
+            continue;
+          }
+
+          try {
+            const event = JSON.parse(data);
+
+            switch (event.type) {
+              case 'text': {
+                set((s: any) => ({
+                  noteAI: {
+                    ...s.noteAI,
+                    generatedText: s.noteAI.generatedText + event.text,
+                  },
+                }));
+                break;
+              }
+              case 'done': {
+                set((s: any) => ({
+                  noteAI: { ...s.noteAI, isGenerating: false },
+                }));
+                break;
+              }
+              case 'error': {
+                console.error('[note-ai] SSE error:', event.message);
+                set((s: any) => ({
+                  noteAI: { ...s.noteAI, isGenerating: false },
+                }));
+                break;
+              }
+            }
+          } catch {
+            // Skip malformed JSON
+          }
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('[note-ai] Stream error:', error);
+        set((s: any) => ({
+          noteAI: { ...s.noteAI, isGenerating: false },
+        }));
+      }
+    } finally {
+      _noteAIAbortController = null;
+    }
+  })();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -852,7 +979,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   // AI
   // ═════════════════════════════════════════════════════════════════
 
-  startNoteAIGeneration: (pageId: string, blockId: string | null, prompt: string) =>
+  startNoteAIGeneration: (pageId: string, blockId: string | null, prompt: string) => {
     set({
       noteAI: {
         isGenerating: true,
@@ -861,17 +988,26 @@ export const createNotesSlice = (set: any, get: any) => ({
         generatedText: '',
         prompt,
       },
-    }),
+    });
+    // Connect to SSE endpoint to stream the AI response
+    connectNoteAISSE(set, get);
+  },
 
   appendNoteAIText: (text: string) =>
     set((s: any) => ({
       noteAI: { ...s.noteAI, generatedText: s.noteAI.generatedText + text },
     })),
 
-  stopNoteAIGeneration: () =>
+  stopNoteAIGeneration: () => {
+    // Abort the SSE fetch if active
+    if (_noteAIAbortController) {
+      _noteAIAbortController.abort();
+      _noteAIAbortController = null;
+    }
     set((s: any) => ({
       noteAI: { ...s.noteAI, isGenerating: false },
-    })),
+    }));
+  },
 
   // ═════════════════════════════════════════════════════════════════
   // Vault System

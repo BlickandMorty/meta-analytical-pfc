@@ -177,8 +177,8 @@ export function ConceptHierarchyPanel() {
           className="fixed right-4 top-16 bottom-4 w-80 z-40 rounded-2xl border flex flex-col overflow-hidden"
           style={{
             background: 'var(--glass-bg)',
-            backdropFilter: 'blur(80px) saturate(2.2)',
-            WebkitBackdropFilter: 'blur(80px) saturate(2.2)',
+            backdropFilter: 'blur(20px) saturate(1.4)',
+            WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
             boxShadow: 'var(--shadow-l)',
             contain: 'layout paint',
             transform: 'translateZ(0)',

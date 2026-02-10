@@ -134,6 +134,7 @@ export const usePFCStore = create<PFCState>()(
         reasoningText: freshMsg.reasoningText,
         reasoningDuration: freshMsg.reasoningDuration,
         isReasoning: freshMsg.isReasoning,
+        isThinkingPaused: freshMsg.isThinkingPaused,
         activeMessageLayer: freshMsg.activeMessageLayer,
 
         // Reset pipeline state
@@ -168,8 +169,6 @@ export const usePFCStore = create<PFCState>()(
         pendingReroute: null,
         researchChatMode: freshResearch.researchChatMode,
         chatViewMode: freshResearch.chatViewMode,
-        thinkingPlayState: freshResearch.thinkingPlayState,
-        thinkingSpeed: freshResearch.thinkingSpeed,
 
         // Reset portal
         portalStack: freshPortal.portalStack,
@@ -198,13 +197,3 @@ export const usePFCStore = create<PFCState>()(
   })),
 );
 
-// ═══════════════════════════════════════════════════════════════════
-// Standalone utility: get effective signal value
-// ═══════════════════════════════════════════════════════════════════
-
-export function getEffectiveSignal(signal: 'confidence' | 'entropy' | 'dissonance' | 'healthScore'): number {
-  const state = usePFCStore.getState();
-  const override = state.userSignalOverrides[signal];
-  if (override !== null) return override;
-  return state[signal];
-}

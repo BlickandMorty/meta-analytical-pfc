@@ -11,8 +11,6 @@ import type {
   SafetyState,
 } from '@/lib/engine/types';
 import type {
-  ThinkingPlayState,
-  ThinkingSpeed,
   ResearchPaper,
   Citation,
   ThoughtGraph,
@@ -47,10 +45,11 @@ export interface MessageSliceState {
   currentChatId: string | null;
   pendingAttachments: FileAttachment[];
 
-  // NEW: reasoning (AI thinking) state
+  // Reasoning (AI thinking) state
   reasoningText: string;
   reasoningDuration: number | null;
   isReasoning: boolean;
+  isThinkingPaused: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,11 +77,12 @@ export interface MessageSliceActions {
   removeAttachment: (id: string) => void;
   clearAttachments: () => void;
 
-  // NEW: reasoning actions
+  // Reasoning actions
   appendReasoningText: (text: string) => void;
   startReasoning: () => void;
   stopReasoning: () => void;
   clearReasoning: () => void;
+  setThinkingPaused: (paused: boolean) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,10 +98,11 @@ export const createMessageSlice = (set: any, get: any) => ({
   currentChatId: null as string | null,
   pendingAttachments: [] as FileAttachment[],
 
-  // NEW: reasoning state
+  // Reasoning state
   reasoningText: '',
   reasoningDuration: null as number | null,
   isReasoning: false,
+  isThinkingPaused: false,
 
   // --- actions ---
 
@@ -309,4 +310,6 @@ export const createMessageSlice = (set: any, get: any) => ({
 
   clearReasoning: () =>
     set({ reasoningText: '', reasoningDuration: null, isReasoning: false }),
+
+  setThinkingPaused: (paused: boolean) => set({ isThinkingPaused: paused }),
 });

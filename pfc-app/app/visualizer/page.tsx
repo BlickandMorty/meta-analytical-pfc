@@ -2,7 +2,18 @@
 
 import { useMemo, useRef, useCallback, useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
-import * as d3 from 'd3';
+import { min, max, bisector } from 'd3-array';
+import { scaleLinear } from 'd3-scale';
+import { line, area, curveMonotoneX } from 'd3-shape';
+import { select } from 'd3-selection';
+import { brushX } from 'd3-brush';
+import {
+  forceSimulation,
+  forceLink,
+  forceManyBody,
+  forceCenter,
+  forceCollide,
+} from 'd3-force';
 import {
   BarChart3Icon,
   RadarIcon,
@@ -13,7 +24,16 @@ import {
   ActivityIcon,
   RotateCcwIcon,
   GridIcon,
+  LayersIcon,
+  ThermometerIcon,
 } from 'lucide-react';
+import {
+  smoothEMA,
+  linearRegression,
+  loess,
+  computeConfidenceBand,
+  computeCorrelationMatrix,
+} from '@/lib/viz/d3-processing';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -95,16 +115,24 @@ const D3LineChart = memo(function D3LineChart({
   xLabel = 'Step',
   yLabel = 'Value',
   height = 280,
+  showSmoothing = false,
+  showConfidenceBands = false,
 }: {
   series: LineChartSeries[];
   xLabel?: string;
   yLabel?: string;
   height?: number;
+  showSmoothing?: boolean;
+  showConfidenceBands?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height });
   const [zoomDomain, setZoomDomain] = useState<{ x: [number, number]; y: [number, number] } | null>(null);
+  const [smoothFactor, setSmoothFactor] = useState(0.3);
+  const [smoothEnabled, setSmoothEnabled] = useState(false);
+  const [bandEnabled, setBandEnabled] = useState(false);
+  const [focusedPoint, setFocusedPoint] = useState<{ x: number; seriesIdx: number } | null>(null);
   const brushingRef = useRef(false);
 
   const margin = { top: 20, right: 20, bottom: 40, left: 56 };
@@ -116,48 +144,97 @@ const D3LineChart = memo(function D3LineChart({
 
   useResizeObserver(containerRef, resizeCb);
 
+  // Apply smoothing
+  const processedSeries = useMemo(() => {
+    if (!smoothEnabled) return series;
+    return series.map((s) => ({
+      ...s,
+      data: smoothEMA(s.data, smoothFactor),
+      rawData: s.data,
+    }));
+  }, [series, smoothEnabled, smoothFactor]);
+
+  // Compute confidence bands
+  const confidenceBands = useMemo(() => {
+    if (!bandEnabled) return null;
+    return processedSeries.map((s) => ({
+      key: s.key,
+      color: s.color,
+      ...computeConfidenceBand(s.data, 7, 1),
+    }));
+  }, [processedSeries, bandEnabled]);
+
   // Compute scales
   const { xScale, yScale, plotW, plotH } = useMemo(() => {
     const pw = dimensions.width - margin.left - margin.right;
     const ph = dimensions.height - margin.top - margin.bottom;
 
-    const allX = series.flatMap((s) => s.data.map((d) => d[0]));
-    const allY = series.flatMap((s) => s.data.map((d) => d[1]));
+    const allX = processedSeries.flatMap((s) => s.data.map((d) => d[0]));
+    let allY = processedSeries.flatMap((s) => s.data.map((d) => d[1]));
+    // Include band extremes in scale
+    if (confidenceBands) {
+      allY = allY.concat(
+        confidenceBands.flatMap((b) => [...b.upper.map((d) => d[1]), ...b.lower.map((d) => d[1])]),
+      );
+    }
 
-    const xDomain = zoomDomain?.x ?? [d3.min(allX) ?? 0, d3.max(allX) ?? 1];
+    const xDomain = zoomDomain?.x ?? [min(allX) ?? 0, max(allX) ?? 1];
     const yDomain = zoomDomain?.y ?? [
-      Math.max(0, (d3.min(allY) ?? 0) - 0.05),
-      Math.min(1.5, (d3.max(allY) ?? 1) + 0.05),
+      Math.max(0, (min(allY) ?? 0) - 0.05),
+      Math.min(1.5, (max(allY) ?? 1) + 0.05),
     ];
 
     return {
-      xScale: d3.scaleLinear().domain(xDomain).range([0, pw]),
-      yScale: d3.scaleLinear().domain(yDomain).range([ph, 0]),
+      xScale: scaleLinear().domain(xDomain).range([0, pw]),
+      yScale: scaleLinear().domain(yDomain).range([ph, 0]),
       plotW: pw,
       plotH: ph,
     };
-  }, [series, dimensions, margin.left, margin.right, margin.top, margin.bottom, zoomDomain]);
+  }, [processedSeries, confidenceBands, dimensions, margin.left, margin.right, margin.top, margin.bottom, zoomDomain]);
 
   // Generate line paths
   const linePaths = useMemo(() => {
-    const lineGen = d3.line<[number, number]>()
+    const lineGen = line<[number, number]>()
       .x((d) => xScale(d[0]))
       .y((d) => yScale(d[1]))
-      .curve(d3.curveMonotoneX);
+      .curve(curveMonotoneX);
 
-    return series.map((s) => ({
+    return processedSeries.map((s) => ({
       ...s,
       path: lineGen(s.data) ?? '',
+      rawPath: (s as any).rawData ? (lineGen((s as any).rawData) ?? '') : undefined,
     }));
-  }, [series, xScale, yScale]);
+  }, [processedSeries, xScale, yScale]);
+
+  // Confidence band paths
+  const bandPaths = useMemo(() => {
+    if (!confidenceBands) return null;
+    const bandAreaGen = area<[number, number]>()
+      .x((d) => xScale(d[0]))
+      .curve(curveMonotoneX);
+
+    return confidenceBands.map((b, i) => {
+      const merged = b.upper.map((u, j) => ({
+        x: u[0],
+        y0: b.lower[j]?.[1] ?? 0,
+        y1: u[1],
+      }));
+      const bandArea = area<typeof merged[0]>()
+        .x((d) => xScale(d.x))
+        .y0((d) => yScale(d.y0))
+        .y1((d) => yScale(d.y1))
+        .curve(curveMonotoneX);
+      return { key: b.key, color: b.color, path: bandArea(merged) ?? '' };
+    });
+  }, [confidenceBands, xScale, yScale]);
 
   // Area fills (AIM-style gradient areas under lines)
   const areaGen = useMemo(() => {
-    return d3.area<[number, number]>()
+    return area<[number, number]>()
       .x((d) => xScale(d[0]))
       .y0(plotH)
       .y1((d) => yScale(d[1]))
-      .curve(d3.curveMonotoneX);
+      .curve(curveMonotoneX);
   }, [xScale, yScale, plotH]);
 
   // D3 brush (AIM's zoom pattern)
@@ -165,24 +242,24 @@ const D3LineChart = memo(function D3LineChart({
     const svg = svgRef.current;
     if (!svg) return;
 
-    const plotGroup = d3.select(svg).select<SVGGElement>('.brush-group');
+    const plotGroup = select(svg).select<SVGGElement>('.brush-group');
     plotGroup.selectAll('.brush').remove();
 
-    const brush = d3.brushX()
+    const brush = brushX()
       .extent([[0, 0], [plotW, plotH]])
       .on('start', () => { brushingRef.current = true; })
       .on('end', (event) => {
         brushingRef.current = false;
         if (!event.selection) return;
         const [x0, x1] = event.selection as [number, number];
+        if (Math.abs(x1 - x0) < 5) return; // AIM: ignore tiny selections
         const newXDomain: [number, number] = [xScale.invert(x0), xScale.invert(x1)];
 
-        // Filter Y to visible X range
-        const visibleY = series.flatMap((s) =>
+        const visibleY = processedSeries.flatMap((s) =>
           s.data.filter((d) => d[0] >= newXDomain[0] && d[0] <= newXDomain[1]).map((d) => d[1])
         );
-        const yMin = Math.max(0, (d3.min(visibleY) ?? 0) - 0.03);
-        const yMax = Math.min(1.5, (d3.max(visibleY) ?? 1) + 0.03);
+        const yMin = Math.max(0, (min(visibleY) ?? 0) - 0.03);
+        const yMax = Math.min(1.5, (max(visibleY) ?? 1) + 0.03);
 
         setZoomDomain({ x: newXDomain, y: [yMin, yMax] });
         plotGroup.select<SVGGElement>('.brush').call(brush.move, null);
@@ -191,36 +268,78 @@ const D3LineChart = memo(function D3LineChart({
     plotGroup.append('g').attr('class', 'brush').call(brush);
 
     return () => { plotGroup.selectAll('.brush').remove(); };
-  }, [plotW, plotH, xScale, series]);
+  }, [plotW, plotH, xScale, processedSeries]);
 
-  // Hover crosshair handler
+  // Hover crosshair handler with RAF throttle (AIM pattern)
   const [hover, setHover] = useState<{ x: number; values: { label: string; color: string; value: number }[] } | null>(null);
+  const rafHover = useRef<number>(0);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (brushingRef.current) return;
+    cancelAnimationFrame(rafHover.current);
+    rafHover.current = requestAnimationFrame(() => {
+      const svg = svgRef.current;
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left - margin.left;
+      const xVal = xScale.invert(mouseX);
+
+      const values = processedSeries.map((s) => {
+        const bisect = bisector((d: [number, number]) => d[0]).left;
+        const idx = bisect(s.data, xVal);
+        const d0 = s.data[idx - 1];
+        const d1 = s.data[idx];
+        const nearest = !d0 ? d1 : !d1 ? d0 : (xVal - d0[0] > d1[0] - xVal ? d1 : d0);
+        return { label: s.label, color: s.color, value: nearest?.[1] ?? 0 };
+      });
+
+      setHover({ x: mouseX, values });
+    });
+  }, [processedSeries, xScale, margin.left]);
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
     if (brushingRef.current) return;
     const svg = svgRef.current;
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
     const mouseX = e.clientX - rect.left - margin.left;
-    const xVal = xScale.invert(mouseX);
-
-    const values = series.map((s) => {
-      const bisect = d3.bisector((d: [number, number]) => d[0]).left;
-      const idx = bisect(s.data, xVal);
-      const d0 = s.data[idx - 1];
-      const d1 = s.data[idx];
-      const nearest = !d0 ? d1 : !d1 ? d0 : (xVal - d0[0] > d1[0] - xVal ? d1 : d0);
-      return { label: s.label, color: s.color, value: nearest?.[1] ?? 0 };
-    });
-
-    setHover({ x: mouseX, values });
-  }, [series, xScale, margin.left]);
+    // Toggle focus pin (AIM pattern)
+    if (focusedPoint && Math.abs(focusedPoint.x - mouseX) < 10) {
+      setFocusedPoint(null);
+    } else {
+      setFocusedPoint({ x: mouseX, seriesIdx: 0 });
+    }
+  }, [margin.left, focusedPoint]);
 
   const xTicks = xScale.ticks(6);
   const yTicks = yScale.ticks(5);
 
   return (
     <div ref={containerRef} className="w-full relative" style={{ contain: 'layout style', transform: 'translateZ(0)' }}>
+      {/* AIM-style controls toolbar */}
+      {(showSmoothing || showConfidenceBands) && (
+        <div className="flex items-center gap-3 mb-3 px-1 flex-wrap">
+          {showSmoothing && (
+            <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={smoothEnabled} onChange={(e) => setSmoothEnabled(e.target.checked)} className="accent-[#C15F3C] h-3 w-3" />
+              EMA Smoothing
+              {smoothEnabled && (
+                <input type="range" min="0.05" max="0.9" step="0.05" value={smoothFactor}
+                  onChange={(e) => setSmoothFactor(parseFloat(e.target.value))}
+                  className="h-1 w-16 accent-[#C15F3C]" />
+              )}
+              {smoothEnabled && <span className="font-mono">{smoothFactor.toFixed(2)}</span>}
+            </label>
+          )}
+          {showConfidenceBands && (
+            <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer">
+              <input type="checkbox" checked={bandEnabled} onChange={(e) => setBandEnabled(e.target.checked)} className="accent-[#6B5CE7] h-3 w-3" />
+              Confidence Bands (\u00b11\u03c3)
+            </label>
+          )}
+        </div>
+      )}
+
       <svg
         ref={svgRef}
         width={dimensions.width}
@@ -228,9 +347,10 @@ const D3LineChart = memo(function D3LineChart({
         className="select-none"
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHover(null)}
+        onClick={handleClick}
       >
         <defs>
-          {series.map((s) => (
+          {processedSeries.map((s) => (
             <linearGradient key={`grad-${s.key}`} id={`area-grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={s.color} stopOpacity={0.25} />
               <stop offset="100%" stopColor={s.color} stopOpacity={0.02} />
@@ -251,9 +371,19 @@ const D3LineChart = memo(function D3LineChart({
             <line key={`xg-${t}`} x1={xScale(t)} y1={0} x2={xScale(t)} y2={plotH} stroke="currentColor" strokeOpacity={0.04} />
           ))}
 
+          {/* Confidence bands (AIM: drawArea) */}
+          {bandPaths?.map((b) => (
+            <path key={`band-${b.key}`} d={b.path} fill={b.color} fillOpacity={0.12} clipPath="url(#plot-clip)" />
+          ))}
+
           {/* Area fills */}
-          {series.map((s) => (
+          {!bandEnabled && processedSeries.map((s) => (
             <path key={`area-${s.key}`} d={areaGen(s.data) ?? ''} fill={`url(#area-grad-${s.key})`} clipPath="url(#plot-clip)" />
+          ))}
+
+          {/* Raw lines (dim, when smoothing active) */}
+          {smoothEnabled && linePaths.map((lp) => lp.rawPath && (
+            <path key={`raw-${lp.key}`} d={lp.rawPath} fill="none" stroke={lp.color} strokeWidth={1} strokeOpacity={0.2} strokeDasharray="3 3" strokeLinecap="round" clipPath="url(#plot-clip)" />
           ))}
 
           {/* Lines */}
@@ -261,10 +391,32 @@ const D3LineChart = memo(function D3LineChart({
             <path key={`line-${lp.key}`} d={lp.path} fill="none" stroke={lp.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" clipPath="url(#plot-clip)" />
           ))}
 
+          {/* Focus pin (AIM: click to pin) */}
+          {focusedPoint && (
+            <>
+              <line x1={focusedPoint.x} y1={0} x2={focusedPoint.x} y2={plotH} stroke="#C15F3C" strokeOpacity={0.5} strokeWidth={1.5} />
+              {processedSeries.map((s, i) => {
+                const bisect = bisector((d: [number, number]) => d[0]).left;
+                const xVal = xScale.invert(focusedPoint.x);
+                const idx = bisect(s.data, xVal);
+                const d0 = s.data[idx - 1]; const d1 = s.data[idx];
+                const nearest = !d0 ? d1 : !d1 ? d0 : (xVal - d0[0] > d1[0] - xVal ? d1 : d0);
+                if (!nearest) return null;
+                const cy = yScale(nearest[1]);
+                return (
+                  <g key={`pin-${i}`}>
+                    <circle cx={focusedPoint.x} cy={cy} r={7} fill={s.color} fillOpacity={0.15} stroke={s.color} strokeWidth={2} />
+                    <circle cx={focusedPoint.x} cy={cy} r={3} fill={s.color} />
+                  </g>
+                );
+              })}
+            </>
+          )}
+
           {/* Hover crosshair */}
           {hover && hover.x >= 0 && hover.x <= plotW && (
             <>
-              <line x1={hover.x} y1={0} x2={hover.x} y2={plotH} stroke="currentColor" strokeOpacity={0.2} strokeDasharray="4 3" />
+              <line x1={hover.x} y1={0} x2={hover.x} y2={plotH} stroke="currentColor" strokeOpacity={0.2} strokeDasharray="4 2" />
               {hover.values.map((v, i) => {
                 const cy = yScale(v.value);
                 return (
@@ -277,11 +429,10 @@ const D3LineChart = memo(function D3LineChart({
             </>
           )}
 
-          {/* Y axis labels */}
+          {/* Axes */}
           {yTicks.map((t) => (
             <text key={`yt-${t}`} x={-8} y={yScale(t) + 3} textAnchor="end" fontSize={9} className="fill-muted-foreground" fillOpacity={0.6}>{t.toFixed(2)}</text>
           ))}
-          {/* X axis labels */}
           {xTicks.map((t) => (
             <text key={`xt-${t}`} x={xScale(t)} y={plotH + 18} textAnchor="middle" fontSize={9} className="fill-muted-foreground" fillOpacity={0.6}>{t}</text>
           ))}
@@ -322,14 +473,14 @@ const D3LineChart = memo(function D3LineChart({
       )}
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mt-2 px-2">
-        {series.map((s) => (
+      <div className="flex items-center gap-4 mt-2 px-2 flex-wrap">
+        {processedSeries.map((s) => (
           <div key={s.key} className="flex items-center gap-1.5 text-[10px]">
             <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: s.color }} />
             <span className="text-muted-foreground">{s.label}</span>
           </div>
         ))}
-        <span className="text-[9px] text-muted-foreground/40 ml-auto">Drag to zoom</span>
+        <span className="text-[9px] text-muted-foreground/40 ml-auto">Drag to zoom \u00b7 Click to pin</span>
       </div>
     </div>
   );
@@ -361,6 +512,7 @@ const D3ScatterPlot = memo(function D3ScatterPlot({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height });
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [showTrend, setShowTrend] = useState<'none' | 'linear' | 'loess'>('none');
 
   const margin = { top: 20, right: 30, bottom: 44, left: 56 };
 
@@ -379,22 +531,76 @@ const D3ScatterPlot = memo(function D3ScatterPlot({
     const pad = 0.05;
 
     return {
-      xScale: d3.scaleLinear().domain([(d3.min(xs) ?? 0) - pad, (d3.max(xs) ?? 1) + pad]).range([0, pw]),
-      yScale: d3.scaleLinear().domain([(d3.min(ys) ?? 0) - pad, (d3.max(ys) ?? 1) + pad]).range([ph, 0]),
+      xScale: scaleLinear().domain([(min(xs) ?? 0) - pad, (max(xs) ?? 1) + pad]).range([0, pw]),
+      yScale: scaleLinear().domain([(min(ys) ?? 0) - pad, (max(ys) ?? 1) + pad]).range([ph, 0]),
       plotW: pw,
       plotH: ph,
     };
   }, [points, dimensions, margin.left, margin.right, margin.top, margin.bottom]);
+
+  // Trendlines (AIM: regression)
+  const trendlinePath = useMemo(() => {
+    if (showTrend === 'none') return null;
+    const lineGen = line<[number, number]>()
+      .x((d) => xScale(d[0]))
+      .y((d) => yScale(d[1]))
+      .curve(curveMonotoneX);
+
+    if (showTrend === 'linear') {
+      const reg = linearRegression(points);
+      return lineGen(reg.line) ?? null;
+    }
+    if (showTrend === 'loess') {
+      const curve = loess(points, 0.4, 50);
+      return lineGen(curve) ?? null;
+    }
+    return null;
+  }, [showTrend, points, xScale, yScale]);
+
+  const trendR2 = useMemo(() => {
+    if (showTrend === 'linear') return linearRegression(points).r2;
+    return null;
+  }, [showTrend, points]);
 
   const xTicks = xScale.ticks(6);
   const yTicks = yScale.ticks(5);
 
   return (
     <div ref={containerRef} className="w-full relative" style={{ contain: 'layout style', transform: 'translateZ(0)' }}>
+      {/* Trendline controls */}
+      <div className="flex items-center gap-3 mb-3 px-1">
+        <span className="text-[10px] text-muted-foreground">Trendline:</span>
+        {(['none', 'linear', 'loess'] as const).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => setShowTrend(mode)}
+            className={cn(
+              'px-2 py-0.5 rounded-full text-[10px] font-medium border cursor-pointer transition-colors',
+              showTrend === mode
+                ? 'border-pfc-ember/40 bg-pfc-ember/10 text-pfc-ember'
+                : 'border-border/30 text-muted-foreground hover:border-pfc-ember/20',
+            )}
+          >
+            {mode === 'none' ? 'None' : mode === 'linear' ? 'Linear' : 'LOESS'}
+          </button>
+        ))}
+        {trendR2 !== null && <span className="text-[10px] font-mono text-muted-foreground">R\u00b2 = {trendR2.toFixed(4)}</span>}
+      </div>
+
       <svg width={dimensions.width} height={dimensions.height} className="select-none">
+        <defs>
+          <clipPath id="scatter-clip">
+            <rect x={0} y={0} width={plotW} height={plotH} />
+          </clipPath>
+        </defs>
         <g transform={`translate(${margin.left},${margin.top})`}>
           {yTicks.map((t) => <line key={`yg-${t}`} x1={0} y1={yScale(t)} x2={plotW} y2={yScale(t)} stroke="currentColor" strokeOpacity={0.06} />)}
           {xTicks.map((t) => <line key={`xg-${t}`} x1={xScale(t)} y1={0} x2={xScale(t)} y2={plotH} stroke="currentColor" strokeOpacity={0.04} />)}
+
+          {/* Trendline */}
+          {trendlinePath && (
+            <path d={trendlinePath} fill="none" stroke="#E64E48" strokeWidth={2} strokeDasharray={showTrend === 'linear' ? '6 3' : 'none'} strokeOpacity={0.8} clipPath="url(#scatter-clip)" />
+          )}
 
           {points.map((p, i) => {
             const cx = xScale(p.x), cy = yScale(p.y);
@@ -477,11 +683,11 @@ const D3ForceGraph = memo(function D3ForceGraph({
       }
     }
 
-    const sim = d3.forceSimulation(simNodes as any)
-      .force('link', d3.forceLink(simLinks as any).id((d: any) => d.id).distance(80).strength(0.3))
-      .force('charge', d3.forceManyBody().strength(-200))
-      .force('center', d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
-      .force('collision', d3.forceCollide().radius(30))
+    const sim = forceSimulation(simNodes as any)
+      .force('link', forceLink(simLinks as any).id((d: any) => d.id).distance(80).strength(0.3))
+      .force('charge', forceManyBody().strength(-200))
+      .force('center', forceCenter(dimensions.width / 2, dimensions.height / 2))
+      .force('collision', forceCollide().radius(30))
       .on('tick', () => {
         setNodes([...simNodes as any]);
         setLinks([...simLinks]);
@@ -753,6 +959,215 @@ function DashCard({ title, icon: Icon, iconColor, children, className, span = 1 
 }
 
 // ---------------------------------------------------------------------------
+// AIM-inspired: D3 Parallel Coordinates (Params Explorer pattern)
+// ---------------------------------------------------------------------------
+
+const D3ParallelCoordinates = memo(function D3ParallelCoordinates({
+  dimensions: dimDefs,
+  data,
+  height = 300,
+}: {
+  dimensions: { key: string; label: string; domain: [number, number] }[];
+  data: { values: Record<string, number>; color: string; label: string }[];
+  height?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 600, height });
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
+  const margin = { top: 30, right: 30, bottom: 20, left: 30 };
+
+  const resizeCb = useCallback((entry: ResizeObserverEntry) => {
+    const w = entry.contentRect.width;
+    if (w > 0) setSize({ width: w, height });
+  }, [height]);
+
+  useResizeObserver(containerRef, resizeCb);
+
+  const plotW = size.width - margin.left - margin.right;
+  const plotH = size.height - margin.top - margin.bottom;
+
+  // One x position per dimension
+  const xPositions = useMemo(() => {
+    return dimDefs.map((_, i) => (plotW / Math.max(1, dimDefs.length - 1)) * i);
+  }, [dimDefs, plotW]);
+
+  // One y scale per dimension
+  const yScales = useMemo(() => {
+    return dimDefs.map((d) => scaleLinear().domain(d.domain).range([plotH, 0]));
+  }, [dimDefs, plotH]);
+
+  const lineGen = line<[number, number]>()
+    .x((d) => d[0])
+    .y((d) => d[1])
+    .curve(curveMonotoneX);
+
+  return (
+    <div ref={containerRef} className="w-full relative" style={{ contain: 'layout style', transform: 'translateZ(0)' }}>
+      <svg width={size.width} height={size.height} className="select-none">
+        <g transform={`translate(${margin.left},${margin.top})`}>
+          {/* Axes */}
+          {dimDefs.map((dim, i) => {
+            const x = xPositions[i];
+            const yS = yScales[i];
+            const ticks = yS.ticks(5);
+            return (
+              <g key={dim.key}>
+                <line x1={x} y1={0} x2={x} y2={plotH} stroke="currentColor" strokeOpacity={0.15} />
+                <text x={x} y={-10} textAnchor="middle" fontSize={10} className="fill-muted-foreground" fontWeight={600}>{dim.label}</text>
+                {ticks.map((t) => (
+                  <g key={t}>
+                    <line x1={x - 3} y1={yS(t)} x2={x + 3} y2={yS(t)} stroke="currentColor" strokeOpacity={0.2} />
+                    <text x={x - 8} y={yS(t) + 3} textAnchor="end" fontSize={7} className="fill-muted-foreground" fillOpacity={0.5}>{t.toFixed(2)}</text>
+                  </g>
+                ))}
+              </g>
+            );
+          })}
+
+          {/* Polylines */}
+          {data.map((d, idx) => {
+            const pts: [number, number][] = dimDefs.map((dim, i) => [
+              xPositions[i],
+              yScales[i](d.values[dim.key] ?? 0),
+            ]);
+            const isHovered = hoveredIdx === idx;
+            return (
+              <path
+                key={idx}
+                d={lineGen(pts) ?? ''}
+                fill="none"
+                stroke={d.color}
+                strokeWidth={isHovered ? 3 : 1.5}
+                strokeOpacity={isHovered ? 0.9 : hoveredIdx !== null ? 0.1 : 0.5}
+                onMouseEnter={() => setHoveredIdx(idx)}
+                onMouseLeave={() => setHoveredIdx(null)}
+                className="cursor-pointer"
+                style={{ transition: 'stroke-opacity 0.15s, stroke-width 0.15s' }}
+              />
+            );
+          })}
+
+          {/* Hover dots on the polyline */}
+          {hoveredIdx !== null && data[hoveredIdx] && dimDefs.map((dim, i) => {
+            const val = data[hoveredIdx].values[dim.key] ?? 0;
+            return (
+              <circle key={`dot-${i}`} cx={xPositions[i]} cy={yScales[i](val)} r={4} fill={data[hoveredIdx].color} stroke="white" strokeWidth={1.5} />
+            );
+          })}
+        </g>
+      </svg>
+
+      {hoveredIdx !== null && data[hoveredIdx] && (
+        <div className="absolute pointer-events-none bg-card/90 backdrop-blur-sm border border-border/40 rounded-lg px-3 py-2 text-xs shadow-lg"
+          style={{ right: 12, top: margin.top, transform: 'translateZ(0)' }}>
+          <div className="font-medium mb-1" style={{ color: data[hoveredIdx].color }}>{data[hoveredIdx].label}</div>
+          {dimDefs.map((dim) => (
+            <div key={dim.key} className="flex items-center gap-2 text-muted-foreground">
+              <span>{dim.label}:</span>
+              <span className="font-mono ml-auto">{(data[hoveredIdx].values[dim.key] ?? 0).toFixed(3)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// AIM-inspired: D3 Correlation Heat Map
+// ---------------------------------------------------------------------------
+
+const D3HeatMap = memo(function D3HeatMap({
+  labels,
+  matrix,
+  height = 300,
+}: {
+  labels: string[];
+  matrix: number[][];
+  height?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 400, height });
+  const [hoveredCell, setHoveredCell] = useState<{ r: number; c: number } | null>(null);
+
+  const margin = { top: 60, right: 20, bottom: 20, left: 80 };
+
+  const resizeCb = useCallback((entry: ResizeObserverEntry) => {
+    const w = entry.contentRect.width;
+    if (w > 0) setSize({ width: Math.min(w, 500), height: Math.min(w, 500) });
+  }, []);
+
+  useResizeObserver(containerRef, resizeCb);
+
+  const n = labels.length;
+  const plotW = size.width - margin.left - margin.right;
+  const plotH = size.height - margin.top - margin.bottom;
+  const cellW = plotW / n;
+  const cellH = plotH / n;
+
+  function heatColor(v: number): string {
+    // Blue (negative) → White (zero) → Ember (positive)
+    if (v >= 0) {
+      const t = Math.min(1, v);
+      const r = Math.round(255 - (255 - 193) * t);
+      const g = Math.round(255 - (255 - 95) * t);
+      const b = Math.round(255 - (255 - 60) * t);
+      return `rgb(${r},${g},${b})`;
+    } else {
+      const t = Math.min(1, -v);
+      const r = Math.round(255 - (255 - 59) * t);
+      const g = Math.round(255 - (255 - 130) * t);
+      const b = Math.round(255 - (255 - 246) * t);
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+
+  return (
+    <div ref={containerRef} className="w-full flex justify-center" style={{ contain: 'layout style', transform: 'translateZ(0)' }}>
+      <svg width={size.width} height={size.height} className="select-none">
+        <g transform={`translate(${margin.left},${margin.top})`}>
+          {matrix.map((row, r) => row.map((val, c) => {
+            const isHovered = hoveredCell?.r === r && hoveredCell?.c === c;
+            return (
+              <g key={`${r}-${c}`}
+                onMouseEnter={() => setHoveredCell({ r, c })}
+                onMouseLeave={() => setHoveredCell(null)}>
+                <rect
+                  x={c * cellW} y={r * cellH} width={cellW - 1} height={cellH - 1}
+                  rx={3}
+                  fill={heatColor(val)}
+                  stroke={isHovered ? '#C15F3C' : 'none'}
+                  strokeWidth={isHovered ? 2 : 0}
+                  className="cursor-pointer"
+                />
+                <text x={c * cellW + cellW / 2} y={r * cellH + cellH / 2 + 1}
+                  textAnchor="middle" dominantBaseline="central"
+                  fontSize={Math.min(11, cellW / 3.5)}
+                  fontWeight={isHovered ? 700 : 500}
+                  fill={Math.abs(val) > 0.5 ? 'white' : 'currentColor'}
+                  fillOpacity={isHovered ? 1 : 0.7}>
+                  {val.toFixed(2)}
+                </text>
+              </g>
+            );
+          }))}
+
+          {/* Row labels */}
+          {labels.map((l, i) => (
+            <text key={`row-${i}`} x={-8} y={i * cellH + cellH / 2 + 1} textAnchor="end" dominantBaseline="central" fontSize={10} className="fill-muted-foreground" fontWeight={500}>{l}</text>
+          ))}
+          {/* Column labels */}
+          {labels.map((l, i) => (
+            <text key={`col-${i}`} x={i * cellW + cellW / 2} y={-8} textAnchor="middle" fontSize={10} className="fill-muted-foreground" fontWeight={500} transform={`rotate(-35, ${i * cellW + cellW / 2}, -8)`}>{l}</text>
+          ))}
+        </g>
+      </svg>
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Tab definitions
 // ---------------------------------------------------------------------------
 
@@ -760,12 +1175,13 @@ const TAB_DEFS = [
   { value: 'dashboard', label: 'Dashboard', icon: GridIcon },
   { value: 'metrics', label: 'Metrics Explorer', icon: TrendingUpIcon },
   { value: 'scatter', label: 'Scatter Plot', icon: TargetIcon },
+  { value: 'parallel', label: 'Parallel Coords', icon: LayersIcon },
+  { value: 'heatmap', label: 'Heat Map', icon: ThermometerIcon },
   { value: 'radar', label: 'Signal Radar', icon: RadarIcon },
   { value: 'pipeline', label: 'Pipeline', icon: NetworkIcon },
   { value: 'concepts', label: 'Force Graph', icon: BrainIcon },
   { value: 'tda', label: 'TDA', icon: ActivityIcon },
   { value: 'risk', label: 'Risk Matrix', icon: TargetIcon },
-  { value: 'harmony', label: 'Harmony', icon: ActivityIcon },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -835,6 +1251,43 @@ export default function VisualizerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confidence, entropy, dissonance, healthScore]);
 
+  // Parallel coordinates data (AIM Params Explorer style)
+  const parallelDims = useMemo(() => [
+    { key: 'confidence', label: 'Confidence', domain: [0, 1] as [number, number] },
+    { key: 'entropy', label: 'Entropy', domain: [0, 1] as [number, number] },
+    { key: 'dissonance', label: 'Dissonance', domain: [0, 1] as [number, number] },
+    { key: 'health', label: 'Health', domain: [0, 1] as [number, number] },
+    { key: 'risk', label: 'Risk', domain: [0, 1] as [number, number] },
+    { key: 'harmony', label: 'Harmony', domain: [0, 1] as [number, number] },
+  ], []);
+
+  const parallelData = useMemo(() => {
+    const COLORS = [EMBER, CYAN, RED, GREEN, VIOLET, YELLOW, PINK, TEAL];
+    const runs = [];
+    for (let i = 0; i < 12; i++) {
+      const jitter = () => (Math.random() - 0.5) * 0.15;
+      runs.push({
+        label: `Run ${i + 1}`,
+        color: COLORS[i % COLORS.length],
+        values: {
+          confidence: Math.max(0, Math.min(1, confidence + jitter())),
+          entropy: Math.max(0, Math.min(1, entropy + jitter())),
+          dissonance: Math.max(0, Math.min(1, dissonance + jitter())),
+          health: Math.max(0, Math.min(1, healthScore + jitter())),
+          risk: Math.max(0, Math.min(1, riskScore + jitter())),
+          harmony: Math.max(0, Math.min(1, 1 - harmonyKeyDistance + jitter())),
+        },
+      });
+    }
+    return runs;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confidence, entropy, dissonance, healthScore, riskScore, harmonyKeyDistance]);
+
+  // Heat map correlation matrix
+  const heatMapData = useMemo(() => {
+    return computeCorrelationMatrix(signalHistory);
+  }, [signalHistory]);
+
   // Generate scatter plot data (AIM Scatter Explorer style)
   const scatterPoints = useMemo(() => {
     const pts: ScatterPoint[] = [];
@@ -884,13 +1337,13 @@ export default function VisualizerPage() {
 
       <GlassSection title="Visualizations" className="">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="mb-6 flex w-full overflow-x-auto">
+          <TabsList className="mb-6 flex w-full overflow-x-auto gap-1 px-1">
             {TAB_DEFS.map((t) => {
               const Icon = t.icon;
               return (
                 <TabsTrigger key={t.value} value={t.value} className="flex items-center gap-1.5 shrink-0">
                   <Icon className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{t.label}</span>
+                  {t.label}
                 </TabsTrigger>
               );
             })}
@@ -930,7 +1383,7 @@ export default function VisualizerPage() {
             </motion.div>
           </TabsContent>
 
-          {/* METRICS EXPLORER — AIM-style D3 line chart */}
+          {/* METRICS EXPLORER — AIM-style D3 line chart with smoothing + bands */}
           <TabsContent value="metrics">
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
               <div className="space-y-4">
@@ -938,17 +1391,17 @@ export default function VisualizerPage() {
                   <TrendingUpIcon className="h-4 w-4 text-pfc-ember" />
                   <h3 className="text-base font-semibold">Metrics Explorer</h3>
                   <Badge variant="outline" className="text-[10px]">D3-powered</Badge>
+                  <Badge variant="outline" className="text-[10px] border-pfc-violet/30 text-pfc-violet">AIM-enhanced</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Interactive signal time-series with hover crosshairs and brush-to-zoom.
-                  Drag across the chart to zoom into a region.
+                  Interactive signal time-series with EMA smoothing, confidence bands, hover crosshairs, brush-to-zoom, and click-to-pin focus.
                 </p>
-                <D3LineChart series={signalHistory} xLabel="Analysis Step" yLabel="Signal Value" height={360} />
+                <D3LineChart series={signalHistory} xLabel="Analysis Step" yLabel="Signal Value" height={360} showSmoothing showConfidenceBands />
               </div>
             </motion.div>
           </TabsContent>
 
-          {/* SCATTER PLOT — AIM-style D3 scatter */}
+          {/* SCATTER PLOT — AIM-style D3 scatter with trendlines */}
           <TabsContent value="scatter">
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
               <div className="space-y-4">
@@ -956,11 +1409,47 @@ export default function VisualizerPage() {
                   <TargetIcon className="h-4 w-4 text-pfc-violet" />
                   <h3 className="text-base font-semibold">Scatter Plot</h3>
                   <Badge variant="outline" className="text-[10px]">D3-powered</Badge>
+                  <Badge variant="outline" className="text-[10px] border-pfc-violet/30 text-pfc-violet">Regression</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Multi-signal scatter plot showing relationships between analytical dimensions. Hover for details.
+                  Multi-signal scatter with linear regression and LOESS trendlines. Hover for details.
                 </p>
                 <D3ScatterPlot points={scatterPoints} xLabel="Primary Signal" yLabel="Secondary Signal" height={400} />
+              </div>
+            </motion.div>
+          </TabsContent>
+
+          {/* PARALLEL COORDINATES — AIM Params Explorer */}
+          <TabsContent value="parallel">
+            <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <LayersIcon className="h-4 w-4 text-pfc-violet" />
+                  <h3 className="text-base font-semibold">Parallel Coordinates</h3>
+                  <Badge variant="outline" className="text-[10px]">D3-powered</Badge>
+                  <Badge variant="outline" className="text-[10px] border-pfc-violet/30 text-pfc-violet">AIM Params</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Multi-dimensional parameter comparison across analysis runs. Hover to isolate individual runs.
+                </p>
+                <D3ParallelCoordinates dimensions={parallelDims} data={parallelData} height={360} />
+              </div>
+            </motion.div>
+          </TabsContent>
+
+          {/* HEAT MAP — AIM-inspired correlation matrix */}
+          <TabsContent value="heatmap">
+            <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ThermometerIcon className="h-4 w-4 text-pfc-ember" />
+                  <h3 className="text-base font-semibold">Signal Correlation Heat Map</h3>
+                  <Badge variant="outline" className="text-[10px]">D3-powered</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Pearson correlation matrix between signal dimensions. Blue = negative, white = zero, amber = positive.
+                </p>
+                <D3HeatMap labels={heatMapData.labels.map((l) => l.charAt(0).toUpperCase() + l.slice(1))} matrix={heatMapData.matrix} height={380} />
               </div>
             </motion.div>
           </TabsContent>
@@ -1056,15 +1545,7 @@ export default function VisualizerPage() {
             </motion.div>
           </TabsContent>
 
-          {/* Harmony */}
-          <TabsContent value="harmony">
-            <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
-              <div className="space-y-4">
-                <div className="flex items-center gap-2"><ActivityIcon className="h-4 w-4 text-pfc-green" /><h3 className="text-base font-semibold">Harmony Spectrum</h3></div>
-                <HarmonySpectrum harmonyKeyDistance={harmonyKeyDistance} activeChordProduct={activeChordProduct} />
-              </div>
-            </motion.div>
-          </TabsContent>
+          {/* Harmony — included in Dashboard view */}
         </Tabs>
       </GlassSection>
     </PageShell>

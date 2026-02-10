@@ -1,0 +1,215 @@
+import { NextRequest } from 'next/server';
+import { streamText } from 'ai';
+import { resolveProvider } from '@/lib/engine/llm/provider';
+import type { InferenceConfig } from '@/lib/engine/llm/config';
+import type { NotePage, NoteBlock } from '@/lib/notes/types';
+
+// ── SSE helper ──
+function sseEvent(data: Record<string, unknown>): string {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+// ── Build note content string ──
+function buildNoteContent(pages: NotePage[], blocks: NoteBlock[]): string {
+  const sections: string[] = [];
+
+  for (const page of pages) {
+    const pageBlocks = blocks
+      .filter((b) => b.pageId === page.id)
+      .sort((a, b) => a.order.localeCompare(b.order));
+
+    const blockContent = pageBlocks
+      .map((b) => {
+        const indent = '  '.repeat(b.indent || 0);
+        const text = b.content.replace(/<[^>]*>/g, '');
+        return text.trim() ? `${indent}${text}` : '';
+      })
+      .filter(Boolean)
+      .join('\n');
+
+    if (blockContent.trim()) {
+      sections.push(`## ${page.title}\n${blockContent}`);
+    }
+  }
+
+  return sections.join('\n\n');
+}
+
+// ── Build the system prompt for a given action ──
+function buildSystemPrompt(action: string): string {
+  return `You are an intelligent note-taking assistant embedded in a knowledge management app. Your role is to help users write, expand, and refine their notes.
+
+Guidelines:
+- Write in a natural, conversational tone that matches the user's existing style.
+- Be concise and direct. Avoid filler words and unnecessary preamble.
+- Do NOT wrap your response in markdown code fences or add metadata.
+- Just output the text content directly.
+- Match the formatting style of the existing notes (plain text, short paragraphs).
+
+Action: ${action}`;
+}
+
+// ── Build the user prompt based on action type ──
+function buildUserPrompt(
+  action: string,
+  prompt: string,
+  noteContent: string,
+  targetBlockContent: string | null,
+): string {
+  const contextSection = noteContent
+    ? `Here are the current notes:\n\n${noteContent}\n\n`
+    : '';
+
+  const blockSection = targetBlockContent
+    ? `The selected block reads:\n"${targetBlockContent}"\n\n`
+    : '';
+
+  switch (action) {
+    case 'continue':
+      return `${contextSection}Continue writing from where these notes left off. Match the tone and style. Write 2-4 paragraphs.`;
+    case 'summarize':
+      return `${contextSection}Summarize the key points of these notes concisely. Use bullet points if appropriate.`;
+    case 'expand':
+      return `${contextSection}${blockSection}Expand on this block with more detail and supporting points. Write 2-3 paragraphs.`;
+    case 'rewrite':
+      return `${contextSection}${blockSection}Rewrite this block to be clearer and more concise while preserving the core meaning.`;
+    default:
+      // Custom prompt
+      return `${contextSection}${blockSection}${prompt}`;
+  }
+}
+
+// ── Detect the action type from the prompt ──
+function detectAction(prompt: string): string {
+  const lower = prompt.toLowerCase();
+  if (lower.includes('continue writing')) return 'continue';
+  if (lower.includes('summarize the key points')) return 'summarize';
+  if (lower.includes('expand on this block')) return 'expand';
+  if (lower.includes('rewrite this block')) return 'rewrite';
+  return 'custom';
+}
+
+// ── Simulation mode: generate mock responses ──
+function generateSimulatedResponse(action: string, noteContent: string): string {
+  switch (action) {
+    case 'continue':
+      return 'Building on the ideas above, it\'s worth considering how these concepts interconnect. The patterns we see emerging suggest a deeper structure that ties together the key themes discussed so far.\n\nAs we explore further, the relationships between these ideas become clearer, revealing opportunities for synthesis and new insights.';
+    case 'summarize':
+      return 'Key points from your notes:\n\n• The main themes revolve around interconnected concepts that build on each other\n• Several important ideas have been captured that would benefit from further exploration\n• The notes show a progression of thought that could be developed into a more structured framework';
+    case 'expand':
+      return 'This idea deserves deeper exploration. At its core, it connects to several broader themes that are worth unpacking.\n\nFirst, consider the foundational assumptions — these shape how we interpret everything that follows. By examining them more closely, we can identify both strengths and potential blind spots in our reasoning.\n\nSecond, the practical implications extend further than initially apparent. When we apply this thinking to concrete scenarios, new possibilities and challenges emerge that warrant careful consideration.';
+    case 'rewrite':
+      return 'Here is a clearer, more concise version that preserves the core meaning while improving readability and flow.';
+    default:
+      return 'Based on your notes and the question asked, here are some thoughts:\n\nThe content in your notes touches on several interesting areas. Looking at the connections between your ideas, there are opportunities to develop these thoughts further and create a more cohesive understanding of the subject matter.';
+  }
+}
+
+// ── POST handler ──
+export async function POST(request: NextRequest) {
+  let pages: NotePage[];
+  let blocks: NoteBlock[];
+  let prompt: string;
+  let targetBlockId: string | null;
+  let inferenceConfig: InferenceConfig;
+
+  try {
+    const body = await request.json();
+    pages = body.pages ?? [];
+    blocks = body.blocks ?? [];
+    prompt = body.prompt ?? '';
+    targetBlockId = body.targetBlockId ?? null;
+    inferenceConfig = body.inferenceConfig;
+
+    if (!prompt) {
+      return new Response(
+        JSON.stringify({ error: 'Missing prompt' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Invalid request body' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  const isSimulation = !inferenceConfig || inferenceConfig.mode === 'simulation';
+  const action = detectAction(prompt);
+
+  // Build note content and target block content
+  const noteContent = buildNoteContent(pages, blocks);
+  const targetBlock = targetBlockId
+    ? blocks.find((b) => b.id === targetBlockId)
+    : null;
+  const targetBlockContent = targetBlock
+    ? targetBlock.content.replace(/<[^>]*>/g, '')
+    : null;
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const emit = (data: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(sseEvent(data)));
+      };
+
+      try {
+        if (isSimulation) {
+          // ── Simulation mode ──
+          const response = generateSimulatedResponse(action, noteContent);
+          // Stream character by character with small delay for effect
+          const chunkSize = 3;
+          for (let i = 0; i < response.length; i += chunkSize) {
+            const chunk = response.slice(i, i + chunkSize);
+            emit({ type: 'text', text: chunk });
+            await new Promise((r) => setTimeout(r, 15));
+          }
+        } else {
+          // ── Real LLM mode ──
+          let model;
+          try {
+            model = resolveProvider(inferenceConfig);
+          } catch (error) {
+            emit({ type: 'error', message: error instanceof Error ? error.message : 'Failed to resolve provider' });
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+            return;
+          }
+
+          const systemPrompt = buildSystemPrompt(action);
+          const userPrompt = buildUserPrompt(action, prompt, noteContent, targetBlockContent);
+
+          const result = streamText({
+            model,
+            system: systemPrompt,
+            prompt: userPrompt,
+            maxOutputTokens: 2048,
+            temperature: 0.7,
+          });
+
+          for await (const chunk of result.textStream) {
+            emit({ type: 'text', text: chunk });
+          }
+        }
+
+        emit({ type: 'done' });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[notes-ai] Error:', message);
+        emit({ type: 'error', message });
+      } finally {
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}

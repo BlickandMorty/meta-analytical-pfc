@@ -150,8 +150,8 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 background: isHovered
                   ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.08)')
                   : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(235,230,222,0.55)'),
-                backdropFilter: 'blur(16px) saturate(1.4)',
-                WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+                backdropFilter: 'blur(10px) saturate(1.3)',
+                WebkitBackdropFilter: 'blur(10px) saturate(1.3)',
                 boxShadow: isDark
                   ? '0 1px 2px rgba(0,0,0,0.15)'
                   : '0 1px 3px rgba(0,0,0,0.04)',
