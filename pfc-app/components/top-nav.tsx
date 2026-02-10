@@ -91,8 +91,8 @@ const MODE_STYLES: Record<string, { label: string }> = {
 /* ─── Theming helpers ─── */
 function bubbleBg(isActive: boolean, isDark: boolean, disabled?: boolean) {
   if (disabled) return 'transparent';
-  if (isActive) return isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)';
-  return isDark ? 'var(--m3-surface-container)' : 'rgba(0,0,0,0.04)';
+  if (isActive) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)';
+  return isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)';
 }
 
 function bubbleColor(isActive: boolean, isDark: boolean, disabled?: boolean) {
@@ -145,6 +145,8 @@ const NavBubble = memo(function NavBubble({
         opacity: disabled ? 0.35 : 1,
         color: bubbleColor(isActive, isDark, disabled),
         background: bubbleBg(isActive, isDark, disabled),
+        backdropFilter: disabled ? 'none' : 'blur(12px) saturate(1.4)',
+        WebkitBackdropFilter: disabled ? 'none' : 'blur(12px) saturate(1.4)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
@@ -233,6 +235,8 @@ const HomePFCBubble = memo(function HomePFCBubble({
         letterSpacing: '-0.01em',
         color: bubbleColor(pfcMode || hovered, isDark),
         background: bubbleBg(pfcMode, isDark),
+        backdropFilter: 'blur(12px) saturate(1.4)',
+        WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
@@ -389,8 +393,10 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                   ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
                   : (isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)'),
                 background: isTabHovered
-                  ? (isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)')
-                  : (isDark ? 'var(--m3-surface-container)' : 'rgba(0,0,0,0.03)'),
+                  ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
+                  : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
+                backdropFilter: 'blur(12px) saturate(1.4)',
+                WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 transition: `${T_SIZE}, ${T_COLOR}`,
@@ -446,6 +452,8 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         opacity: disabled ? 0.35 : 1,
         color: bubbleColor(false, isDark, disabled),
         background: bubbleBg(false, isDark, disabled),
+        backdropFilter: disabled ? 'none' : 'blur(12px) saturate(1.4)',
+        WebkitBackdropFilter: disabled ? 'none' : 'blur(12px) saturate(1.4)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
