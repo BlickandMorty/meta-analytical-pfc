@@ -2,7 +2,18 @@
 
 import { useMemo, useRef, useCallback, useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
-import * as d3 from 'd3';
+import { min, max, bisector } from 'd3-array';
+import { scaleLinear } from 'd3-scale';
+import { line, area, curveMonotoneX } from 'd3-shape';
+import { select } from 'd3-selection';
+import { brushX } from 'd3-brush';
+import {
+  forceSimulation,
+  forceLink,
+  forceManyBody,
+  forceCenter,
+  forceCollide,
+} from 'd3-force';
 import {
   BarChart3Icon,
   RadarIcon,
@@ -124,15 +135,15 @@ const D3LineChart = memo(function D3LineChart({
     const allX = series.flatMap((s) => s.data.map((d) => d[0]));
     const allY = series.flatMap((s) => s.data.map((d) => d[1]));
 
-    const xDomain = zoomDomain?.x ?? [d3.min(allX) ?? 0, d3.max(allX) ?? 1];
+    const xDomain = zoomDomain?.x ?? [min(allX) ?? 0, max(allX) ?? 1];
     const yDomain = zoomDomain?.y ?? [
-      Math.max(0, (d3.min(allY) ?? 0) - 0.05),
-      Math.min(1.5, (d3.max(allY) ?? 1) + 0.05),
+      Math.max(0, (min(allY) ?? 0) - 0.05),
+      Math.min(1.5, (max(allY) ?? 1) + 0.05),
     ];
 
     return {
-      xScale: d3.scaleLinear().domain(xDomain).range([0, pw]),
-      yScale: d3.scaleLinear().domain(yDomain).range([ph, 0]),
+      xScale: scaleLinear().domain(xDomain).range([0, pw]),
+      yScale: scaleLinear().domain(yDomain).range([ph, 0]),
       plotW: pw,
       plotH: ph,
     };
@@ -140,10 +151,10 @@ const D3LineChart = memo(function D3LineChart({
 
   // Generate line paths
   const linePaths = useMemo(() => {
-    const lineGen = d3.line<[number, number]>()
+    const lineGen = line<[number, number]>()
       .x((d) => xScale(d[0]))
       .y((d) => yScale(d[1]))
-      .curve(d3.curveMonotoneX);
+      .curve(curveMonotoneX);
 
     return series.map((s) => ({
       ...s,
@@ -153,11 +164,11 @@ const D3LineChart = memo(function D3LineChart({
 
   // Area fills (AIM-style gradient areas under lines)
   const areaGen = useMemo(() => {
-    return d3.area<[number, number]>()
+    return area<[number, number]>()
       .x((d) => xScale(d[0]))
       .y0(plotH)
       .y1((d) => yScale(d[1]))
-      .curve(d3.curveMonotoneX);
+      .curve(curveMonotoneX);
   }, [xScale, yScale, plotH]);
 
   // D3 brush (AIM's zoom pattern)
@@ -165,10 +176,10 @@ const D3LineChart = memo(function D3LineChart({
     const svg = svgRef.current;
     if (!svg) return;
 
-    const plotGroup = d3.select(svg).select<SVGGElement>('.brush-group');
+    const plotGroup = select(svg).select<SVGGElement>('.brush-group');
     plotGroup.selectAll('.brush').remove();
 
-    const brush = d3.brushX()
+    const brush = brushX()
       .extent([[0, 0], [plotW, plotH]])
       .on('start', () => { brushingRef.current = true; })
       .on('end', (event) => {
@@ -181,8 +192,8 @@ const D3LineChart = memo(function D3LineChart({
         const visibleY = series.flatMap((s) =>
           s.data.filter((d) => d[0] >= newXDomain[0] && d[0] <= newXDomain[1]).map((d) => d[1])
         );
-        const yMin = Math.max(0, (d3.min(visibleY) ?? 0) - 0.03);
-        const yMax = Math.min(1.5, (d3.max(visibleY) ?? 1) + 0.03);
+        const yMin = Math.max(0, (min(visibleY) ?? 0) - 0.03);
+        const yMax = Math.min(1.5, (max(visibleY) ?? 1) + 0.03);
 
         setZoomDomain({ x: newXDomain, y: [yMin, yMax] });
         plotGroup.select<SVGGElement>('.brush').call(brush.move, null);
@@ -205,7 +216,7 @@ const D3LineChart = memo(function D3LineChart({
     const xVal = xScale.invert(mouseX);
 
     const values = series.map((s) => {
-      const bisect = d3.bisector((d: [number, number]) => d[0]).left;
+      const bisect = bisector((d: [number, number]) => d[0]).left;
       const idx = bisect(s.data, xVal);
       const d0 = s.data[idx - 1];
       const d1 = s.data[idx];
@@ -379,8 +390,8 @@ const D3ScatterPlot = memo(function D3ScatterPlot({
     const pad = 0.05;
 
     return {
-      xScale: d3.scaleLinear().domain([(d3.min(xs) ?? 0) - pad, (d3.max(xs) ?? 1) + pad]).range([0, pw]),
-      yScale: d3.scaleLinear().domain([(d3.min(ys) ?? 0) - pad, (d3.max(ys) ?? 1) + pad]).range([ph, 0]),
+      xScale: scaleLinear().domain([(min(xs) ?? 0) - pad, (max(xs) ?? 1) + pad]).range([0, pw]),
+      yScale: scaleLinear().domain([(min(ys) ?? 0) - pad, (max(ys) ?? 1) + pad]).range([ph, 0]),
       plotW: pw,
       plotH: ph,
     };
@@ -477,11 +488,11 @@ const D3ForceGraph = memo(function D3ForceGraph({
       }
     }
 
-    const sim = d3.forceSimulation(simNodes as any)
-      .force('link', d3.forceLink(simLinks as any).id((d: any) => d.id).distance(80).strength(0.3))
-      .force('charge', d3.forceManyBody().strength(-200))
-      .force('center', d3.forceCenter(dimensions.width / 2, dimensions.height / 2))
-      .force('collision', d3.forceCollide().radius(30))
+    const sim = forceSimulation(simNodes as any)
+      .force('link', forceLink(simLinks as any).id((d: any) => d.id).distance(80).strength(0.3))
+      .force('charge', forceManyBody().strength(-200))
+      .force('center', forceCenter(dimensions.width / 2, dimensions.height / 2))
+      .force('collision', forceCollide().radius(30))
       .on('tick', () => {
         setNodes([...simNodes as any]);
         setLinks([...simLinks]);
