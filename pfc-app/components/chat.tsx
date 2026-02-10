@@ -319,6 +319,25 @@ export function Chat() {
             <CodeRainOverlays isDark={isDark} />
           </motion.div>
 
+          {/* Subtle blended shadow behind UI — creates depth separation from wallpaper */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '52rem',
+              height: '36rem',
+              borderRadius: '50%',
+              background: isDark
+                ? 'radial-gradient(ellipse at center, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 40%, transparent 70%)'
+                : 'radial-gradient(ellipse at center, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.025) 40%, transparent 70%)',
+              pointerEvents: 'none',
+              zIndex: 1,
+              filter: 'blur(30px)',
+            }}
+          />
+
           <div style={{
             position: 'relative',
             zIndex: 2,

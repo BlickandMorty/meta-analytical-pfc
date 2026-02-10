@@ -2,12 +2,11 @@
 
 import { useState, useEffect, memo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { useTheme } from 'next-themes';
 import { usePFCStore, type PFCState } from '@/lib/store/use-pfc-store';
 import {
   HomeIcon,
-  MessageSquareIcon,
   BarChart3Icon,
   SettingsIcon,
   BookOpenIcon,
@@ -28,9 +27,11 @@ import {
 } from 'lucide-react';
 import { SteeringIndicator } from './steering-indicator';
 
-/* ─── Shared spring config for fluid motion ─── */
-const FLUID_SPRING = { type: 'spring' as const, stiffness: 300, damping: 28, mass: 0.8 };
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+/* ─── Constants ─── */
+const CUP = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const T_SIZE = `padding 0.3s ${CUP}, gap 0.3s ${CUP}`;
+const T_LABEL = `max-width 0.3s ${CUP}, opacity 0.2s ${CUP}`;
+const T_COLOR = 'background 0.15s ease, color 0.15s ease';
 
 /** Minimum tier required to access a nav item */
 type TierGate = 'notes' | 'programming' | 'full';
@@ -45,9 +46,9 @@ interface NavItem {
   neverActive?: boolean;
 }
 
+/* Chat item removed — Home now does double duty */
 const NAV_ITEMS: NavItem[] = [
-  { href: '/', label: 'Home', icon: HomeIcon, group: 'core', neverActive: true },
-  { href: '/chat', label: 'Chat', icon: MessageSquareIcon, group: 'core', activePrefix: '/chat' },
+  { href: '/', label: 'Home', icon: HomeIcon, group: 'core' },
   { href: '/notes', label: 'Notes', icon: PenLineIcon, group: 'core' },
   { href: '/research-library', label: 'Library', icon: LibraryIcon, group: 'core' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full', group: 'tools' },
@@ -56,7 +57,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/docs', label: 'Docs', icon: BookOpenIcon, group: 'utility' },
 ];
 
-/* ─── Analytics sub-tabs — shown when analytics bubble expands ─── */
+/* ─── Analytics sub-tabs ─── */
 const ANALYTICS_TABS = [
   { key: 'research', label: 'Research', icon: FlaskConicalIcon },
   { key: 'archive', label: 'Archive', icon: ArchiveIcon },
@@ -87,7 +88,7 @@ const MODE_STYLES: Record<string, { label: string }> = {
   local: { label: 'Local' },
 };
 
-/* ─── M3-style bubble helpers ─── */
+/* ─── Theming helpers ─── */
 function bubbleBg(isActive: boolean, isDark: boolean, disabled?: boolean) {
   if (disabled) return 'transparent';
   if (isActive) return isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)';
@@ -101,7 +102,7 @@ function bubbleColor(isActive: boolean, isDark: boolean, disabled?: boolean) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   Standard NavBubble
+   NavBubble — CSS transitions only, no layout prop
    ═══════════════════════════════════════════════════════════════════ */
 const NavBubble = memo(function NavBubble({
   item,
@@ -123,14 +124,11 @@ const NavBubble = memo(function NavBubble({
   const Icon = item.icon;
 
   return (
-    <motion.button
+    <button
       onClick={() => !disabled && onNavigate(item.href)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      whileTap={disabled ? undefined : { scale: 0.95 }}
       title={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
-      layout
-      transition={FLUID_SPRING}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -149,6 +147,8 @@ const NavBubble = memo(function NavBubble({
         background: bubbleBg(isActive, isDark, disabled),
         whiteSpace: 'nowrap',
         overflow: 'hidden',
+        transition: `${T_SIZE}, ${T_COLOR}`,
+        transform: 'translateZ(0)',
       }}
     >
       <Icon style={{
@@ -156,27 +156,31 @@ const NavBubble = memo(function NavBubble({
         width: '1.0625rem',
         flexShrink: 0,
         color: isActive ? '#C4956A' : 'inherit',
+        transition: 'color 0.15s',
       }} />
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.span
-            key="label"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
-            style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
-          >
-            {item.label}
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </motion.button>
+      <span style={{
+        display: 'inline-block',
+        maxWidth: expanded ? '8rem' : '0rem',
+        opacity: expanded ? 1 : 0,
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        transition: T_LABEL,
+      }}>
+        {item.label}
+      </span>
+    </button>
   );
 });
 
 /* ═══════════════════════════════════════════════════════════════════
-   Chat NavBubble — expands into PFC engine bar when on chat page
+   HomePFCBubble — Home button that morphs into PFC Engine bar on chat
+   Click behavior:
+     - From any page → navigate to landing
+     - Already on landing → scroll to top
+     - On chat with messages → clear messages, go to landing
+   Visual:
+     - When on chat with messages → expands to show "PFC Engine" + badges
+     - Otherwise → shows Home icon, expands label on hover
    ═══════════════════════════════════════════════════════════════════ */
 const selectIsProcessing = (s: PFCState) => s.isProcessing;
 const selectActiveStage = (s: PFCState) => s.activeStage;
@@ -185,19 +189,16 @@ const selectInferenceMode = (s: PFCState) => s.inferenceMode;
 const selectConfidence = (s: PFCState) => s.confidence;
 const selectToggleSynthesis = (s: PFCState) => s.toggleSynthesisView;
 
-const ChatNavBubble = memo(function ChatNavBubble({
-  item,
-  isActive,
+const HomePFCBubble = memo(function HomePFCBubble({
   isDark,
+  isOnChat,
   onNavigate,
 }: {
-  item: NavItem;
-  isActive: boolean;
   isDark: boolean;
+  isOnChat: boolean;
   onNavigate: (href: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const Icon = item.icon;
 
   const isProcessing = usePFCStore(selectIsProcessing);
   const activeStage = usePFCStore(selectActiveStage);
@@ -209,64 +210,57 @@ const ChatNavBubble = memo(function ChatNavBubble({
   const hasMessages = messages.some((m) => m.role === 'system');
   const modeInfo = MODE_STYLES[inferenceMode] ?? MODE_STYLES.simulation;
 
-  const showExpanded = isActive;
-  const showLabel = hovered || isActive;
+  // PFC mode: on chat page with messages
+  const pfcMode = isOnChat && hasMessages;
+  const showLabel = hovered || pfcMode;
 
   return (
-    <motion.button
-      onClick={() => onNavigate(item.href)}
+    <button
+      onClick={() => onNavigate('/')}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      whileTap={{ scale: 0.95 }}
-      layout
-      transition={FLUID_SPRING}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
+        gap: showLabel ? '0.5rem' : '0rem',
         cursor: 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: showExpanded
-          ? '0.5rem 1rem'
-          : showLabel
-            ? '0.5rem 1rem'
-            : '0.5rem 0.625rem',
+        padding: showLabel ? '0.5rem 1rem' : '0.5rem 0.625rem',
         height: '2.5rem',
         fontSize: '0.875rem',
-        fontWeight: isActive ? 650 : 500,
+        fontWeight: pfcMode ? 650 : 500,
         letterSpacing: '-0.01em',
-        color: bubbleColor(isActive, isDark),
-        background: bubbleBg(isActive, isDark),
+        color: bubbleColor(pfcMode || hovered, isDark),
+        background: bubbleBg(pfcMode, isDark),
         whiteSpace: 'nowrap',
         overflow: 'hidden',
+        transition: `${T_SIZE}, ${T_COLOR}`,
+        transform: 'translateZ(0)',
       }}
     >
-      <Icon style={{
+      <HomeIcon style={{
         height: '1.0625rem',
         width: '1.0625rem',
         flexShrink: 0,
-        color: isActive ? '#C4956A' : 'inherit',
+        color: pfcMode ? '#C4956A' : hovered ? '#C4956A' : 'inherit',
+        transition: 'color 0.15s',
       }} />
 
-      {/* Label — AnimatePresence for polished fade, layout handles resize */}
-      <AnimatePresence initial={false}>
-        {showLabel && (
-          <motion.span
-            key="chat-label"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
-            style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
-          >
-            {showExpanded ? 'PFC Engine' : item.label}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      {/* Label — "PFC Engine" when in chat, "Home" otherwise */}
+      <span style={{
+        display: 'inline-block',
+        maxWidth: showLabel ? '8rem' : '0rem',
+        opacity: showLabel ? 1 : 0,
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        transition: T_LABEL,
+      }}>
+        {pfcMode ? 'PFC Engine' : 'Home'}
+      </span>
 
-      {/* PFC engine bar items — inline, no nested AnimatePresence */}
-      {showExpanded && (
+      {/* PFC Engine badges — only in PFC mode */}
+      {pfcMode && (
         <>
           <span style={{
             width: 3, height: 3, borderRadius: '50%', flexShrink: 0,
@@ -332,12 +326,13 @@ const ChatNavBubble = memo(function ChatNavBubble({
           )}
         </>
       )}
-    </motion.button>
+    </button>
   );
 });
 
 /* ═══════════════════════════════════════════════════════════════════
-   Analytics NavBubble — splits into sub-tab bubbles on analytics page
+   AnalyticsBubble — splits into sub-tab bubbles on analytics page
+   CSS transitions only, no layout prop
    ═══════════════════════════════════════════════════════════════════ */
 const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   item,
@@ -358,35 +353,23 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   const [hoveredTab, setHoveredTab] = useState<string | null>(null);
   const Icon = item.icon;
 
-  // When active, show the sub-tabs as separate small bubbles
+  // When active, show the sub-tabs
   if (isActive && !disabled) {
     return (
-      <motion.div
-        layout
-        transition={FLUID_SPRING}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.1875rem',
-        }}
-      >
-        {ANALYTICS_TABS.map((tab, idx) => {
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.1875rem',
+      }}>
+        {ANALYTICS_TABS.map((tab) => {
           const TabIcon = tab.icon;
           const isTabHovered = hoveredTab === tab.key;
           return (
-            <motion.button
+            <button
               key={tab.key}
-              initial={{ opacity: 0, scale: 0.3 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{
-                ...FLUID_SPRING,
-                delay: idx * 0.025,
-              }}
               onMouseEnter={() => setHoveredTab(tab.key)}
               onMouseLeave={() => setHoveredTab(null)}
-              whileTap={{ scale: 0.92 }}
               onClick={() => {
-                // Dispatch a custom event for the analytics page to pick up
                 window.dispatchEvent(new CustomEvent('pfc-analytics-tab', { detail: tab.key }));
               }}
               title={tab.label}
@@ -409,7 +392,9 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                   ? (isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)')
                   : (isDark ? 'var(--m3-surface-container)' : 'rgba(0,0,0,0.03)'),
                 whiteSpace: 'nowrap',
-                transition: 'padding 0.3s cubic-bezier(0.32,0.72,0,1), gap 0.3s cubic-bezier(0.32,0.72,0,1), background 0.2s, color 0.2s',
+                overflow: 'hidden',
+                transition: `${T_SIZE}, ${T_COLOR}`,
+                transform: 'translateZ(0)',
               }}
             >
               <TabIcon style={{
@@ -417,25 +402,22 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 width: '0.8125rem',
                 flexShrink: 0,
                 color: isTabHovered ? '#C4956A' : 'inherit',
+                transition: 'color 0.15s',
               }} />
-              <AnimatePresence initial={false}>
-                {isTabHovered && (
-                  <motion.span
-                    key="tab-label"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.12, ease: [0.32, 0.72, 0, 1] }}
-                    style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
-                  >
-                    {tab.label}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
+              <span style={{
+                display: 'inline-block',
+                maxWidth: isTabHovered ? '5rem' : '0rem',
+                opacity: isTabHovered ? 1 : 0,
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                transition: T_LABEL,
+              }}>
+                {tab.label}
+              </span>
+            </button>
           );
         })}
-      </motion.div>
+      </div>
     );
   }
 
@@ -443,14 +425,11 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   const expanded = hovered && !disabled;
 
   return (
-    <motion.button
+    <button
       onClick={() => !disabled && onNavigate(item.href)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      whileTap={disabled ? undefined : { scale: 0.95 }}
       title={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
-      layout
-      transition={FLUID_SPRING}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -469,33 +448,32 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         background: bubbleBg(false, isDark, disabled),
         whiteSpace: 'nowrap',
         overflow: 'hidden',
+        transition: `${T_SIZE}, ${T_COLOR}`,
+        transform: 'translateZ(0)',
       }}
     >
       <Icon style={{
         height: '1.0625rem',
         width: '1.0625rem',
         flexShrink: 0,
+        transition: 'color 0.15s',
       }} />
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.span
-            key="analytics-label"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
-            style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
-          >
-            {item.label}
-          </motion.span>
-        )}
-      </AnimatePresence>
-    </motion.button>
+      <span style={{
+        display: 'inline-block',
+        maxWidth: expanded ? '8rem' : '0rem',
+        opacity: expanded ? 1 : 0,
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        transition: T_LABEL,
+      }}>
+        {item.label}
+      </span>
+    </button>
   );
 });
 
 /* ═══════════════════════════════════════════════════════════════════
-   TopNav — floating bubbles at top of page
+   TopNav — floating bubbles, zero layout animations
    ═══════════════════════════════════════════════════════════════════ */
 export function TopNav() {
   const router = useRouter();
@@ -515,6 +493,12 @@ export function TopNav() {
 
   const handleNavigate = useCallback((href: string) => {
     if (href === '/') {
+      // Already on landing with no messages → scroll to top
+      if (pathname === '/' && chatMessages.length === 0) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      // On chat or has messages → clear and go to landing
       clearMessages();
       if (pathname === '/' || pathname.startsWith('/chat')) {
         router.replace('/');
@@ -524,13 +508,10 @@ export function TopNav() {
       return;
     }
     router.push(href);
-  }, [router, clearMessages, pathname]);
+  }, [router, clearMessages, pathname, chatMessages.length]);
 
   return (
-    <motion.nav
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: CUPERTINO_EASE }}
+    <nav
       style={{
         position: 'fixed',
         top: 0,
@@ -540,12 +521,12 @@ export function TopNav() {
         display: 'flex',
         flexDirection: 'column',
         pointerEvents: 'none',
+        opacity: mounted ? 1 : 0,
+        transform: mounted ? 'translateY(0)' : 'translateY(-8px)',
+        transition: `opacity 0.5s ${CUP}, transform 0.5s ${CUP}`,
       }}
     >
-      {/* Floating bubbles — no background bar */}
-      <motion.div
-        layout
-        transition={FLUID_SPRING}
+      <div
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -555,24 +536,18 @@ export function TopNav() {
           pointerEvents: 'auto',
         }}
       >
-        {NAV_ITEMS.map((item) => {
+        {/* Home / PFC Engine bubble — first item, special behavior */}
+        <HomePFCBubble
+          isDark={isDark}
+          isOnChat={isOnChat}
+          onNavigate={handleNavigate}
+        />
+
+        {/* Remaining nav items */}
+        {NAV_ITEMS.slice(1).map((item) => {
           const minTier = item.minTier ?? 'notes';
           const meetsRequirement = tierMeetsMinimum(suiteTier, minTier);
 
-          // Chat item gets special expanded bubble
-          if (item.label === 'Chat') {
-            return (
-              <ChatNavBubble
-                key={item.href}
-                item={item}
-                isActive={isOnChat}
-                isDark={isDark}
-                onNavigate={handleNavigate}
-              />
-            );
-          }
-
-          // Analytics item splits into sub-bubbles on analytics page
           if (item.label === 'Analytics') {
             return (
               <AnalyticsNavBubble
@@ -592,11 +567,9 @@ export function TopNav() {
               key={item.href}
               item={item}
               isActive={
-                item.neverActive
-                  ? false
-                  : item.activePrefix
-                    ? pathname.startsWith(item.activePrefix)
-                    : pathname === item.href
+                item.activePrefix
+                  ? pathname.startsWith(item.activePrefix)
+                  : pathname === item.href
               }
               isDark={isDark}
               onNavigate={handleNavigate}
@@ -605,7 +578,7 @@ export function TopNav() {
             />
           );
         })}
-      </motion.div>
-    </motion.nav>
+      </div>
+    </nav>
   );
 }
