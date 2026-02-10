@@ -323,7 +323,7 @@ export function SignalChart({
   }, [brushState, scaleX, plotW]);
 
   // ---- Style tokens ----
-  const gridColor = isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)';
+  const gridColor = isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)';
   const textColor = isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.4)';
   const labelColor = isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.75)';
 
@@ -336,7 +336,7 @@ export function SignalChart({
         borderRadius: '0.75rem',
         overflow: 'hidden',
         background: isDark ? 'rgba(196,149,106,0.02)' : 'rgba(0,0,0,0.015)',
-        border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
+        border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
       }}
     >
       {/* ── Header row: label + zoom controls ── */}
@@ -592,11 +592,11 @@ export function SignalChart({
               padding: '0.375rem 0.625rem',
               borderRadius: '0.625rem',
               background: isDark
-                ? 'rgba(43, 42, 39, 0.92)'
+                ? 'rgba(28, 27, 25, 0.92)'
                 : 'rgba(255, 255, 255, 0.85)',
               backdropFilter: 'blur(12px) saturate(1.3)',
               WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
-              border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
+              border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
               zIndex: 10,
               minWidth: '7rem',
             }}

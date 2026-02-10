@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useChatStream } from '@/hooks/use-chat-stream';
-import { ChatHeader } from './chat-header';
+// ChatHeader is now merged into the TopNav ChatNavBubble
 import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
 import { SynthesisCard } from './synthesis-card';
@@ -311,9 +311,9 @@ export function Chat() {
             padding: '0 24px',
             /* Warm background: subtle radial from dark brown center */
             background: searchFocused
-              ? (isDark ? '#2B2A27' : '#F5F0E8')
+              ? (isDark ? '#111110' : '#F5F0E8')
               : (isDark
-                ? 'radial-gradient(ellipse at 50% 50%, #302F2B 0%, #2B2A27 70%)'
+                ? 'radial-gradient(ellipse at 50% 50%, #1A1918 0%, #111110 70%)'
                 : 'radial-gradient(ellipse at 50% 50%, #F8F3EB 0%, #F5F0E8 70%)'),
             transition: 'background 0.5s cubic-bezier(0.32, 0.72, 0, 1)',
           }}
@@ -428,10 +428,6 @@ export function Chat() {
               background: 'var(--chat-surface)',
             }}
           >
-            <div style={{ margin: '0 auto', maxWidth: '56rem', width: '100%', padding: '0.75rem 1rem 0' }}>
-              <ChatHeader />
-            </div>
-
             {/* Thought Visualizer (mind-map mode) */}
             {showThoughtViz ? (
               <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>

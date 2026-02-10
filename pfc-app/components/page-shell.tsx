@@ -179,7 +179,7 @@ export function Section({ title, badge, children, className }: SectionProps) {
             justifyContent: 'space-between',
             marginBottom: '1rem',
             paddingBottom: '0.625rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(62,61,57,0.5)' : 'rgba(0,0,0,0.06)'}`,
+            borderBottom: `1px solid ${isDark ? 'rgba(50,49,45,0.5)' : 'rgba(0,0,0,0.06)'}`,
           }}
         >
           <h2

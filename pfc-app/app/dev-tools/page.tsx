@@ -383,7 +383,7 @@ function ToolCardComponent({
         position: 'relative',
         padding: '1.5rem',
         borderRadius: '1.25rem',
-        border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
+        border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
         background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(255,255,255,0.6)',
         backdropFilter: 'blur(12px) saturate(1.3)',
         WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
@@ -405,7 +405,7 @@ function ToolCardComponent({
         const el = e.target as HTMLElement;
         if (el?.style) {
           el.style.borderColor = isDark
-            ? 'rgba(62,61,57,0.5)'
+            ? 'rgba(50,49,45,0.5)'
             : 'rgba(0,0,0,0.1)';
         }
       }}
@@ -413,7 +413,7 @@ function ToolCardComponent({
         const el = e.target as HTMLElement;
         if (el?.style) {
           el.style.borderColor = isDark
-            ? 'rgba(62,61,57,0.3)'
+            ? 'rgba(50,49,45,0.3)'
             : 'rgba(0,0,0,0.06)';
         }
       }}

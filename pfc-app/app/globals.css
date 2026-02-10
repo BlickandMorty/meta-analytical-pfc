@@ -119,127 +119,107 @@
 }
 
 /* ─────────────────────────────────────────────────────────
-   Light theme — Claude warm cream palette
+   Light theme — warm cream with darker accents/sidebar
    ───────────────────────────────────────────────────────── */
 :root {
   --background: #F5F0E8;
   --foreground: #2B2A27;
-  --card: rgba(250, 247, 242, 0.72);
+  --card: rgba(235, 229, 218, 0.72);
   --card-foreground: #2B2A27;
-  --popover: rgba(250, 247, 242, 0.92);
+  --popover: rgba(235, 229, 218, 0.92);
   --popover-foreground: #2B2A27;
-  --primary: #C4956A;
+  --primary: #A07850;
   --primary-foreground: #FFFFFF;
-  --secondary: #EDE8DF;
+  --secondary: #E0DACF;
   --secondary-foreground: #2B2A27;
-  --muted: #EDE8DF;
+  --muted: #E0DACF;
   --muted-foreground: #6B6660;
-  --accent: #C4956A;
+  --accent: #A07850;
   --accent-foreground: #FFFFFF;
   --destructive: #C75E5E;
   --destructive-foreground: #FFFFFF;
-  --border: rgba(214, 209, 199, 0.5);
-  --input: rgba(214, 209, 199, 0.5);
-  --ring: #C4956A;
+  --border: rgba(190, 183, 170, 0.4);
+  --input: rgba(190, 183, 170, 0.4);
+  --ring: #A07850;
   --radius: 0.75rem;
 
-  /* Sidebar — warm cream frosted */
-  --sidebar: rgba(237, 232, 223, 0.78);
+  /* Sidebar — darker cream for contrast */
+  --sidebar: rgba(218, 212, 200, 0.85);
   --sidebar-foreground: #2B2A27;
-  --sidebar-border: rgba(214, 209, 199, 0.5);
-  --sidebar-accent: rgba(237, 232, 223, 0.6);
+  --sidebar-border: rgba(190, 183, 170, 0.4);
+  --sidebar-accent: rgba(210, 204, 192, 0.7);
   --sidebar-accent-foreground: #2B2A27;
-  --sidebar-ring: #C4956A;
+  --sidebar-ring: #A07850;
 
-  /* Liquid Glass — Warm cream (heavy frosted) */
-  --liquid-glass-background: rgba(250, 247, 242, 0.72);
-  --shadow-base: inset 1px 1px 2px rgba(255, 252, 247, 0.6),
-    inset -1px -1px 2px rgba(255, 252, 247, 0.4),
-    inset 0 4px 16px rgba(255, 252, 247, 0.03);
-  --shadow-border: 0 0 1px 0 rgba(107, 102, 96, 0.2);
-  --shadow-xs: var(--shadow-base),
-    inset 0 -8px 48px rgba(43, 42, 39, 0.02),
-    0 0 8px rgba(43, 42, 39, 0.025),
-    0 4px 48px rgba(43, 42, 39, 0.08);
-  --shadow-s: var(--shadow-base),
-    inset 0 0 1px 1px rgba(255, 252, 247, 0.7),
-    var(--shadow-border),
-    0 8px 16px 0 rgba(43, 42, 39, 0.1);
-  --shadow-l: var(--shadow-border),
-    inset 0 0 1px 1px rgba(255, 252, 247, 0.7),
-    0 16px 64px 0 rgba(43, 42, 39, 0.08);
-  --shadow-tactile: rgba(43, 42, 39, 0.06) 0px 2px 8px -2px,
-    rgba(43, 42, 39, 0.04) 0px 2px 4px -2px;
+  /* Liquid Glass — warm cream (lighter glass) */
+  --liquid-glass-background: rgba(240, 235, 225, 0.72);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
 
-  /* Glass tokens — warm cream frosted glass */
+  /* Glass tokens */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: rgba(214, 209, 199, 0.5);
-  --glass-hover: rgba(250, 247, 242, 0.7);
+  --glass-border: rgba(190, 183, 170, 0.3);
+  --glass-hover: rgba(240, 235, 225, 0.7);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 
-  /* Chat surface — warm cream */
+  /* Chat surface — same as bg */
   --chat-surface: #F5F0E8;
 
 }
 
 /* ─────────────────────────────────────────────────────────
-   Dark theme — Claude warm brown palette
+   Dark theme — Near-OLED with dark gray elevated surfaces
    ───────────────────────────────────────────────────────── */
 .dark {
-  --background: #2B2A27;
+  --background: #111110;
   --foreground: #E8E4DE;
-  --card: rgba(53, 52, 48, 0.65);
+  --card: rgba(28, 27, 25, 0.85);
   --card-foreground: #E8E4DE;
-  --popover: rgba(53, 52, 48, 0.92);
+  --popover: rgba(28, 27, 25, 0.95);
   --popover-foreground: #E8E4DE;
   --primary: #C4956A;
-  --primary-foreground: #2B2A27;
-  --secondary: #353430;
+  --primary-foreground: #111110;
+  --secondary: #1C1B19;
   --secondary-foreground: #E8E4DE;
-  --muted: #353430;
+  --muted: #1C1B19;
   --muted-foreground: #9B9689;
   --accent: #C4956A;
-  --accent-foreground: #2B2A27;
+  --accent-foreground: #111110;
   --destructive: #C75E5E;
   --destructive-foreground: #E8E4DE;
-  --border: rgba(62, 61, 57, 0.5);
-  --input: rgba(58, 56, 53, 0.5);
+  --border: rgba(50, 49, 45, 0.5);
+  --input: rgba(45, 44, 40, 0.5);
   --ring: #C4956A;
 
-  /* Chat surface — warm dark brown */
-  --chat-surface: #353430;
+  /* Chat surface — slightly elevated from bg */
+  --chat-surface: #161615;
 
-  /* Sidebar dark — deeper warm brown */
-  --sidebar: rgba(31, 30, 27, 0.78);
+  /* Sidebar — lighter gray for contrast against OLED bg */
+  --sidebar: rgba(28, 27, 25, 0.9);
   --sidebar-foreground: #E8E4DE;
-  --sidebar-border: rgba(62, 61, 57, 0.4);
-  --sidebar-accent: rgba(53, 52, 48, 0.5);
+  --sidebar-border: rgba(50, 49, 45, 0.3);
+  --sidebar-accent: rgba(38, 37, 34, 0.6);
   --sidebar-accent-foreground: #E8E4DE;
   --sidebar-ring: #C4956A;
 
-  /* Liquid Glass — Dark warm (heavy frosted) */
-  --liquid-glass-background: rgba(255, 255, 255, 0.05);
-  --shadow-base: inset 1px 1.5px 1px -1px rgba(232, 228, 222, 0.12),
-    inset -1px -1.5px 1px -1px rgba(232, 228, 222, 0.08),
-    inset 0 4px 16px rgba(232, 228, 222, 0.02);
-  --shadow-border: 0 0 1px 0 rgba(232, 228, 222, 0.2);
-  --shadow-xs: var(--shadow-base);
-  --shadow-s: var(--shadow-border),
-    0 0 1px rgba(232, 228, 222, 0.3),
-    0 0 1px 0 rgba(0, 0, 0, 0.4),
-    0 8px 16px 0 rgba(0, 0, 0, 0.2);
-  --shadow-l: var(--shadow-border),
-    0 0 1px rgba(232, 228, 222, 0.3),
-    0 0 1px 0 rgba(0, 0, 0, 0.7),
-    0 16px 64px 0 rgba(0, 0, 0, 0.3);
-  --shadow-tactile: rgba(0, 0, 0, 0.08) 0px 2px 8px -2px,
-    rgba(232, 228, 222, 0.03) 0px 2px 4px -2px;
+  /* No glass morphism shadows in dark — flat */
+  --liquid-glass-background: rgba(28, 27, 25, 0.75);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
 
-  /* Glass tokens (dark) — warm brown frosted glass */
+  /* Glass tokens (dark) — subtle, no heavy blur */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: rgba(62, 61, 57, 0.35);
-  --glass-hover: rgba(53, 52, 48, 0.55);
+  --glass-border: rgba(50, 49, 45, 0.3);
+  --glass-hover: rgba(38, 37, 34, 0.6);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 }

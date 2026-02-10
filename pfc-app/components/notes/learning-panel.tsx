@@ -241,11 +241,11 @@ export const LearningPanel = memo(function LearningPanel() {
   // ── Styles ──
 
   const glassBackground = isDark
-    ? 'rgba(43, 42, 39, 0.92)'
+    ? 'rgba(28, 27, 25, 0.92)'
     : 'rgba(255, 255, 255, 0.78)';
 
   const glassBorder = isDark
-    ? 'rgba(62, 61, 57, 0.5)'
+    ? 'rgba(50, 49, 45, 0.5)'
     : 'rgba(0, 0, 0, 0.08)';
 
   const subtleText = isDark
@@ -300,7 +300,7 @@ export const LearningPanel = memo(function LearningPanel() {
             style={{
               height: 2,
               width: '100%',
-              background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.04)',
+              background: isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.04)',
               flexShrink: 0,
             }}
           >
@@ -1033,7 +1033,7 @@ function StepIndicator({ status, isDark }: { status: StepStatus; isDark: boolean
         height: size,
         borderRadius: '50%',
         background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.04)',
-        border: `1px solid ${isDark ? 'rgba(62,61,57,0.5)' : 'rgba(0,0,0,0.06)'}`,
+        border: `1px solid ${isDark ? 'rgba(50,49,45,0.5)' : 'rgba(0,0,0,0.06)'}`,
         flexShrink: 0,
       }}
     />

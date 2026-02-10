@@ -187,12 +187,12 @@ export const NotesSidebar = memo(function NotesSidebar() {
             display: 'flex',
             flexDirection: 'column',
             background: isDark
-              ? 'rgba(31, 30, 27, 0.95)'
-              : 'rgba(255, 255, 255, 0.40)',
+              ? 'rgba(20, 19, 17, 0.95)'
+              : 'rgba(218, 212, 200, 0.50)',
             backdropFilter: 'blur(12px) saturate(1.3)',
             WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
             borderRight: isDark
-              ? '1px solid rgba(62, 61, 57, 0.5)'
+              ? '1px solid rgba(50, 49, 45, 0.5)'
               : '1px solid rgba(0, 0, 0, 0.06)',
           }}
         >
@@ -294,7 +294,7 @@ const SidebarHeader = memo(function SidebarHeader({
       style={{
         padding: '0.75rem 0.75rem 0.5rem',
         borderBottom: isDark
-          ? '1px solid rgba(62, 61, 57, 0.5)'
+          ? '1px solid rgba(50, 49, 45, 0.5)'
           : '1px solid rgba(0, 0, 0, 0.04)',
         display: 'flex',
         flexDirection: 'column',
@@ -345,7 +345,7 @@ const SidebarHeader = memo(function SidebarHeader({
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = isDark
-              ? 'rgba(62,61,57,0.5)'
+              ? 'rgba(50,49,45,0.5)'
               : 'rgba(0,0,0,0.06)';
           }}
         />
@@ -457,7 +457,7 @@ const ViewTabBar = memo(function ViewTabBar({
         gap: '0.125rem',
         padding: '0.375rem 0.75rem',
         borderBottom: isDark
-          ? '1px solid rgba(62,61,57,0.5)'
+          ? '1px solid rgba(50,49,45,0.5)'
           : '1px solid rgba(0,0,0,0.04)',
       }}
     >
@@ -778,9 +778,9 @@ const PageContextMenu = memo(function PageContextMenu({
         sideOffset={4}
         className="min-w-[140px]"
         style={{
-          background: isDark ? 'rgba(43,42,39,0.95)' : 'rgba(255,255,255,0.95)',
+          background: isDark ? 'rgba(28,27,25,0.95)' : 'rgba(255,255,255,0.95)',
           backdropFilter: 'blur(12px) saturate(1.3)',
-          border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+          border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.06)',
           borderRadius: '0.75rem',
           padding: '0.25rem',
         }}
@@ -1116,7 +1116,7 @@ function BooksView({ isDark, books }: BooksViewProps) {
               fontWeight: 600,
               borderRadius: '9999px',
               border: isDark
-                ? '1px dashed rgba(62,61,57,0.3)'
+                ? '1px dashed rgba(50,49,45,0.3)'
                 : '1px dashed rgba(0,0,0,0.08)',
               background: 'transparent',
               color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
@@ -1247,7 +1247,7 @@ function BooksView({ isDark, books }: BooksViewProps) {
             fontWeight: 600,
             borderRadius: '9999px',
             border: isDark
-              ? '1px dashed rgba(62,61,57,0.3)'
+              ? '1px dashed rgba(50,49,45,0.3)'
               : '1px dashed rgba(0,0,0,0.08)',
             background: 'transparent',
             color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',

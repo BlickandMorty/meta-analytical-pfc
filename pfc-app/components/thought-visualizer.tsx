@@ -246,7 +246,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
               y1={from.y}
               x2={to.x}
               y2={to.y}
-              stroke={isHighlighted ? '#C4956A' : (isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.08)')}
+              stroke={isHighlighted ? '#C4956A' : (isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.08)')}
               strokeWidth={isHighlighted ? 2 : 1}
               strokeDasharray={edge.label === 'weakness' ? '4 4' : undefined}
               style={{ transition: 'stroke 0.2s, stroke-width 0.2s' }}
@@ -284,7 +284,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
                 cx={pos.x}
                 cy={pos.y}
                 r={nodeRadius}
-                fill={isDark ? 'rgba(43,42,39,0.9)' : 'rgba(255,255,255,0.9)'}
+                fill={isDark ? 'rgba(28,27,25,0.9)' : 'rgba(255,255,255,0.9)'}
                 stroke={color}
                 strokeWidth={isHovered ? 2.5 : 1.5}
                 style={{ transition: 'stroke-width 0.2s' }}
@@ -379,8 +379,8 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
             maxWidth: '16rem',
             padding: '0.75rem',
             borderRadius: '0.625rem',
-            background: isDark ? 'rgba(43,42,39,0.95)' : 'rgba(255,255,255,0.95)',
-            border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.08)',
+            background: isDark ? 'rgba(28,27,25,0.95)' : 'rgba(255,255,255,0.95)',
+            border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.08)',
             backdropFilter: 'blur(12px)',
             fontSize: '0.6875rem',
             lineHeight: 1.5,

@@ -498,7 +498,7 @@ export function MultimodalInput({
               style={{ overflow: 'hidden' }}
             >
               <div style={{
-                borderTop: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
+                borderTop: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
                 paddingTop: '0.375rem',
                 marginTop: '0.5rem',
               }}>

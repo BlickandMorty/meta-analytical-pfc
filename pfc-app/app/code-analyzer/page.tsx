@@ -779,7 +779,7 @@ function ScoreBar({
           flex: 1,
           height: '0.375rem',
           borderRadius: '0.25rem',
-          background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
+          background: isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)',
           overflow: 'hidden',
         }}
       >
@@ -851,7 +851,7 @@ function LanguageResultCard({
               ? 'rgba(139,124,246,0.25)'
               : 'rgba(139,124,246,0.2)'
             : isDark
-              ? 'rgba(62,61,57,0.3)'
+              ? 'rgba(50,49,45,0.3)'
               : 'rgba(0,0,0,0.06)'
         }`,
         borderRadius: '1rem',
@@ -877,7 +877,7 @@ function LanguageResultCard({
             background: isTop
               ? 'rgba(139,124,246,0.2)'
               : isDark
-                ? 'rgba(62,61,57,0.3)'
+                ? 'rgba(50,49,45,0.3)'
                 : 'rgba(0,0,0,0.06)',
             color: isTop
               ? '#8B7CF6'
@@ -934,7 +934,7 @@ function LanguageResultCard({
                 fontWeight: 600,
                 padding: '0.125rem 0.5rem',
                 borderRadius: '1rem',
-                background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
+                background: isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)',
                 color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)',
                 letterSpacing: '0.02em',
                 textTransform: 'uppercase',
@@ -992,7 +992,7 @@ function LanguageResultCard({
           style={{
             height: '0.25rem',
             borderRadius: '0.25rem',
-            background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
+            background: isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)',
             overflow: 'hidden',
           }}
         >
@@ -1433,7 +1433,7 @@ export default function CodeAnalyzerPage() {
                         padding: '0.75rem 1rem',
                         borderRadius: '0.75rem',
                         background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.02)',
-                        border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
+                        border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
                         cursor: 'pointer',
                         transition: 'background 0.15s',
                       }}
@@ -1552,7 +1552,7 @@ export default function CodeAnalyzerPage() {
                     width: '100%',
                     padding: '0.5rem 0.75rem',
                     borderRadius: '0.75rem',
-                    border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.08)'}`,
+                    border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.08)'}`,
                     background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.02)',
                     color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.8)',
                     fontSize: '0.8125rem',
@@ -1596,7 +1596,7 @@ export default function CodeAnalyzerPage() {
                           isSelected
                             ? 'rgba(139,124,246,0.3)'
                             : isDark
-                              ? 'rgba(62,61,57,0.3)'
+                              ? 'rgba(50,49,45,0.3)'
                               : 'rgba(0,0,0,0.06)'
                         }`,
                         transition: 'background 0.15s, border-color 0.15s',
@@ -1741,7 +1741,7 @@ export default function CodeAnalyzerPage() {
                               isSelected
                                 ? 'rgba(139,124,246,0.3)'
                                 : isDark
-                                  ? 'rgba(62,61,57,0.3)'
+                                  ? 'rgba(50,49,45,0.3)'
                                   : 'rgba(0,0,0,0.06)'
                             }`,
                             transition: 'background 0.15s, border-color 0.15s',
@@ -1916,7 +1916,7 @@ export default function CodeAnalyzerPage() {
                       padding: '0.75rem 1rem',
                       borderRadius: '0.75rem',
                       background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.02)',
-                      border: `1px solid ${isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
+                      border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)'}`,
                     }}
                   >
                     <ArrowRightIcon

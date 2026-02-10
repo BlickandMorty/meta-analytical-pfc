@@ -47,7 +47,7 @@ function DocSection({
         borderRadius: '1rem',
         overflow: 'hidden',
         background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(0,0,0,0.02)',
-        border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+        border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.06)',
       }}
     >
       <button

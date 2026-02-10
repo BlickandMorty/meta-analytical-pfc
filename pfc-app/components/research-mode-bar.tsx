@@ -53,7 +53,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
         padding: '0.375rem 0.625rem',
         borderRadius: '9999px',
         background: toggleBg,
-        border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+        border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.06)',
       }}
     >
       {/* Research Mode Toggle */}
@@ -86,7 +86,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
           style={{
             width: '1px',
             height: '1rem',
-            background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
+            background: isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)',
           }}
         />
       )}
@@ -138,7 +138,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               style={{
                 width: '1px',
                 height: '1rem',
-                background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
+                background: isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)',
                 margin: '0 0.125rem',
               }}
             />
@@ -177,7 +177,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               style={{
                 width: '1px',
                 height: '1rem',
-                background: isDark ? 'rgba(62,61,57,0.3)' : 'rgba(0,0,0,0.06)',
+                background: isDark ? 'rgba(50,49,45,0.3)' : 'rgba(0,0,0,0.06)',
                 margin: '0 0.125rem',
               }}
             />
@@ -219,8 +219,8 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               marginBottom: '0.5rem',
               padding: '0.75rem',
               borderRadius: '1rem',
-              background: isDark ? 'rgba(43,42,39,0.95)' : 'rgba(255,255,255,0.95)',
-              border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.1)',
+              background: isDark ? 'rgba(28,27,25,0.95)' : 'rgba(255,255,255,0.95)',
+              border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.1)',
               backdropFilter: 'blur(12px) saturate(1.3)',
               minWidth: '14rem',
               zIndex: 50,
@@ -396,7 +396,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               padding: '0.375rem 0.5rem',
               borderRadius: '9999px',
               background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(0,0,0,0.02)',
-              border: isDark ? '1px solid rgba(62,61,57,0.2)' : '1px solid rgba(0,0,0,0.04)',
+              border: isDark ? '1px solid rgba(50,49,45,0.2)' : '1px solid rgba(0,0,0,0.04)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.375rem',

@@ -110,10 +110,10 @@ export const PortalSidebar = memo(function PortalSidebar() {
 
   // Glass panel styles
   const panelBg = isDark
-    ? 'rgba(43,42,39,0.92)'
+    ? 'rgba(28,27,25,0.92)'
     : 'rgba(245,240,232,0.90)';
   const borderColor = isDark
-    ? 'rgba(62,61,57,0.3)'
+    ? 'rgba(50,49,45,0.3)'
     : 'rgba(0,0,0,0.06)';
   const headerBg = isDark
     ? 'rgba(196,149,106,0.02)'
@@ -792,7 +792,7 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
                     borderRadius: '1rem',
                     border: `1px solid ${borderColor}`,
                     background: isDark
-                      ? 'rgba(43,42,39,0.96)'
+                      ? 'rgba(28,27,25,0.96)'
                       : 'rgba(255, 255, 255, 0.96)',
                     backdropFilter: 'blur(12px) saturate(1.3)',
                     WebkitBackdropFilter: 'blur(12px) saturate(1.3)',

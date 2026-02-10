@@ -4,7 +4,7 @@ import { useState, useEffect, memo, useCallback, Fragment } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
-import { usePFCStore } from '@/lib/store/use-pfc-store';
+import { usePFCStore, type PFCState } from '@/lib/store/use-pfc-store';
 import {
   HomeIcon,
   MessageSquareIcon,
@@ -16,8 +16,13 @@ import {
   CodeIcon,
   WrenchIcon,
   PenLineIcon,
+  ServerIcon,
+  WifiIcon,
+  ActivityIcon,
+  SparklesIcon,
   type LucideIcon,
 } from 'lucide-react';
+import { SteeringIndicator } from './steering-indicator';
 
 const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -28,43 +33,30 @@ interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Minimum tier needed. Default: 'notes' (always available) */
   minTier?: TierGate;
-  /** Visual grouping for separator dots */
   group: 'core' | 'tools' | 'utility';
-  /** Custom active-check: match prefix instead of exact path */
   activePrefix?: string;
-  /** Never highlight as active (e.g. Home is always a quick-nav, not a destination) */
   neverActive?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  // ── Home (landing) ──
   { href: '/', label: 'Home', icon: HomeIcon, group: 'core', neverActive: true },
-  // ── Pillar 1: Chat ──
-  { href: '/', label: 'Chat', icon: MessageSquareIcon, group: 'core', activePrefix: '/chat' },
-  // ── Pillar 2: Notes ──
+  { href: '/chat', label: 'Chat', icon: MessageSquareIcon, group: 'core', activePrefix: '/chat' },
   { href: '/notes', label: 'Notes', icon: PenLineIcon, group: 'core' },
-  // ── Pillar 3: Research ──
   { href: '/research-library', label: 'Library', icon: LibraryIcon, group: 'core' },
-  // ── Programming (tier-gated) ──
   { href: '/dev-tools', label: 'Dev Tools', icon: WrenchIcon, minTier: 'programming', group: 'tools' },
   { href: '/code-analyzer', label: 'Analyzer', icon: CodeIcon, minTier: 'programming', group: 'tools' },
-  // ── Measurement (tier-gated) ──
   { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full', group: 'tools' },
-  // ── Utilities ──
   { href: '/export', label: 'Export', icon: DownloadIcon, group: 'utility' },
   { href: '/settings', label: 'Settings', icon: SettingsIcon, group: 'utility' },
   { href: '/docs', label: 'Docs', icon: BookOpenIcon, group: 'utility' },
 ];
 
-/** Check if a tier meets the minimum requirement */
 function tierMeetsMinimum(current: string, minimum: TierGate): boolean {
   const ORDER: Record<string, number> = { notes: 0, programming: 1, full: 2 };
   return (ORDER[current] ?? 0) >= (ORDER[minimum] ?? 0);
 }
 
-/** Get a human-readable label for a tier gate */
 function tierGateLabel(gate: TierGate): string {
   switch (gate) {
     case 'programming': return 'Programming Suite';
@@ -73,6 +65,13 @@ function tierGateLabel(gate: TierGate): string {
   }
 }
 
+const MODE_STYLES: Record<string, { label: string }> = {
+  simulation: { label: 'Sim' },
+  api: { label: 'API' },
+  local: { label: 'Local' },
+};
+
+/* ─── Standard NavBubble ─── */
 const NavBubble = memo(function NavBubble({
   item,
   isActive,
@@ -154,6 +153,210 @@ const NavBubble = memo(function NavBubble({
   );
 });
 
+/* ─── Chat NavBubble — expands into PFC engine bar when on chat page ─── */
+const selectIsProcessing = (s: PFCState) => s.isProcessing;
+const selectActiveStage = (s: PFCState) => s.activeStage;
+const selectMessages = (s: PFCState) => s.messages;
+const selectInferenceMode = (s: PFCState) => s.inferenceMode;
+const selectConfidence = (s: PFCState) => s.confidence;
+const selectToggleSynthesis = (s: PFCState) => s.toggleSynthesisView;
+
+const ChatNavBubble = memo(function ChatNavBubble({
+  item,
+  isActive,
+  isDark,
+  onNavigate,
+}: {
+  item: NavItem;
+  isActive: boolean;
+  isDark: boolean;
+  onNavigate: (href: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const Icon = item.icon;
+
+  const isProcessing = usePFCStore(selectIsProcessing);
+  const activeStage = usePFCStore(selectActiveStage);
+  const messages = usePFCStore(selectMessages);
+  const inferenceMode = usePFCStore(selectInferenceMode);
+  const confidence = usePFCStore(selectConfidence);
+  const toggleSynthesis = usePFCStore(selectToggleSynthesis);
+
+  const hasMessages = messages.some((m) => m.role === 'system');
+  const modeInfo = MODE_STYLES[inferenceMode] ?? MODE_STYLES.simulation;
+
+  // When active (on chat page), expand to show PFC engine bar
+  const showExpanded = isActive;
+  const showLabel = hovered || isActive;
+
+  return (
+    <motion.div
+      layout
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.375rem',
+        borderRadius: '9999px',
+        background: isActive
+          ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)')
+          : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)'),
+        backdropFilter: 'blur(12px) saturate(1.3)',
+        WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+        overflow: 'hidden',
+        transition: 'background 0.15s',
+      }}
+    >
+      {/* Chat button core */}
+      <motion.button
+        onClick={() => onNavigate(item.href)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        whileTap={{ scale: 0.92 }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: showLabel ? '0.375rem' : '0rem',
+          cursor: 'pointer',
+          border: 'none',
+          borderRadius: '9999px',
+          padding: showLabel ? '0.4375rem 0.625rem 0.4375rem 0.875rem' : '0.4375rem',
+          height: '2.5rem',
+          minWidth: showLabel ? 'auto' : '2.5rem',
+          fontSize: '0.875rem',
+          fontWeight: isActive ? 700 : 600,
+          letterSpacing: '-0.01em',
+          color: isActive
+            ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+            : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
+          background: 'transparent',
+          transition: 'padding 0.28s cubic-bezier(0.32,0.72,0,1), gap 0.28s cubic-bezier(0.32,0.72,0,1), min-width 0.28s cubic-bezier(0.32,0.72,0,1), color 0.15s',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <Icon style={{
+          height: '1.0625rem',
+          width: '1.0625rem',
+          flexShrink: 0,
+          color: isActive ? '#C4956A' : 'inherit',
+        }} />
+        <AnimatePresence>
+          {showLabel && (
+            <motion.span
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 'auto' }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.22, ease: CUPERTINO_EASE }}
+              style={{ overflow: 'hidden', display: 'inline-block' }}
+            >
+              {showExpanded ? 'PFC' : item.label}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
+
+      {/* Expanded PFC engine bar content — only shown on chat page */}
+      <AnimatePresence>
+        {showExpanded && (
+          <motion.div
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            exit={{ opacity: 0, width: 0 }}
+            transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              paddingRight: '0.625rem',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {/* Mode badge */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              padding: '0.125rem 0.375rem',
+              borderRadius: '9999px',
+              background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+              fontSize: '0.5625rem',
+              fontFamily: 'var(--font-mono)',
+              color: isDark ? 'rgba(196,149,106,0.7)' : 'rgba(196,149,106,0.8)',
+            }}>
+              {inferenceMode === 'simulation'
+                ? <ServerIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
+                : <WifiIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
+              }
+              {modeInfo.label}
+            </div>
+
+            {/* Confidence */}
+            {confidence > 0 && (
+              <span style={{
+                fontSize: '0.5625rem',
+                fontFamily: 'var(--font-mono)',
+                color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+              }}>
+                {(confidence * 100).toFixed(0)}%
+              </span>
+            )}
+
+            <SteeringIndicator />
+
+            {/* Active pipeline stage */}
+            {isProcessing && activeStage && (
+              <div
+                className="animate-pipeline-pulse"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: '0.125rem 0.375rem',
+                  borderRadius: '9999px',
+                  background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                  fontSize: '0.5625rem',
+                  fontFamily: 'var(--font-mono)',
+                  color: '#C4956A',
+                }}
+              >
+                <ActivityIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
+                {activeStage.replace('_', '-')}
+              </div>
+            )}
+
+            {/* Synthesize button */}
+            {hasMessages && (
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={(e) => { e.stopPropagation(); toggleSynthesis(); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: '0.1875rem 0.5rem',
+                  borderRadius: '9999px',
+                  background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  color: '#C4956A',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <SparklesIcon style={{ height: '0.625rem', width: '0.625rem' }} />
+                Synthesize
+              </motion.button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+});
+
 export function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
@@ -163,6 +366,8 @@ export function TopNav() {
 
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? resolvedTheme === 'dark' : true;
+
+  const isOnChat = pathname === '/' || pathname.startsWith('/chat');
 
   const handleNavigate = useCallback((href: string) => {
     router.push(href);
@@ -184,54 +389,48 @@ export function TopNav() {
         pointerEvents: 'none',
       }}
     >
-      {/* Navigation bar */}
+      {/* Floating bubbles — no background bar */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '0.75rem',
-        padding: '0.75rem 1.25rem',
+        gap: '0.375rem',
+        padding: '0.625rem 1.25rem',
         pointerEvents: 'auto',
-        background: isDark
-          ? 'rgba(31,30,27,0.85)'
-          : 'rgba(245,240,232,0.75)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: isDark
-          ? '1px solid rgba(62,61,57,0.3)'
-          : '1px solid rgba(0,0,0,0.04)',
       }}>
-        {NAV_ITEMS.map((item, idx) => {
-          const prev = idx > 0 ? NAV_ITEMS[idx - 1] : null;
-          const showSep = prev && prev.group !== item.group;
+        {NAV_ITEMS.map((item) => {
           const minTier = item.minTier ?? 'notes';
           const meetsRequirement = tierMeetsMinimum(suiteTier, minTier);
-          return (
-            <Fragment key={item.href}>
-              {showSep && (
-                <div style={{
-                  width: '3px',
-                  height: '3px',
-                  borderRadius: '50%',
-                  background: isDark ? 'rgba(155,150,137,0.2)' : 'rgba(0,0,0,0.1)',
-                  flexShrink: 0,
-                }} />
-              )}
-              <NavBubble
+
+          // Chat item gets special expanded bubble
+          if (item.label === 'Chat') {
+            return (
+              <ChatNavBubble
+                key={item.href}
                 item={item}
-                isActive={
-                  item.neverActive
-                    ? false
-                    : item.activePrefix
-                      ? (pathname === '/' || pathname.startsWith(item.activePrefix))
-                      : pathname === item.href
-                }
+                isActive={isOnChat}
                 isDark={isDark}
                 onNavigate={handleNavigate}
-                disabled={!meetsRequirement}
-                disabledReason={tierGateLabel(minTier)}
               />
-            </Fragment>
+            );
+          }
+
+          return (
+            <NavBubble
+              key={item.href}
+              item={item}
+              isActive={
+                item.neverActive
+                  ? false
+                  : item.activePrefix
+                    ? pathname.startsWith(item.activePrefix)
+                    : pathname === item.href
+              }
+              isDark={isDark}
+              onNavigate={handleNavigate}
+              disabled={!meetsRequirement}
+              disabledReason={tierGateLabel(minTier)}
+            />
           );
         })}
       </div>

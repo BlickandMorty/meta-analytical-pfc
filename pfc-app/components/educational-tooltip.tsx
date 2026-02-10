@@ -70,8 +70,8 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
               width: '18rem',
               padding: '0.875rem',
               borderRadius: '0.75rem',
-              background: isDark ? 'rgba(43,42,39,0.97)' : 'rgba(255,255,255,0.97)',
-              border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.08)',
+              background: isDark ? 'rgba(28,27,25,0.97)' : 'rgba(255,255,255,0.97)',
+              border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.08)',
               backdropFilter: 'blur(12px) saturate(1.3)',
             }}
             onMouseEnter={() => setOpen(true)}
@@ -167,7 +167,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
                   padding: '0.5rem',
                   borderRadius: '0.5rem',
                   background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(0,0,0,0.02)',
-                  border: isDark ? '1px solid rgba(62,61,57,0.2)' : '1px solid rgba(0,0,0,0.04)',
+                  border: isDark ? '1px solid rgba(50,49,45,0.2)' : '1px solid rgba(0,0,0,0.04)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginBottom: '0.25rem' }}>

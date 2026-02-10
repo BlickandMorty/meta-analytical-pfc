@@ -174,7 +174,7 @@ export default function OnboardingPage() {
     backdropFilter: 'blur(12px) saturate(1.3)',
     WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
     borderRadius: '1.5rem',
-    border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+    border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.06)',
   };
 
   const textDim = isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)';
@@ -316,7 +316,7 @@ export default function OnboardingPage() {
                       background: isDark
                         ? 'linear-gradient(135deg, rgba(224,120,80,0.2), rgba(139,124,246,0.2))'
                         : 'linear-gradient(135deg, rgba(224,120,80,0.1), rgba(139,124,246,0.1))',
-                      border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.05)',
                     }}
                   >
                     <LayersIcon
@@ -345,7 +345,7 @@ export default function OnboardingPage() {
                     padding: '0.5rem 0.75rem',
                     borderRadius: '0.625rem',
                     background: isDark ? 'rgba(139,124,246,0.06)' : 'rgba(139,124,246,0.04)',
-                    border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(139,124,246,0.08)',
+                    border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(139,124,246,0.08)',
                   }}
                 >
                   <DevIcon style={{ height: '0.875rem', width: '0.875rem', color: '#8B7CF6', flexShrink: 0 }} />
@@ -497,7 +497,7 @@ export default function OnboardingPage() {
                       background: isDark
                         ? 'linear-gradient(135deg, rgba(224,120,80,0.2), rgba(139,124,246,0.2))'
                         : 'linear-gradient(135deg, rgba(224,120,80,0.1), rgba(139,124,246,0.1))',
-                      border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.05)',
+                      border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.05)',
                     }}
                   >
                     <span
@@ -538,7 +538,7 @@ export default function OnboardingPage() {
                     className="font-mono text-sm pr-10"
                     style={{
                       background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.02)',
-                      border: isDark ? '1px solid rgba(62,61,57,0.3)' : '1px solid rgba(0,0,0,0.1)',
+                      border: isDark ? '1px solid rgba(50,49,45,0.3)' : '1px solid rgba(0,0,0,0.1)',
                       color: isDark ? 'rgba(232,228,222,0.95)' : 'var(--foreground)',
                       borderRadius: '0.625rem',
                     }}

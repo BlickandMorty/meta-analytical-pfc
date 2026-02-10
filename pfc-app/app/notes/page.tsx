@@ -160,7 +160,7 @@ export default function NotesPage() {
             alignItems: 'center',
             gap: '0.375rem',
             padding: '0.5rem 1.25rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(62,61,57,0.6)' : 'rgba(0,0,0,0.04)'}`,
+            borderBottom: `1px solid ${isDark ? 'rgba(50,49,45,0.6)' : 'rgba(0,0,0,0.04)'}`,
             flexShrink: 0,
           }}
         >

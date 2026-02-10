@@ -148,7 +148,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 padding: '0.625rem 0.75rem',
                 border: 'none',
                 borderTop: idx > 0
-                  ? (isDark ? '1px solid rgba(62,61,57,0.2)' : '1px solid rgba(0,0,0,0.04)')
+                  ? (isDark ? '1px solid rgba(50,49,45,0.2)' : '1px solid rgba(0,0,0,0.04)')
                   : 'none',
                 background: isHovered
                   ? (isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)')
