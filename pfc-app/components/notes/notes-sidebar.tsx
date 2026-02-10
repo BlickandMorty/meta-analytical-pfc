@@ -81,7 +81,6 @@ export const NotesSidebar = memo(function NotesSidebar() {
   const notePages          = usePFCStore((s) => s.notePages);
   const noteBooks          = usePFCStore((s) => s.noteBooks);
   const activePageId       = usePFCStore((s) => s.activePageId);
-  const sidebarOpen        = usePFCStore((s) => s.notesSidebarOpen);
   const setActivePage      = usePFCStore((s) => s.setActivePage);
   const createPage         = usePFCStore((s) => s.createPage);
   const deletePage         = usePFCStore((s) => s.deletePage);
@@ -198,8 +197,6 @@ export const NotesSidebar = memo(function NotesSidebar() {
     movePageToBook(pageId, targetBookId);
   }, [movePageToBook]);
 
-  if (!sidebarOpen) return null;
-
   const viewTabs: { id: SidebarView; label: string; icon: React.ReactNode }[] = [
     { id: 'pages', label: 'Pages', icon: <FileIcon style={{ width: 12, height: 12 }} /> },
     { id: 'journals', label: 'Journal', icon: <CalendarIcon style={{ width: 12, height: 12 }} /> },
@@ -214,8 +211,7 @@ export const NotesSidebar = memo(function NotesSidebar() {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: c.bg,
-        borderRight: `1px solid ${c.border}`,
+        background: 'transparent',
         fontFamily: 'var(--font-sans)',
         fontSize: '14px',
         color: c.text,
@@ -253,10 +249,10 @@ export const NotesSidebar = memo(function NotesSidebar() {
             onBlur={() => setSearchFocused(false)}
             style={{
               width: '100%',
-              height: 30,
-              paddingLeft: 28,
-              paddingRight: searchQuery ? 26 : 8,
-              fontSize: '13px',
+              height: 28,
+              paddingLeft: 26,
+              paddingRight: searchQuery ? 24 : 8,
+              fontSize: '12px',
               fontWeight: 500,
               fontFamily: 'var(--font-sans)',
               borderRadius: 6,

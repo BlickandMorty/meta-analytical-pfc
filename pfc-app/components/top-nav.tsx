@@ -495,6 +495,10 @@ export function TopNav() {
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
+  // Hide TopNav entirely on notes page — notes has its own floating UI
+  const isOnNotes = pathname === '/notes';
+  if (isOnNotes) return null;
+
   const chatMessages = usePFCStore((s) => s.messages);
   const isOnChat = pathname.startsWith('/chat') || (pathname === '/' && chatMessages.length > 0);
   const isOnAnalytics = pathname === '/analytics';
