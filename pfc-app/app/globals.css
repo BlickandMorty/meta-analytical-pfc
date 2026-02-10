@@ -4,43 +4,55 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ── Custom display fonts ── */
+/* ── Geist — primary app font ── */
 @font-face {
-  font-family: 'Ubuntu';
-  src: url('/fonts/Ubuntu-Bold.ttf') format('truetype');
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist/Geist-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
-  font-family: 'MarioKartDS';
-  src: url('/fonts/Mario-Kart-DS.ttf') format('truetype');
+  font-family: 'GeistMono';
+  src: url('/fonts/geist/GeistMono-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
-  font-family: 'Frantically';
-  src: url('/fonts/Frantically-Regular.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'GeistMono';
+  src: url('/fonts/geist/GeistMono-Medium.woff2') format('woff2');
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
+/* ── Legacy display fonts ── */
 @font-face {
-  font-family: 'FuntasiLear';
-  src: url('/fonts/FuntasiLear.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Billyand';
-  src: url('/fonts/Billyand.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'Ubuntu';
+  src: url('/fonts/Ubuntu-Bold.ttf') format('truetype');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
@@ -80,9 +92,9 @@
   --color-pfc-red: #C75E5E;
   --color-pfc-cyan: #6B8EBF;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'GeistMono', "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -175,37 +187,37 @@
    Light theme — warm cream with darker accents/sidebar
    ───────────────────────────────────────────────────────── */
 :root {
-  --background: #F5F0E8;
+  --background: #FAFAF8;
   --foreground: #2B2A27;
-  --card: rgba(235, 229, 218, 0.72);
+  --card: rgba(250, 250, 248, 0.85);
   --card-foreground: #2B2A27;
-  --popover: rgba(235, 229, 218, 0.92);
+  --popover: rgba(250, 250, 248, 0.95);
   --popover-foreground: #2B2A27;
   --primary: #A07850;
   --primary-foreground: #FFFFFF;
-  --secondary: #E0DACF;
+  --secondary: #F0ECE4;
   --secondary-foreground: #2B2A27;
-  --muted: #E0DACF;
+  --muted: #F0ECE4;
   --muted-foreground: #6B6660;
   --accent: #A07850;
   --accent-foreground: #FFFFFF;
   --destructive: #C75E5E;
   --destructive-foreground: #FFFFFF;
-  --border: rgba(190, 183, 170, 0.4);
-  --input: rgba(190, 183, 170, 0.4);
+  --border: rgba(190, 183, 170, 0.3);
+  --input: rgba(190, 183, 170, 0.3);
   --ring: #A07850;
   --radius: 0.75rem;
 
-  /* Sidebar — darker cream for contrast */
-  --sidebar: rgba(218, 212, 200, 0.85);
+  /* Sidebar — warm tan for contrast against white main area */
+  --sidebar: #EDE8DE;
   --sidebar-foreground: #2B2A27;
-  --sidebar-border: rgba(190, 183, 170, 0.4);
-  --sidebar-accent: rgba(210, 204, 192, 0.7);
+  --sidebar-border: rgba(190, 183, 170, 0.35);
+  --sidebar-accent: rgba(224, 218, 206, 0.8);
   --sidebar-accent-foreground: #2B2A27;
   --sidebar-ring: #A07850;
 
-  /* Liquid Glass — warm cream (lighter glass) */
-  --liquid-glass-background: rgba(240, 235, 225, 0.72);
+  /* Liquid Glass — light glass */
+  --liquid-glass-background: rgba(250, 250, 248, 0.80);
   --shadow-base: none;
   --shadow-border: none;
   --shadow-xs: none;
@@ -215,22 +227,22 @@
 
   /* Glass tokens */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: rgba(190, 183, 170, 0.3);
-  --glass-hover: rgba(240, 235, 225, 0.7);
+  --glass-border: rgba(190, 183, 170, 0.2);
+  --glass-hover: rgba(250, 250, 248, 0.8);
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 
-  /* Chat surface — unified with background, no two-tone */
-  --chat-surface: #F5F0E8;
+  /* Chat surface — white, matching main area */
+  --chat-surface: #FAFAF8;
 
-  /* M3 Surface container hierarchy — warm cream tones */
-  --m3-surface: #F5F0E8;
-  --m3-surface-dim: #E8E3DB;
+  /* M3 Surface container hierarchy — near-white tones */
+  --m3-surface: #FAFAF8;
+  --m3-surface-dim: #F0ECE4;
   --m3-surface-bright: #FFFFFF;
   --m3-surface-container-lowest: #FFFFFF;
-  --m3-surface-container: #EFEBE2;
-  --m3-surface-container-high: #E9E4DB;
-  --m3-surface-container-highest: #E3DED5;
+  --m3-surface-container: #F5F2EC;
+  --m3-surface-container-high: #EFEBE3;
+  --m3-surface-container-highest: #E9E5DD;
 
   /* M3 Color roles — warm brown primary */
   --m3-primary: #7A5C3E;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, memo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePFCStore, type PFCState } from '@/lib/store/use-pfc-store';
 import {
@@ -135,40 +135,37 @@ const NavBubble = memo(function NavBubble({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: expanded ? '0.375rem' : '0rem',
+        gap: expanded ? '0.5rem' : '0rem',
         cursor: disabled ? 'not-allowed' : 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: expanded ? '0.4375rem 0.875rem' : '0.4375rem 0.5rem',
-        height: '2.25rem',
-        fontSize: '0.8125rem',
-        fontWeight: isActive ? 700 : 600,
+        padding: expanded ? '0.5rem 1rem' : '0.5rem 0.625rem',
+        height: '2.5rem',
+        fontSize: '0.875rem',
+        fontWeight: isActive ? 650 : 500,
         letterSpacing: '-0.01em',
         opacity: disabled ? 0.35 : 1,
         color: bubbleColor(isActive, isDark, disabled),
         background: bubbleBg(isActive, isDark, disabled),
         whiteSpace: 'nowrap',
+        overflow: 'hidden',
       }}
     >
       <Icon style={{
-        height: '0.9375rem',
-        width: '0.9375rem',
+        height: '1.0625rem',
+        width: '1.0625rem',
         flexShrink: 0,
         color: isActive ? '#C4956A' : 'inherit',
       }} />
-      <AnimatePresence>
-        {expanded && (
-          <motion.span
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.3, ease: CUPERTINO_EASE }}
-            style={{ overflow: 'hidden', display: 'inline-block' }}
-          >
-            {item.label}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      {expanded && (
+        <motion.span
+          initial={false}
+          animate={{ opacity: 1 }}
+          style={{ display: 'inline-block' }}
+        >
+          {item.label}
+        </motion.span>
+      )}
     </motion.button>
   );
 });
@@ -221,45 +218,38 @@ const ChatNavBubble = memo(function ChatNavBubble({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.375rem',
+        gap: '0.5rem',
         cursor: 'pointer',
         border: 'none',
         borderRadius: '9999px',
         padding: showExpanded
-          ? '0.4375rem 0.75rem'
+          ? '0.5rem 1rem'
           : showLabel
-            ? '0.4375rem 0.875rem'
-            : '0.4375rem 0.5rem',
-        height: '2.25rem',
-        fontSize: '0.8125rem',
-        fontWeight: isActive ? 700 : 600,
+            ? '0.5rem 1rem'
+            : '0.5rem 0.625rem',
+        height: '2.5rem',
+        fontSize: '0.875rem',
+        fontWeight: isActive ? 650 : 500,
         letterSpacing: '-0.01em',
         color: bubbleColor(isActive, isDark),
         background: bubbleBg(isActive, isDark),
         whiteSpace: 'nowrap',
+        overflow: 'hidden',
       }}
     >
       <Icon style={{
-        height: '0.9375rem',
-        width: '0.9375rem',
+        height: '1.0625rem',
+        width: '1.0625rem',
         flexShrink: 0,
         color: isActive ? '#C4956A' : 'inherit',
       }} />
 
-      {/* Label */}
-      <AnimatePresence>
-        {showLabel && (
-          <motion.span
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.3, ease: CUPERTINO_EASE }}
-            style={{ overflow: 'hidden', display: 'inline-block' }}
-          >
-            {showExpanded ? 'PFC Engine' : item.label}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      {/* Label — no width animation, let layout handle resizing */}
+      {showLabel && (
+        <span style={{ display: 'inline-block' }}>
+          {showExpanded ? 'PFC Engine' : item.label}
+        </span>
+      )}
 
       {/* PFC engine bar items — inline, no nested AnimatePresence */}
       {showExpanded && (
@@ -409,21 +399,15 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
               }}
             >
               <TabIcon style={{
-                height: '0.75rem',
-                width: '0.75rem',
+                height: '0.8125rem',
+                width: '0.8125rem',
                 flexShrink: 0,
                 color: isTabHovered ? '#C4956A' : 'inherit',
               }} />
               {isTabHovered && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.25, ease: CUPERTINO_EASE }}
-                  style={{ overflow: 'hidden', display: 'inline-block' }}
-                >
+                <span style={{ display: 'inline-block' }}>
                   {tab.label}
-                </motion.span>
+                </span>
               )}
             </motion.button>
           );
@@ -448,39 +432,36 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: expanded ? '0.375rem' : '0rem',
+        gap: expanded ? '0.5rem' : '0rem',
         cursor: disabled ? 'not-allowed' : 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: expanded ? '0.4375rem 0.875rem' : '0.4375rem 0.5rem',
-        height: '2.25rem',
-        fontSize: '0.8125rem',
-        fontWeight: 600,
+        padding: expanded ? '0.5rem 1rem' : '0.5rem 0.625rem',
+        height: '2.5rem',
+        fontSize: '0.875rem',
+        fontWeight: 500,
         letterSpacing: '-0.01em',
         opacity: disabled ? 0.35 : 1,
         color: bubbleColor(false, isDark, disabled),
         background: bubbleBg(false, isDark, disabled),
         whiteSpace: 'nowrap',
+        overflow: 'hidden',
       }}
     >
       <Icon style={{
-        height: '0.9375rem',
-        width: '0.9375rem',
+        height: '1.0625rem',
+        width: '1.0625rem',
         flexShrink: 0,
       }} />
-      <AnimatePresence>
-        {expanded && (
-          <motion.span
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.3, ease: CUPERTINO_EASE }}
-            style={{ overflow: 'hidden', display: 'inline-block' }}
-          >
-            {item.label}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      {expanded && (
+        <motion.span
+          initial={false}
+          animate={{ opacity: 1 }}
+          style={{ display: 'inline-block' }}
+        >
+          {item.label}
+        </motion.span>
+      )}
     </motion.button>
   );
 });
@@ -541,8 +522,8 @@ export function TopNav() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '0.25rem',
-          padding: '0.5rem 1rem',
+          gap: '0.375rem',
+          padding: '0.625rem 1rem',
           pointerEvents: 'auto',
         }}
       >

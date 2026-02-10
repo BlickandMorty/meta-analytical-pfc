@@ -798,7 +798,7 @@ export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
         inset: 0,
         zIndex: 0,
         pointerEvents: 'none',
-        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(240,232,222,0.92) 100%)',
+        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(250,250,248,0.92) 100%)',
       }}
     />
   );
