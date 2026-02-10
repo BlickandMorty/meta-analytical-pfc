@@ -143,6 +143,64 @@ export interface NoteAIState {
   prompt: string;
 }
 
+// ── Vault System ──
+
+export interface Vault {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  createdAt: number;
+  updatedAt: number;
+  /** Number of pages in this vault (cached) */
+  pageCount: number;
+}
+
+export function generateVaultId(): string {
+  return `vault-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// ── Concept System ──
+
+export interface Concept {
+  id: string;
+  name: string;
+  sourcePageId: string;
+  sourceBlockId: string;
+  type: 'heading' | 'key-term' | 'entity' | 'definition' | 'custom';
+  context: string;      // surrounding text for understanding
+  createdAt: number;
+}
+
+export interface ConceptCorrelation {
+  id: string;
+  conceptAId: string;
+  conceptBId: string;
+  pageAId: string;
+  pageBId: string;
+  correlationType: 'shared-concept' | 'causal' | 'hierarchical' | 'opposing' | 'supporting';
+  description: string;
+  strength: number;     // 0-1
+  createdAt: number;
+}
+
+// ── Block Attributes (SiYuan feature) ──
+
+export interface BlockAttribute {
+  key: string;
+  value: string;
+}
+
+// ── Template Snippets (SiYuan feature) ──
+
+export interface TemplateSnippet {
+  id: string;
+  name: string;
+  content: string;      // JSON serialized blocks
+  category?: string;
+  createdAt: number;
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Transaction System (SiYuan-inspired)
 // Operation-based undo/redo with batching

@@ -325,10 +325,10 @@ export async function POST(request: NextRequest) {
             let responseText: string;
 
             if (isSimulation || !capturedModel) {
-              // ── Simulation mode: generate mock insights with delays ──
+              // ── Simulation mode: template responses (no LLM configured) ──
               responseText = generateSimulatedResponse(step.type, effectiveNoteContent);
-              // Simulate processing time
-              await new Promise((r) => setTimeout(r, 600 + Math.random() * 800));
+              // Brief delay for progressive display
+              await new Promise((r) => setTimeout(r, 400));
             } else {
               // ── LLM mode: call the real provider ──
               // Build the prompt for this step

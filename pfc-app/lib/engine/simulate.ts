@@ -266,19 +266,22 @@ export function analyzeQuery(query: string, context?: ConversationContext): Quer
 
 function generateStageDetail(stage: PipelineStage, qa: QueryAnalysis): string {
   const topic = qa.entities.slice(0, 3).join(', ') || 'the query topic';
+  // Use query complexity as a deterministic seed instead of Math.random()
+  const c = qa.complexity;
+  const entityFactor = Math.min(1, qa.entities.length / 8);
 
   switch (stage) {
     case 'triage':
       return qa.isPhilosophical
-        ? `complexity score: ${(0.7 + qa.complexity * 0.3).toFixed(2)} — philosophical-conceptual routing, multi-framework analysis`
+        ? `complexity score: ${(0.7 + c * 0.3).toFixed(2)} — philosophical-conceptual routing, multi-framework analysis`
         : qa.isMetaAnalytical
-        ? `complexity score: ${(0.85 + qa.complexity * 0.15).toFixed(2)} — full meta-analytical mode for ${topic}`
-        : `complexity score: ${(0.3 + qa.complexity * 0.6).toFixed(2)} — ${qa.complexity > 0.5 ? 'executive pipeline' : 'moderate-depth analysis'} for "${topic}"`;
+        ? `complexity score: ${(0.85 + c * 0.15).toFixed(2)} — full meta-analytical mode for ${topic}`
+        : `complexity score: ${(0.3 + c * 0.6).toFixed(2)} — ${c > 0.5 ? 'executive pipeline' : 'moderate-depth analysis'} for "${topic}"`;
 
     case 'memory':
       return qa.isPhilosophical
         ? `cross-referencing ${Math.floor(3 + qa.entities.length * 0.5)} philosophical frameworks for ${topic}`
-        : `${Math.floor(2 + qa.complexity * 8)} context fragments retrieved for "${topic}" (similarity > 0.7)`;
+        : `${Math.floor(2 + c * 8)} context fragments retrieved for "${topic}" (similarity > 0.7)`;
 
     case 'routing':
       if (qa.isPhilosophical) return `philosophical-analytical mode — dialectical + ethical + epistemic engines for: ${qa.coreQuestion.slice(0, 60)}`;
@@ -288,37 +291,37 @@ function generateStageDetail(stage: PipelineStage, qa: QueryAnalysis): string {
 
     case 'statistical': {
       if (qa.isPhilosophical) {
-        return `framework agreement index: ${(0.3 + Math.random() * 0.5).toFixed(2)}, argument coherence: ${(0.4 + Math.random() * 0.5).toFixed(2)}, ${Math.floor(2 + Math.random() * 4)} positions identified`;
+        return `framework agreement index: ${(0.3 + c * 0.4).toFixed(2)}, argument coherence: ${(0.4 + entityFactor * 0.4).toFixed(2)}, ${Math.floor(2 + qa.entities.length * 0.5)} positions identified`;
       }
-      const d = (0.2 + Math.random() * 1.0).toFixed(2);
-      const power = (0.5 + Math.random() * 0.45).toFixed(2);
+      const d = (0.2 + c * 0.8 + entityFactor * 0.2).toFixed(2);
+      const power = (0.5 + c * 0.35 + entityFactor * 0.1).toFixed(2);
       return `Cohen's d = ${d} (${parseFloat(d) > 0.8 ? 'large' : parseFloat(d) > 0.5 ? 'medium' : 'small'}), power = ${power}${parseFloat(power) > 0.8 ? ', adequately powered' : ', may be underpowered'}`;
     }
 
     case 'causal': {
       if (qa.isPhilosophical) {
-        return `${Math.floor(2 + Math.random() * 4)} causal/logical chains analyzed — ${qa.hasNormativeClaims ? 'normative-descriptive boundary flagged' : 'conceptual dependencies mapped'}`;
+        return `${Math.floor(2 + qa.entities.length * 0.5)} causal/logical chains analyzed — ${qa.hasNormativeClaims ? 'normative-descriptive boundary flagged' : 'conceptual dependencies mapped'}`;
       }
-      const hill = (0.4 + Math.random() * 0.5).toFixed(2);
+      const hill = (0.4 + c * 0.35 + entityFactor * 0.15).toFixed(2);
       return `Bradford Hill score: ${hill} — ${parseFloat(hill) > 0.7 ? 'strong' : parseFloat(hill) > 0.5 ? 'moderate' : 'weak'} causal evidence for ${topic}`;
     }
 
     case 'meta_analysis':
       if (qa.isPhilosophical) {
-        return `${Math.floor(3 + Math.random() * 5)} traditions synthesized — cross-framework convergence: ${(0.2 + Math.random() * 0.6).toFixed(2)}`;
+        return `${Math.floor(3 + qa.entities.length * 0.6)} traditions synthesized — cross-framework convergence: ${(0.2 + c * 0.4 + entityFactor * 0.2).toFixed(2)}`;
       }
       if (qa.isMetaAnalytical) {
-        const iSq = Math.floor(Math.random() * 80);
-        return `${Math.floor(4 + Math.random() * 12)} studies pooled, I² = ${iSq}% (${iSq < 30 ? 'low' : iSq < 60 ? 'moderate' : 'high'} heterogeneity)`;
+        const iSq = Math.floor(20 + c * 40 + entityFactor * 20);
+        return `${Math.floor(4 + c * 8 + entityFactor * 4)} studies pooled, I² = ${iSq}% (${iSq < 30 ? 'low' : iSq < 60 ? 'moderate' : 'high'} heterogeneity)`;
       }
-      return `${Math.floor(2 + Math.random() * 5)} analytical perspectives integrated for ${topic}`;
+      return `${Math.floor(2 + c * 3 + entityFactor * 2)} analytical perspectives integrated for ${topic}`;
 
     case 'bayesian': {
       if (qa.isPhilosophical) {
-        const range = (0.15 + Math.random() * 0.5).toFixed(2);
-        return `posterior across ${Math.floor(2 + Math.random() * 4)} priors, range = ${range} — ${parseFloat(range) > 0.3 ? 'position-sensitive' : 'converges across starting positions'}`;
+        const range = (0.15 + c * 0.3 + entityFactor * 0.2).toFixed(2);
+        return `posterior across ${Math.floor(2 + qa.entities.length * 0.4)} priors, range = ${range} — ${parseFloat(range) > 0.3 ? 'position-sensitive' : 'converges across starting positions'}`;
       }
-      const bf = (1.5 + Math.random() * 18).toFixed(1);
+      const bf = (1.5 + c * 12 + entityFactor * 6).toFixed(1);
       return `BF₁₀ = ${bf} (${parseFloat(bf) > 10 ? 'strong' : parseFloat(bf) > 3 ? 'moderate' : 'weak'} evidence for ${topic})`;
     }
 
@@ -328,15 +331,15 @@ function generateStageDetail(stage: PipelineStage, qa: QueryAnalysis): string {
         : `integrating evidence streams for structured response on ${topic}`;
 
     case 'adversarial': {
-      const challenges = Math.floor(1 + Math.random() * 3);
+      const challenges = Math.max(1, Math.floor(1 + c * 2 + entityFactor));
       return qa.isPhilosophical
         ? `${challenges} counter-argument${challenges > 1 ? 's' : ''} generated — ${qa.hasNormativeClaims ? 'is/ought distinction tested' : 'logical consistency verified'}`
-        : `${challenges} weakness${challenges > 1 ? 'es' : ''} identified${Math.random() > 0.6 ? ', no overclaiming' : ', potential overclaiming flagged'}`;
+        : `${challenges} weakness${challenges > 1 ? 'es' : ''} identified${c > 0.6 ? ', no overclaiming' : ', potential overclaiming flagged'}`;
     }
 
     case 'calibration': {
-      const conf = (0.3 + Math.random() * 0.55).toFixed(2);
-      const margin = (0.08 + Math.random() * 0.25).toFixed(2);
+      const conf = (0.3 + c * 0.35 + entityFactor * 0.2).toFixed(2);
+      const margin = (0.08 + (1 - c) * 0.15 + entityFactor * 0.1).toFixed(2);
       const grade = parseFloat(conf) > 0.75 ? 'A' : parseFloat(conf) > 0.55 ? 'B' : 'C';
       return `final confidence: ${conf} ± ${margin} (grade ${grade}) — ${qa.isPhilosophical ? 'philosophical claims resist high certainty' : 'calibrated against convergence'}`;
     }
@@ -361,8 +364,8 @@ function generateRawAnalysis(qa: QueryAnalysis): string {
   }
 
   if (qa.isPhilosophical) {
-    const traditions = Math.floor(3 + Math.random() * 4);
-    const convergence = (0.2 + Math.random() * 0.5).toFixed(2);
+    const traditions = Math.floor(3 + qa.entities.length * 0.5);
+    const convergence = (0.2 + qa.complexity * 0.3 + (qa.entities.length / 16)).toFixed(2);
 
     segments.push(
       `[DATA] Analysis of ${traditions} major philosophical frameworks relevant to "${qa.coreQuestion.slice(0, 80)}" reveals fundamental tensions between ${qa.hasNormativeClaims ? 'descriptive and normative claims' : 'competing ontological commitments'}.`,
@@ -404,16 +407,18 @@ function generateRawAnalysis(qa: QueryAnalysis): string {
     }
 
   } else if (qa.isEmpirical || qa.isMetaAnalytical) {
-    const studies = Math.floor(3 + Math.random() * 15);
-    const n = Math.floor(500 + Math.random() * 50000);
-    const d = (0.15 + Math.random() * 1.2).toFixed(2);
-    const iSq = Math.floor(Math.random() * 75);
-    const hillScore = (0.4 + Math.random() * 0.5).toFixed(2);
-    const bf = (0.8 + Math.random() * 20).toFixed(1);
-    const priorRange = (0.04 + Math.random() * 0.35).toFixed(2);
+    const c = qa.complexity;
+    const ef = Math.min(1, qa.entities.length / 8);
+    const studies = Math.floor(3 + c * 10 + ef * 5);
+    const n = Math.floor(500 + c * 30000 + ef * 20000);
+    const d = (0.15 + c * 0.8 + ef * 0.4).toFixed(2);
+    const iSq = Math.floor(15 + c * 40 + ef * 20);
+    const hillScore = (0.4 + c * 0.3 + ef * 0.2).toFixed(2);
+    const bf = (0.8 + c * 12 + ef * 8).toFixed(1);
+    const priorRange = (0.04 + c * 0.2 + ef * 0.15).toFixed(2);
 
     segments.push(
-      `[DATA] Based on ${studies} ${qa.isMetaAnalytical ? 'pooled studies' : 'available studies'} (combined N ≈ ${n.toLocaleString()}) examining ${topic}, the ${qa.questionType === 'causal' ? 'intervention' : 'relationship'} shows ${parseFloat(d) > 0.8 ? 'a large' : parseFloat(d) > 0.5 ? 'a medium' : parseFloat(d) > 0.2 ? 'a small' : 'a negligible'} effect size (d = ${d}, 95% CI [${(parseFloat(d) - 0.15 - Math.random() * 0.2).toFixed(2)}, ${(parseFloat(d) + 0.15 + Math.random() * 0.2).toFixed(2)}]) with ${iSq < 30 ? 'low' : iSq < 60 ? 'moderate' : 'high'} heterogeneity (I² = ${iSq}%).`,
+      `[DATA] Based on ${studies} ${qa.isMetaAnalytical ? 'pooled studies' : 'available studies'} (combined N ≈ ${n.toLocaleString()}) examining ${topic}, the ${qa.questionType === 'causal' ? 'intervention' : 'relationship'} shows ${parseFloat(d) > 0.8 ? 'a large' : parseFloat(d) > 0.5 ? 'a medium' : parseFloat(d) > 0.2 ? 'a small' : 'a negligible'} effect size (d = ${d}, 95% CI [${(parseFloat(d) - 0.15 - c * 0.15).toFixed(2)}, ${(parseFloat(d) + 0.15 + c * 0.15).toFixed(2)}]) with ${iSq < 30 ? 'low' : iSq < 60 ? 'moderate' : 'high'} heterogeneity (I² = ${iSq}%).`,
     );
 
     segments.push(
@@ -425,18 +430,18 @@ function generateRawAnalysis(qa: QueryAnalysis): string {
     );
 
     if (qa.domain === 'medical') {
-      const nnt = Math.floor(5 + Math.random() * 50);
+      const nnt = Math.floor(5 + c * 30 + ef * 20);
       segments.push(
         `[DATA] Clinical significance: NNT = ${nnt}, ${nnt < 15 ? 'suggesting meaningful clinical benefit' : nnt < 30 ? 'moderate clinical significance' : 'raising questions about practical value despite statistical significance'} for ${topic}.`,
       );
     }
 
-    const altExplanations = Math.floor(1 + Math.random() * 3);
+    const altExplanations = Math.max(1, Math.floor(1 + c * 2 + ef));
     segments.push(
       `[MODEL] Adversarial review identified ${altExplanations} alternative explanation${altExplanations > 1 ? 's' : ''}: ${
         qa.questionType === 'causal'
           ? `${altExplanations > 1 ? 'reverse causation and residual confounding' : 'residual confounding'}, ${parseFloat(hillScore) > 0.65 ? 'partially mitigated by study designs' : 'inadequately addressed'}`
-          : `including ${Math.random() > 0.5 ? 'selection bias and measurement error' : 'publication bias and heterogeneous populations'}`
+          : `including ${qa.isMetaAnalytical ? 'publication bias and heterogeneous populations' : 'selection bias and measurement error'}`
       }.`,
     );
 
@@ -447,8 +452,8 @@ function generateRawAnalysis(qa: QueryAnalysis): string {
     }
 
   } else {
-    const perspectives = Math.floor(2 + Math.random() * 5);
-    const coherence = (0.3 + Math.random() * 0.6).toFixed(2);
+    const perspectives = Math.floor(2 + qa.complexity * 3 + qa.entities.length * 0.3);
+    const coherence = (0.3 + qa.complexity * 0.35 + (qa.entities.length / 16)).toFixed(2);
 
     segments.push(
       `[DATA] Analysis of ${perspectives} major perspectives on "${qa.coreQuestion.slice(0, 80)}" yields a coherence index of ${coherence}, indicating ${parseFloat(coherence) > 0.7 ? 'substantial agreement' : parseFloat(coherence) > 0.4 ? 'partial convergence with notable dissent' : 'significant disagreement'}.`,
@@ -456,15 +461,15 @@ function generateRawAnalysis(qa: QueryAnalysis): string {
 
     if (qa.domain === 'psychology') {
       segments.push(
-        `[DATA] Psychological evidence from ${Math.floor(2 + Math.random() * 6)} research paradigms addresses ${topic}. ${qa.questionType === 'causal' ? 'Causal mechanisms are proposed but primarily supported by correlational designs' : 'Multiple theoretical accounts exist with varying empirical support'}.`,
+        `[DATA] Psychological evidence from ${Math.floor(2 + qa.complexity * 4 + qa.entities.length * 0.3)} research paradigms addresses ${topic}. ${qa.questionType === 'causal' ? 'Causal mechanisms are proposed but primarily supported by correlational designs' : 'Multiple theoretical accounts exist with varying empirical support'}.`,
       );
     } else if (qa.domain === 'technology') {
       segments.push(
-        `[DATA] Technical analysis identifies ${Math.floor(2 + Math.random() * 4)} key dimensions of ${topic}. ${Math.random() > 0.5 ? 'Benchmarks exist but ecological validity is limited' : 'The field is rapidly evolving, limiting shelf-life of current findings'}.`,
+        `[DATA] Technical analysis identifies ${Math.floor(2 + qa.complexity * 2 + qa.entities.length * 0.3)} key dimensions of ${topic}. ${qa.complexity > 0.5 ? 'Benchmarks exist but ecological validity is limited' : 'The field is rapidly evolving, limiting shelf-life of current findings'}.`,
       );
     } else if (qa.domain === 'social_science') {
       segments.push(
-        `[DATA] Social science literature on ${topic} reveals ${Math.floor(2 + Math.random() * 4)} competing frameworks. Cross-cultural generalizability is ${Math.random() > 0.5 ? 'limited' : 'partially supported'}.`,
+        `[DATA] Social science literature on ${topic} reveals ${Math.floor(2 + qa.complexity * 2 + qa.entities.length * 0.3)} competing frameworks. Cross-cultural generalizability is ${qa.complexity > 0.5 ? 'limited' : 'partially supported'}.`,
       );
     } else {
       segments.push(
@@ -641,12 +646,7 @@ function generateLaymanSummary(qa: QueryAnalysis, rawAnalysis: string): LaymanSu
 
       // Follow-up responses should go DEEPER into the specific aspect, not repeat the overview
       if (qa.isFollowUp && focusAspect) {
-        const depthResponses = [
-          `Drilling into ${focusAspect} specifically: the evidence reveals a more nuanced picture than the initial overview suggests. For ${topic}, ${focusAspect} operates through multiple mechanisms — some well-established in the literature and others still debated. The strongest evidence supports a conditional relationship: the degree of ${focusAspect} depends on contextual factors including individual differences, methodology, and the specific outcome measures used.`,
-          `Looking specifically at ${focusAspect} for ${topic}: the research literature shows this is where the most interesting tensions lie. While popular accounts tend to present a clear narrative, the underlying evidence is more granular. Studies using rigorous methodology find that ${focusAspect} is real but moderated by several factors — age of onset, degree of proficiency, the specific cognitive domain being measured, and socioeconomic factors that often confound the picture.`,
-          `On ${focusAspect} specifically: the deeper analysis reveals that what appears as a simple relationship at the surface level actually involves multiple interacting pathways. For ${topic}, the mechanism connecting ${focusAspect} to the observed outcomes involves both direct effects (supported by stronger evidence) and indirect effects through mediating variables (where evidence is more mixed). The strongest finding is that the relationship is dose-dependent and context-sensitive.`,
-        ];
-        return depthResponses[Math.floor(Math.random() * depthResponses.length)];
+        return `Drilling into ${focusAspect} specifically: the evidence reveals a more nuanced picture than the initial overview suggests. For ${topic}, ${focusAspect} operates through multiple mechanisms — some well-established in the literature and others still debated. The strongest evidence supports a conditional relationship: the degree of ${focusAspect} depends on contextual factors including individual differences, methodology, and the specific outcome measures used. What appears as a simple relationship at the surface level actually involves multiple interacting pathways, with both direct effects (supported by stronger evidence) and indirect effects through mediating variables (where evidence is more mixed).`;
       }
 
       if (qa.isFollowUp) {
@@ -723,43 +723,45 @@ function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steerin
   const c = Math.max(0, Math.min(1, qa.complexity + (controls?.complexityBias ?? 0)));
   const advInt = controls?.adversarialIntensity ?? 1.0;
   const bayStr = controls?.bayesianPriorStrength ?? 1.0;
+  // Deterministic entity-based factor (replaces Math.random())
+  const ef = Math.min(1, qa.entities.length / 8);
 
   const betti0 = qa.isPhilosophical
     ? Math.floor(2 + qa.entities.length * 0.5)
     : Math.max(1, Math.floor(1 + c * 4));
   const betti1 = qa.isPhilosophical
-    ? (qa.hasNormativeClaims ? Math.floor(1 + Math.random() * 2) : Math.floor(Math.random() * 2))
-    : Math.floor(Math.random() * 3 * advInt);
+    ? (qa.hasNormativeClaims ? Math.floor(1 + ef) : Math.floor(ef * 1.5))
+    : Math.floor(c * 2 * advInt + ef);
   const persistenceEntropy = qa.isPhilosophical
-    ? 0.5 + c * 1.5 + Math.random() * 0.5
-    : 0.1 + c * 1.8 + Math.random() * 0.3;
-  const maxPersistence = 0.1 + c * 0.5 + Math.random() * 0.2;
+    ? 0.5 + c * 1.5 + ef * 0.4
+    : 0.1 + c * 1.8 + ef * 0.25;
+  const maxPersistence = 0.1 + c * 0.5 + ef * 0.15;
 
   const baseConf = qa.isPhilosophical
-    ? 0.2 + Math.random() * 0.25
+    ? 0.2 + c * 0.15 + ef * 0.1
     : qa.isEmpirical
-    ? (0.45 + Math.random() * 0.35) * bayStr
-    : 0.35 + Math.random() * 0.35;
+    ? (0.45 + c * 0.2 + ef * 0.15) * bayStr
+    : 0.35 + c * 0.2 + ef * 0.15;
 
   const entropy = qa.isPhilosophical
-    ? 0.5 + c * 0.3 + Math.random() * 0.15
+    ? 0.5 + c * 0.3 + ef * 0.1
     : qa.isEmpirical
-    ? 0.05 + c * 0.4 + Math.random() * 0.15
-    : 0.15 + c * 0.45 + Math.random() * 0.15;
+    ? 0.05 + c * 0.4 + ef * 0.1
+    : 0.15 + c * 0.45 + ef * 0.1;
 
   const dissonance = qa.hasNormativeClaims
-    ? (0.3 + Math.random() * 0.4) * advInt
+    ? (0.3 + c * 0.25 + ef * 0.15) * advInt
     : qa.isPhilosophical
-    ? 0.2 + Math.random() * 0.4
-    : (0.05 + c * 0.35 + Math.random() * 0.15) * advInt;
+    ? 0.2 + c * 0.25 + ef * 0.15
+    : (0.05 + c * 0.35 + ef * 0.1) * advInt;
 
   const healthScoreBase = Math.max(0.25, 1 - entropy * 0.45 - dissonance * 0.35 - (qa.hasSafetyKeywords ? 0.15 : 0));
 
   const riskScoreBase = qa.hasSafetyKeywords
-    ? 0.4 + Math.random() * 0.35
+    ? 0.4 + c * 0.2 + ef * 0.15
     : qa.hasNormativeClaims
-    ? 0.15 + Math.random() * 0.25
-    : 0.02 + c * 0.2 + Math.random() * 0.1;
+    ? 0.15 + c * 0.15 + ef * 0.1
+    : 0.02 + c * 0.2 + ef * 0.08;
 
   // ── Apply steering bias (activation steering injection point) ──
   // Pattern from interceptor.py: activations + coeff * vector
@@ -774,7 +776,7 @@ function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steerin
 
   // Apply focus/temperature overrides from controls + steering
   const baseDepth = controls?.focusDepthOverride ?? (2 + c * 7 + (qa.isPhilosophical ? 1.5 : 0));
-  const baseTemp = controls?.temperatureOverride ?? (qa.isPhilosophical ? 0.7 + Math.random() * 0.25 : 1.0 - c * 0.5);
+  const baseTemp = controls?.temperatureOverride ?? (qa.isPhilosophical ? 0.7 + c * 0.15 + ef * 0.1 : 1.0 - c * 0.5);
   const depth = sb ? baseDepth + sb.focusDepth * sb.steeringStrength : baseDepth;
   const temp = sb ? baseTemp + sb.temperatureScale * sb.steeringStrength : baseTemp;
 
@@ -792,8 +794,8 @@ function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steerin
   const sortedConcepts = uniqueConcepts.sort((a, b) => {
     const wa = cw[a] ?? 1.0;
     const wb = cw[b] ?? 1.0;
-    // Higher weight = more likely to be selected (sort descending), with random jitter
-    return (wb + Math.random() * 0.3) - (wa + Math.random() * 0.3);
+    // Higher weight = more likely to be selected (sort descending), deterministic by name length
+    return (wb + a.length * 0.02) - (wa + b.length * 0.02);
   });
   const concepts = sortedConcepts.slice(0, Math.floor(3 + c * 4));
   const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
@@ -1111,11 +1113,11 @@ export async function* runPipeline(
       };
       return; // Done — skip simulation path
     } catch (llmError) {
-      // Graceful fallback to simulation mode on any LLM error
+      // Inform user clearly that LLM failed — do NOT silently fall back
       console.error('[runPipeline] LLM error, falling back to simulation:', llmError);
       yield {
         type: 'error',
-        message: `LLM inference failed (using simulation fallback): ${llmError instanceof Error ? llmError.message : 'Unknown error'}`,
+        message: `LLM inference failed: ${llmError instanceof Error ? llmError.message : 'Unknown error'}. Falling back to simulation mode — results below are template-generated, not from your configured model.`,
       };
       // Fall through to simulation path below
     }

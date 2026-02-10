@@ -30,6 +30,7 @@ import {
   EyeIcon,
   PencilIcon,
   HomeIcon,
+  FolderOpenIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -52,6 +53,14 @@ const NoteAIChat = dynamic(
 );
 const LearningPanel = dynamic(
   () => import('@/components/notes/learning-panel').then((m) => ({ default: m.LearningPanel })),
+  { ssr: false },
+);
+const VaultPicker = dynamic(
+  () => import('@/components/notes/vault-picker').then((m) => ({ default: m.VaultPicker })),
+  { ssr: false },
+);
+const ConceptCorrelationPanel = dynamic(
+  () => import('@/components/notes/concept-panel').then((m) => ({ default: m.ConceptCorrelationPanel })),
   { ssr: false },
 );
 
@@ -567,6 +576,17 @@ export default function NotesPage() {
   const togglePagePin    = usePFCStore((s) => s.togglePagePin);
   const setActivePage    = usePFCStore((s) => s.setActivePage);
 
+  // ── Vault system ──
+  const vaults = usePFCStore((s) => s.vaults);
+  const activeVaultId = usePFCStore((s) => s.activeVaultId);
+  const vaultReady = usePFCStore((s) => s.vaultReady);
+  const loadVaultIndex = usePFCStore((s) => s.loadVaultIndex);
+  const [showVaultPicker, setShowVaultPicker] = useState(false);
+
+  // ── Concept correlation ──
+  const [correlationTarget, setCorrelationTarget] = useState<{ pageAId: string; pageBId: string } | null>(null);
+  const extractConcepts = usePFCStore((s) => s.extractConcepts);
+
   // ── Zen mode (distraction-free) ──
   const [zenMode, setZenMode] = useState(false);
 
@@ -601,10 +621,33 @@ export default function NotesPage() {
     document.addEventListener('mouseup', handleUp);
   }, []);
 
-  // ── Load notes ──
+  // ── Load vault index on mount ──
   useEffect(() => {
-    if (ready) loadNotesFromStorage();
-  }, [ready, loadNotesFromStorage]);
+    if (ready) {
+      loadVaultIndex();
+    }
+  }, [ready, loadVaultIndex]);
+
+  // ── Show vault picker if no vaults exist ──
+  useEffect(() => {
+    if (vaultReady && vaults.length === 0) {
+      setShowVaultPicker(true);
+    }
+  }, [vaultReady, vaults.length]);
+
+  // ── Load notes when vault is selected ──
+  useEffect(() => {
+    if (vaultReady && activeVaultId) {
+      loadNotesFromStorage();
+    }
+  }, [vaultReady, activeVaultId, loadNotesFromStorage]);
+
+  // ── Auto-extract concepts when active page changes ──
+  useEffect(() => {
+    if (activePageId) {
+      extractConcepts(activePageId);
+    }
+  }, [activePageId, extractConcepts]);
 
   // ── Save notes on tab close / navigation away ──
   const saveNotesToStorage = usePFCStore((s) => s.saveNotesToStorage);
@@ -776,6 +819,32 @@ export default function NotesPage() {
             <PanelLeftIcon style={{ width: '1rem', height: '1rem' }} />
           </ToolbarBtn>
 
+          {/* Vault indicator */}
+          {vaults.length > 0 && (
+            <button
+              onClick={() => setShowVaultPicker((v) => !v)}
+              title="Switch vault"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '4px 10px',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                color: c.accent,
+                background: `${c.accent}08`,
+                border: `1px solid ${c.accent}20`,
+                borderRadius: 6,
+                cursor: 'pointer',
+                transition: 'background 0.15s',
+              }}
+            >
+              <FolderOpenIcon style={{ width: 11, height: 11 }} />
+              {vaults.find((v: any) => v.id === activeVaultId)?.name ?? 'Vault'}
+            </button>
+          )}
+
           {/* Page nav breadcrumb */}
           {activePage && (
             <div style={{
@@ -884,7 +953,20 @@ export default function NotesPage() {
         </div>
 
         {/* ── Editor area — GPU scroll layer with overscroll containment ── */}
-        <div style={{
+        <div
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes('application/x-page-id')) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'link';
+            }
+          }}
+          onDrop={(e) => {
+            const draggedPageId = e.dataTransfer.getData('application/x-page-id');
+            if (draggedPageId && activePageId && draggedPageId !== activePageId) {
+              setCorrelationTarget({ pageAId: activePageId, pageBId: draggedPageId });
+            }
+          }}
+          style={{
           flex: 1,
           overflow: 'auto',
           position: 'relative',
@@ -1154,8 +1236,51 @@ export default function NotesPage() {
             <NoteAIChat pageId={activePageId} activeBlockId={editingBlockId} />
           )}
           {mounted && <LearningPanel />}
+
+          {/* Vault picker overlay */}
+          {showVaultPicker && mounted && (
+            <VaultPicker />
+          )}
+
+          {/* Concept correlation panel */}
+          <AnimatePresence>
+            {correlationTarget && (
+              <ConceptCorrelationPanel
+                pageAId={correlationTarget.pageAId}
+                pageBId={correlationTarget.pageBId}
+                onClose={() => setCorrelationTarget(null)}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
+      {/* Page-level drop zone for correlation (drag a page from sidebar onto editor) */}
+      {activePageId && (
+        <div
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes('application/x-page-id')) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'link';
+            }
+          }}
+          onDrop={(e) => {
+            const draggedPageId = e.dataTransfer.getData('application/x-page-id');
+            if (draggedPageId && draggedPageId !== activePageId) {
+              setCorrelationTarget({ pageAId: activePageId, pageBId: draggedPageId });
+            }
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 4,
+            zIndex: 55,
+            pointerEvents: 'auto',
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -3,12 +3,13 @@
 import type {
   NoteBlock, NotePage, NoteBook, PageLink,
   NoteSearchResult, NoteAIState, BlockType,
-  Transaction, IOperation,
+  Transaction, IOperation, Vault, Concept, ConceptCorrelation,
 } from '@/lib/notes/types';
 import {
   generateBlockId, generatePageId, normalizePageName,
   createEmptyBlock, createNewPage, getTodayJournalDate,
   extractPageLinks, orderBetween, migrateBlock, stripHtml,
+  generateVaultId,
 } from '@/lib/notes/types';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -20,6 +21,15 @@ export interface NotesSliceState {
   noteBlocks: NoteBlock[];
   noteBooks: NoteBook[];
   pageLinks: PageLink[];
+
+  // Vault
+  vaults: Vault[];
+  activeVaultId: string | null;
+  vaultReady: boolean;
+
+  // Concepts
+  concepts: Concept[];
+  conceptCorrelations: ConceptCorrelation[];
 
   // UI
   activePageId: string | null;
@@ -97,14 +107,32 @@ export interface NotesSliceActions {
 
   // Backlinks
   getBacklinks: (pageId: string) => PageLink[];
+
+  // Vault
+  createVault: (name: string) => string;
+  switchVault: (vaultId: string) => void;
+  deleteVault: (vaultId: string) => void;
+  renameVault: (vaultId: string, name: string) => void;
+  loadVaultIndex: () => void;
+
+  // Concepts
+  extractConcepts: (pageId: string) => void;
+  addConcept: (concept: Omit<Concept, 'id' | 'createdAt'>) => string;
+  removeConcept: (conceptId: string) => void;
+  getPageConcepts: (pageId: string) => Concept[];
+  correlatePages: (pageAId: string, pageBId: string) => ConceptCorrelation[];
 }
 
 // ── Constants ──
-const STORAGE_KEY_PAGES = 'pfc-note-pages';
-const STORAGE_KEY_BLOCKS = 'pfc-note-blocks';
-const STORAGE_KEY_BOOKS = 'pfc-note-books';
+const STORAGE_KEY_VAULTS = 'pfc-vaults';
+const STORAGE_KEY_ACTIVE_VAULT = 'pfc-active-vault';
 const MAX_UNDO_STACK = 64;
 const SAVE_DEBOUNCE_MS = 500;
+
+// Vault-scoped storage keys
+function vaultKey(vaultId: string, suffix: string): string {
+  return `pfc-vault-${vaultId}-${suffix}`;
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // Slice Creator
@@ -116,6 +144,15 @@ export const createNotesSlice = (set: any, get: any) => ({
   noteBlocks: [] as NoteBlock[],
   noteBooks: [] as NoteBook[],
   pageLinks: [] as PageLink[],
+
+  // Vault
+  vaults: [] as Vault[],
+  activeVaultId: null as string | null,
+  vaultReady: false,
+
+  // Concepts
+  concepts: [] as Concept[],
+  conceptCorrelations: [] as ConceptCorrelation[],
 
   activePageId: null as string | null,
   activeBlockId: null as string | null,
@@ -837,21 +874,279 @@ export const createNotesSlice = (set: any, get: any) => ({
     })),
 
   // ═════════════════════════════════════════════════════════════════
-  // Persistence
+  // Vault System
+  // ═════════════════════════════════════════════════════════════════
+
+  loadVaultIndex: () => {
+    try {
+      const vaultsRaw = localStorage.getItem(STORAGE_KEY_VAULTS);
+      const vaults: Vault[] = vaultsRaw ? JSON.parse(vaultsRaw) : [];
+      const activeVaultId = localStorage.getItem(STORAGE_KEY_ACTIVE_VAULT);
+
+      // Migrate: if old non-vault data exists, create a default vault and migrate
+      const legacyPages = localStorage.getItem('pfc-note-pages');
+      if (legacyPages && vaults.length === 0) {
+        const defaultVault: Vault = {
+          id: generateVaultId(),
+          name: 'My Vault',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          pageCount: 0,
+        };
+        vaults.push(defaultVault);
+        // Migrate legacy data to vault-scoped keys
+        const legacyBlocks = localStorage.getItem('pfc-note-blocks');
+        const legacyBooks = localStorage.getItem('pfc-note-books');
+        if (legacyPages) localStorage.setItem(vaultKey(defaultVault.id, 'pages'), legacyPages);
+        if (legacyBlocks) localStorage.setItem(vaultKey(defaultVault.id, 'blocks'), legacyBlocks);
+        if (legacyBooks) localStorage.setItem(vaultKey(defaultVault.id, 'books'), legacyBooks);
+        // Clean up legacy keys
+        localStorage.removeItem('pfc-note-pages');
+        localStorage.removeItem('pfc-note-blocks');
+        localStorage.removeItem('pfc-note-books');
+        localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
+        localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, defaultVault.id);
+        set({ vaults, activeVaultId: defaultVault.id, vaultReady: true });
+        return;
+      }
+
+      set({ vaults, activeVaultId: activeVaultId || (vaults[0]?.id ?? null), vaultReady: true });
+    } catch {
+      set({ vaultReady: true });
+    }
+  },
+
+  createVault: (name: string): string => {
+    const vault: Vault = {
+      id: generateVaultId(),
+      name,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      pageCount: 0,
+    };
+    set((s: any) => ({ vaults: [...s.vaults, vault] }));
+    try {
+      const s = get();
+      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(s.vaults));
+    } catch {}
+    return vault.id;
+  },
+
+  switchVault: (vaultId: string) => {
+    // Save current vault first
+    get().saveNotesToStorage();
+    // Clear current data
+    set({
+      notePages: [],
+      noteBlocks: [],
+      noteBooks: [],
+      pageLinks: [],
+      concepts: [],
+      conceptCorrelations: [],
+      activePageId: null,
+      editingBlockId: null,
+      activeVaultId: vaultId,
+    });
+    localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, vaultId);
+    // Load new vault's data
+    get().loadNotesFromStorage();
+  },
+
+  deleteVault: (vaultId: string) => {
+    // Remove vault data from storage
+    try {
+      localStorage.removeItem(vaultKey(vaultId, 'pages'));
+      localStorage.removeItem(vaultKey(vaultId, 'blocks'));
+      localStorage.removeItem(vaultKey(vaultId, 'books'));
+      localStorage.removeItem(vaultKey(vaultId, 'concepts'));
+    } catch {}
+    set((s: any) => {
+      const vaults = s.vaults.filter((v: Vault) => v.id !== vaultId);
+      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
+      const newActiveId = s.activeVaultId === vaultId ? (vaults[0]?.id ?? null) : s.activeVaultId;
+      if (newActiveId !== s.activeVaultId) {
+        localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, newActiveId ?? '');
+      }
+      return { vaults, activeVaultId: newActiveId };
+    });
+  },
+
+  renameVault: (vaultId: string, name: string) => {
+    set((s: any) => {
+      const vaults = s.vaults.map((v: Vault) => v.id === vaultId ? { ...v, name, updatedAt: Date.now() } : v);
+      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
+      return { vaults };
+    });
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // Concepts
+  // ═════════════════════════════════════════════════════════════════
+
+  extractConcepts: (pageId: string) => {
+    const s = get();
+    const pageBlocks = s.noteBlocks.filter((b: NoteBlock) => b.pageId === pageId);
+    const newConcepts: Concept[] = [];
+
+    for (const block of pageBlocks) {
+      const text = stripHtml(block.content).trim();
+      if (!text) continue;
+
+      // Extract headings as concepts
+      if (block.type === 'heading') {
+        newConcepts.push({
+          id: `concept-${block.id}`,
+          name: text,
+          sourcePageId: pageId,
+          sourceBlockId: block.id,
+          type: 'heading',
+          context: text,
+          createdAt: Date.now(),
+        });
+      }
+
+      // Extract bold/strong terms as key concepts
+      const boldMatches = block.content.matchAll(/<(?:strong|b)>([^<]+)<\/(?:strong|b)>/gi);
+      for (const match of boldMatches) {
+        const term = match[1].trim();
+        if (term.length > 2 && term.length < 100) {
+          newConcepts.push({
+            id: `concept-bold-${block.id}-${term.slice(0, 20)}`,
+            name: term,
+            sourcePageId: pageId,
+            sourceBlockId: block.id,
+            type: 'key-term',
+            context: text.slice(0, 150),
+            createdAt: Date.now(),
+          });
+        }
+      }
+
+      // Extract [[linked]] terms as concepts
+      const linkMatches = text.matchAll(/\[\[([^\]]+)\]\]/g);
+      for (const match of linkMatches) {
+        newConcepts.push({
+          id: `concept-link-${block.id}-${match[1].slice(0, 20)}`,
+          name: match[1],
+          sourcePageId: pageId,
+          sourceBlockId: block.id,
+          type: 'entity',
+          context: text.slice(0, 150),
+          createdAt: Date.now(),
+        });
+      }
+    }
+
+    // Merge with existing concepts (replace page's concepts)
+    set((s: any) => ({
+      concepts: [
+        ...s.concepts.filter((c: Concept) => c.sourcePageId !== pageId),
+        ...newConcepts,
+      ],
+    }));
+  },
+
+  addConcept: (partial: Omit<Concept, 'id' | 'createdAt'>): string => {
+    const id = `concept-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const concept: Concept = { ...partial, id, createdAt: Date.now() };
+    set((s: any) => ({ concepts: [...s.concepts, concept] }));
+    return id;
+  },
+
+  removeConcept: (conceptId: string) => {
+    set((s: any) => ({
+      concepts: s.concepts.filter((c: Concept) => c.id !== conceptId),
+    }));
+  },
+
+  getPageConcepts: (pageId: string): Concept[] => {
+    return get().concepts.filter((c: Concept) => c.sourcePageId === pageId);
+  },
+
+  correlatePages: (pageAId: string, pageBId: string): ConceptCorrelation[] => {
+    const s = get();
+    const conceptsA = s.concepts.filter((c: Concept) => c.sourcePageId === pageAId);
+    const conceptsB = s.concepts.filter((c: Concept) => c.sourcePageId === pageBId);
+    const correlations: ConceptCorrelation[] = [];
+
+    // Find shared concepts (same name or similar)
+    for (const a of conceptsA) {
+      for (const b of conceptsB) {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        if (nameA === nameB || nameA.includes(nameB) || nameB.includes(nameA)) {
+          correlations.push({
+            id: `corr-${a.id}-${b.id}`,
+            conceptAId: a.id,
+            conceptBId: b.id,
+            pageAId: pageAId,
+            pageBId: pageBId,
+            correlationType: 'shared-concept',
+            description: `Both pages discuss "${a.name}"`,
+            strength: nameA === nameB ? 1.0 : 0.7,
+            createdAt: Date.now(),
+          });
+        }
+      }
+    }
+
+    // Find [[link]] references between pages
+    const blocksA = s.noteBlocks.filter((b: NoteBlock) => b.pageId === pageAId);
+    const blocksB = s.noteBlocks.filter((b: NoteBlock) => b.pageId === pageBId);
+    const pageA = s.notePages.find((p: NotePage) => p.id === pageAId);
+    const pageB = s.notePages.find((p: NotePage) => p.id === pageBId);
+
+    if (pageA && pageB) {
+      const aLinksToB = blocksA.some((b: NoteBlock) =>
+        b.refs.some((r: string) => normalizePageName(r) === pageB.name)
+      );
+      const bLinksToA = blocksB.some((b: NoteBlock) =>
+        b.refs.some((r: string) => normalizePageName(r) === pageA.name)
+      );
+
+      if (aLinksToB || bLinksToA) {
+        correlations.push({
+          id: `corr-link-${pageAId}-${pageBId}`,
+          conceptAId: pageAId,
+          conceptBId: pageBId,
+          pageAId, pageBId,
+          correlationType: aLinksToB && bLinksToA ? 'supporting' : 'hierarchical',
+          description: aLinksToB && bLinksToA
+            ? `"${pageA.title}" and "${pageB.title}" reference each other`
+            : aLinksToB
+              ? `"${pageA.title}" links to "${pageB.title}"`
+              : `"${pageB.title}" links to "${pageA.title}"`,
+          strength: aLinksToB && bLinksToA ? 0.9 : 0.6,
+          createdAt: Date.now(),
+        });
+      }
+    }
+
+    set({ conceptCorrelations: correlations });
+    return correlations;
+  },
+
+  // ═════════════════════════════════════════════════════════════════
+  // Persistence (vault-scoped)
   // ═════════════════════════════════════════════════════════════════
 
   loadNotesFromStorage: () => {
     try {
-      const pagesRaw = localStorage.getItem(STORAGE_KEY_PAGES);
-      const blocksRaw = localStorage.getItem(STORAGE_KEY_BLOCKS);
-      const booksRaw = localStorage.getItem(STORAGE_KEY_BOOKS);
+      const activeVaultId = get().activeVaultId;
+      if (!activeVaultId) return;
+
+      const pagesRaw = localStorage.getItem(vaultKey(activeVaultId, 'pages'));
+      const blocksRaw = localStorage.getItem(vaultKey(activeVaultId, 'blocks'));
+      const booksRaw = localStorage.getItem(vaultKey(activeVaultId, 'books'));
+      const conceptsRaw = localStorage.getItem(vaultKey(activeVaultId, 'concepts'));
 
       const notePages = pagesRaw ? JSON.parse(pagesRaw) : [];
       const rawBlocks = blocksRaw ? JSON.parse(blocksRaw) : [];
       const noteBlocks = rawBlocks.map(migrateBlock);
       const noteBooks = booksRaw ? JSON.parse(booksRaw) : [];
+      const concepts = conceptsRaw ? JSON.parse(conceptsRaw) : [];
 
-      set({ notePages, noteBlocks, noteBooks });
+      set({ notePages, noteBlocks, noteBooks, concepts });
       get().rebuildPageLinks();
     } catch {
       // Ignore parse errors
@@ -861,9 +1156,21 @@ export const createNotesSlice = (set: any, get: any) => ({
   saveNotesToStorage: () => {
     try {
       const s = get();
-      localStorage.setItem(STORAGE_KEY_PAGES, JSON.stringify(s.notePages));
-      localStorage.setItem(STORAGE_KEY_BLOCKS, JSON.stringify(s.noteBlocks));
-      localStorage.setItem(STORAGE_KEY_BOOKS, JSON.stringify(s.noteBooks));
+      const vid = s.activeVaultId;
+      if (!vid) return;
+
+      localStorage.setItem(vaultKey(vid, 'pages'), JSON.stringify(s.notePages));
+      localStorage.setItem(vaultKey(vid, 'blocks'), JSON.stringify(s.noteBlocks));
+      localStorage.setItem(vaultKey(vid, 'books'), JSON.stringify(s.noteBooks));
+      localStorage.setItem(vaultKey(vid, 'concepts'), JSON.stringify(s.concepts));
+
+      // Update vault page count
+      set((st: any) => ({
+        vaults: st.vaults.map((v: Vault) =>
+          v.id === vid ? { ...v, pageCount: s.notePages.length, updatedAt: Date.now() } : v
+        ),
+      }));
+      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(get().vaults));
     } catch {
       // Storage full or unavailable
     }

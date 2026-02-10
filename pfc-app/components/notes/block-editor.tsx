@@ -1097,6 +1097,24 @@ const BlockItem = memo(function BlockItem({
             alignSelf: 'stretch', marginRight: '4px',
           }} />
         );
+      case 'heading':
+        return (
+          <button
+            onClick={() => toggleBlockCollapse(block.id)}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '18px', height: '18px', border: 'none',
+              background: 'transparent', cursor: 'pointer', flexShrink: 0,
+              color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.18)',
+              transform: block.collapsed ? 'rotate(0deg)' : 'rotate(90deg)',
+              transition: `transform 0.15s ${CUP}, opacity 0.15s`,
+              opacity: hovered || block.collapsed ? 1 : 0,
+              marginTop: '2px',
+            }}
+          >
+            <ChevronRightIcon style={{ width: '13px', height: '13px' }} />
+          </button>
+        );
       case 'toggle':
         return (
           <button
@@ -1130,9 +1148,9 @@ const BlockItem = memo(function BlockItem({
     switch (block.type) {
       case 'heading': {
         const level = parseInt(block.properties.level || '1', 10);
-        if (level === 1) return { ...base, fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.3, letterSpacing: '-0.02em' };
-        if (level === 2) return { ...base, fontSize: '1.375rem', fontWeight: 650, lineHeight: 1.35, letterSpacing: '-0.015em' };
-        return { ...base, fontSize: '1.125rem', fontWeight: 600, lineHeight: 1.4 };
+        if (level === 1) return { ...base, fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.3, letterSpacing: '-0.02em', position: 'relative' as const };
+        if (level === 2) return { ...base, fontSize: '1.375rem', fontWeight: 650, lineHeight: 1.35, letterSpacing: '-0.015em', position: 'relative' as const };
+        return { ...base, fontSize: '1.125rem', fontWeight: 600, lineHeight: 1.4, position: 'relative' as const };
       }
       case 'code':
         return {
@@ -1461,11 +1479,62 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
   const dragSourceRef = useRef<string | null>(null);
   const dragTargetRef = useRef<string | null>(null);
 
-  // Page blocks sorted
+  // Page blocks sorted, with collapsed heading/toggle children filtered out
   const pageBlocks = useMemo(() => {
-    return noteBlocks
+    const sorted = noteBlocks
       .filter((b: NoteBlock) => b.pageId === pageId)
       .sort((a: NoteBlock, b: NoteBlock) => a.order.localeCompare(b.order));
+
+    // Build lookup map for parent checks
+    const blockById = new Map(sorted.map(b => [b.id, b]));
+
+    const visible: NoteBlock[] = [];
+    const hiddenIds = new Set<string>(); // tracks all hidden block IDs for recursive hiding
+    let hiddenUntilLevel = -1; // heading collapse: -1 = not hiding
+
+    for (const block of sorted) {
+      // 1. If any ancestor is hidden, this block is also hidden (recursive parent collapse)
+      if (block.parentId && hiddenIds.has(block.parentId)) {
+        hiddenIds.add(block.id);
+        continue;
+      }
+
+      // 2. Check if direct parent is a collapsed toggle block
+      if (block.parentId) {
+        const parent = blockById.get(block.parentId);
+        if (parent && parent.type === 'toggle' && parent.collapsed) {
+          hiddenIds.add(block.id);
+          continue;
+        }
+      }
+
+      // 3. Heading-level collapsing (document order based)
+      if (block.type === 'heading') {
+        const level = parseInt(block.properties.level || '1', 10);
+        if (hiddenUntilLevel > 0) {
+          if (level <= hiddenUntilLevel) {
+            // Same or higher level heading ends the collapsed section
+            hiddenUntilLevel = -1;
+          } else {
+            hiddenIds.add(block.id);
+            continue;
+          }
+        }
+        visible.push(block);
+        if (block.collapsed) {
+          hiddenUntilLevel = level;
+        }
+      } else {
+        // Non-heading block under collapsed heading section
+        if (hiddenUntilLevel > 0) {
+          hiddenIds.add(block.id);
+          continue;
+        }
+        visible.push(block);
+      }
+    }
+
+    return visible;
   }, [noteBlocks, pageId]);
 
   // ── Selection change listener for floating toolbar ──
