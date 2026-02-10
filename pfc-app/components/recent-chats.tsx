@@ -107,7 +107,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
             color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+            fontFamily: 'var(--font-sans)',
           }}
         >
           Recent Sessions
@@ -143,16 +143,18 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 gap: '0.5rem',
                 padding: '0.5rem 0.75rem',
                 borderRadius: 'var(--shape-md)',
-                border: 'none',
                 cursor: 'pointer',
                 textAlign: 'left',
                 maxWidth: '100%',
                 background: isHovered
                   ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.08)')
-                  : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(235,230,222,0.75)'),
-                backdropFilter: isDark ? 'none' : 'blur(12px)',
-                WebkitBackdropFilter: isDark ? 'none' : 'blur(12px)',
-                boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
+                  : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(235,230,222,0.55)'),
+                backdropFilter: 'blur(16px) saturate(1.4)',
+                WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+                boxShadow: isDark
+                  ? '0 1px 2px rgba(0,0,0,0.15)'
+                  : '0 1px 3px rgba(0,0,0,0.04)',
+                border: `1px solid ${isDark ? 'rgba(196,149,106,0.08)' : 'rgba(190,183,170,0.15)'}`,
                 transition: 'background 0.15s ease, transform 0.15s ease',
                 overflow: 'hidden',
               }}
@@ -178,7 +180,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                  fontFamily: 'var(--font-sans)',
                   transition: 'color 0.15s',
                 }}
               >
@@ -190,7 +192,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                   fontWeight: 500,
                   color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)',
                   flexShrink: 0,
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                  fontFamily: 'var(--font-sans)',
                 }}
               >
                 {timeStr}

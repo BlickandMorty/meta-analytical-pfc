@@ -36,6 +36,212 @@ const LearningPanel = dynamic(
 );
 
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
+
+// ═══════════════════════════════════════════════════════════════════
+// NoteTitleTypewriter — types the note title with brief syntax previews
+// Different from landing page: contextual (uses the actual title),
+// one-shot reveal (types 2 code variations → settles on plain title),
+// cursor fades out after completion.
+// ═══════════════════════════════════════════════════════════════════
+
+interface TitleVariation {
+  plain: string;
+  spans: { text: string; color: string }[];
+  isCode: boolean;
+}
+
+function buildVariations(title: string): TitleVariation[] {
+  return [
+    // 1: Python comment
+    {
+      plain: `# ${title}`,
+      spans: [
+        { text: '# ', color: '#86EFAC' },
+        { text: title, color: '#86EFAC' },
+      ],
+      isCode: true,
+    },
+    // 2: JS variable
+    {
+      plain: `const title = "${title}"`,
+      spans: [
+        { text: 'const', color: '#C4B5FD' },
+        { text: ' title ', color: '#22D3EE' },
+        { text: '= ', color: '#9CA3AF' },
+        { text: `"${title}"`, color: '#4ADE80' },
+      ],
+      isCode: true,
+    },
+    // 3: Plain title (final — this one stays)
+    {
+      plain: title,
+      spans: [{ text: title, color: 'inherit' }],
+      isCode: false,
+    },
+  ];
+}
+
+function NoteTitleTypewriter({
+  title,
+  isDark,
+  onClick,
+}: {
+  title: string;
+  isDark: boolean;
+  onClick: () => void;
+}) {
+  const [displayText, setDisplayText] = useState('');
+  const [cursorOn, setCursorOn] = useState(true);
+  const [variationIdx, setVariationIdx] = useState(0);
+  const [done, setDone] = useState(false);
+  const [cursorOpacity, setCursorOpacity] = useState(1);
+  const stateRef = useRef({
+    variation: 0,
+    charIdx: 0,
+    phase: 'typing' as 'typing' | 'pausing' | 'deleting' | 'done',
+  });
+  const variations = useMemo(() => buildVariations(title), [title]);
+
+  // Blink cursor
+  useEffect(() => {
+    if (done) return;
+    const id = setInterval(() => setCursorOn((v) => !v), 530);
+    return () => clearInterval(id);
+  }, [done]);
+
+  // Typewriter loop
+  useEffect(() => {
+    // Reset on title change
+    stateRef.current = { variation: 0, charIdx: 0, phase: 'typing' };
+    setDisplayText('');
+    setVariationIdx(0);
+    setDone(false);
+    setCursorOpacity(1);
+
+    let timer: ReturnType<typeof setTimeout>;
+    const totalVariations = variations.length;
+
+    function tick() {
+      const s = stateRef.current;
+      const target = variations[s.variation].plain;
+      const isLast = s.variation === totalVariations - 1;
+
+      if (s.phase === 'typing') {
+        if (s.charIdx < target.length) {
+          s.charIdx++;
+          setDisplayText(target.slice(0, s.charIdx));
+          setVariationIdx(s.variation);
+          // Code variations type faster, final title types more deliberately
+          const speed = isLast ? 45 : 30;
+          timer = setTimeout(tick, speed);
+        } else {
+          s.phase = 'pausing';
+          // Short pause for code versions, longer for final
+          timer = setTimeout(tick, isLast ? 600 : 1200);
+        }
+      } else if (s.phase === 'pausing') {
+        if (isLast) {
+          // Final variation — done, fade cursor
+          s.phase = 'done';
+          setDone(true);
+          // Fade cursor out
+          let fade = 1;
+          const fadeInterval = setInterval(() => {
+            fade -= 0.08;
+            if (fade <= 0) {
+              clearInterval(fadeInterval);
+              setCursorOpacity(0);
+            } else {
+              setCursorOpacity(fade);
+            }
+          }, 50);
+        } else {
+          s.phase = 'deleting';
+          tick();
+        }
+      } else if (s.phase === 'deleting') {
+        if (s.charIdx > 0) {
+          s.charIdx--;
+          setDisplayText(variations[s.variation].plain.slice(0, s.charIdx));
+          timer = setTimeout(tick, 15);
+        } else {
+          s.variation++;
+          s.phase = 'typing';
+          setVariationIdx(s.variation);
+          timer = setTimeout(tick, 350);
+        }
+      }
+    }
+
+    timer = setTimeout(tick, 80);
+    return () => clearTimeout(timer);
+  }, [title, variations]);
+
+  const v = variations[variationIdx];
+  const isCode = v?.isCode ?? false;
+
+  // Build colored spans
+  const coloredOutput = useMemo(() => {
+    if (!v) return [];
+    let remaining = displayText.length;
+    const spans: { text: string; color: string }[] = [];
+    for (const seg of v.spans) {
+      if (remaining <= 0) break;
+      const chars = Math.min(remaining, seg.text.length);
+      spans.push({ text: seg.text.slice(0, chars), color: seg.color });
+      remaining -= chars;
+    }
+    return spans;
+  }, [displayText, v]);
+
+  const titleColor = isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.85)';
+
+  return (
+    <h1
+      onClick={onClick}
+      style={{
+        fontFamily: isCode ? 'var(--font-mono)' : 'var(--font-display)',
+        fontSize: isCode ? '1.75rem' : '3rem',
+        letterSpacing: isCode ? '0em' : '-0.035em',
+        lineHeight: 1.15,
+        fontWeight: isCode ? 400 : 700,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        minHeight: '3.5rem',
+        display: 'flex',
+        alignItems: 'center',
+        margin: 0,
+        cursor: 'text',
+        transition: 'font-size 0.3s cubic-bezier(0.32,0.72,0,1), font-weight 0.3s cubic-bezier(0.32,0.72,0,1)',
+      }}
+    >
+      {coloredOutput.map((span, i) => (
+        <span
+          key={i}
+          style={{ color: span.color === 'inherit' ? titleColor : span.color }}
+        >
+          {span.text}
+        </span>
+      ))}
+      {/* Blinking cursor */}
+      {cursorOpacity > 0 && (
+        <span
+          style={{
+            display: 'inline-block',
+            width: '2px',
+            height: isCode ? '1.75rem' : '2.75rem',
+            marginLeft: '2px',
+            background: '#C4956A',
+            opacity: cursorOn ? cursorOpacity : 0,
+            transition: 'height 0.3s cubic-bezier(0.32,0.72,0,1)',
+            borderRadius: '1px',
+          }}
+        />
+      )}
+    </h1>
+  );
+}
+
 const DEFAULT_SIDEBAR_WIDTH = 260;
 const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 420;
@@ -347,21 +553,11 @@ export default function NotesPage() {
                     }}
                   />
                 ) : (
-                  <h1
+                  <NoteTitleTypewriter
+                    title={activePage.title}
+                    isDark={isDark}
                     onClick={handleTitleClick}
-                    style={{
-                      fontSize: '3rem',
-                      fontWeight: 700,
-                      letterSpacing: '-0.035em',
-                      lineHeight: 1.15,
-                      color: isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.85)',
-                      cursor: 'text',
-                      fontFamily: 'var(--font-display)',
-                      margin: 0,
-                    }}
-                  >
-                    {activePage.title}
-                  </h1>
+                  />
                 )}
               </div>
 

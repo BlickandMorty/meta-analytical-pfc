@@ -620,7 +620,7 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
           if (col.editing >= 1) col.editing = 0;
         }
 
-        // ── Code block typewriter ──
+        // ── Code block typewriter (blurred for depth) ──
         if (col.codeblock > 0) {
           const p = col.codeblock;
           const snippet = CODE_SNIPPETS[col.codeblockIdx % CODE_SNIPPETS.length];
@@ -635,6 +635,7 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
           const blockAlpha = (isDark ? 0.5 : 0.4) * bgFadeIn * fadeOut;
 
           ctx.save();
+          ctx.filter = getBlurFilter(2.5);
           ctx.font = getFont(blockFontSize);
 
           if (p > 0.05) {
