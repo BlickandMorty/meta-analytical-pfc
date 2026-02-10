@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useTheme } from 'next-themes';
 
-// Obsidian Cupertino motion curve
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+// M3 emphasized easing
+const M3_EASE = [0.2, 0, 0, 1] as const;
 
 // ---------------------------------------------------------------------------
 // Research-ready prompt generation engine
@@ -398,7 +398,7 @@ export function MultimodalInput({
     <div className="relative">
       {/* Input container */}
       <motion.div
-        transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
+        transition={{ duration: 0.32, ease: M3_EASE }}
         className={cn(
           'relative flex w-full flex-col transition-shadow duration-200',
           hero ? 'p-3 pr-2' : 'p-3',
@@ -474,8 +474,8 @@ export function MultimodalInput({
                 cursor: 'pointer',
                 border: 'none',
                 flexShrink: 0,
-                background: isDark ? '#FFFFFF' : '#7A3B4E',
-                color: isDark ? '#000000' : '#FFFFFF',
+                background: 'var(--m3-primary)',
+                color: 'var(--m3-on-primary)',
                 transition: 'background 0.15s',
               }}
             >
@@ -494,7 +494,7 @@ export function MultimodalInput({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease: CUPERTINO_EASE }}
+              transition={{ duration: 0.25, ease: M3_EASE }}
               style={{ overflow: 'hidden' }}
             >
               <div style={{
@@ -525,7 +525,7 @@ export function MultimodalInput({
                       transition: 'background 0.12s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.03)';
+                      e.currentTarget.style.background = isDark ? 'var(--m3-surface-container-high)' : 'rgba(0,0,0,0.03)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent';

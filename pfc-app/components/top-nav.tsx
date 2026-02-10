@@ -87,11 +87,11 @@ const MODE_STYLES: Record<string, { label: string }> = {
   local: { label: 'Local' },
 };
 
-/* ─── Shared bubble style helper ─── */
+/* ─── M3-style bubble helpers ─── */
 function bubbleBg(isActive: boolean, isDark: boolean, disabled?: boolean) {
-  if (disabled) return isDark ? 'rgba(196,149,106,0.02)' : 'rgba(0,0,0,0.02)';
-  if (isActive) return isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)';
-  return isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.04)';
+  if (disabled) return 'transparent';
+  if (isActive) return isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)';
+  return isDark ? 'var(--m3-surface-container)' : 'rgba(0,0,0,0.04)';
 }
 
 function bubbleColor(isActive: boolean, isDark: boolean, disabled?: boolean) {
@@ -402,8 +402,8 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                   ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
                   : (isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)'),
                 background: isTabHovered
-                  ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.10)')
-                  : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.03)'),
+                  ? (isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)')
+                  : (isDark ? 'var(--m3-surface-container)' : 'rgba(0,0,0,0.03)'),
                 whiteSpace: 'nowrap',
                 transition: 'padding 0.3s cubic-bezier(0.32,0.72,0,1), gap 0.3s cubic-bezier(0.32,0.72,0,1), background 0.2s, color 0.2s',
               }}

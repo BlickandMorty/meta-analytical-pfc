@@ -7,6 +7,7 @@ import { MessageLayman } from './message-layman';
 import { MessageResearch } from './message-research';
 import { TruthBotCard } from './truth-bot-card';
 import { ThinkingAccordion } from './thinking-accordion';
+import { MarkdownContent } from './markdown-content';
 import type { ChatMessage } from '@/lib/engine/types';
 import { cn } from '@/lib/utils';
 import { UserIcon, ChevronDownIcon } from 'lucide-react';
@@ -16,7 +17,8 @@ import { ConceptMiniMap } from './concept-mini-map';
 import { SteeringFeedback } from './steering-feedback';
 import { useSteeringStore } from '@/lib/store/use-steering-store';
 
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+/* Harmonoid-inspired spring for message entrance */
+const MSG_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 };
 
 interface MessageProps {
   message: ChatMessage;
@@ -48,7 +50,6 @@ function MessageInner({ message }: MessageProps) {
   const cleanText = useMemo(() => {
     if (!message.dualMessage?.laymanSummary) return message.text;
     const ls = message.dualMessage.laymanSummary;
-    // Combine the most important sections into a clean response
     const parts: string[] = [];
     if (ls.whatIsLikelyTrue) parts.push(ls.whatIsLikelyTrue);
     if (ls.whatCouldChange) parts.push(ls.whatCouldChange);
@@ -59,31 +60,54 @@ function MessageInner({ message }: MessageProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
-      className={cn(
-        'flex gap-3 w-full',
-        isUser ? 'justify-end' : 'justify-start'
-      )}
+      transition={MSG_SPRING}
+      style={{
+        display: 'flex',
+        gap: '0.75rem',
+        width: '100%',
+        justifyContent: isUser ? 'flex-end' : 'flex-start',
+      }}
     >
+      {/* Assistant avatar */}
       {!isUser && (
-        <div className="flex shrink-0 mt-1">
-          <BrainMascot isDark={isDark} size={28} mini />
+        <div style={{ flexShrink: 0, marginTop: '0.25rem' }}>
+          <BrainMascot isDark={isDark} size={26} mini />
         </div>
       )}
 
+      {/* Message bubble */}
       <div
-        className={cn(
-          isUser
-            ? 'max-w-[80%] rounded-2xl rounded-br-md bg-pfc-violet text-white px-3.5 py-2 shadow-[var(--shadow-s)]'
-            : 'max-w-[85%] rounded-2xl rounded-bl-md glass px-4 py-3'
-        )}
+        style={{
+          maxWidth: isUser ? '80%' : '88%',
+          borderRadius: isUser
+            ? 'var(--shape-xl) var(--shape-xl) var(--shape-sm) var(--shape-xl)'
+            : 'var(--shape-xl) var(--shape-xl) var(--shape-xl) var(--shape-sm)',
+          padding: isUser ? '0.625rem 1rem' : '0.875rem 1.125rem',
+          background: isUser
+            ? 'var(--m3-primary)'
+            : isDark
+              ? 'var(--m3-surface-container)'
+              : 'var(--m3-surface-container)',
+          color: isUser
+            ? 'var(--m3-on-primary)'
+            : 'var(--foreground)',
+          ...(isUser ? {} : {
+            border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)'}`,
+          }),
+        }}
       >
         {isUser ? (
-          <p className="text-[14px] leading-relaxed">{message.text}</p>
+          <p style={{
+            fontSize: 'var(--type-body-md)',
+            lineHeight: 1.65,
+            margin: 0,
+          }}>
+            {message.text}
+          </p>
         ) : message.dualMessage ? (
-          <div className="space-y-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {/* Reasoning accordion — shows AI thinking for this message */}
             {message.reasoning?.content && (
               <ThinkingAccordion
@@ -93,42 +117,83 @@ function MessageInner({ message }: MessageProps) {
               />
             )}
 
-            {/* Clean response text — always visible */}
-            <div className="text-[14px] leading-[1.7] text-foreground/90 whitespace-pre-line">
-              {cleanText}
-            </div>
+            {/* Clean response text — rendered as markdown */}
+            <MarkdownContent content={cleanText} />
 
-            {/* Confidence footer — subtle inline */}
+            {/* Confidence footer — M3 label style */}
             {message.confidence !== undefined && (
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground/40 font-mono">
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: 'var(--type-label-sm)',
+                fontFamily: 'var(--font-mono)',
+                color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.3)',
+                paddingTop: '0.25rem',
+              }}>
                 <span>{(message.confidence * 100).toFixed(0)}% confidence</span>
                 {message.evidenceGrade && (
-                  <span className={cn(
-                    'px-1 py-0.5 rounded',
-                    message.evidenceGrade === 'A' ? 'text-pfc-green/60' :
-                    message.evidenceGrade === 'B' ? 'text-pfc-yellow/60' :
-                    'text-pfc-red/60'
-                  )}>
+                  <span
+                    style={{
+                      padding: '0.0625rem 0.375rem',
+                      borderRadius: 'var(--shape-full)',
+                      fontSize: 'var(--type-label-sm)',
+                      fontWeight: 600,
+                      background: message.evidenceGrade === 'A'
+                        ? isDark ? 'rgba(52,211,153,0.08)' : 'rgba(52,211,153,0.06)'
+                        : message.evidenceGrade === 'B'
+                          ? isDark ? 'rgba(212,168,67,0.08)' : 'rgba(212,168,67,0.06)'
+                          : isDark ? 'rgba(199,94,94,0.08)' : 'rgba(199,94,94,0.06)',
+                      color: message.evidenceGrade === 'A'
+                        ? '#34D399'
+                        : message.evidenceGrade === 'B'
+                          ? '#D4A843'
+                          : '#C75E5E',
+                    }}
+                  >
                     Grade {message.evidenceGrade}
                   </span>
                 )}
                 {isSimulation && (
-                  <span className="text-pfc-violet/50">sim</span>
+                  <span style={{
+                    padding: '0.0625rem 0.375rem',
+                    borderRadius: 'var(--shape-full)',
+                    background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
+                    color: 'var(--m3-primary)',
+                    fontSize: 'var(--type-label-sm)',
+                  }}>
+                    sim
+                  </span>
                 )}
               </div>
             )}
 
-            {/* Deep analysis toggle */}
+            {/* Deep analysis toggle — M3 tonal button */}
             <button
               onClick={() => setDeepOpen(!deepOpen)}
-              className={cn(
-                'flex items-center gap-1.5 text-[11px] font-medium cursor-pointer',
-                'text-muted-foreground/40 hover:text-muted-foreground/70',
-                'transition-colors duration-200',
-              )}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                padding: '0.3125rem 0.625rem',
+                borderRadius: 'var(--shape-full)',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 'var(--type-label-sm)',
+                fontWeight: 500,
+                color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.4)',
+                background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.03)',
+                transition: 'color 0.15s, background 0.15s',
+                alignSelf: 'flex-start',
+              }}
             >
-              <ChevronDownIcon className={cn('h-3 w-3 transition-transform duration-200', deepOpen && 'rotate-180')} />
-              <span>{deepOpen ? 'Hide' : 'View'} deep analysis</span>
+              <ChevronDownIcon style={{
+                height: '0.6875rem',
+                width: '0.6875rem',
+                transition: 'transform 0.2s',
+                transform: deepOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              }} />
+              {deepOpen ? 'Hide' : 'View'} deep analysis
             </button>
 
             {/* Expandable deep analysis section */}
@@ -138,16 +203,32 @@ function MessageInner({ message }: MessageProps) {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: CUPERTINO_EASE }}
-                  className="overflow-hidden"
+                  transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
+                  style={{ overflow: 'hidden' }}
                 >
-                  <div className="space-y-3 pt-2 border-t border-border/20">
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    paddingTop: '0.625rem',
+                    borderTop: `1px solid ${isDark ? 'rgba(50,49,45,0.2)' : 'rgba(190,183,170,0.15)'}`,
+                  }}>
                     {/* Full layman breakdown */}
                     <MessageLayman layman={message.dualMessage.laymanSummary} />
 
                     {/* Research analysis with inline tags */}
-                    <div className="pt-2 border-t border-border/15">
-                      <p className="text-[9.5px] font-medium text-muted-foreground/40 uppercase tracking-wider mb-2">
+                    <div style={{
+                      paddingTop: '0.5rem',
+                      borderTop: `1px solid ${isDark ? 'rgba(50,49,45,0.15)' : 'rgba(190,183,170,0.1)'}`,
+                    }}>
+                      <p style={{
+                        fontSize: 'var(--type-label-sm)',
+                        fontWeight: 600,
+                        color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.3)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        marginBottom: '0.5rem',
+                      }}>
                         Research Analysis
                       </p>
                       <MessageResearch dualMessage={message.dualMessage} />
@@ -171,13 +252,29 @@ function MessageInner({ message }: MessageProps) {
             </AnimatePresence>
           </div>
         ) : (
-          <p className="text-[14px] leading-relaxed text-foreground/90">{message.text}</p>
+          /* Simple text message — rendered as markdown */
+          <MarkdownContent content={message.text} />
         )}
       </div>
 
+      {/* User avatar */}
       {isUser && (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/60 mt-1">
-          <UserIcon className="h-3.5 w-3.5 text-muted-foreground/60" />
+        <div style={{
+          display: 'flex',
+          height: '1.625rem',
+          width: '1.625rem',
+          flexShrink: 0,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 'var(--shape-full)',
+          background: isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)',
+          marginTop: '0.25rem',
+        }}>
+          <UserIcon style={{
+            height: '0.8125rem',
+            width: '0.8125rem',
+            color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)',
+          }} />
         </div>
       )}
     </motion.div>

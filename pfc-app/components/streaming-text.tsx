@@ -1,6 +1,7 @@
 'use client';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
+import { MarkdownContent } from './markdown-content';
 
 export function StreamingText() {
   const streamingText = usePFCStore((s) => s.streamingText);
@@ -9,12 +10,20 @@ export function StreamingText() {
   if (!isStreaming && !streamingText) return null;
 
   return (
-    <div className="text-foreground/90 leading-relaxed">
-      {streamingText}
+    <div style={{ position: 'relative' }}>
+      <MarkdownContent content={streamingText} />
       {isStreaming && (
         <span
-          className="inline-block ml-0.5 animate-blink rounded-sm"
-          style={{ width: 2.5, height: '1.1em', background: '#C4956A', verticalAlign: 'text-bottom' }}
+          className="animate-blink"
+          style={{
+            display: 'inline-block',
+            width: 2.5,
+            height: '1.1em',
+            background: 'var(--m3-primary)',
+            borderRadius: 1,
+            verticalAlign: 'text-bottom',
+            marginLeft: 1,
+          }}
         />
       )}
     </div>

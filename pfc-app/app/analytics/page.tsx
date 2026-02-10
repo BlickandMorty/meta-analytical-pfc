@@ -50,7 +50,7 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key'];
 
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+const M3_EASE = [0.2, 0, 0, 1] as const;
 
 /* ═══════════════════════════════════════════════════════════
    Analytics Hub — single page with all analytical tools
@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--background)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--m3-surface)' }}>
       {/* ── Sticky tab bar (secondary, below nav sub-bubbles) ── */}
       <div
         style={{
@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
           top: '2.625rem',
           zIndex: 20,
           padding: '0.75rem 1rem 0',
-          background: 'var(--background)',
+          background: 'var(--m3-surface)',
         }}
       >
         <div
@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.3, ease: CUPERTINO_EASE }}
+          transition={{ duration: 0.3, ease: M3_EASE }}
         >
           {activeTab === 'pipeline' && <PipelinePage />}
           {activeTab === 'signals' && <DiagnosticsPage />}

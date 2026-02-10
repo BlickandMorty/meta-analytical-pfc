@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { MessageSquareIcon, ClockIcon } from 'lucide-react';
 
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+const ENTER_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 };
 
 interface ChatEntry {
   id: string;
@@ -76,7 +76,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, delay: 0.48, ease: CUPERTINO_EASE }}
+      transition={{ ...ENTER_SPRING, delay: 0.28 }}
       style={{
         width: '100%',
         display: 'flex',
@@ -132,7 +132,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
               key={chat.id}
               initial={{ opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.28, delay: 0.5 + idx * 0.04, ease: CUPERTINO_EASE }}
+              transition={{ ...ENTER_SPRING, delay: 0.3 + idx * 0.04 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => router.push(`/chat/${chat.id}`)}
               onMouseEnter={() => setHoveredId(chat.id)}
@@ -142,7 +142,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
                 alignItems: 'center',
                 gap: '0.5rem',
                 padding: '0.5rem 0.75rem',
-                borderRadius: '0.75rem',
+                borderRadius: 'var(--shape-md)',
                 border: 'none',
                 cursor: 'pointer',
                 textAlign: 'left',

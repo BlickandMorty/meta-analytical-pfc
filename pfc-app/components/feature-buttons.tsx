@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 
+/* Harmonoid spring for staggered entrance */
+const BTN_SPRING = { type: 'spring' as const, stiffness: 400, damping: 30, mass: 0.6 };
+
 interface FeatureButtonsProps {
   isDark: boolean;
   onSubmit: (query: string) => void;
@@ -84,10 +87,6 @@ export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }:
     }
   }, [onSubmit]);
 
-  const bg = isDark ? 'rgba(196,149,106,0.06)' : 'rgba(0,0,0,0.04)';
-  const hoverBg = isDark ? 'rgba(196,149,106,0.1)' : 'rgba(0,0,0,0.07)';
-  const textColor = isDark ? 'rgba(155,150,137,0.9)' : 'rgba(0,0,0,0.45)';
-
   return (
     <>
       <input
@@ -99,7 +98,7 @@ export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }:
       />
       <div style={{
         display: 'flex',
-        gap: '0.5rem',
+        gap: '0.375rem',
         justifyContent: 'center',
         flexWrap: 'wrap',
       }}>
@@ -108,30 +107,29 @@ export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }:
           return (
             <motion.button
               key={feat.action}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04, duration: 0.22 }}
-              whileTap={{ scale: 0.92 }}
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ ...BTN_SPRING, delay: i * 0.04 }}
+              whileTap={{ scale: 0.94 }}
+              whileHover={{ scale: 1.02 }}
               onClick={() => handleClick(feat.action)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.375rem',
                 padding: '0.4375rem 0.875rem',
-                borderRadius: '9999px',
-                border: 'none',
-                background: bg,
-                color: textColor,
+                borderRadius: 'var(--shape-full)',
+                border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(190,183,170,0.25)'}`,
+                background: isDark ? 'var(--m3-surface-container)' : 'var(--m3-surface-container)',
+                color: isDark ? 'rgba(155,150,137,0.85)' : 'rgba(0,0,0,0.5)',
                 cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
-                backdropFilter: 'blur(12px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
-                transition: 'background 0.15s, color 0.15s',
+                fontSize: 'var(--type-label-md)',
+                fontWeight: 500,
+                letterSpacing: '-0.005em',
+                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
               }}
             >
-              <Icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0 }} />
+              <Icon style={{ height: '0.8125rem', width: '0.8125rem', flexShrink: 0 }} />
               {feat.label}
             </motion.button>
           );

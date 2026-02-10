@@ -8,11 +8,11 @@ import { StreamingText } from './streaming-text';
 import { ThinkingAccordion } from './thinking-accordion';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import { ArrowDownIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ThinkingIndicator } from './thinking-indicator';
 
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+/* Harmonoid-inspired spring config */
+const HARMONOID_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 };
 
 // Stable selectors
 const selectMessages = (s: { messages: ChatMessage[] }) => s.messages;
@@ -22,7 +22,11 @@ const selectReasoningText = (s: { reasoningText: string }) => s.reasoningText;
 const selectReasoningDuration = (s: { reasoningDuration: number | null }) => s.reasoningDuration;
 const selectIsReasoning = (s: { isReasoning: boolean }) => s.isReasoning;
 
-function MessagesInner() {
+function MessagesInner({
+  scrollContainerRef,
+}: {
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
+}) {
   const messages = usePFCStore(selectMessages);
   const isStreaming = usePFCStore(selectIsStreaming);
   const isProcessing = usePFCStore(selectIsProcessing);
@@ -31,13 +35,32 @@ function MessagesInner() {
   const isReasoning = usePFCStore(selectIsReasoning);
   const { containerRef, isAtBottom, scrollToBottom } = useScrollToBottom<HTMLDivElement>();
 
+  // Merge the scroll-to-bottom ref with the externally provided ref for TOC
+  const setRefs = (el: HTMLDivElement | null) => {
+    (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    if (scrollContainerRef) {
+      (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    }
+  };
+
   return (
-    <div className="relative flex-1 overflow-hidden">
+    <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
       <div
-        ref={containerRef}
-        className="relative h-full overflow-y-auto px-4 py-6"
+        ref={setRefs}
+        style={{
+          position: 'relative',
+          height: '100%',
+          overflowY: 'auto',
+          padding: '1.5rem 1rem',
+        }}
       >
-        <div className="mx-auto max-w-3xl space-y-4">
+        <div style={{
+          maxWidth: '48rem',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+        }}>
           <AnimatePresence initial={false}>
             {messages.map((message) => (
               <Message key={message.id} message={message} />
@@ -47,10 +70,10 @@ function MessagesInner() {
           {/* Thinking / streaming indicator */}
           {(isStreaming || isProcessing) && (
             <motion.div
-              initial={{ opacity: 0, y: 6 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.32, ease: CUPERTINO_EASE }}
-              className="space-y-2"
+              transition={HARMONOID_SPRING}
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
             >
               {/* Reasoning accordion — shows AI thinking process */}
               {(isReasoning || reasoningText) && (
@@ -70,30 +93,42 @@ function MessagesInner() {
         </div>
       </div>
 
-      {/* Scroll to bottom */}
+      {/* Scroll to bottom — M3 tonal surface button */}
       <AnimatePresence>
         {!isAtBottom && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 28, mass: 0.6 }}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2"
+            transition={HARMONOID_SPRING}
+            style={{
+              position: 'absolute',
+              bottom: '1rem',
+              left: '50%',
+              transform: 'translateX(-50%)',
+            }}
           >
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full h-7 text-[10px] gap-1 px-3 cursor-pointer border-none"
-              style={{
-                background: 'var(--glass-bg)',
-                backdropFilter: 'blur(12px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
-              }}
+            <button
               onClick={scrollToBottom}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                padding: '0.3125rem 0.75rem',
+                borderRadius: 'var(--shape-full)',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 'var(--type-label-sm)',
+                fontWeight: 500,
+                background: 'var(--m3-surface-container-highest)',
+                color: 'var(--foreground)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+              }}
             >
-              <ArrowDownIcon className="h-2.5 w-2.5" />
+              <ArrowDownIcon style={{ height: '0.625rem', width: '0.625rem' }} />
               Scroll to bottom
-            </Button>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
