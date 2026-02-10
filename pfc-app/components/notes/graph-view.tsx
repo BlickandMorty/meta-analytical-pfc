@@ -322,7 +322,7 @@ export const GraphView = memo(function GraphView() {
         draggedNode.fx = (event.sourceEvent.offsetX - t.x) / t.k;
         draggedNode.fy = (event.sourceEvent.offsetY - t.y) / t.k;
       })
-      .on('end', (event: d3.D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
+      .on('end', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
         if (!event.active) simulation.alphaTarget(0);
         if (draggedNode) {
           draggedNode.fx = null;
