@@ -40,31 +40,30 @@ export const VaultPicker = memo(function VaultPicker() {
   const [renameValue, setRenameValue] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
+  const hasDirectoryPicker = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+
   const handlePickDirectory = useCallback(async () => {
+    if (!hasDirectoryPicker) return;
     try {
-      if ('showDirectoryPicker' in window) {
-        const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
-        setSelectedDir(handle.name);
-        if (!newName.trim()) setNewName(handle.name);
-        // Store handle in IndexedDB for persistence
-        try {
-          const db = await new Promise<IDBDatabase>((resolve, reject) => {
-            const req = indexedDB.open('pfc-vault-handles', 1);
-            req.onupgradeneeded = () => { req.result.createObjectStore('handles'); };
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-          });
-          const tx = db.transaction('handles', 'readwrite');
-          tx.objectStore('handles').put(handle, `pending`);
-          db.close();
-        } catch { /* IndexedDB not available, handle still usable for session */ }
-      } else {
-        alert('Directory picker is not supported in this browser. Use Chrome or Edge for local vault support.');
-      }
+      const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+      setSelectedDir(handle.name);
+      if (!newName.trim()) setNewName(handle.name);
+      // Store handle in IndexedDB for persistence
+      try {
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const req = indexedDB.open('pfc-vault-handles', 1);
+          req.onupgradeneeded = () => { req.result.createObjectStore('handles'); };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').put(handle, `pending`);
+        db.close();
+      } catch { /* IndexedDB not available, handle still usable for session */ }
     } catch (e: any) {
       if (e?.name !== 'AbortError') console.error('Directory picker error:', e);
     }
-  }, [newName]);
+  }, [newName, hasDirectoryPicker]);
 
   const handleCreate = useCallback(async () => {
     const name = newName.trim() || 'New Vault';
@@ -177,7 +176,7 @@ export const VaultPicker = memo(function VaultPicker() {
             margin: '0.375rem 0 0',
             lineHeight: 1.5,
           }}>
-            Vaults are isolated workspaces for your notes. Each vault has its own pages, notebooks, and links.
+            Vaults are isolated workspaces stored in your browser. Optionally link a local folder for file-based backup.
           </p>
         </div>
 
@@ -396,30 +395,98 @@ export const VaultPicker = memo(function VaultPicker() {
                     <XIcon style={{ width: 14, height: 14 }} />
                   </button>
                 </div>
-                {/* Local directory picker */}
-                <button
-                  onClick={handlePickDirectory}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 12px',
-                    fontSize: '0.75rem',
-                    fontWeight: 500,
-                    fontFamily: 'inherit',
-                    color: selectedDir ? accent : muted,
-                    background: selectedDir ? `${accent}08` : 'transparent',
-                    border: `1px dashed ${selectedDir ? `${accent}40` : border}`,
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <HardDriveIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
-                  {selectedDir
-                    ? `Location: ${selectedDir}/`
-                    : 'Choose local folder (optional)'}
-                </button>
+                {/* Storage info */}
+                <p style={{
+                  fontSize: '0.6875rem',
+                  color: muted,
+                  margin: 0,
+                  lineHeight: 1.5,
+                  padding: '0 2px',
+                }}>
+                  Data is saved in your browser automatically. Link a folder to also sync to disk.
+                </p>
+                {/* Local directory picker — only shown if supported */}
+                {hasDirectoryPicker ? (
+                  selectedDir ? (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
+                      color: accent,
+                      background: `${accent}08`,
+                      border: `1px solid ${accent}25`,
+                      borderRadius: 8,
+                    }}>
+                      <FolderOpenIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
+                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {selectedDir}/
+                      </span>
+                      <button
+                        onClick={() => setSelectedDir(null)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 18, height: 18, borderRadius: 4,
+                          background: 'transparent', border: 'none',
+                          color: muted, cursor: 'pointer', flexShrink: 0,
+                        }}
+                      >
+                        <XIcon style={{ width: 10, height: 10 }} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={handlePickDirectory}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '8px 12px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 500,
+                          fontFamily: 'inherit',
+                          color: muted,
+                          background: 'transparent',
+                          border: `1px dashed ${border}`,
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <FolderOpenIcon style={{ width: 12, height: 12, flexShrink: 0 }} />
+                        Open folder
+                      </button>
+                      <button
+                        onClick={handlePickDirectory}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '8px 12px',
+                          fontSize: '0.6875rem',
+                          fontWeight: 500,
+                          fontFamily: 'inherit',
+                          color: muted,
+                          background: 'transparent',
+                          border: `1px dashed ${border}`,
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <HardDriveIcon style={{ width: 12, height: 12, flexShrink: 0 }} />
+                        New folder
+                      </button>
+                    </div>
+                  )
+                ) : null}
               </div>
             </motion.div>
           ) : (

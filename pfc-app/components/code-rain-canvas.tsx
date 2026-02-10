@@ -463,7 +463,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     let cachedW = window.innerWidth;
     let cachedH = window.innerHeight;
     // Light mode gets more particles for visibility
-    const lightModeMultiplier = isDark ? 1 : 1.4;
+    const lightModeMultiplier = isDark ? 1 : 2.0;
 
     function resetColumns() {
       columnsRef.current = [];
@@ -687,7 +687,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
         for (const col of cols) {
           const token = col.tokens[col.tokenIndex % col.tokens.length];
           const blurDim = col.blur > 0 ? Math.max(0.3, 1 - col.blur * 0.06) : 1;
-          const alpha = (isDark ? col.opacity * 0.9 : col.opacity * 0.65) * blurDim;
+          const alpha = (isDark ? col.opacity * 0.9 : col.opacity * 0.88) * blurDim;
           ctx.fillStyle = token.color;
           ctx.globalAlpha = Math.min(alpha, 1);
           ctx.fillText(token.text, col.x, col.y);
@@ -705,7 +705,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
           const colorT = easeInOut(Math.min(p / 0.4, 1));
           const drawColor = lerpColor(col.strikeoutOrigColor, STRIKEOUT_RED, colorT);
           const fadeOut = p > 0.7 ? 1 - easeInOut((p - 0.7) / 0.3) : 1;
-          const strikeAlpha = (isDark ? 0.55 : 0.45) * fadeOut;
+          const strikeAlpha = (isDark ? 0.55 : 0.55) * fadeOut;
 
           ctx.fillStyle = drawColor;
           ctx.globalAlpha = strikeAlpha;
@@ -729,7 +729,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
         // ── Code-edit animation ──
         if (col.editing > 0) {
           const p = col.editing;
-          const editAlpha = isDark ? 0.55 : 0.45;
+          const editAlpha = isDark ? 0.55 : 0.55;
           const origLen = col.editOrigText.length;
           const newLen = col.editNewText.length;
 
@@ -791,7 +791,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
           const bgFadeIn = Math.min(p / 0.05, 1);
           const fadeOut = p > 0.85 ? 1 - easeInOut((p - 0.85) / 0.15) : 1;
-          const blockAlpha = (isDark ? 0.5 : 0.4) * bgFadeIn * fadeOut;
+          const blockAlpha = (isDark ? 0.5 : 0.5) * bgFadeIn * fadeOut;
 
           ctx.font = getFont(blockFontSize);
           const cbAlpha = blockAlpha * 0.7;
@@ -938,7 +938,7 @@ export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
         inset: 0,
         zIndex: 0,
         pointerEvents: 'none',
-        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(250,250,248,0.92) 100%)',
+        background: 'radial-gradient(ellipse at center, transparent 40%, rgba(250,250,248,0.65) 100%)',
       }}
     />
   );

@@ -27,6 +27,8 @@ import {
   FolderOpenIcon,
   XIcon,
   LayoutGridIcon,
+  HomeIcon,
+  PlusSquareIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -54,6 +56,14 @@ const VaultPicker = dynamic(
 );
 const ConceptCorrelationPanel = dynamic(
   () => import('@/components/notes/concept-panel').then((m) => ({ default: m.ConceptCorrelationPanel })),
+  { ssr: false },
+);
+const NoteCanvas = dynamic(
+  () => import('@/components/notes/note-canvas').then((m) => ({ default: m.NoteCanvas })),
+  { ssr: false },
+);
+const FormatRibbon = dynamic(
+  () => import('@/components/notes/format-ribbon').then((m) => ({ default: m.FormatRibbon })),
   { ssr: false },
 );
 
@@ -580,6 +590,13 @@ export default function NotesPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelHovered, setPanelHovered] = useState(false);
 
+  // ── Ribbon tabs (Home / Insert) ──
+  type RibbonTab = 'home' | 'insert';
+  const [ribbonTab, setRibbonTab] = useState<RibbonTab>('home');
+  const [ribbonOpen, setRibbonOpen] = useState(true);
+  const [homeHovered, setHomeHovered] = useState(false);
+  const [insertHovered, setInsertHovered] = useState(false);
+
   // ── Load vault index on mount ──
   useEffect(() => {
     if (ready) {
@@ -846,6 +863,12 @@ export default function NotesPage() {
               </div>
 
               <BlockEditor pageId={activePageId} readOnly={editorMode === 'read'} />
+
+              {/* OneNote-style canvas text boxes */}
+              {activeVaultId && (
+                <NoteCanvas pageId={activePageId} vaultId={activeVaultId} />
+              )}
+
               <BacklinksPanel pageId={activePageId} c={c} />
               <PageStats pageId={activePageId} page={activePage} c={c} />
             </motion.div>
@@ -944,6 +967,125 @@ export default function NotesPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ═══ Home + Insert NavBubble tabs — top-left ═══ */}
+        {mounted && (
+          <div style={{
+            position: 'fixed',
+            top: 12,
+            left: 16,
+            zIndex: 40,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.375rem',
+          }}>
+            {/* Tab row */}
+            <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+              {/* Home tab NavBubble */}
+              <button
+                onClick={() => { setRibbonTab('home'); setRibbonOpen(true); }}
+                onMouseEnter={() => setHomeHovered(true)}
+                onMouseLeave={() => setHomeHovered(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: (homeHovered || (ribbonTab === 'home' && ribbonOpen)) ? '0.4rem' : '0rem',
+                  cursor: 'pointer',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: (homeHovered || (ribbonTab === 'home' && ribbonOpen)) ? '0.4rem 0.85rem' : '0.4rem 0.55rem',
+                  height: '2.25rem',
+                  fontSize: '0.8125rem',
+                  fontWeight: (ribbonTab === 'home' && ribbonOpen) ? 650 : 500,
+                  letterSpacing: '-0.01em',
+                  color: (ribbonTab === 'home' && ribbonOpen)
+                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+                    : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
+                  background: (ribbonTab === 'home' && ribbonOpen)
+                    ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
+                    : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
+                  backdropFilter: 'blur(12px) saturate(1.4)',
+                  WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  transition: `padding 0.3s ${CUP_EASE}, gap 0.3s ${CUP_EASE}, background 0.15s ease, color 0.15s ease`,
+                  transform: 'translateZ(0)',
+                }}
+              >
+                <HomeIcon style={{
+                  height: '0.9375rem', width: '0.9375rem', flexShrink: 0,
+                  color: (ribbonTab === 'home' && ribbonOpen) ? '#C4956A' : 'inherit',
+                  transition: 'color 0.15s',
+                }} />
+                <span style={{
+                  display: 'inline-block',
+                  maxWidth: (homeHovered || (ribbonTab === 'home' && ribbonOpen)) ? '4rem' : '0rem',
+                  opacity: (homeHovered || (ribbonTab === 'home' && ribbonOpen)) ? 1 : 0,
+                  overflow: 'hidden', whiteSpace: 'nowrap',
+                  transition: `max-width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
+                }}>
+                  Home
+                </span>
+              </button>
+
+              {/* Insert tab NavBubble */}
+              <button
+                onClick={() => { setRibbonTab('insert'); setRibbonOpen(true); }}
+                onMouseEnter={() => setInsertHovered(true)}
+                onMouseLeave={() => setInsertHovered(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: (insertHovered || (ribbonTab === 'insert' && ribbonOpen)) ? '0.4rem' : '0rem',
+                  cursor: 'pointer',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: (insertHovered || (ribbonTab === 'insert' && ribbonOpen)) ? '0.4rem 0.85rem' : '0.4rem 0.55rem',
+                  height: '2.25rem',
+                  fontSize: '0.8125rem',
+                  fontWeight: (ribbonTab === 'insert' && ribbonOpen) ? 650 : 500,
+                  letterSpacing: '-0.01em',
+                  color: (ribbonTab === 'insert' && ribbonOpen)
+                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+                    : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
+                  background: (ribbonTab === 'insert' && ribbonOpen)
+                    ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
+                    : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
+                  backdropFilter: 'blur(12px) saturate(1.4)',
+                  WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  transition: `padding 0.3s ${CUP_EASE}, gap 0.3s ${CUP_EASE}, background 0.15s ease, color 0.15s ease`,
+                  transform: 'translateZ(0)',
+                }}
+              >
+                <PlusSquareIcon style={{
+                  height: '0.9375rem', width: '0.9375rem', flexShrink: 0,
+                  color: (ribbonTab === 'insert' && ribbonOpen) ? '#C4956A' : 'inherit',
+                  transition: 'color 0.15s',
+                }} />
+                <span style={{
+                  display: 'inline-block',
+                  maxWidth: (insertHovered || (ribbonTab === 'insert' && ribbonOpen)) ? '4rem' : '0rem',
+                  opacity: (insertHovered || (ribbonTab === 'insert' && ribbonOpen)) ? 1 : 0,
+                  overflow: 'hidden', whiteSpace: 'nowrap',
+                  transition: `max-width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
+                }}>
+                  Insert
+                </span>
+              </button>
+            </div>
+
+            {/* Format ribbon — below tabs */}
+            <AnimatePresence>
+              {ribbonOpen && activePageId && (
+                <FormatRibbon isDark={isDark} activeTab={ribbonTab} onTabChange={setRibbonTab} />
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         {/* ═══ Floating Sidebar Toggle Bubble — top-right ═══ */}
         {mounted && (
