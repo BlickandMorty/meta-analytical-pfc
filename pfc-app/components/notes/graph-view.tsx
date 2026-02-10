@@ -1,7 +1,24 @@
 'use client';
 
 import { memo, useRef, useEffect, useCallback, useState } from 'react';
-import * as d3 from 'd3';
+import {
+  forceSimulation,
+  forceLink,
+  forceManyBody,
+  forceCenter,
+  forceCollide,
+  type Simulation,
+  type SimulationNodeDatum,
+  type SimulationLinkDatum,
+} from 'd3-force';
+import { select, pointer } from 'd3-selection';
+import {
+  zoom,
+  zoomIdentity,
+  type ZoomTransform,
+  type D3ZoomEvent,
+} from 'd3-zoom';
+import { drag, type D3DragEvent } from 'd3-drag';
 import { useTheme } from 'next-themes';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import type { NotePage, PageLink } from '@/lib/notes/types';
@@ -13,7 +30,7 @@ import type { NotePage, PageLink } from '@/lib/notes/types';
 
 // ── Node / Link types for d3 simulation ──
 
-interface GraphSimNode extends d3.SimulationNodeDatum {
+interface GraphSimNode extends SimulationNodeDatum {
   id: string;
   label: string;
   isJournal: boolean;
@@ -21,7 +38,7 @@ interface GraphSimNode extends d3.SimulationNodeDatum {
   radius: number;
 }
 
-interface GraphSimLink extends d3.SimulationLinkDatum<GraphSimNode> {
+interface GraphSimLink extends SimulationLinkDatum<GraphSimNode> {
   source: GraphSimNode | string;
   target: GraphSimNode | string;
 }
@@ -40,8 +57,8 @@ const LABEL_FONT = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 
 export const GraphView = memo(function GraphView() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const simulationRef = useRef<d3.Simulation<GraphSimNode, GraphSimLink> | null>(null);
-  const transformRef = useRef<d3.ZoomTransform>(d3.zoomIdentity);
+  const simulationRef = useRef<Simulation<GraphSimNode, GraphSimLink> | null>(null);
+  const transformRef = useRef<ZoomTransform>(zoomIdentity);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const animFrameRef = useRef<number>(0);
 
@@ -242,18 +259,16 @@ export const GraphView = memo(function GraphView() {
     ctx.scale(dpr, dpr);
 
     // ── Force simulation ──
-    const simulation = d3
-      .forceSimulation<GraphSimNode>(nodes)
+    const simulation = forceSimulation<GraphSimNode>(nodes)
       .force(
         'link',
-        d3
-          .forceLink<GraphSimNode, GraphSimLink>(links)
+        forceLink<GraphSimNode, GraphSimLink>(links)
           .id((d) => d.id)
           .distance(80),
       )
-      .force('charge', d3.forceManyBody().strength(-200))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide<GraphSimNode>().radius((d) => d.radius + 4))
+      .force('charge', forceManyBody().strength(-200))
+      .force('center', forceCenter(width / 2, height / 2))
+      .force('collision', forceCollide<GraphSimNode>().radius((d) => d.radius + 4))
       .alphaDecay(0.02);
 
     simulationRef.current = simulation;
@@ -269,12 +284,11 @@ export const GraphView = memo(function GraphView() {
     });
 
     // ── d3 zoom ──
-    const canvasSelection = d3.select<HTMLCanvasElement, unknown>(canvas);
+    const canvasSelection = select<HTMLCanvasElement, unknown>(canvas);
 
-    const zoomBehavior = d3
-      .zoom<HTMLCanvasElement, unknown>()
+    const zoomBehavior = zoom<HTMLCanvasElement, unknown>()
       .scaleExtent([0.1, 6])
-      .on('zoom', (event: d3.D3ZoomEvent<HTMLCanvasElement, unknown>) => {
+      .on('zoom', (event: D3ZoomEvent<HTMLCanvasElement, unknown>) => {
         transformRef.current = event.transform;
         tick();
       });
@@ -284,10 +298,9 @@ export const GraphView = memo(function GraphView() {
     // ── d3 drag ──
     let draggedNode: GraphSimNode | null = null;
 
-    const dragBehavior = d3
-      .drag<HTMLCanvasElement, unknown>()
-      .subject((event: d3.D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
-        const [cx, cy] = d3.pointer(event, canvas);
+    const dragBehavior = drag<HTMLCanvasElement, unknown>()
+      .subject((event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
+        const [cx, cy] = pointer(event, canvas);
         const found = hitTest(cx, cy, nodes);
         if (found) {
           found.x = found.x ?? 0;
@@ -296,14 +309,14 @@ export const GraphView = memo(function GraphView() {
         }
         return undefined as unknown as GraphSimNode;
       })
-      .on('start', (event: d3.D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
+      .on('start', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
         if (!event.subject) return;
         if (!event.active) simulation.alphaTarget(0.3).restart();
         draggedNode = event.subject;
         draggedNode.fx = draggedNode.x;
         draggedNode.fy = draggedNode.y;
       })
-      .on('drag', (event: d3.D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
+      .on('drag', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
         if (!draggedNode) return;
         const t = transformRef.current;
         draggedNode.fx = (event.sourceEvent.offsetX - t.x) / t.k;
@@ -370,7 +383,7 @@ export const GraphView = memo(function GraphView() {
           newCtx.scale(newDpr, newDpr);
           draw(newCtx, nodes, links, w, h);
         }
-        simulation.force('center', d3.forceCenter(w / 2, h / 2));
+        simulation.force('center', forceCenter(w / 2, h / 2));
         simulation.alpha(0.1).restart();
       }
     });
