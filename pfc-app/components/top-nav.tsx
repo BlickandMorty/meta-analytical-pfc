@@ -2,7 +2,7 @@
 
 import { useState, useEffect, memo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePFCStore, type PFCState } from '@/lib/store/use-pfc-store';
 import {
@@ -157,15 +157,20 @@ const NavBubble = memo(function NavBubble({
         flexShrink: 0,
         color: isActive ? '#C4956A' : 'inherit',
       }} />
-      {expanded && (
-        <motion.span
-          initial={false}
-          animate={{ opacity: 1 }}
-          style={{ display: 'inline-block' }}
-        >
-          {item.label}
-        </motion.span>
-      )}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.span
+            key="label"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
+            style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
+          >
+            {item.label}
+          </motion.span>
+        )}
+      </AnimatePresence>
     </motion.button>
   );
 });
@@ -244,12 +249,21 @@ const ChatNavBubble = memo(function ChatNavBubble({
         color: isActive ? '#C4956A' : 'inherit',
       }} />
 
-      {/* Label — no width animation, let layout handle resizing */}
-      {showLabel && (
-        <span style={{ display: 'inline-block' }}>
-          {showExpanded ? 'PFC Engine' : item.label}
-        </span>
-      )}
+      {/* Label — AnimatePresence for polished fade, layout handles resize */}
+      <AnimatePresence initial={false}>
+        {showLabel && (
+          <motion.span
+            key="chat-label"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
+            style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
+          >
+            {showExpanded ? 'PFC Engine' : item.label}
+          </motion.span>
+        )}
+      </AnimatePresence>
 
       {/* PFC engine bar items — inline, no nested AnimatePresence */}
       {showExpanded && (
@@ -404,11 +418,20 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 flexShrink: 0,
                 color: isTabHovered ? '#C4956A' : 'inherit',
               }} />
-              {isTabHovered && (
-                <span style={{ display: 'inline-block' }}>
-                  {tab.label}
-                </span>
-              )}
+              <AnimatePresence initial={false}>
+                {isTabHovered && (
+                  <motion.span
+                    key="tab-label"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.12, ease: [0.32, 0.72, 0, 1] }}
+                    style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
+                  >
+                    {tab.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.button>
           );
         })}
@@ -453,15 +476,20 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         width: '1.0625rem',
         flexShrink: 0,
       }} />
-      {expanded && (
-        <motion.span
-          initial={false}
-          animate={{ opacity: 1 }}
-          style={{ display: 'inline-block' }}
-        >
-          {item.label}
-        </motion.span>
-      )}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.span
+            key="analytics-label"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
+            style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
+          >
+            {item.label}
+          </motion.span>
+        )}
+      </AnimatePresence>
     </motion.button>
   );
 });

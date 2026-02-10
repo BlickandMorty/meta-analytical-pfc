@@ -49,14 +49,6 @@ type GreetingDef = {
 
 const GREETING_DEFS: GreetingDef[] = [
   {
-    plain: 'Greetings, Researcher',
-    colored: [
-      { text: 'Greetings, ', color: '#C4B5FD' },
-      { text: 'Researcher', color: '#F9A8D4' },
-    ],
-    isCode: false,
-  },
-  {
     plain: 'print("Greetings, Researcher")',
     colored: [
       { text: 'print', color: '#22D3EE' },
@@ -225,8 +217,8 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
     return spans;
   }, [displayText, def]);
 
-  const fontSize = isCode ? '1.875rem' : '2.875rem';
-  const cursorHeight = isCode ? '1.875rem' : '2.75rem';
+  const fontSize = isCode ? '2.25rem' : '3.25rem';
+  const cursorHeight = isCode ? '2.25rem' : '3.125rem';
 
   return (
     <h1
@@ -239,7 +231,7 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
         lineHeight: 1.15,
         fontWeight: isCode ? 400 : 600,
         whiteSpace: 'nowrap',
-        minHeight: '2.75rem',
+        minHeight: '3.25rem',
         display: 'flex',
         alignItems: 'center',
         margin: 0,
