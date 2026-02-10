@@ -1,13 +1,12 @@
 'use client';
 
 /**
- * Pixel-art sun mascot — uses the image file directly.
- * Simple CSS animation for gentle wobble.
+ * Pixel-art sun mascot — uses the actual GIF image directly.
  */
 export function PixelSun({ size = 40 }: { size?: number }) {
   return (
     <img
-      src="/pixel-sun.svg"
+      src="/pixel-sun.gif"
       alt="Sun mascot"
       width={size}
       height={size}
@@ -16,7 +15,6 @@ export function PixelSun({ size = 40 }: { size?: number }) {
         height: size,
         flexShrink: 0,
         imageRendering: 'pixelated',
-        animation: 'mascot-wobble 3.5s ease-in-out infinite',
       }}
     />
   );

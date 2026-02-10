@@ -9,7 +9,9 @@ import { ThinkingAccordion } from './thinking-accordion';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import { ArrowDownIcon } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { PixelSun } from './pixel-sun';
 import { PixelBook } from './pixel-book';
+import { useTheme } from 'next-themes';
 
 /* Harmonoid-inspired spring config */
 const HARMONOID_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 };
@@ -34,6 +36,8 @@ function MessagesInner({
   const reasoningDuration = usePFCStore(selectReasoningDuration);
   const isReasoning = usePFCStore(selectIsReasoning);
   const { containerRef, isAtBottom, scrollToBottom } = useScrollToBottom<HTMLDivElement>();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   // Merge the scroll-to-bottom ref with the externally provided ref for TOC
   const setRefs = (el: HTMLDivElement | null) => {
@@ -67,36 +71,61 @@ function MessagesInner({
             ))}
           </AnimatePresence>
 
-          {/* Thinking / streaming indicator */}
+          {/* Thinking / streaming — seamless assistant bubble */}
           {(isStreaming || isProcessing) && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={HARMONOID_SPRING}
-              style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+              style={{
+                display: 'flex',
+                gap: '0.75rem',
+                width: '100%',
+                justifyContent: 'flex-start',
+              }}
             >
-              {/* Reasoning accordion — shows AI thinking process */}
-              {(isReasoning || reasoningText) && (
-                <ThinkingAccordion
-                  content={reasoningText}
-                  duration={reasoningDuration}
-                  isThinking={isReasoning}
-                />
-              )}
-              {isStreaming ? (
-                <StreamingText />
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                  <PixelBook size={24} />
-                  <span style={{
-                    color: 'var(--m3-primary)',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                  }}>
-                    {isReasoning ? 'Reasoning...' : 'Thinking...'}
-                  </span>
-                </div>
-              )}
+              {/* Avatar */}
+              <div style={{ flexShrink: 0, marginTop: '0.25rem' }}>
+                <PixelSun size={26} />
+              </div>
+
+              {/* Bubble — matches assistant Message styling */}
+              <div
+                style={{
+                  maxWidth: '88%',
+                  borderRadius: 'var(--shape-xl) var(--shape-xl) var(--shape-xl) var(--shape-sm)',
+                  padding: '0.875rem 1.125rem',
+                  background: isDark ? 'var(--m3-surface-container)' : 'var(--m3-surface-container)',
+                  color: 'var(--foreground)',
+                  border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)'}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}
+              >
+                {/* Reasoning accordion */}
+                {(isReasoning || reasoningText) && (
+                  <ThinkingAccordion
+                    content={reasoningText}
+                    duration={reasoningDuration}
+                    isThinking={isReasoning}
+                  />
+                )}
+                {isStreaming ? (
+                  <StreamingText />
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                    <PixelBook size={24} />
+                    <span style={{
+                      color: 'var(--m3-primary)',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                    }}>
+                      {isReasoning ? 'Reasoning...' : 'Thinking...'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </div>

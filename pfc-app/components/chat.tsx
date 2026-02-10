@@ -225,8 +225,8 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
     return spans;
   }, [displayText, def]);
 
-  const fontSize = isCode ? '1.625rem' : '2.5rem';
-  const cursorHeight = isCode ? '1.625rem' : '2.4rem';
+  const fontSize = isCode ? '1.875rem' : '2.875rem';
+  const cursorHeight = isCode ? '1.875rem' : '2.75rem';
 
   return (
     <h1
@@ -255,7 +255,7 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
           height: cursorHeight,
           backgroundColor: isCode
             ? 'var(--m3-primary)'
-            : isDark ? 'rgba(237,224,212,0.5)' : 'rgba(0,0,0,0.4)',
+            : isDark ? 'rgba(232,228,222,0.5)' : 'rgba(0,0,0,0.4)',
           marginLeft: '1px',
           opacity: cursorOn ? 1 : 0,
           transition: 'opacity 0.1s',
@@ -314,11 +314,7 @@ export function Chat() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            /* OLED → warm dark brown on focus in dark mode */
-            background: isDark
-              ? (searchFocused ? 'var(--m3-surface-container-low)' : 'var(--m3-surface)')
-              : 'var(--m3-surface)',
-            transition: 'background 0.5s cubic-bezier(0.2, 0, 0, 1)',
+            background: 'var(--m3-surface)',
           }}
         >
           {/* Code rain background — fades on search focus */}
@@ -341,7 +337,7 @@ export function Chat() {
             gap: '1.25rem',
           }}>
 
-            {/* Greeting section — Harmonoid spring entrance + shadow on focus */}
+            {/* Greeting section — Harmonoid spring entrance */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -352,15 +348,9 @@ export function Chat() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.75rem',
-                paddingBottom: '0.75rem',
-                /* Soft shadow under greeting when search is focused in dark mode */
-                boxShadow: isDark && searchFocused
-                  ? '0 24px 48px -16px rgba(0,0,0,0.5)'
-                  : '0 0 0 0 rgba(0,0,0,0)',
-                transition: 'box-shadow 0.4s cubic-bezier(0.2, 0, 0, 1)',
               }}
             >
-              {mounted && <PixelSun size={48} />}
+              {mounted && <PixelSun size={52} />}
               {mounted && <GreetingTypewriter isDark={isDark} />}
             </motion.div>
 
@@ -373,10 +363,17 @@ export function Chat() {
               <div
                 data-search-bar
                 style={{
-                  borderRadius: 'var(--shape-xl)',
+                  borderRadius: '1.5rem',
                   overflow: 'hidden',
-                  background: 'var(--m3-surface-container)',
-                  border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.2)'}`,
+                  background: isDark
+                    ? 'var(--m3-surface-container)'
+                    : 'rgba(239,235,226,0.8)',
+                  border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(190,183,170,0.15)'}`,
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  boxShadow: isDark
+                    ? 'none'
+                    : '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
                 }}
               >
                 <MultimodalInput
@@ -465,7 +462,7 @@ export function Chat() {
                           background: isDark ? 'var(--m3-surface-container)' : 'var(--m3-surface-container)',
                           border: 'none',
                           fontSize: 'var(--type-label-sm)',
-                          color: isDark ? 'var(--m3-on-surface-variant)' : 'var(--m3-on-surface-variant)',
+                          color: isDark ? 'rgba(155,150,137,0.9)' : 'rgba(0,0,0,0.4)',
                         }}
                       >
                         {inferenceMode === 'api'
@@ -479,7 +476,7 @@ export function Chat() {
                           onClick={() => setModeHintDismissed(true)}
                           style={{
                             border: 'none',
-                            background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(128,86,16,0.06)',
+                            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
                             cursor: 'pointer',
                             fontSize: 'var(--type-label-sm)',
                             color: 'var(--m3-primary)',
@@ -528,7 +525,7 @@ export function Chat() {
             {/* TOC sidebar — right side, only on wider screens */}
             <div
               style={{
-                borderLeft: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(208,196,180,0.15)'}`,
+                borderLeft: `1px solid ${isDark ? 'rgba(50,49,45,0.2)' : 'rgba(190,183,170,0.15)'}`,
               }}
               className="hidden lg:block"
             >

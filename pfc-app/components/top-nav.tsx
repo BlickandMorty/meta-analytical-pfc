@@ -87,17 +87,17 @@ const MODE_STYLES: Record<string, { label: string }> = {
   local: { label: 'Local' },
 };
 
-/* ─── M3 Nav bubble helpers — active uses primaryContainer ─── */
+/* ─── M3-style bubble helpers ─── */
 function bubbleBg(isActive: boolean, isDark: boolean, disabled?: boolean) {
   if (disabled) return 'transparent';
-  if (isActive) return 'var(--m3-primary-container)';
-  return 'transparent';
+  if (isActive) return isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)';
+  return isDark ? 'var(--m3-surface-container)' : 'rgba(0,0,0,0.04)';
 }
 
 function bubbleColor(isActive: boolean, isDark: boolean, disabled?: boolean) {
-  if (disabled) return isDark ? 'rgba(156,143,128,0.35)' : 'rgba(0,0,0,0.2)';
-  if (isActive) return 'var(--m3-on-primary-container)';
-  return isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)';
+  if (disabled) return isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)';
+  if (isActive) return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)';
+  return isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)';
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -129,6 +129,8 @@ const NavBubble = memo(function NavBubble({
       onMouseLeave={() => setHovered(false)}
       whileTap={disabled ? undefined : { scale: 0.95 }}
       title={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
+      layout
+      transition={FLUID_SPRING}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -146,14 +148,13 @@ const NavBubble = memo(function NavBubble({
         color: bubbleColor(isActive, isDark, disabled),
         background: bubbleBg(isActive, isDark, disabled),
         whiteSpace: 'nowrap',
-        transition: 'padding 0.25s cubic-bezier(0.2,0,0,1), gap 0.25s cubic-bezier(0.2,0,0,1), background 0.15s, color 0.15s',
       }}
     >
       <Icon style={{
         height: '0.9375rem',
         width: '0.9375rem',
         flexShrink: 0,
-        color: isActive ? 'var(--m3-primary)' : 'inherit',
+        color: isActive ? '#C4956A' : 'inherit',
       }} />
       <AnimatePresence>
         {expanded && (
@@ -215,6 +216,8 @@ const ChatNavBubble = memo(function ChatNavBubble({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       whileTap={{ scale: 0.95 }}
+      layout
+      transition={FLUID_SPRING}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -234,14 +237,13 @@ const ChatNavBubble = memo(function ChatNavBubble({
         color: bubbleColor(isActive, isDark),
         background: bubbleBg(isActive, isDark),
         whiteSpace: 'nowrap',
-        transition: 'padding 0.25s cubic-bezier(0.2,0,0,1), gap 0.25s cubic-bezier(0.2,0,0,1), background 0.15s, color 0.15s',
       }}
     >
       <Icon style={{
         height: '0.9375rem',
         width: '0.9375rem',
         flexShrink: 0,
-        color: isActive ? 'var(--m3-primary)' : 'inherit',
+        color: isActive ? '#C4956A' : 'inherit',
       }} />
 
       {/* Label */}
@@ -264,15 +266,15 @@ const ChatNavBubble = memo(function ChatNavBubble({
         <>
           <span style={{
             width: 3, height: 3, borderRadius: '50%', flexShrink: 0,
-            background: isDark ? 'rgba(156,143,128,0.25)' : 'rgba(0,0,0,0.15)',
+            background: isDark ? 'rgba(155,150,137,0.25)' : 'rgba(0,0,0,0.15)',
           }} />
 
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
             padding: '0.125rem 0.375rem', borderRadius: '9999px',
-            background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(128,86,16,0.06)',
+            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
             fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
-            color: isDark ? 'rgba(244,189,111,0.7)' : 'rgba(128,86,16,0.7)',
+            color: isDark ? 'rgba(196,149,106,0.7)' : 'rgba(196,149,106,0.8)',
           }}>
             {inferenceMode === 'simulation'
               ? <ServerIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
@@ -284,7 +286,7 @@ const ChatNavBubble = memo(function ChatNavBubble({
           {confidence > 0 && (
             <span style={{
               fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
-              color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
             }}>
               {(confidence * 100).toFixed(0)}%
             </span>
@@ -298,9 +300,9 @@ const ChatNavBubble = memo(function ChatNavBubble({
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
                 padding: '0.125rem 0.375rem', borderRadius: '9999px',
-                background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(128,86,16,0.06)',
+                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
                 fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
-                color: 'var(--m3-primary)',
+                color: '#C4956A',
               }}
             >
               <ActivityIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
@@ -315,9 +317,9 @@ const ChatNavBubble = memo(function ChatNavBubble({
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
                 padding: '0.1875rem 0.5rem', borderRadius: '9999px',
-                background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(128,86,16,0.06)',
+                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
                 cursor: 'pointer', fontSize: '0.625rem', fontWeight: 600,
-                color: 'var(--m3-primary)',
+                color: '#C4956A',
               }}
             >
               <SparklesIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
@@ -355,7 +357,9 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   // When active, show the sub-tabs as separate small bubbles
   if (isActive && !disabled) {
     return (
-      <div
+      <motion.div
+        layout
+        transition={FLUID_SPRING}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -395,11 +399,11 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 fontSize: '0.6875rem',
                 fontWeight: 600,
                 color: isTabHovered
-                  ? 'var(--m3-on-primary-container)'
-                  : (isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.35)'),
+                  ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
+                  : (isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)'),
                 background: isTabHovered
-                  ? 'var(--m3-primary-container)'
-                  : 'transparent',
+                  ? (isDark ? 'var(--m3-surface-container-high)' : 'var(--m3-surface-container-high)')
+                  : (isDark ? 'var(--m3-surface-container)' : 'rgba(0,0,0,0.03)'),
                 whiteSpace: 'nowrap',
                 transition: 'padding 0.3s cubic-bezier(0.32,0.72,0,1), gap 0.3s cubic-bezier(0.32,0.72,0,1), background 0.2s, color 0.2s',
               }}
@@ -408,7 +412,7 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 height: '0.75rem',
                 width: '0.75rem',
                 flexShrink: 0,
-                color: isTabHovered ? 'var(--m3-primary)' : 'inherit',
+                color: isTabHovered ? '#C4956A' : 'inherit',
               }} />
               {isTabHovered && (
                 <motion.span
@@ -424,7 +428,7 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
             </motion.button>
           );
         })}
-      </div>
+      </motion.div>
     );
   }
 
@@ -438,6 +442,8 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
       onMouseLeave={() => setHovered(false)}
       whileTap={disabled ? undefined : { scale: 0.95 }}
       title={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
+      layout
+      transition={FLUID_SPRING}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -455,7 +461,6 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         color: bubbleColor(false, isDark, disabled),
         background: bubbleBg(false, isDark, disabled),
         whiteSpace: 'nowrap',
-        transition: 'padding 0.25s cubic-bezier(0.2,0,0,1), gap 0.25s cubic-bezier(0.2,0,0,1), background 0.15s, color 0.15s',
       }}
     >
       <Icon style={{
@@ -529,7 +534,9 @@ export function TopNav() {
       }}
     >
       {/* Floating bubbles — no background bar */}
-      <div
+      <motion.div
+        layout
+        transition={FLUID_SPRING}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -589,7 +596,7 @@ export function TopNav() {
             />
           );
         })}
-      </div>
+      </motion.div>
     </motion.nav>
   );
 }

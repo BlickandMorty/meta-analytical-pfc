@@ -2,12 +2,12 @@
 
 /**
  * Pixel-art book — loading indicator throughout the app.
- * Uses the image file directly with a CSS bounce animation.
+ * Uses the actual GIF image directly.
  */
 export function PixelBook({ size = 32 }: { size?: number }) {
   return (
     <img
-      src="/pixel-book.svg"
+      src="/pixel-book.gif"
       alt="Loading"
       width={size}
       height={size}
@@ -16,7 +16,6 @@ export function PixelBook({ size = 32 }: { size?: number }) {
         height: size,
         flexShrink: 0,
         imageRendering: 'pixelated',
-        animation: 'book-bounce 1.8s ease-in-out infinite',
       }}
     />
   );
