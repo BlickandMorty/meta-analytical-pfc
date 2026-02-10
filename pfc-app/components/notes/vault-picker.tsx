@@ -15,6 +15,7 @@ import {
   FolderIcon,
   XIcon,
   CheckIcon,
+  HardDriveIcon,
 } from 'lucide-react';
 
 const CUPERTINO = [0.32, 0.72, 0, 1] as const;
@@ -34,17 +35,67 @@ export const VaultPicker = memo(function VaultPicker() {
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const [selectedDir, setSelectedDir] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const handleCreate = useCallback(() => {
+  const handlePickDirectory = useCallback(async () => {
+    try {
+      if ('showDirectoryPicker' in window) {
+        const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+        setSelectedDir(handle.name);
+        if (!newName.trim()) setNewName(handle.name);
+        // Store handle in IndexedDB for persistence
+        try {
+          const db = await new Promise<IDBDatabase>((resolve, reject) => {
+            const req = indexedDB.open('pfc-vault-handles', 1);
+            req.onupgradeneeded = () => { req.result.createObjectStore('handles'); };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+          });
+          const tx = db.transaction('handles', 'readwrite');
+          tx.objectStore('handles').put(handle, `pending`);
+          db.close();
+        } catch { /* IndexedDB not available, handle still usable for session */ }
+      } else {
+        alert('Directory picker is not supported in this browser. Use Chrome or Edge for local vault support.');
+      }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') console.error('Directory picker error:', e);
+    }
+  }, [newName]);
+
+  const handleCreate = useCallback(async () => {
     const name = newName.trim() || 'New Vault';
     const id = createVault(name);
+    // If a directory handle was selected, persist it keyed to the vault ID
+    if (selectedDir) {
+      try {
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const req = indexedDB.open('pfc-vault-handles', 1);
+          req.onupgradeneeded = () => { req.result.createObjectStore('handles'); };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+        const tx = db.transaction('handles', 'readwrite');
+        const store = tx.objectStore('handles');
+        // Move pending handle to vault-specific key
+        const getReq = store.get('pending');
+        getReq.onsuccess = () => {
+          if (getReq.result) {
+            store.put(getReq.result, `vault-${id}`);
+            store.delete('pending');
+          }
+        };
+        db.close();
+      } catch { /* ignore */ }
+    }
     switchVault(id);
     setCreating(false);
     setNewName('');
-  }, [newName, createVault, switchVault]);
+    setSelectedDir(null);
+  }, [newName, selectedDir, createVault, switchVault]);
 
   const handleRename = useCallback(() => {
     if (renamingId && renameValue.trim()) {
@@ -296,51 +347,78 @@ export const VaultPicker = memo(function VaultPicker() {
             >
               <div style={{
                 display: 'flex',
+                flexDirection: 'column',
                 gap: '8px',
                 padding: '4px 0',
               }}>
-                <input
-                  autoFocus
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreate();
-                    if (e.key === 'Escape') setCreating(false);
-                  }}
-                  placeholder="Vault name..."
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreate();
+                      if (e.key === 'Escape') { setCreating(false); setSelectedDir(null); }
+                    }}
+                    placeholder="Vault name..."
+                    style={{
+                      flex: 1,
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      background: cardBg,
+                      border: `1px solid ${border}`,
+                      borderRadius: 8,
+                      color: text,
+                      padding: '8px 12px',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    onClick={handleCreate}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 36, borderRadius: 8, border: 'none',
+                      background: accent, color: '#fff', cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <CheckIcon style={{ width: 16, height: 16 }} />
+                  </button>
+                  <button
+                    onClick={() => { setCreating(false); setSelectedDir(null); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 36, borderRadius: 8, border: `1px solid ${border}`,
+                      background: 'transparent', color: muted, cursor: 'pointer',
+                    }}
+                  >
+                    <XIcon style={{ width: 14, height: 14 }} />
+                  </button>
+                </div>
+                {/* Local directory picker */}
+                <button
+                  onClick={handlePickDirectory}
                   style={{
-                    flex: 1,
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    background: cardBg,
-                    border: `1px solid ${border}`,
-                    borderRadius: 8,
-                    color: text,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
                     padding: '8px 12px',
-                    outline: 'none',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
                     fontFamily: 'inherit',
-                  }}
-                />
-                <button
-                  onClick={handleCreate}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 36, height: 36, borderRadius: 8, border: 'none',
-                    background: accent, color: '#fff', cursor: 'pointer',
-                    fontWeight: 600,
+                    color: selectedDir ? accent : muted,
+                    background: selectedDir ? `${accent}08` : 'transparent',
+                    border: `1px dashed ${selectedDir ? `${accent}40` : border}`,
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
                   }}
                 >
-                  <CheckIcon style={{ width: 16, height: 16 }} />
-                </button>
-                <button
-                  onClick={() => setCreating(false)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 36, height: 36, borderRadius: 8, border: `1px solid ${border}`,
-                    background: 'transparent', color: muted, cursor: 'pointer',
-                  }}
-                >
-                  <XIcon style={{ width: 14, height: 14 }} />
+                  <HardDriveIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
+                  {selectedDir
+                    ? `Location: ${selectedDir}/`
+                    : 'Choose local folder (optional)'}
                 </button>
               </div>
             </motion.div>

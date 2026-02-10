@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 // ═══════════════════════════════════════════════════════════════════════
 
 const TOKEN_POOL = [
-  // Imports & keywords (violet)
+  // Imports & keywords (ember/amber)
   { text: 'import torch', color: '#C4956A' },
   { text: 'import numpy as np', color: '#C4956A' },
   { text: 'import pandas as pd', color: '#C4956A' },
@@ -21,6 +21,24 @@ const TOKEN_POOL = [
   { text: 'lambda x:', color: '#C4956A' },
   { text: 'yield batch', color: '#C4956A' },
   { text: 'async def train', color: '#C4956A' },
+  { text: 'import jax', color: '#C4956A' },
+  { text: 'import einops', color: '#C4956A' },
+  { text: 'from typing import', color: '#C4956A' },
+  { text: 'import matplotlib', color: '#C4956A' },
+  { text: 'from pathlib', color: '#C4956A' },
+  { text: 'import wandb', color: '#C4956A' },
+  { text: 'import huggingface', color: '#C4956A' },
+  { text: 'from torch.optim', color: '#C4956A' },
+  { text: 'import torchvision', color: '#C4956A' },
+  // Rust keywords (orange)
+  { text: 'fn main()', color: '#E07850' },
+  { text: 'let mut x =', color: '#E07850' },
+  { text: 'impl Trait for', color: '#E07850' },
+  { text: 'pub struct', color: '#E07850' },
+  { text: 'match result {', color: '#E07850' },
+  { text: '.unwrap()', color: '#E07850' },
+  { text: '&self', color: '#E07850' },
+  { text: 'Vec<f64>', color: '#E07850' },
   // Functions & methods (ember)
   { text: 'model.fit()', color: '#E07850' },
   { text: 'optimizer.step()', color: '#E07850' },
@@ -34,6 +52,25 @@ const TOKEN_POOL = [
   { text: 'torch.sigmoid(z)', color: '#E07850' },
   { text: 'np.random.randn()', color: '#E07850' },
   { text: 'pd.read_csv()', color: '#E07850' },
+  { text: 'model.eval()', color: '#E07850' },
+  { text: 'torch.no_grad()', color: '#E07850' },
+  { text: 'F.relu(x)', color: '#E07850' },
+  { text: 'np.einsum("ij,jk")', color: '#E07850' },
+  { text: 'model.parameters()', color: '#E07850' },
+  { text: 'torch.cat(tensors)', color: '#E07850' },
+  { text: 'nn.Dropout(0.1)', color: '#E07850' },
+  { text: 'F.cross_entropy()', color: '#E07850' },
+  { text: 'jax.grad(loss_fn)', color: '#E07850' },
+  { text: 'np.fft.fft(signal)', color: '#E07850' },
+  // JavaScript / TypeScript
+  { text: 'const x = await', color: '#C4B5FD' },
+  { text: 'export default', color: '#C4B5FD' },
+  { text: 'interface Props {', color: '#C4B5FD' },
+  { text: 'Promise.all()', color: '#C4B5FD' },
+  { text: '.then(res =>)', color: '#C4B5FD' },
+  { text: 'Array.from()', color: '#C4B5FD' },
+  { text: 'new Map()', color: '#C4B5FD' },
+  { text: 'type Guard<T>', color: '#C4B5FD' },
   // Strings & labels (green)
   { text: '"cross_entropy"', color: '#4ADE80' },
   { text: '"attention_mask"', color: '#4ADE80' },
@@ -42,6 +79,14 @@ const TOKEN_POOL = [
   { text: '"embeddings"', color: '#4ADE80' },
   { text: '"gradient"', color: '#4ADE80' },
   { text: '"epoch_{i}"', color: '#4ADE80' },
+  { text: '"meta_analysis"', color: '#4ADE80' },
+  { text: '"confidence_interval"', color: '#4ADE80' },
+  { text: '"bayesian_prior"', color: '#4ADE80' },
+  { text: '"effect_size"', color: '#4ADE80' },
+  { text: '"p_value < 0.05"', color: '#4ADE80' },
+  { text: '"replication_rate"', color: '#4ADE80' },
+  { text: '"funnel_plot"', color: '#4ADE80' },
+  { text: '"heterogeneity"', color: '#4ADE80' },
   // Numbers & math (cyan)
   { text: '1e-4', color: '#22D3EE' },
   { text: '0.001', color: '#22D3EE' },
@@ -51,6 +96,14 @@ const TOKEN_POOL = [
   { text: '0.9', color: '#22D3EE' },
   { text: '1024', color: '#22D3EE' },
   { text: '2048', color: '#22D3EE' },
+  { text: '3.14159', color: '#22D3EE' },
+  { text: '2.71828', color: '#22D3EE' },
+  { text: '0.95', color: '#22D3EE' },
+  { text: '1.96', color: '#22D3EE' },
+  { text: '256', color: '#22D3EE' },
+  { text: '4096', color: '#22D3EE' },
+  { text: '0xDEAD', color: '#22D3EE' },
+  { text: '0b1010', color: '#22D3EE' },
   // Types & classes (yellow)
   { text: 'torch.Tensor', color: '#FACC15' },
   { text: 'nn.Module', color: '#FACC15' },
@@ -59,6 +112,13 @@ const TOKEN_POOL = [
   { text: 'DataLoader', color: '#FACC15' },
   { text: 'Optimizer', color: '#FACC15' },
   { text: 'Transformer', color: '#FACC15' },
+  { text: 'BertModel', color: '#FACC15' },
+  { text: 'GPT2Config', color: '#FACC15' },
+  { text: 'AutoTokenizer', color: '#FACC15' },
+  { text: 'LlamaForCausal', color: '#FACC15' },
+  { text: 'AdamW', color: '#FACC15' },
+  { text: 'StepLR', color: '#FACC15' },
+  { text: 'GradScaler', color: '#FACC15' },
   // Operators & syntax (dim)
   { text: '@', color: '#9CA3AF' },
   { text: '**2', color: '#9CA3AF' },
@@ -67,6 +127,12 @@ const TOKEN_POOL = [
   { text: '-> Tensor', color: '#9CA3AF' },
   { text: '+=', color: '#9CA3AF' },
   { text: '.shape', color: '#9CA3AF' },
+  { text: '|>', color: '#9CA3AF' },
+  { text: '??=', color: '#9CA3AF' },
+  { text: '<<=', color: '#9CA3AF' },
+  { text: '...args', color: '#9CA3AF' },
+  { text: '?.', color: '#9CA3AF' },
+  { text: '>>>', color: '#9CA3AF' },
   // Comments (dim green)
   { text: '# gradient descent', color: '#86EFAC' },
   { text: '# backpropagation', color: '#86EFAC' },
@@ -74,6 +140,23 @@ const TOKEN_POOL = [
   { text: '# loss function', color: '#86EFAC' },
   { text: '# feature scaling', color: '#86EFAC' },
   { text: '# batch norm', color: '#86EFAC' },
+  { text: '# meta-analysis', color: '#86EFAC' },
+  { text: '# Bayesian inference', color: '#86EFAC' },
+  { text: '# MCMC sampling', color: '#86EFAC' },
+  { text: '# cross-validation', color: '#86EFAC' },
+  { text: '# p(H|D) ∝ p(D|H)p(H)', color: '#86EFAC' },
+  { text: '// TODO: optimize', color: '#86EFAC' },
+  { text: '/* effect sizes */', color: '#86EFAC' },
+  { text: '# heterogeneity test', color: '#86EFAC' },
+  // Math symbols (pink)
+  { text: 'Σ(xi - x̄)²', color: '#F9A8D4' },
+  { text: '∂L/∂w', color: '#F9A8D4' },
+  { text: '∇f(x)', color: '#F9A8D4' },
+  { text: 'μ ± σ', color: '#F9A8D4' },
+  { text: 'χ² test', color: '#F9A8D4' },
+  { text: 'ℒ(θ|X)', color: '#F9A8D4' },
+  { text: 'argmax P(y|x)', color: '#F9A8D4' },
+  { text: 'KL(P‖Q)', color: '#F9A8D4' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -480,9 +563,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     const onMotionChange = (e: MediaQueryListEvent) => { reducedMotion = e.matches; };
     motionQuery.addEventListener('change', onMotionChange);
 
-    // Frame skip counter for 30fps throttle (draw every other frame)
-    let frameSkip = false;
-
     function draw(timestamp: number) {
       if (!canvas || !ctx) return;
 
@@ -492,14 +572,9 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       // Skip drawing when user prefers reduced motion
       if (reducedMotion) { rafRef.current = requestAnimationFrame(draw); return; }
 
-      // Throttle to ~30fps: skip every other frame (halves CPU/GPU work)
-      frameSkip = !frameSkip;
-      if (frameSkip) { rafRef.current = requestAnimationFrame(draw); return; }
-
       const delta = timestamp - lastTimeRef.current;
       lastTimeRef.current = timestamp;
       if (delta > 200) { rafRef.current = requestAnimationFrame(draw); return; }
-      // dt accounts for the 2-frame gap (~33ms instead of ~16ms)
       const dt = Math.min(delta / 16.67, 3);
       const dtSec = delta / 1000;
 

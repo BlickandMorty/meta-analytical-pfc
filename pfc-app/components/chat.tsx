@@ -377,7 +377,7 @@ export function Chat() {
               <div
                 data-search-bar
                 style={{
-                  borderRadius: '1.5rem',
+                  borderRadius: 'var(--shape-full)',
                   overflow: 'hidden',
                   background: isDark
                     ? 'var(--m3-surface-container)'
@@ -386,7 +386,6 @@ export function Chat() {
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
                   boxShadow: 'none',
-                  transition: 'border-radius 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
                 }}
               >
                 <MultimodalInput

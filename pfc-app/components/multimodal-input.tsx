@@ -327,7 +327,7 @@ export function MultimodalInput({
 
     debounceRef.current = setTimeout(() => {
       setTypingSuggestions(generateRealtimeSuggestions(trimmed));
-    }, 200);
+    }, 80);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -491,11 +491,11 @@ export function MultimodalInput({
         <AnimatePresence>
           {showTyping && (
             <motion.div
-              initial={{ opacity: 0, scaleY: 0 }}
-              animate={{ opacity: 1, scaleY: 1 }}
-              exit={{ opacity: 0, scaleY: 0 }}
-              transition={{ duration: 0.25, ease: M3_EASE }}
-              style={{ overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              style={{ overflow: 'hidden', willChange: 'height, opacity', transform: 'translateZ(0)' }}
             >
               <div style={{
                 borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.2)'}`,
@@ -505,9 +505,9 @@ export function MultimodalInput({
                 {typingSuggestions.map((s, i) => (
                   <motion.button
                     key={`t-${i}-${s.slice(0, 20)}`}
-                    initial={{ opacity: 0, x: -6 }}
+                    initial={{ opacity: 0, x: -4 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.035, duration: 0.18 }}
+                    transition={{ delay: i * 0.025, duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
                     onClick={() => handleSuggestionClick(s)}
                     style={{
                       display: 'flex',
