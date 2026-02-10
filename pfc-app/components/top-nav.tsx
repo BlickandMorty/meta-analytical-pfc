@@ -528,7 +528,7 @@ export function TopNav() {
         pointerEvents: 'none',
       }}
     >
-      {/* Floating bubbles — no background bar */}
+      {/* Floating bubbles — frosted dark backdrop for readability */}
       <div
         style={{
           display: 'flex',
@@ -537,6 +537,12 @@ export function TopNav() {
           gap: '0.25rem',
           padding: '0.5rem 1rem',
           pointerEvents: 'auto',
+          background: isDark
+            ? 'rgba(24,18,11,0.65)'
+            : 'rgba(255,248,244,0.65)',
+          backdropFilter: 'blur(16px) saturate(1.5)',
+          WebkitBackdropFilter: 'blur(16px) saturate(1.5)',
+          borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.15)' : 'rgba(208,196,180,0.12)'}`,
         }}
       >
         {NAV_ITEMS.map((item) => {
