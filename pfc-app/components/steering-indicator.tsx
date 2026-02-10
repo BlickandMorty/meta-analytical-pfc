@@ -38,7 +38,7 @@ export function SteeringIndicator() {
               'bg-card/50 border border-border/30',
               color,
             )}
-            style={{ backdropFilter: 'blur(20px) saturate(1.4)', WebkitBackdropFilter: 'blur(20px) saturate(1.4)' }}
+            style={{ backdropFilter: 'blur(12px) saturate(1.3)', WebkitBackdropFilter: 'blur(12px) saturate(1.3)' }}
           >
             <CompassIcon className="h-3 w-3" />
             <span>{strengthPct}%</span>

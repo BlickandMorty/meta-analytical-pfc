@@ -127,7 +127,7 @@ function PageLinkPopup({
           ? '0 8px 32px rgba(0,0,0,0.5)'
           : '0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06)',
         padding: '6px',
-        backdropFilter: 'blur(20px) saturate(1.3)',
+        backdropFilter: 'blur(12px) saturate(1.2)',
         animation: 'toolbar-in 0.12s cubic-bezier(0.32, 0.72, 0, 1)',
       }}
     >
@@ -247,7 +247,7 @@ function FloatingToolbar({
         boxShadow: isDark
           ? '0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3)'
           : '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
-        backdropFilter: 'blur(20px) saturate(1.3)',
+        backdropFilter: 'blur(12px) saturate(1.2)',
         animation: 'toolbar-in 0.12s cubic-bezier(0.32, 0.72, 0, 1)',
       }}
     >
@@ -365,7 +365,7 @@ function SlashMenu({
           ? '0 8px 32px rgba(0,0,0,0.5)'
           : '0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06)',
         padding: '6px',
-        backdropFilter: 'blur(20px) saturate(1.3)',
+        backdropFilter: 'blur(12px) saturate(1.2)',
         animation: 'toolbar-in 0.12s cubic-bezier(0.32, 0.72, 0, 1)',
       }}
     >

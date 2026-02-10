@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 // ═══════════════════════════════════════════════════════════════════════
 
 const TOKEN_POOL = [
-  // Imports & keywords (violet)
+  // Imports & keywords (ember/amber)
   { text: 'import torch', color: '#C4956A' },
   { text: 'import numpy as np', color: '#C4956A' },
   { text: 'import pandas as pd', color: '#C4956A' },
@@ -21,6 +21,24 @@ const TOKEN_POOL = [
   { text: 'lambda x:', color: '#C4956A' },
   { text: 'yield batch', color: '#C4956A' },
   { text: 'async def train', color: '#C4956A' },
+  { text: 'import jax', color: '#C4956A' },
+  { text: 'import einops', color: '#C4956A' },
+  { text: 'from typing import', color: '#C4956A' },
+  { text: 'import matplotlib', color: '#C4956A' },
+  { text: 'from pathlib', color: '#C4956A' },
+  { text: 'import wandb', color: '#C4956A' },
+  { text: 'import huggingface', color: '#C4956A' },
+  { text: 'from torch.optim', color: '#C4956A' },
+  { text: 'import torchvision', color: '#C4956A' },
+  // Rust keywords (orange)
+  { text: 'fn main()', color: '#E07850' },
+  { text: 'let mut x =', color: '#E07850' },
+  { text: 'impl Trait for', color: '#E07850' },
+  { text: 'pub struct', color: '#E07850' },
+  { text: 'match result {', color: '#E07850' },
+  { text: '.unwrap()', color: '#E07850' },
+  { text: '&self', color: '#E07850' },
+  { text: 'Vec<f64>', color: '#E07850' },
   // Functions & methods (ember)
   { text: 'model.fit()', color: '#E07850' },
   { text: 'optimizer.step()', color: '#E07850' },
@@ -34,6 +52,25 @@ const TOKEN_POOL = [
   { text: 'torch.sigmoid(z)', color: '#E07850' },
   { text: 'np.random.randn()', color: '#E07850' },
   { text: 'pd.read_csv()', color: '#E07850' },
+  { text: 'model.eval()', color: '#E07850' },
+  { text: 'torch.no_grad()', color: '#E07850' },
+  { text: 'F.relu(x)', color: '#E07850' },
+  { text: 'np.einsum("ij,jk")', color: '#E07850' },
+  { text: 'model.parameters()', color: '#E07850' },
+  { text: 'torch.cat(tensors)', color: '#E07850' },
+  { text: 'nn.Dropout(0.1)', color: '#E07850' },
+  { text: 'F.cross_entropy()', color: '#E07850' },
+  { text: 'jax.grad(loss_fn)', color: '#E07850' },
+  { text: 'np.fft.fft(signal)', color: '#E07850' },
+  // JavaScript / TypeScript
+  { text: 'const x = await', color: '#C4B5FD' },
+  { text: 'export default', color: '#C4B5FD' },
+  { text: 'interface Props {', color: '#C4B5FD' },
+  { text: 'Promise.all()', color: '#C4B5FD' },
+  { text: '.then(res =>)', color: '#C4B5FD' },
+  { text: 'Array.from()', color: '#C4B5FD' },
+  { text: 'new Map()', color: '#C4B5FD' },
+  { text: 'type Guard<T>', color: '#C4B5FD' },
   // Strings & labels (green)
   { text: '"cross_entropy"', color: '#4ADE80' },
   { text: '"attention_mask"', color: '#4ADE80' },
@@ -42,6 +79,14 @@ const TOKEN_POOL = [
   { text: '"embeddings"', color: '#4ADE80' },
   { text: '"gradient"', color: '#4ADE80' },
   { text: '"epoch_{i}"', color: '#4ADE80' },
+  { text: '"meta_analysis"', color: '#4ADE80' },
+  { text: '"confidence_interval"', color: '#4ADE80' },
+  { text: '"bayesian_prior"', color: '#4ADE80' },
+  { text: '"effect_size"', color: '#4ADE80' },
+  { text: '"p_value < 0.05"', color: '#4ADE80' },
+  { text: '"replication_rate"', color: '#4ADE80' },
+  { text: '"funnel_plot"', color: '#4ADE80' },
+  { text: '"heterogeneity"', color: '#4ADE80' },
   // Numbers & math (cyan)
   { text: '1e-4', color: '#22D3EE' },
   { text: '0.001', color: '#22D3EE' },
@@ -51,6 +96,14 @@ const TOKEN_POOL = [
   { text: '0.9', color: '#22D3EE' },
   { text: '1024', color: '#22D3EE' },
   { text: '2048', color: '#22D3EE' },
+  { text: '3.14159', color: '#22D3EE' },
+  { text: '2.71828', color: '#22D3EE' },
+  { text: '0.95', color: '#22D3EE' },
+  { text: '1.96', color: '#22D3EE' },
+  { text: '256', color: '#22D3EE' },
+  { text: '4096', color: '#22D3EE' },
+  { text: '0xDEAD', color: '#22D3EE' },
+  { text: '0b1010', color: '#22D3EE' },
   // Types & classes (yellow)
   { text: 'torch.Tensor', color: '#FACC15' },
   { text: 'nn.Module', color: '#FACC15' },
@@ -59,6 +112,13 @@ const TOKEN_POOL = [
   { text: 'DataLoader', color: '#FACC15' },
   { text: 'Optimizer', color: '#FACC15' },
   { text: 'Transformer', color: '#FACC15' },
+  { text: 'BertModel', color: '#FACC15' },
+  { text: 'GPT2Config', color: '#FACC15' },
+  { text: 'AutoTokenizer', color: '#FACC15' },
+  { text: 'LlamaForCausal', color: '#FACC15' },
+  { text: 'AdamW', color: '#FACC15' },
+  { text: 'StepLR', color: '#FACC15' },
+  { text: 'GradScaler', color: '#FACC15' },
   // Operators & syntax (dim)
   { text: '@', color: '#9CA3AF' },
   { text: '**2', color: '#9CA3AF' },
@@ -67,6 +127,12 @@ const TOKEN_POOL = [
   { text: '-> Tensor', color: '#9CA3AF' },
   { text: '+=', color: '#9CA3AF' },
   { text: '.shape', color: '#9CA3AF' },
+  { text: '|>', color: '#9CA3AF' },
+  { text: '??=', color: '#9CA3AF' },
+  { text: '<<=', color: '#9CA3AF' },
+  { text: '...args', color: '#9CA3AF' },
+  { text: '?.', color: '#9CA3AF' },
+  { text: '>>>', color: '#9CA3AF' },
   // Comments (dim green)
   { text: '# gradient descent', color: '#86EFAC' },
   { text: '# backpropagation', color: '#86EFAC' },
@@ -74,6 +140,23 @@ const TOKEN_POOL = [
   { text: '# loss function', color: '#86EFAC' },
   { text: '# feature scaling', color: '#86EFAC' },
   { text: '# batch norm', color: '#86EFAC' },
+  { text: '# meta-analysis', color: '#86EFAC' },
+  { text: '# Bayesian inference', color: '#86EFAC' },
+  { text: '# MCMC sampling', color: '#86EFAC' },
+  { text: '# cross-validation', color: '#86EFAC' },
+  { text: '# p(H|D) ∝ p(D|H)p(H)', color: '#86EFAC' },
+  { text: '// TODO: optimize', color: '#86EFAC' },
+  { text: '/* effect sizes */', color: '#86EFAC' },
+  { text: '# heterogeneity test', color: '#86EFAC' },
+  // Math symbols (pink)
+  { text: 'Σ(xi - x̄)²', color: '#F9A8D4' },
+  { text: '∂L/∂w', color: '#F9A8D4' },
+  { text: '∇f(x)', color: '#F9A8D4' },
+  { text: 'μ ± σ', color: '#F9A8D4' },
+  { text: 'χ² test', color: '#F9A8D4' },
+  { text: 'ℒ(θ|X)', color: '#F9A8D4' },
+  { text: 'argmax P(y|x)', color: '#F9A8D4' },
+  { text: 'KL(P‖Q)', color: '#F9A8D4' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -172,7 +255,6 @@ const PINATA_POOL = [
   { text: '# backprop', color: '#86EFAC' },
   { text: '# gradient', color: '#86EFAC' },
   { text: '# attention', color: '#86EFAC' },
-  // Single characters & short syntax tokens
   { text: '{', color: '#9CA3AF' },
   { text: '}', color: '#9CA3AF' },
   { text: '(', color: '#9CA3AF' },
@@ -222,7 +304,7 @@ interface PinataParticle {
 }
 
 const PINATA_GRAVITY = 0.07;
-const PINATA_MAX = 80;
+const PINATA_MAX_PARTICLES = 40;
 
 function createPinataParticle(x: number, y: number): PinataParticle {
   const token = PINATA_POOL[Math.floor(Math.random() * PINATA_POOL.length)];
@@ -246,7 +328,7 @@ function createPinataParticle(x: number, y: number): PinataParticle {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Canvas rain column — with size tiers for visual depth
+// Rain drop — types in, falls, blurs out
 // ═══════════════════════════════════════════════════════════════════════
 
 type SizeTier = 'tiny' | 'normal' | 'large';
@@ -254,58 +336,145 @@ type SizeTier = 'tiny' | 'normal' | 'large';
 const STRIKEOUT_RED = '#F87171';
 const CURSOR_COLOR = '#D4D4D8';
 
-interface RainColumn {
+interface RainDrop {
   x: number;
   y: number;
   speed: number;
   fontSize: number;
-  tokens: { text: string; color: string }[];
-  tokenIndex: number;
-  opacity: number;
-  blur: number;
-  trail: { text: string; color: string; y: number; opacity: number }[];
+  text: string;
+  color: string;
+  typedChars: number;
+  typeTimer: number;
+  typeInterval: number;   // frames between each char appearing
+  phase: 'typing' | 'visible' | 'fading';
+  baseOpacity: number;
+  fadeProgress: number;   // 0→1 during fading
+  visibleTimer: number;   // frames to stay visible before fading
   sizeTier: SizeTier;
+  // Strikeout animation
   strikeout: number;
   strikeoutText: string;
   strikeoutOrigColor: string;
   strikeoutY: number;
+  // Code-edit animation
   editing: number;
   editOrigText: string;
   editNewText: string;
   editOrigColor: string;
   editNewColor: string;
   editY: number;
+  // Codeblock animation
   codeblock: number;
   codeblockIdx: number;
   codeblockY: number;
 }
 
-function pickSizeTier(): SizeTier {
+function pickSpeedTier(): { speed: number; tier: SizeTier } {
   const r = Math.random();
-  if (r < 0.14) return 'large';   // More large blurred elements (was 0.08)
-  if (r < 0.28) return 'tiny';
-  return 'normal';
+  if (r < 0.12) {
+    // Large: slow background depth elements
+    return { speed: 0.3 + Math.random() * 0.5, tier: 'large' };
+  }
+  if (r < 0.25) {
+    // Slow rain
+    return { speed: 1.0 + Math.random() * 1.2, tier: 'normal' };
+  }
+  if (r < 0.55) {
+    // Medium rain
+    return { speed: 2.0 + Math.random() * 1.5, tier: 'normal' };
+  }
+  // Fast rain (majority)
+  return { speed: 3.0 + Math.random() * 2.5, tier: Math.random() < 0.2 ? 'tiny' : 'normal' };
 }
 
-function applyTier(col: Partial<RainColumn>, tier: SizeTier) {
+function createDrop(w: number, h: number): RainDrop {
+  const token = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
+  const { speed, tier } = pickSpeedTier();
+
+  let fontSize: number;
+  let baseOpacity: number;
+
   switch (tier) {
     case 'large':
-      col.fontSize = 24 + Math.random() * 16;   // Slightly larger
-      col.opacity = 0.05 + Math.random() * 0.06;
-      col.speed = 0.15 + Math.random() * 0.35;  // Slower drift
-      col.blur = 4 + Math.random() * 6;          // More blur for depth
+      fontSize = 22 + Math.random() * 14;
+      baseOpacity = 0.04 + Math.random() * 0.05;
       break;
     case 'tiny':
-      col.fontSize = 7 + Math.random() * 4;
-      col.opacity = 0.08 + Math.random() * 0.12;
-      col.speed = 0.6 + Math.random() * 1.4;
-      col.blur = 0.5 + Math.random() * 2;
+      fontSize = 7 + Math.random() * 4;
+      baseOpacity = 0.08 + Math.random() * 0.10;
       break;
     default:
-      col.fontSize = 12 + Math.random() * 5;
-      col.opacity = 0.10 + Math.random() * 0.16;
-      col.blur = Math.random() < 0.4 ? (0.5 + Math.random() * 2) : 0;
-      col.speed = 0.25 + Math.random() * 0.9;
+      fontSize = 11 + Math.random() * 5;
+      baseOpacity = 0.10 + Math.random() * 0.16;
+      break;
+  }
+
+  // Faster drops type faster
+  const typeInterval = speed > 2.5 ? 1.5 + Math.random() * 1.5 : 2 + Math.random() * 3;
+
+  return {
+    x: Math.random() * w,
+    y: -Math.random() * h * 0.5 - 30,
+    speed,
+    fontSize,
+    text: token.text,
+    color: token.color,
+    typedChars: 0,
+    typeTimer: 0,
+    typeInterval,
+    phase: 'typing',
+    baseOpacity,
+    fadeProgress: 0,
+    visibleTimer: 20 + Math.random() * 60, // stay visible 20-80 frames
+    sizeTier: tier,
+    strikeout: 0,
+    strikeoutText: '',
+    strikeoutOrigColor: '',
+    strikeoutY: 0,
+    editing: 0,
+    editOrigText: '',
+    editNewText: '',
+    editOrigColor: '',
+    editNewColor: '',
+    editY: 0,
+    codeblock: 0,
+    codeblockIdx: 0,
+    codeblockY: 0,
+  };
+}
+
+function recycleDrop(drop: RainDrop, w: number) {
+  const token = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
+  const { speed, tier } = pickSpeedTier();
+
+  drop.text = token.text;
+  drop.color = token.color;
+  drop.speed = speed;
+  drop.sizeTier = tier;
+  drop.x = Math.random() * w;
+  drop.y = -Math.random() * 120 - 30;
+  drop.typedChars = 0;
+  drop.typeTimer = 0;
+  drop.typeInterval = speed > 2.5 ? 1.5 + Math.random() * 1.5 : 2 + Math.random() * 3;
+  drop.phase = 'typing';
+  drop.fadeProgress = 0;
+  drop.visibleTimer = 20 + Math.random() * 60;
+  drop.strikeout = 0;
+  drop.editing = 0;
+  drop.codeblock = 0;
+
+  switch (tier) {
+    case 'large':
+      drop.fontSize = 22 + Math.random() * 14;
+      drop.baseOpacity = 0.04 + Math.random() * 0.05;
+      break;
+    case 'tiny':
+      drop.fontSize = 7 + Math.random() * 4;
+      drop.baseOpacity = 0.08 + Math.random() * 0.10;
+      break;
+    default:
+      drop.fontSize = 11 + Math.random() * 5;
+      drop.baseOpacity = 0.10 + Math.random() * 0.16;
       break;
   }
 }
@@ -323,53 +492,21 @@ function easeInOut(t: number): number {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 }
 
-function createColumn(canvasWidth: number, canvasHeight: number): RainColumn {
-  const tier = pickSizeTier();
-  const tokenCount = 4 + Math.floor(Math.random() * 6);
-  const tokens: { text: string; color: string }[] = [];
-  for (let i = 0; i < tokenCount; i++) {
-    tokens.push(TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)]);
-  }
-
-  const col: RainColumn = {
-    x: Math.random() * canvasWidth,
-    y: -Math.random() * canvasHeight,
-    speed: 0,
-    fontSize: 0,
-    tokens,
-    tokenIndex: 0,
-    opacity: 0,
-    blur: 0,
-    trail: [],
-    sizeTier: tier,
-    strikeout: 0,
-    strikeoutText: '',
-    strikeoutOrigColor: '',
-    strikeoutY: 0,
-    editing: 0,
-    editOrigText: '',
-    editNewText: '',
-    editOrigColor: '',
-    editNewColor: '',
-    editY: 0,
-    codeblock: 0,
-    codeblockIdx: 0,
-    codeblockY: 0,
-  };
-  applyTier(col, tier);
-  return col;
+function easeOut(t: number): number {
+  return 1 - (1 - t) * (1 - t);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Canvas rain component — original background + piñata overlay
+// Canvas rain component
 // ═══════════════════════════════════════════════════════════════════════
 
 export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; searchFocused?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const columnsRef = useRef<RainColumn[]>([]);
+  const dropsRef = useRef<RainDrop[]>([]);
   const pinataRef = useRef<PinataParticle[]>([]);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
+  const frameSkipRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -378,17 +515,15 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    // Pre-cached values to avoid per-frame allocation
     let cachedW = window.innerWidth;
     let cachedH = window.innerHeight;
-    // Light mode gets more particles for visibility
-    const lightModeMultiplier = isDark ? 1 : 1.4;
+    const densityMultiplier = isDark ? 1.3 : 1.6;
 
-    function resetColumns() {
-      columnsRef.current = [];
-      const colCount = Math.floor((cachedW / 42) * lightModeMultiplier);
-      for (let i = 0; i < colCount; i++) {
-        columnsRef.current.push(createColumn(cachedW, cachedH));
+    function resetDrops() {
+      dropsRef.current = [];
+      const count = Math.floor((cachedW / 48) * densityMultiplier);
+      for (let i = 0; i < count; i++) {
+        dropsRef.current.push(createDrop(cachedW, cachedH));
       }
     }
 
@@ -400,50 +535,37 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-
       cachedW = window.innerWidth;
       cachedH = window.innerHeight;
-      resetColumns();
+      resetDrops();
     }
 
     resize();
     window.addEventListener('resize', resize);
 
-    // Periodic reset every 20 seconds to keep syntax from getting too crowded
-    const resetInterval = setInterval(() => {
-      resetColumns();
-    }, 20000);
-
-    // ── Piñata event listener ──
+    // Piñata event listener
     function onPinata(e: Event) {
       const { x, y, count } = (e as CustomEvent).detail;
       const current = pinataRef.current.length;
-      const toAdd = Math.min(count, PINATA_MAX - current);
+      const toAdd = Math.min(count, PINATA_MAX_PARTICLES - current);
       for (let i = 0; i < toAdd; i++) {
         pinataRef.current.push(createPinataParticle(x, y));
       }
     }
     window.addEventListener('pfc-pinata', onPinata);
 
-    // Cached search-bar rect
-    const STRIKEOUT_SPEED = 1 / 110;     // Slower animation (was /90)
-    const STRIKEOUT_CHANCE = 0.0008;     // Less frequent (was 0.0015)
-    const EDIT_SPEED = 1 / 180;          // Slower typing (was /140)
-    const EDIT_CHANCE = 0.0006;          // Less frequent (was 0.001)
-    const CODEBLOCK_SPEED = 1 / 260;    // Slower block typing (was /200)
-    const CODEBLOCK_CHANCE = 0.00025;   // Less frequent (was 0.0004)
+    // Animation constants
+    const STRIKEOUT_SPEED = 1 / 90;
+    const STRIKEOUT_CHANCE = 0.0015;
+    const EDIT_SPEED = 1 / 140;
+    const EDIT_CHANCE = 0.001;
+    const CODEBLOCK_SPEED = 1 / 200;
+    const CODEBLOCK_CHANCE = 0.0004;
+    const FADE_SPEED = 0.035; // how fast drops blur-vanish (higher = faster)
     let cursorClock = 0;
 
-    const blurCache = new Map<number, string>();
     const fontCache = new Map<number, string>();
     const measureCache = new Map<string, number>();
-
-    function getBlurFilter(blur: number): string {
-      const key = Math.round(blur * 10);
-      let v = blurCache.get(key);
-      if (!v) { v = `blur(${blur}px)`; blurCache.set(key, v); }
-      return v;
-    }
 
     function getFont(size: number): string {
       const key = Math.round(size);
@@ -463,7 +585,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       return v;
     }
 
-    // Cache search bar rect outside rAF loop via ResizeObserver
+    // Search bar rect cache
     let searchBarRect: DOMRect | null = null;
     const searchBarEl = document.querySelector('[data-search-bar]');
     if (searchBarEl) searchBarRect = searchBarEl.getBoundingClientRect();
@@ -472,17 +594,33 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       searchBarRect = el ? el.getBoundingClientRect() : null;
     });
     if (searchBarEl) searchBarObserver.observe(searchBarEl);
-    // Also update on scroll/resize
     const updateSearchBarRect = () => {
       const el = document.querySelector('[data-search-bar]');
       searchBarRect = el ? el.getBoundingClientRect() : null;
     };
     window.addEventListener('scroll', updateSearchBarRect, { passive: true });
 
-    const PINATA_MAX_PARTICLES = 40;
+    // Battery: pause when tab hidden
+    let tabHidden = document.hidden;
+    const onVisChange = () => { tabHidden = document.hidden; };
+    document.addEventListener('visibilitychange', onVisChange);
+
+    // Respect prefers-reduced-motion
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reducedMotion = motionQuery.matches;
+    const onMotionChange = (e: MediaQueryListEvent) => { reducedMotion = e.matches; };
+    motionQuery.addEventListener('change', onMotionChange);
 
     function draw(timestamp: number) {
       if (!canvas || !ctx) return;
+
+      if (tabHidden) { rafRef.current = requestAnimationFrame(draw); return; }
+      if (reducedMotion) { rafRef.current = requestAnimationFrame(draw); return; }
+
+      // 30fps throttle — skip every other frame
+      frameSkipRef.current = !frameSkipRef.current;
+      if (frameSkipRef.current) { rafRef.current = requestAnimationFrame(draw); return; }
+
       const delta = timestamp - lastTimeRef.current;
       lastTimeRef.current = timestamp;
       if (delta > 200) { rafRef.current = requestAnimationFrame(draw); return; }
@@ -497,134 +635,230 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       const cursorOn = Math.sin(cursorClock * 0.55) > 0;
 
       // ════════════════════════════════════════════════════════════
-      // LAYER 1: Background rain columns
+      // LAYER 1: Rain drops — type in, fall, blur-vanish
       // ════════════════════════════════════════════════════════════
 
-      for (const col of columnsRef.current) {
-        col.y += col.speed * dt;
+      const idleBuckets = new Map<number, RainDrop[]>();
+      const animatingDrops: RainDrop[] = [];
 
-        const token = col.tokens[col.tokenIndex % col.tokens.length];
-        ctx.font = getFont(col.fontSize);
+      for (const drop of dropsRef.current) {
+        // Fall
+        drop.y += drop.speed * dt;
 
-        const isIdle = col.strikeout === 0 && col.editing === 0 && col.codeblock === 0;
+        // Off-screen: recycle
+        if (drop.y > h + 60) {
+          recycleDrop(drop, w);
+          continue;
+        }
+        if (drop.y < -250) continue;
 
-        // Merge animation trigger checks into single branch
-        if (isIdle && col.sizeTier === 'normal' && col.y > 0 && col.y < h) {
-          const r = Math.random();
-          if (r < STRIKEOUT_CHANCE) {
-            col.strikeout = 0.001;
-            col.strikeoutText = token.text;
-            col.strikeoutOrigColor = token.color;
-            col.strikeoutY = col.y;
-          } else if (r < STRIKEOUT_CHANCE + EDIT_CHANCE) {
-            let replacement = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
-            for (let a = 0; a < 3 && replacement.text === token.text; a++) {
-              replacement = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
+        // Phase logic
+        if (drop.phase === 'typing') {
+          drop.typeTimer += dt;
+          if (drop.typeTimer >= drop.typeInterval) {
+            drop.typeTimer = 0;
+            drop.typedChars++;
+            if (drop.typedChars >= drop.text.length) {
+              drop.typedChars = drop.text.length;
+              drop.phase = 'visible';
             }
-            col.editing = 0.001;
-            col.editOrigText = token.text;
-            col.editOrigColor = token.color;
-            col.editNewText = replacement.text;
-            col.editNewColor = replacement.color;
-            col.editY = col.y;
-          } else if (col.y > 40 && col.y < h - 100 && Math.random() < CODEBLOCK_CHANCE) {
-            col.codeblock = 0.001;
-            col.codeblockIdx = Math.floor(Math.random() * CODE_SNIPPETS.length);
-            col.codeblockY = col.y;
+          }
+        } else if (drop.phase === 'visible') {
+          drop.visibleTimer -= dt;
+          if (drop.visibleTimer <= 0) {
+            drop.phase = 'fading';
+            drop.fadeProgress = 0;
+          }
+        } else if (drop.phase === 'fading') {
+          drop.fadeProgress += FADE_SPEED * dt;
+          if (drop.fadeProgress >= 1) {
+            recycleDrop(drop, w);
+            continue;
           }
         }
 
-        // ── Strikeout animation ──
-        if (col.strikeout > 0) {
-          const p = col.strikeout;
+        const isIdle = drop.strikeout === 0 && drop.editing === 0 && drop.codeblock === 0;
+
+        // Trigger animations (only normal-tier, visible phase, on-screen)
+        if (isIdle && drop.phase === 'visible' && drop.sizeTier === 'normal' && drop.y > 0 && drop.y < h) {
+          const r = Math.random();
+          if (r < STRIKEOUT_CHANCE) {
+            drop.strikeout = 0.001;
+            drop.strikeoutText = drop.text;
+            drop.strikeoutOrigColor = drop.color;
+            drop.strikeoutY = drop.y;
+          } else if (r < STRIKEOUT_CHANCE + EDIT_CHANCE) {
+            let replacement = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
+            for (let a = 0; a < 3 && replacement.text === drop.text; a++) {
+              replacement = TOKEN_POOL[Math.floor(Math.random() * TOKEN_POOL.length)];
+            }
+            drop.editing = 0.001;
+            drop.editOrigText = drop.text;
+            drop.editOrigColor = drop.color;
+            drop.editNewText = replacement.text;
+            drop.editNewColor = replacement.color;
+            drop.editY = drop.y;
+          } else if (drop.y > 40 && drop.y < h - 100 && Math.random() < CODEBLOCK_CHANCE) {
+            drop.codeblock = 0.001;
+            drop.codeblockIdx = Math.floor(Math.random() * CODE_SNIPPETS.length);
+            drop.codeblockY = drop.y;
+          }
+        }
+
+        // Advance animation timers
+        if (drop.strikeout > 0) {
+          drop.strikeout += STRIKEOUT_SPEED * dt;
+          if (drop.strikeout >= 1) drop.strikeout = 0;
+        }
+        if (drop.editing > 0) {
+          drop.editing += EDIT_SPEED * dt;
+          if (drop.editing >= 1) drop.editing = 0;
+        }
+        if (drop.codeblock > 0) {
+          drop.codeblock += CODEBLOCK_SPEED * dt;
+          if (drop.codeblock >= 1) drop.codeblock = 0;
+        }
+
+        // Bucket for batch drawing
+        if (drop.strikeout > 0 || drop.editing > 0 || drop.codeblock > 0) {
+          animatingDrops.push(drop);
+        } else {
+          const key = Math.round(drop.fontSize);
+          let bucket = idleBuckets.get(key);
+          if (!bucket) { bucket = []; idleBuckets.set(key, bucket); }
+          bucket.push(drop);
+        }
+      }
+
+      // ── Batch-draw idle drops by font size ──
+      for (const [fontSize, drops] of idleBuckets) {
+        ctx.font = getFont(fontSize);
+        for (const drop of drops) {
+          // Calculate how many chars to show
+          const chars = Math.min(drop.typedChars, drop.text.length);
+          if (chars <= 0) continue;
+
+          const displayText = drop.text.slice(0, chars);
+
+          // Calculate opacity with fade
+          let alpha = isDark ? drop.baseOpacity * 0.9 : drop.baseOpacity * 0.88;
+          if (drop.phase === 'fading') {
+            const fadeEased = easeOut(drop.fadeProgress);
+            alpha *= (1 - fadeEased);
+          }
+
+          if (alpha < 0.005) continue;
+
+          // Apply blur via filter for fading drops (CSS filter on canvas)
+          if (drop.phase === 'fading' && drop.fadeProgress > 0.1) {
+            const blurAmount = drop.fadeProgress * 6;
+            ctx.filter = `blur(${blurAmount}px)`;
+          }
+
+          ctx.fillStyle = drop.color;
+          ctx.globalAlpha = Math.min(alpha, 1);
+          ctx.fillText(displayText, drop.x, drop.y);
+
+          // Typing cursor
+          if (drop.phase === 'typing' && chars < drop.text.length && cursorOn) {
+            const tw = getMeasure(displayText, drop.fontSize);
+            ctx.fillStyle = CURSOR_COLOR;
+            ctx.globalAlpha = alpha * 0.6;
+            ctx.fillRect(drop.x + tw + 1, drop.y - drop.fontSize * 0.75, Math.max(1, drop.fontSize * 0.06), drop.fontSize * 0.85);
+          }
+
+          if (ctx.filter !== 'none') ctx.filter = 'none';
+        }
+      }
+
+      // ── Draw animating drops ──
+      for (const drop of animatingDrops) {
+        ctx.font = getFont(drop.fontSize);
+
+        // Strikeout animation
+        if (drop.strikeout > 0) {
+          const p = drop.strikeout;
           const colorT = easeInOut(Math.min(p / 0.4, 1));
-          const drawColor = lerpColor(col.strikeoutOrigColor, STRIKEOUT_RED, colorT);
+          const drawColor = lerpColor(drop.strikeoutOrigColor, STRIKEOUT_RED, colorT);
           const fadeOut = p > 0.7 ? 1 - easeInOut((p - 0.7) / 0.3) : 1;
-          const strikeAlpha = (isDark ? 0.55 : 0.45) * fadeOut;
+          const strikeAlpha = 0.55 * fadeOut;
 
           ctx.fillStyle = drawColor;
           ctx.globalAlpha = strikeAlpha;
-          ctx.font = getFont(col.fontSize);
-          ctx.fillText(col.strikeoutText, col.x, col.strikeoutY);
+          ctx.fillText(drop.strikeoutText, drop.x, drop.strikeoutY);
 
           if (p > 0.3) {
             const lineProgress = easeInOut(Math.min((p - 0.3) / 0.4, 1));
-            const textWidth = getMeasure(col.strikeoutText, col.fontSize);
-            const lineY = col.strikeoutY - col.fontSize * 0.3;
+            const textWidth = getMeasure(drop.strikeoutText, drop.fontSize);
+            const lineY = drop.strikeoutY - drop.fontSize * 0.3;
             ctx.strokeStyle = STRIKEOUT_RED;
             ctx.globalAlpha = strikeAlpha * 0.9;
-            ctx.lineWidth = Math.max(1, col.fontSize * 0.08);
+            ctx.lineWidth = Math.max(1, drop.fontSize * 0.08);
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(col.x - 2, lineY);
-            ctx.lineTo(col.x - 2 + (textWidth + 4) * lineProgress, lineY);
+            ctx.moveTo(drop.x - 2, lineY);
+            ctx.lineTo(drop.x - 2 + (textWidth + 4) * lineProgress, lineY);
             ctx.stroke();
           }
-          col.strikeout += STRIKEOUT_SPEED * dt;
-          if (col.strikeout >= 1) col.strikeout = 0;
         }
 
-        // ── Code-edit animation ──
-        if (col.editing > 0) {
-          const p = col.editing;
-          const editAlpha = isDark ? 0.55 : 0.45;
-          const origLen = col.editOrigText.length;
-          const newLen = col.editNewText.length;
+        // Code-edit animation
+        if (drop.editing > 0) {
+          const p = drop.editing;
+          const editAlpha = 0.55;
+          const origLen = drop.editOrigText.length;
+          const newLen = drop.editNewText.length;
 
           let displayText = '';
-          let displayColor = col.editOrigColor;
+          let displayColor = drop.editOrigColor;
           let cursorX = 0;
           let showCursor = cursorOn;
           let fadeAlpha = 1;
 
           if (p < 0.08) {
-            displayText = col.editOrigText;
-            displayColor = col.editOrigColor;
+            displayText = drop.editOrigText;
+            displayColor = drop.editOrigColor;
           } else if (p < 0.38) {
             const deleteProgress = (p - 0.08) / 0.30;
             const charsRemaining = Math.max(0, origLen - Math.floor(deleteProgress * origLen));
-            displayText = col.editOrigText.slice(0, charsRemaining);
-            displayColor = col.editOrigColor;
+            displayText = drop.editOrigText.slice(0, charsRemaining);
+            displayColor = drop.editOrigColor;
           } else if (p < 0.45) {
             displayText = '';
           } else if (p < 0.85) {
             const typeProgress = (p - 0.45) / 0.40;
             const charsTyped = Math.min(newLen, Math.floor(typeProgress * (newLen + 1)));
-            displayText = col.editNewText.slice(0, charsTyped);
-            displayColor = col.editNewColor;
+            displayText = drop.editNewText.slice(0, charsTyped);
+            displayColor = drop.editNewColor;
           } else {
-            displayText = col.editNewText;
-            displayColor = col.editNewColor;
+            displayText = drop.editNewText;
+            displayColor = drop.editNewColor;
             fadeAlpha = 1 - easeInOut((p - 0.85) / 0.15);
             showCursor = false;
           }
 
-          ctx.font = getFont(col.fontSize);
-
           if (displayText.length > 0) {
             ctx.fillStyle = displayColor;
             ctx.globalAlpha = editAlpha * fadeAlpha;
-            ctx.fillText(displayText, col.x, col.editY);
-            cursorX = col.x + getMeasure(displayText, col.fontSize);
+            ctx.fillText(displayText, drop.x, drop.editY);
+            cursorX = drop.x + getMeasure(displayText, drop.fontSize);
           } else {
-            cursorX = col.x;
+            cursorX = drop.x;
           }
 
           if (showCursor) {
-            const cursorH = col.fontSize * 0.85;
-            const cursorY = col.editY - cursorH + col.fontSize * 0.15;
+            const cursorH = drop.fontSize * 0.85;
+            const cursorY = drop.editY - cursorH + drop.fontSize * 0.15;
             ctx.fillStyle = CURSOR_COLOR;
             ctx.globalAlpha = editAlpha * fadeAlpha * 0.8;
-            ctx.fillRect(cursorX + 1, cursorY, Math.max(1, col.fontSize * 0.07), cursorH);
+            ctx.fillRect(cursorX + 1, cursorY, Math.max(1, drop.fontSize * 0.07), cursorH);
           }
-          col.editing += EDIT_SPEED * dt;
-          if (col.editing >= 1) col.editing = 0;
         }
 
-        // ── Code block typewriter (blurred for depth) ──
-        if (col.codeblock > 0) {
-          const p = col.codeblock;
-          const snippet = CODE_SNIPPETS[col.codeblockIdx % CODE_SNIPPETS.length];
+        // Code block typewriter
+        if (drop.codeblock > 0) {
+          const p = drop.codeblock;
+          const snippet = CODE_SNIPPETS[drop.codeblockIdx % CODE_SNIPPETS.length];
           const blockFontSize = 8;
           const lineH = blockFontSize * 1.5;
 
@@ -633,10 +867,9 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
           const bgFadeIn = Math.min(p / 0.05, 1);
           const fadeOut = p > 0.85 ? 1 - easeInOut((p - 0.85) / 0.15) : 1;
-          const blockAlpha = (isDark ? 0.5 : 0.4) * bgFadeIn * fadeOut;
+          const blockAlpha = 0.5 * bgFadeIn * fadeOut;
 
           ctx.font = getFont(blockFontSize);
-          // Code blocks drawn at reduced alpha instead of blur filter
           const cbAlpha = blockAlpha * 0.7;
 
           if (p > 0.05) {
@@ -653,73 +886,40 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
               const visibleText = line.text.slice(0, visibleChars);
               charCount += line.text.length;
 
-              const ly = col.codeblockY + li * lineH;
+              const ly = drop.codeblockY + li * lineH;
               ctx.fillStyle = line.color;
               ctx.globalAlpha = cbAlpha;
-              ctx.fillText(visibleText, col.x, ly);
+              ctx.fillText(visibleText, drop.x, ly);
 
               if (visibleChars < line.text.length && cursorOn && fadeOut > 0.5) {
                 const cw = getMeasure(visibleText, 8);
                 ctx.fillStyle = CURSOR_COLOR;
                 ctx.globalAlpha = cbAlpha * 0.7;
-                ctx.fillRect(col.x + cw + 1, ly - blockFontSize * 0.7, 1, blockFontSize * 0.85);
+                ctx.fillRect(drop.x + cw + 1, ly - blockFontSize * 0.7, 1, blockFontSize * 0.85);
               }
             }
           }
-          col.codeblock += CODEBLOCK_SPEED * dt;
-          if (col.codeblock >= 1) col.codeblock = 0;
-        }
-
-        // ── Normal token drawing ──
-        // No canvas filter (was causing per-column GPU composition switching = stutter)
-        // Depth is simulated via opacity + font size from applyTier()
-        if (col.strikeout === 0 && col.editing === 0 && col.codeblock === 0) {
-          const blurDim = col.blur > 0 ? Math.max(0.3, 1 - col.blur * 0.06) : 1;
-          const alpha = (isDark ? col.opacity * 0.9 : col.opacity * 0.65) * blurDim;
-          ctx.fillStyle = token.color;
-          ctx.globalAlpha = Math.min(alpha, 1);
-          ctx.fillText(token.text, col.x, col.y);
-        }
-
-        if (Math.random() < 0.02) col.tokenIndex++;
-
-        if (col.y > h + 50) {
-          const tier = pickSizeTier();
-          col.sizeTier = tier;
-          applyTier(col, tier);
-          col.y = -Math.random() * 200 - 50;
-          col.x = Math.random() * w;
-          col.tokenIndex = Math.floor(Math.random() * col.tokens.length);
-          col.strikeout = 0;
-          col.editing = 0;
-          col.codeblock = 0;
         }
       }
 
       // ════════════════════════════════════════════════════════════
-      // LAYER 2: Piñata particles (separate ragdoll physics)
+      // LAYER 2: Piñata particles
       // ════════════════════════════════════════════════════════════
 
-      // searchBarRect updated outside rAF via ResizeObserver + scroll listener
-
       const particles = pinataRef.current;
-      // Hard cap particle count to prevent lag spikes
       while (particles.length > PINATA_MAX_PARTICLES) particles.pop();
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
 
-        // Physics
         p.vy += PINATA_GRAVITY * dt;
         p.vx *= 0.998;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.rotation += p.rotVel * dt;
 
-        // Life countdown
         p.life -= dtSec;
         if (p.life <= 0) { particles.splice(i, 1); continue; }
 
-        // Search bar collision
         if (!p.bounced && searchBarRect && p.vy > 0) {
           const sb = searchBarRect;
           if (p.x > sb.left - 10 && p.x < sb.right + 10 &&
@@ -733,19 +933,16 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
           }
         }
 
-        // Off screen removal
         if (p.y > h + 60 || p.x < -80 || p.x > w + 80) {
           particles.splice(i, 1);
           continue;
         }
 
-        // Alpha with fade-in/out
         const age = p.maxLife - p.life;
         const fadeIn = Math.min(1, age / 0.15);
         const fadeOut = p.life < 2 ? p.life / 2 : 1;
         const alpha = p.opacity * fadeIn * fadeOut;
 
-        // Draw with rotation — use setTransform instead of save/restore
         const cos = Math.cos(p.rotation);
         const sin = Math.sin(p.rotation);
         const dpr = window.devicePixelRatio || 1;
@@ -756,10 +953,11 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
         ctx.fillText(p.text, 0, 0);
       }
 
-      // Reset transform and alpha after particle loop
+      // Reset transform
       const dpr = window.devicePixelRatio || 1;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.globalAlpha = 1;
+      ctx.filter = 'none';
       rafRef.current = requestAnimationFrame(draw);
     }
 
@@ -769,9 +967,10 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       window.removeEventListener('resize', resize);
       window.removeEventListener('pfc-pinata', onPinata);
       window.removeEventListener('scroll', updateSearchBarRect);
+      document.removeEventListener('visibilitychange', onVisChange);
+      motionQuery.removeEventListener('change', onMotionChange);
       searchBarObserver.disconnect();
       cancelAnimationFrame(rafRef.current);
-      clearInterval(resetInterval);
     };
   }, [isDark]);
 
@@ -795,10 +994,8 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 // ═══════════════════════════════════════════════════════════════════════
 
 export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
-  // Dark mode: no vignette — flat dark background with visible code rain
   if (isDark) return null;
 
-  // Light mode: soft edge fade to blend rain into the cream background
   return (
     <div
       style={{
@@ -806,7 +1003,7 @@ export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
         inset: 0,
         zIndex: 0,
         pointerEvents: 'none',
-        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(250,250,248,0.92) 100%)',
+        background: 'radial-gradient(ellipse at center, transparent 40%, rgba(250,250,248,0.65) 100%)',
       }}
     />
   );

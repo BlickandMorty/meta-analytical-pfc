@@ -1,6 +1,8 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 
+const workspaceRoot = path.resolve(__dirname, '..');
+
 const nextConfig: NextConfig = {
   experimental: {
     // Enable server actions
@@ -9,7 +11,29 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['better-sqlite3'],
   // Tell Turbopack the workspace root so it resolves hoisted packages (d3, etc.)
   turbopack: {
-    root: path.resolve(__dirname, '..'),
+    root: workspaceRoot,
+    resolveAlias: {
+      'd3-force': '../node_modules/d3-force',
+      'd3-selection': '../node_modules/d3-selection',
+      'd3-zoom': '../node_modules/d3-zoom',
+      'd3-drag': '../node_modules/d3-drag',
+      'd3-dispatch': '../node_modules/d3-dispatch',
+      'd3-timer': '../node_modules/d3-timer',
+      'd3-ease': '../node_modules/d3-ease',
+      'd3-interpolate': '../node_modules/d3-interpolate',
+      'd3-color': '../node_modules/d3-color',
+      'd3-transition': '../node_modules/d3-transition',
+      'd3-quadtree': '../node_modules/d3-quadtree',
+      'd3-array': '../node_modules/d3-array',
+      'd3-scale': '../node_modules/d3-scale',
+      'd3-shape': '../node_modules/d3-shape',
+      'd3-brush': '../node_modules/d3-brush',
+      'd3-path': '../node_modules/d3-path',
+      'd3-format': '../node_modules/d3-format',
+      'd3-time': '../node_modules/d3-time',
+      'd3-time-format': '../node_modules/d3-time-format',
+      'internmap': '../node_modules/internmap',
+    },
   },
 };
 

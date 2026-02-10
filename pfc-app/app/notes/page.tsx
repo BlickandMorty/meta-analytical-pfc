@@ -9,7 +9,6 @@ import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { useTheme } from 'next-themes';
 import { spring, variants, ease } from '@/lib/motion/motion-config';
 import {
-  PanelLeftIcon,
   PlusIcon,
   CalendarIcon,
   PenLineIcon,
@@ -17,20 +16,18 @@ import {
   PinIcon,
   HashIcon,
   ChevronRightIcon,
-  ArrowLeftIcon,
   LinkIcon,
   ClockIcon,
-  TypeIcon,
-  MoreHorizontalIcon,
   BookOpenIcon,
-  SparklesIcon,
   MaximizeIcon,
   MinimizeIcon,
   FileTextIcon,
   EyeIcon,
   PencilIcon,
-  HomeIcon,
   FolderOpenIcon,
+  XIcon,
+  LayoutGridIcon,
+  MousePointerClickIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -51,16 +48,16 @@ const NoteAIChat = dynamic(
   () => import('@/components/notes/note-ai-chat').then((m) => ({ default: m.NoteAIChat })),
   { ssr: false },
 );
-const LearningPanel = dynamic(
-  () => import('@/components/notes/learning-panel').then((m) => ({ default: m.LearningPanel })),
-  { ssr: false },
-);
 const VaultPicker = dynamic(
   () => import('@/components/notes/vault-picker').then((m) => ({ default: m.VaultPicker })),
   { ssr: false },
 );
 const ConceptCorrelationPanel = dynamic(
   () => import('@/components/notes/concept-panel').then((m) => ({ default: m.ConceptCorrelationPanel })),
+  { ssr: false },
+);
+const NoteCanvas = dynamic(
+  () => import('@/components/notes/note-canvas').then((m) => ({ default: m.NoteCanvas })),
   { ssr: false },
 );
 
@@ -542,12 +539,19 @@ function ToolbarBtn({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Sidebar Dimensions
+// Notes Mode type — mutually exclusive: 'notes' (markdown) or 'canvas'
 // ═══════════════════════════════════════════════════════════════════
 
-const DEFAULT_SIDEBAR_WIDTH = 300;
-const MIN_SIDEBAR_WIDTH = 240;
-const MAX_SIDEBAR_WIDTH = 480;
+type NotesViewMode = 'notes' | 'canvas';
+
+function loadViewMode(): NotesViewMode {
+  if (typeof window === 'undefined') return 'notes';
+  return (localStorage.getItem('pfc-notes-view-mode') as NotesViewMode) || 'notes';
+}
+
+function saveViewMode(mode: NotesViewMode) {
+  localStorage.setItem('pfc-notes-view-mode', mode);
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // Main Notes Page
@@ -565,8 +569,6 @@ export default function NotesPage() {
   // ── Store selectors ──
   const activePageId     = usePFCStore((s) => s.activePageId);
   const notePages        = usePFCStore((s) => s.notePages);
-  const notesSidebarOpen = usePFCStore((s) => s.notesSidebarOpen);
-  const toggleNotesSidebar = usePFCStore((s) => s.toggleNotesSidebar);
   const loadNotesFromStorage = usePFCStore((s) => s.loadNotesFromStorage);
   const createPage       = usePFCStore((s) => s.createPage);
   const renamePage       = usePFCStore((s) => s.renamePage);
@@ -581,6 +583,8 @@ export default function NotesPage() {
   const activeVaultId = usePFCStore((s) => s.activeVaultId);
   const vaultReady = usePFCStore((s) => s.vaultReady);
   const loadVaultIndex = usePFCStore((s) => s.loadVaultIndex);
+  const createVault = usePFCStore((s) => s.createVault);
+  const switchVault = usePFCStore((s) => s.switchVault);
   const [showVaultPicker, setShowVaultPicker] = useState(false);
 
   // ── Concept correlation ──
@@ -593,33 +597,17 @@ export default function NotesPage() {
   // ── Read / Write mode ──
   const [editorMode, setEditorMode] = useState<'write' | 'read'>('write');
 
-  // ── Resizable sidebar ──
-  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
-  const isResizing = useRef(false);
-
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizing.current = true;
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-
-    const handleMove = (ev: MouseEvent) => {
-      if (!isResizing.current) return;
-      const newWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, ev.clientX));
-      setSidebarWidth(newWidth);
-    };
-
-    const handleUp = () => {
-      isResizing.current = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      document.removeEventListener('mousemove', handleMove);
-      document.removeEventListener('mouseup', handleUp);
-    };
-
-    document.addEventListener('mousemove', handleMove);
-    document.addEventListener('mouseup', handleUp);
+  // ── View mode: notes (markdown) vs canvas — mutually exclusive ──
+  const [viewMode, setViewMode] = useState<NotesViewMode>('notes');
+  useEffect(() => { setViewMode(loadViewMode()); }, []);
+  const handleSetViewMode = useCallback((mode: NotesViewMode) => {
+    setViewMode(mode);
+    saveViewMode(mode);
   }, []);
+
+  // ── Floating sidebar panel ──
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelHovered, setPanelHovered] = useState(false);
 
   // ── Load vault index on mount ──
   useEffect(() => {
@@ -628,12 +616,13 @@ export default function NotesPage() {
     }
   }, [ready, loadVaultIndex]);
 
-  // ── Show vault picker if no vaults exist ──
+  // ── Auto-create a default vault if none exist ──
   useEffect(() => {
     if (vaultReady && vaults.length === 0) {
-      setShowVaultPicker(true);
+      const id = createVault('My Notes');
+      switchVault(id);
     }
-  }, [vaultReady, vaults.length]);
+  }, [vaultReady, vaults.length, createVault, switchVault]);
 
   // ── Load notes when vault is selected ──
   useEffect(() => {
@@ -692,7 +681,6 @@ export default function NotesPage() {
   }, [handleTitleCommit]);
 
   const handleNewPage = useCallback(() => {
-    // Use startTransition to keep sidebar animation smooth
     startTransition(() => {
       createPage('Untitled');
     });
@@ -710,15 +698,17 @@ export default function NotesPage() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey;
-      // Cmd+\ — toggle sidebar
       if (isMod && e.key === '\\') {
         e.preventDefault();
-        toggleNotesSidebar();
+        setPanelOpen((v) => !v);
+      }
+      if (e.key === 'Escape' && panelOpen) {
+        setPanelOpen(false);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [toggleNotesSidebar, undo, redo]);
+  }, [panelOpen, undo, redo]);
 
   // ── Loading state ──
   if (!ready) {
@@ -729,255 +719,123 @@ export default function NotesPage() {
     );
   }
 
-  const showSidebar = mounted && notesSidebarOpen && !zenMode;
+  const panelBubbleExpanded = panelHovered || panelOpen;
 
   return (
     <div
       style={{
         display: 'flex',
+        flexDirection: 'column',
         height: '100vh',
         background: c.bg,
         overflow: 'hidden',
-        paddingTop: '3rem',
         contain: 'layout style',
       }}
     >
-      {/* ── Sidebar — CSS transition + GPU layer, no Framer Motion width animation ── */}
+      {/* ── Full-page editor/canvas area ── */}
       <div
-        style={{
-          width: showSidebar ? sidebarWidth : 0,
-          opacity: showSidebar ? 1 : 0,
-          overflow: 'hidden',
-          flexShrink: 0,
-          position: 'relative',
-          transform: 'translateZ(0)',
-          transition: `width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
-          contain: 'layout paint',
-          willChange: showSidebar ? 'auto' : 'width, opacity',
-        } as React.CSSProperties}
-      >
-        <NotesSidebar />
-        {/* Resize handle */}
-        <div
-          onMouseDown={handleResizeStart}
-          style={{
-            position: 'absolute',
-            top: 0,
-            right: -2,
-            width: 5,
-            height: '100%',
-            cursor: 'col-resize',
-            zIndex: 10,
-          }}
-        />
-      </div>
-
-      {/* ── Main content ── */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minWidth: 0,
-          background: c.bg,
-          contain: 'layout style',
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes('application/x-page-id')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'link';
+          }
         }}
-      >
-        {/* ── Toolbar ── */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 1.5rem',
-            borderBottom: `1px solid ${c.border}`,
-            flexShrink: 0,
-            contain: 'layout style',
-          }}
-        >
-          {/* Home button */}
-          <ToolbarBtn
-            onClick={() => router.push('/')}
-            title="Back to home"
-            bgColor={c.toolbarBtnBg}
-            activeColor={c.accent}
-            inactiveColor={c.muted}
-            isActive
-          >
-            <HomeIcon style={{ width: '1rem', height: '1rem' }} />
-          </ToolbarBtn>
-
-          {/* Sidebar toggle */}
-          <ToolbarBtn
-            onClick={toggleNotesSidebar}
-            title="Toggle sidebar (Cmd+\\)"
-            bgColor={c.toolbarBtnBg}
-            activeColor={c.muted}
-            inactiveColor={c.muted}
-            isActive
-          >
-            <PanelLeftIcon style={{ width: '1rem', height: '1rem' }} />
-          </ToolbarBtn>
-
-          {/* Vault indicator */}
-          {vaults.length > 0 && (
-            <button
-              onClick={() => setShowVaultPicker((v) => !v)}
-              title="Switch vault"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '4px 10px',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                fontFamily: 'inherit',
-                color: c.accent,
-                background: `${c.accent}08`,
-                border: `1px solid ${c.accent}20`,
-                borderRadius: 6,
-                cursor: 'pointer',
-                transition: 'background 0.15s',
-              }}
-            >
-              <FolderOpenIcon style={{ width: 11, height: 11 }} />
-              {vaults.find((v: any) => v.id === activeVaultId)?.name ?? 'Vault'}
-            </button>
-          )}
-
-          {/* Page nav breadcrumb */}
-          {activePage && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              fontSize: '0.75rem',
-              color: c.muted,
-              fontFamily: 'var(--font-sans)',
-              fontWeight: 500,
-            }}>
-              {activePage.isJournal && (
-                <>
-                  <CalendarIcon style={{ width: '0.6875rem', height: '0.6875rem', color: c.green }} />
-                  <span style={{ color: c.green }}>Journal</span>
-                  <ChevronRightIcon style={{ width: '0.625rem', height: '0.625rem', opacity: 0.4 }} />
-                </>
-              )}
-              <span style={{
-                maxWidth: '12rem',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {activePage.title}
-              </span>
-            </div>
-          )}
-
-          <div style={{ flex: 1 }} />
-
-          {/* Page actions */}
-          {activePage && (
-            <>
-              <ToolbarBtn
-                onClick={() => togglePageFavorite(activePage.id)}
-                title={activePage.favorite ? 'Remove from favorites' : 'Favorite'}
-                activeColor="#FBBF24"
-                isActive={activePage.favorite}
-              >
-                <StarIcon style={{
-                  width: '0.8rem', height: '0.8rem',
-                  fill: activePage.favorite ? '#FBBF24' : 'none',
-                }} />
-              </ToolbarBtn>
-              <ToolbarBtn
-                onClick={() => togglePagePin(activePage.id)}
-                title={activePage.pinned ? 'Unpin' : 'Pin'}
-                isActive={activePage.pinned}
-              >
-                <PinIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-              </ToolbarBtn>
-            </>
-          )}
-
-          {/* Read / Write mode toggle */}
-          <ToolbarBtn
-            onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
-            title={editorMode === 'write' ? 'Switch to read mode' : 'Switch to write mode'}
-            isActive
-            activeColor={editorMode === 'read' ? c.green : c.accent}
-            bgColor={editorMode === 'read'
-              ? (isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)')
-              : c.toolbarBtnBg}
-          >
-            {editorMode === 'read'
-              ? <EyeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-              : <PencilIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-            }
-          </ToolbarBtn>
-
-          {/* Zen mode toggle */}
-          <ToolbarBtn
-            onClick={() => setZenMode((v) => !v)}
-            title={zenMode ? 'Exit zen mode' : 'Zen mode'}
-            isActive={zenMode}
-            activeColor={c.accent}
-          >
-            {zenMode
-              ? <MinimizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-              : <MaximizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-            }
-          </ToolbarBtn>
-
-          {/* New page */}
-          <ToolbarBtn
-            onClick={handleNewPage}
-            title="New page"
-            bgColor={isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)'}
-            activeColor={c.green}
-            isActive
-          >
-            <PlusIcon style={{ width: '0.875rem', height: '0.875rem' }} />
-          </ToolbarBtn>
-
-          {/* Today's journal */}
-          <ToolbarBtn
-            onClick={() => getOrCreateTodayJournal()}
-            title="Today's journal"
-            bgColor={isDark ? 'rgba(244,189,111,0.1)' : 'rgba(244,189,111,0.08)'}
-            activeColor={c.accent}
-            isActive
-          >
-            <CalendarIcon style={{ width: '0.875rem', height: '0.875rem' }} />
-          </ToolbarBtn>
-        </div>
-
-        {/* ── Editor area — GPU scroll layer with overscroll containment ── */}
-        <div
-          onDragOver={(e) => {
-            if (e.dataTransfer.types.includes('application/x-page-id')) {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = 'link';
-            }
-          }}
-          onDrop={(e) => {
-            const draggedPageId = e.dataTransfer.getData('application/x-page-id');
-            if (draggedPageId && activePageId && draggedPageId !== activePageId) {
-              setCorrelationTarget({ pageAId: activePageId, pageBId: draggedPageId });
-            }
-          }}
-          style={{
+        onDrop={(e) => {
+          const draggedPageId = e.dataTransfer.getData('application/x-page-id');
+          if (draggedPageId && activePageId && draggedPageId !== activePageId) {
+            setCorrelationTarget({ pageAId: activePageId, pageBId: draggedPageId });
+          }
+        }}
+        style={{
           flex: 1,
           overflow: 'auto',
           position: 'relative',
           transform: 'translateZ(0)',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
-        } as React.CSSProperties}>
-          <AnimatePresence mode="wait">
-            {activePageId && activePage && mounted ? (
+          // Add top padding so content doesn't hide behind the TopNav
+          paddingTop: '3rem',
+        } as React.CSSProperties}
+      >
+        <AnimatePresence mode="wait">
+          {activePageId && activePage && mounted ? (
+            viewMode === 'canvas' ? (
+              /* ═══ CANVAS MODE — full-screen canvas ═══ */
               <motion.div
-                key={activePageId}
+                key={`canvas-${activePageId}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  position: 'relative',
+                }}
+              >
+                {/* Floating page title in canvas mode */}
+                <div style={{
+                  position: 'fixed',
+                  top: 52,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 35,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.375rem 1rem',
+                  borderRadius: '9999px',
+                  background: isDark ? 'rgba(20,19,17,0.85)' : 'rgba(248,244,238,0.85)',
+                  backdropFilter: 'blur(12px) saturate(1.3)',
+                  WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+                  border: `1px solid ${c.border}`,
+                }}>
+                  {activePage.isJournal && (
+                    <CalendarIcon style={{ width: '0.6875rem', height: '0.6875rem', color: c.green }} />
+                  )}
+                  <span
+                    onClick={handleTitleClick}
+                    style={{
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      color: c.text,
+                      cursor: 'text',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {isEditingTitle ? (
+                      <input
+                        ref={titleRef}
+                        value={titleDraft}
+                        onChange={(e) => setTitleDraft(e.target.value)}
+                        onBlur={handleTitleCommit}
+                        onKeyDown={handleTitleKeyDown}
+                        autoFocus
+                        style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          color: c.text,
+                          background: 'transparent',
+                          border: 'none',
+                          outline: 'none',
+                          padding: 0,
+                          caretColor: c.accent,
+                          fontFamily: 'inherit',
+                          width: '12rem',
+                        }}
+                      />
+                    ) : activePage.title}
+                  </span>
+                </div>
+
+                {activeVaultId && (
+                  <NoteCanvas pageId={activePageId} vaultId={activeVaultId} />
+                )}
+              </motion.div>
+            ) : (
+              /* ═══ NOTES MODE — markdown block editor ═══ */
+              <motion.div
+                key={`notes-${activePageId}`}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
@@ -985,11 +843,11 @@ export default function NotesPage() {
                 style={{
                   maxWidth: zenMode ? '42rem' : '52rem',
                   margin: '0 auto',
-                  padding: zenMode ? '4rem 2rem 8rem' : '2rem 4rem 8rem',
+                  padding: zenMode ? '3rem 2rem 8rem' : '1.5rem 4rem 8rem',
                   transition: 'max-width 0.3s cubic-bezier(0.32,0.72,0,1), padding 0.3s cubic-bezier(0.32,0.72,0,1)',
                 }}
               >
-                {/* Title header — centered at top with stable height */}
+                {/* Title header */}
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -998,7 +856,6 @@ export default function NotesPage() {
                   marginBottom: '2.5rem',
                   paddingTop: '1rem',
                 }}>
-                  {/* Journal badge — small indicator only */}
                   {activePage.isJournal && (
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.5rem',
@@ -1011,7 +868,6 @@ export default function NotesPage() {
                     </div>
                   )}
 
-                  {/* Title row — book GIF + title centered, stable height wrapper */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1023,7 +879,6 @@ export default function NotesPage() {
                       <PixelBook size={48} />
                     </div>
 
-                    {/* Title — editable always, typewriter only in read mode */}
                     {isEditingTitle ? (
                       <input
                         ref={titleRef}
@@ -1073,7 +928,6 @@ export default function NotesPage() {
                     )}
                   </div>
 
-                  {/* Tags — below title */}
                   {activePage.tags.length > 0 && (
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                       {activePage.tags.map((tag: string) => (
@@ -1098,189 +952,352 @@ export default function NotesPage() {
                   )}
                 </div>
 
-                {/* Block editor */}
                 <BlockEditor pageId={activePageId} readOnly={editorMode === 'read'} />
 
-                {/* Backlinks panel */}
                 <BacklinksPanel pageId={activePageId} c={c} />
-
-                {/* Page stats */}
                 <PageStats pageId={activePageId} page={activePage} c={c} />
               </motion.div>
-            ) : (
-              /* ── Landing page (empty state) ── */
+            )
+          ) : (
+            /* ═══ LANDING — no active page ═══ */
+            <motion.div
+              key="landing"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={spring.standard}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                gap: '1.5rem',
+                padding: '2rem',
+              }}
+            >
               <motion.div
-                key="landing"
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={spring.standard}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...spring.gentle, delay: 0.05 }}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  gap: '1.5rem',
-                  padding: '2rem',
+                  gap: '1rem',
+                  textAlign: 'center',
                 }}
               >
                 <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ ...spring.gentle, delay: 0.05 }}
+                  whileHover={{ scale: 1.06 }}
+                  transition={spring.snappy}
                   style={{
+                    width: '3.5rem',
+                    height: '3.5rem',
+                    borderRadius: '1rem',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '1rem',
-                    textAlign: 'center',
+                    justifyContent: 'center',
+                    background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
                   }}
                 >
-                  <motion.div
-                    whileHover={{ scale: 1.06 }}
-                    transition={spring.snappy}
-                    style={{
-                      width: '3.5rem',
-                      height: '3.5rem',
-                      borderRadius: '1rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
-                    }}
-                  >
-                    <PenLineIcon style={{
-                      width: '1.5rem',
-                      height: '1.5rem',
-                      color: c.faint,
-                    }} />
-                  </motion.div>
-
-                  <div>
-                    <h3 style={{
-                      fontSize: '1.5rem',
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                      color: isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.6)',
-                      marginBottom: '0.5rem',
-                    }}>
-                      Notes
-                    </h3>
-                    <p style={{
-                      fontSize: '1rem',
-                      color: c.muted,
-                      maxWidth: '340px',
-                      lineHeight: 1.6,
-                    }}>
-                      Create a page or open today&apos;s journal to start taking notes.
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <motion.button
-                      onClick={handleNewPage}
-                      whileHover={{ scale: 1.04 }}
-                      whileTap={{ scale: 0.96 }}
-                      transition={spring.snappy}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.375rem',
-                        padding: '0.625rem 1.25rem',
-                        borderRadius: '9999px',
-                        border: 'none',
-                        background: isDark ? 'rgba(52,211,153,0.12)' : 'rgba(52,211,153,0.1)',
-                        color: c.green,
-                        fontSize: '0.9375rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <PlusIcon style={{ width: '0.75rem', height: '0.75rem' }} />
-                      New Page
-                    </motion.button>
-                    <motion.button
-                      onClick={() => getOrCreateTodayJournal()}
-                      whileHover={{ scale: 1.04 }}
-                      whileTap={{ scale: 0.96 }}
-                      transition={spring.snappy}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.375rem',
-                        padding: '0.625rem 1.25rem',
-                        borderRadius: '9999px',
-                        border: 'none',
-                        background: isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.1)',
-                        color: c.accent,
-                        fontSize: '0.9375rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <CalendarIcon style={{ width: '0.75rem', height: '0.75rem' }} />
-                      Today&apos;s Journal
-                    </motion.button>
-                  </div>
+                  <PenLineIcon style={{ width: '1.5rem', height: '1.5rem', color: c.faint }} />
                 </motion.div>
 
-                {/* Recent pages quick-access */}
-                <RecentPagesGrid isDark={isDark} c={c} />
+                <div>
+                  <h3 style={{
+                    fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em',
+                    color: isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.6)', marginBottom: '0.5rem',
+                  }}>
+                    Notes
+                  </h3>
+                  <p style={{ fontSize: '1rem', color: c.muted, maxWidth: '340px', lineHeight: 1.6 }}>
+                    Create a page or open today&apos;s journal to start taking notes.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <motion.button
+                    onClick={handleNewPage}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    transition={spring.snappy}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.375rem',
+                      padding: '0.625rem 1.25rem', borderRadius: '9999px', border: 'none',
+                      background: isDark ? 'rgba(52,211,153,0.12)' : 'rgba(52,211,153,0.1)',
+                      color: c.green, fontSize: '0.9375rem', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    <PlusIcon style={{ width: '0.75rem', height: '0.75rem' }} />
+                    New Page
+                  </motion.button>
+                  <motion.button
+                    onClick={() => getOrCreateTodayJournal()}
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    transition={spring.snappy}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.375rem',
+                      padding: '0.625rem 1.25rem', borderRadius: '9999px', border: 'none',
+                      background: isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.1)',
+                      color: c.accent, fontSize: '0.9375rem', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    <CalendarIcon style={{ width: '0.75rem', height: '0.75rem' }} />
+                    Today&apos;s Journal
+                  </motion.button>
+                </div>
               </motion.div>
-            )}
-          </AnimatePresence>
 
-          {/* AI Chat overlay */}
-          {activePageId && mounted && (
-            <NoteAIChat pageId={activePageId} activeBlockId={editingBlockId} />
+              <RecentPagesGrid isDark={isDark} c={c} />
+            </motion.div>
           )}
-          {mounted && <LearningPanel />}
+        </AnimatePresence>
 
-          {/* Vault picker overlay */}
-          {showVaultPicker && mounted && (
-            <VaultPicker />
-          )}
-
-          {/* Concept correlation panel */}
-          <AnimatePresence>
-            {correlationTarget && (
-              <ConceptCorrelationPanel
-                pageAId={correlationTarget.pageAId}
-                pageBId={correlationTarget.pageBId}
-                onClose={() => setCorrelationTarget(null)}
-              />
+        {/* ═══ Floating toolbar — top-right (below TopNav) ═══ */}
+        {mounted && (
+          <div style={{ position: 'fixed', top: 52, right: 16, zIndex: 40, display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+            {/* Notes home — deselect active page to return to landing */}
+            {activePage && (
+              <ToolbarBtn
+                onClick={() => setActivePage(null)}
+                title="Notes home"
+                isActive={false}
+                bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+              >
+                <PenLineIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+              </ToolbarBtn>
             )}
-          </AnimatePresence>
-        </div>
+
+            {/* Page quick-actions — only when a page is active */}
+            {activePage && (
+              <>
+                <ToolbarBtn
+                  onClick={() => togglePageFavorite(activePage.id)}
+                  title={activePage.favorite ? 'Unfavorite' : 'Favorite'}
+                  activeColor="#FBBF24"
+                  isActive={activePage.favorite}
+                  bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+                >
+                  <StarIcon style={{ width: '0.8rem', height: '0.8rem', fill: activePage.favorite ? '#FBBF24' : 'none' }} />
+                </ToolbarBtn>
+                <ToolbarBtn
+                  onClick={() => togglePagePin(activePage.id)}
+                  title={activePage.pinned ? 'Unpin' : 'Pin'}
+                  isActive={activePage.pinned}
+                  bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+                >
+                  <PinIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                </ToolbarBtn>
+
+                {/* Notes Mode / Canvas Mode toggle */}
+                <button
+                  onClick={() => handleSetViewMode(viewMode === 'notes' ? 'canvas' : 'notes')}
+                  title={viewMode === 'notes' ? 'Switch to Canvas mode' : 'Switch to Notes mode'}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.3rem 0.65rem',
+                    height: '1.75rem',
+                    borderRadius: '9999px',
+                    border: 'none',
+                    fontSize: '0.6875rem',
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    color: viewMode === 'canvas' ? '#22D3EE' : c.accent,
+                    background: isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)',
+                    backdropFilter: 'blur(12px) saturate(1.4)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                    transition: 'color 0.15s, background 0.15s',
+                  }}
+                >
+                  {viewMode === 'canvas' ? (
+                    <>
+                      <MousePointerClickIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
+                      Canvas
+                    </>
+                  ) : (
+                    <>
+                      <FileTextIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
+                      Notes
+                    </>
+                  )}
+                </button>
+
+                {viewMode === 'notes' && (
+                  <>
+                    <ToolbarBtn
+                      onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
+                      title={editorMode === 'write' ? 'Read mode' : 'Write mode'}
+                      isActive
+                      activeColor={editorMode === 'read' ? c.green : c.accent}
+                      bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+                    >
+                      {editorMode === 'read'
+                        ? <EyeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                        : <PencilIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                      }
+                    </ToolbarBtn>
+                    <ToolbarBtn
+                      onClick={() => setZenMode((v) => !v)}
+                      title={zenMode ? 'Exit zen' : 'Zen mode'}
+                      isActive={zenMode}
+                      activeColor={c.accent}
+                      bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+                    >
+                      {zenMode
+                        ? <MinimizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                        : <MaximizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                      }
+                    </ToolbarBtn>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Vault switcher bubble */}
+            {vaults.length > 0 && (
+              <button
+                onClick={() => setShowVaultPicker((v) => !v)}
+                title="Switch vault"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '0.4rem 0.75rem', fontSize: '0.6875rem', fontWeight: 600,
+                  fontFamily: 'inherit', color: c.accent,
+                  background: isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)',
+                  border: 'none', borderRadius: '9999px', cursor: 'pointer',
+                  backdropFilter: 'blur(12px) saturate(1.4)',
+                  WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                  height: '1.75rem',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <FolderOpenIcon style={{ width: 11, height: 11 }} />
+                {vaults.find((v: any) => v.id === activeVaultId)?.name ?? 'Vault'}
+              </button>
+            )}
+
+            {/* Sidebar panel toggle — NavBubble-style */}
+            <button
+              onClick={() => setPanelOpen((v) => !v)}
+              onMouseEnter={() => setPanelHovered(true)}
+              onMouseLeave={() => setPanelHovered(false)}
+              title="Toggle notes panel (Cmd+\\)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: panelBubbleExpanded ? '0.5rem' : '0rem',
+                cursor: 'pointer',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: panelBubbleExpanded ? '0.4rem 0.85rem' : '0.4rem 0.55rem',
+                height: '1.75rem',
+                fontSize: '0.6875rem',
+                fontWeight: panelOpen ? 650 : 500,
+                letterSpacing: '-0.01em',
+                color: panelOpen
+                  ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
+                  : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
+                background: panelOpen
+                  ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
+                  : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
+                backdropFilter: 'blur(12px) saturate(1.4)',
+                WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                transition: `padding 0.3s ${CUP_EASE}, gap 0.3s ${CUP_EASE}, background 0.15s ease, color 0.15s ease`,
+                transform: 'translateZ(0)',
+              }}
+            >
+              <LayoutGridIcon style={{
+                height: '0.75rem', width: '0.75rem', flexShrink: 0,
+                color: panelOpen ? '#C4956A' : 'inherit',
+                transition: 'color 0.15s',
+              }} />
+              <span style={{
+                display: 'inline-block',
+                maxWidth: panelBubbleExpanded ? '5rem' : '0rem',
+                opacity: panelBubbleExpanded ? 1 : 0,
+                overflow: 'hidden', whiteSpace: 'nowrap',
+                transition: `max-width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
+              }}>
+                pages
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* ═══ Floating Notes Panel — overlays from top-right ═══ */}
+        <AnimatePresence>
+          {panelOpen && mounted && (
+            <motion.div
+              key="notes-panel"
+              initial={{ opacity: 0, scale: 0.92, y: -8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: -8 }}
+              transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+              style={{
+                position: 'fixed',
+                top: 88,
+                right: 16,
+                width: 300,
+                maxHeight: 'calc(100vh - 110px)',
+                display: 'flex',
+                flexDirection: 'column',
+                background: isDark ? 'rgba(20,19,17,0.96)' : 'rgba(248,244,238,0.96)',
+                border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.3)'}`,
+                borderRadius: '1rem',
+                backdropFilter: 'blur(12px) saturate(1.3)',
+                WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+                overflow: 'hidden',
+                zIndex: 39,
+              }}
+            >
+              {/* Close button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.375rem 0.5rem 0', flexShrink: 0 }}>
+                <motion.button
+                  onClick={() => setPanelOpen(false)}
+                  whileTap={{ scale: 0.92 }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, borderRadius: '50%',
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                  }}
+                >
+                  <XIcon style={{ width: 12, height: 12 }} />
+                </motion.button>
+              </div>
+              <NotesSidebar />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ═══ Fused AI button — NoteAIChat with AI Learn built in ═══ */}
+        {activePageId && mounted && viewMode === 'notes' && (
+          <NoteAIChat pageId={activePageId} activeBlockId={editingBlockId} />
+        )}
+
+        {/* Vault picker overlay */}
+        {showVaultPicker && mounted && (
+          <VaultPicker onClose={() => setShowVaultPicker(false)} />
+        )}
+
+        {/* Concept correlation panel */}
+        <AnimatePresence>
+          {correlationTarget && (
+            <ConceptCorrelationPanel
+              pageAId={correlationTarget.pageAId}
+              pageBId={correlationTarget.pageBId}
+              onClose={() => setCorrelationTarget(null)}
+            />
+          )}
+        </AnimatePresence>
       </div>
-
-      {/* Page-level drop zone for correlation (drag a page from sidebar onto editor) */}
-      {activePageId && (
-        <div
-          onDragOver={(e) => {
-            if (e.dataTransfer.types.includes('application/x-page-id')) {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = 'link';
-            }
-          }}
-          onDrop={(e) => {
-            const draggedPageId = e.dataTransfer.getData('application/x-page-id');
-            if (draggedPageId && draggedPageId !== activePageId) {
-              setCorrelationTarget({ pageAId: activePageId, pageBId: draggedPageId });
-            }
-          }}
-          style={{
-            position: 'fixed',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: 4,
-            zIndex: 55,
-            pointerEvents: 'auto',
-          }}
-        />
-      )}
     </div>
   );
 }

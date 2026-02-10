@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback, useMemo, useEffect } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
@@ -11,7 +11,6 @@ import {
   TrashIcon,
   PencilIcon,
   ChevronRightIcon,
-  FileTextIcon,
   FolderIcon,
   XIcon,
   CheckIcon,
@@ -19,7 +18,11 @@ import {
 
 const CUPERTINO = [0.32, 0.72, 0, 1] as const;
 
-export const VaultPicker = memo(function VaultPicker() {
+interface VaultPickerProps {
+  onClose?: () => void;
+}
+
+export const VaultPicker = memo(function VaultPicker({ onClose }: VaultPickerProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -38,13 +41,19 @@ export const VaultPicker = memo(function VaultPicker() {
   const [renameValue, setRenameValue] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
+  const handleSelectVault = useCallback((vaultId: string) => {
+    switchVault(vaultId);
+    onClose?.();
+  }, [switchVault, onClose]);
+
   const handleCreate = useCallback(() => {
     const name = newName.trim() || 'New Vault';
     const id = createVault(name);
     switchVault(id);
     setCreating(false);
     setNewName('');
-  }, [newName, createVault, switchVault]);
+    onClose?.();
+  }, [newName, createVault, switchVault, onClose]);
 
   const handleRename = useCallback(() => {
     if (renamingId && renameValue.trim()) {
@@ -72,17 +81,20 @@ export const VaultPicker = memo(function VaultPicker() {
   const accent = '#C4956A';
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 100,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: glassBackground,
-      backdropFilter: 'blur(40px) saturate(1.5)',
-      WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
-    }}>
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: glassBackground,
+        backdropFilter: 'blur(16px) saturate(1.3)',
+        WebkitBackdropFilter: 'blur(16px) saturate(1.3)',
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -126,7 +138,7 @@ export const VaultPicker = memo(function VaultPicker() {
             margin: '0.375rem 0 0',
             lineHeight: 1.5,
           }}>
-            Vaults are isolated workspaces for your notes. Each vault has its own pages, notebooks, and links.
+            Vaults are isolated workspaces stored in your browser.
           </p>
         </div>
 
@@ -151,7 +163,7 @@ export const VaultPicker = memo(function VaultPicker() {
                 animate={{ opacity: 1, y: 0 }}
                 onMouseEnter={() => setHoveredId(vault.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                onClick={() => { if (!isRenaming) switchVault(vault.id); }}
+                onClick={() => { if (!isRenaming) handleSelectVault(vault.id); }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -182,7 +194,7 @@ export const VaultPicker = memo(function VaultPicker() {
                         if (e.key === 'Escape') {
                           setRenamingId(null);
                           e.currentTarget.blur();
-                          return; // Prevent onBlur from calling handleRename
+                          return;
                         }
                       }}
                       onBlur={() => { if (renamingId) handleRename(); }}
@@ -296,52 +308,64 @@ export const VaultPicker = memo(function VaultPicker() {
             >
               <div style={{
                 display: 'flex',
+                flexDirection: 'column',
                 gap: '8px',
                 padding: '4px 0',
               }}>
-                <input
-                  autoFocus
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreate();
-                    if (e.key === 'Escape') setCreating(false);
-                  }}
-                  placeholder="Vault name..."
-                  style={{
-                    flex: 1,
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    background: cardBg,
-                    border: `1px solid ${border}`,
-                    borderRadius: 8,
-                    color: text,
-                    padding: '8px 12px',
-                    outline: 'none',
-                    fontFamily: 'inherit',
-                  }}
-                />
-                <button
-                  onClick={handleCreate}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 36, height: 36, borderRadius: 8, border: 'none',
-                    background: accent, color: '#fff', cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  <CheckIcon style={{ width: 16, height: 16 }} />
-                </button>
-                <button
-                  onClick={() => setCreating(false)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    width: 36, height: 36, borderRadius: 8, border: `1px solid ${border}`,
-                    background: 'transparent', color: muted, cursor: 'pointer',
-                  }}
-                >
-                  <XIcon style={{ width: 14, height: 14 }} />
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreate();
+                      if (e.key === 'Escape') setCreating(false);
+                    }}
+                    placeholder="Vault name..."
+                    style={{
+                      flex: 1,
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      background: cardBg,
+                      border: `1px solid ${border}`,
+                      borderRadius: 8,
+                      color: text,
+                      padding: '8px 12px',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    onClick={handleCreate}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 36, borderRadius: 8, border: 'none',
+                      background: accent, color: '#fff', cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <CheckIcon style={{ width: 16, height: 16 }} />
+                  </button>
+                  <button
+                    onClick={() => setCreating(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 36, borderRadius: 8, border: `1px solid ${border}`,
+                      background: 'transparent', color: muted, cursor: 'pointer',
+                    }}
+                  >
+                    <XIcon style={{ width: 14, height: 14 }} />
+                  </button>
+                </div>
+                <p style={{
+                  fontSize: '0.6875rem',
+                  color: muted,
+                  margin: 0,
+                  lineHeight: 1.5,
+                  padding: '0 2px',
+                }}>
+                  Data is saved in your browser automatically.
+                </p>
               </div>
             </motion.div>
           ) : (
@@ -370,6 +394,30 @@ export const VaultPicker = memo(function VaultPicker() {
             </motion.button>
           )}
         </AnimatePresence>
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            padding: '10px',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+            fontFamily: 'inherit',
+            color: muted,
+            background: 'transparent',
+            border: `1px solid ${border}`,
+            borderRadius: 10,
+            cursor: 'pointer',
+            transition: 'background 0.15s',
+          }}
+        >
+          <XIcon style={{ width: 14, height: 14 }} />
+          Close
+        </button>
       </motion.div>
     </div>
   );

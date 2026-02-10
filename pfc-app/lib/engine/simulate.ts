@@ -23,6 +23,7 @@ import type { InferenceConfig } from './llm/config';
 import { resolveProvider } from './llm/provider';
 import {
   llmGenerateRawAnalysis,
+  llmStreamRawAnalysis,
   llmGenerateLaymanSummary,
   llmGenerateReflection,
   llmGenerateArbitration,
@@ -906,9 +907,30 @@ export async function* runPipeline(
       yield stageEvent('routing', 'complete', stageResults[2].detail, 1);
 
       // ── Stage 4: Statistical — LLM raw analysis (THE BIG CALL) ──
+      // Uses streaming to yield real-time reasoning events for thought visualization.
+      // Models that output <think> tags (DeepSeek R1, Qwen QwQ, etc.) will have
+      // their thinking separated and streamed as 'reasoning' events.
       yield stageEvent('statistical', 'active', 'Running statistical analysis via LLM...');
       yield { type: 'signals', data: { entropy: signals.entropy * 0.4, dissonance: signals.dissonance * 0.35 } };
-      rawAnalysis = await withTimeout(llmGenerateRawAnalysis(model, qa, signals), LLM_TIMEOUT, 'Raw analysis');
+      rawAnalysis = '';
+      try {
+        const stream = llmStreamRawAnalysis(model, qa, signals);
+        const streamTimeout = setTimeout(() => { throw new Error('Raw analysis stream timed out'); }, LLM_TIMEOUT);
+        for await (const chunk of stream) {
+          if (chunk.kind === 'reasoning') {
+            yield { type: 'reasoning', text: chunk.text } as PipelineEvent;
+          } else {
+            rawAnalysis += chunk.text;
+          }
+        }
+        clearTimeout(streamTimeout);
+      } catch (streamError) {
+        // Fallback to non-streaming if stream fails
+        console.warn('[runPipeline] Stream failed, falling back to non-streaming:', streamError);
+        if (!rawAnalysis) {
+          rawAnalysis = await withTimeout(llmGenerateRawAnalysis(model, qa, signals), LLM_TIMEOUT, 'Raw analysis');
+        }
+      }
       stageResults[3] = { stage: 'statistical', status: 'complete', summary: 'statistical', detail: 'Statistical analysis complete', value: 1 };
       yield stageEvent('statistical', 'complete', 'Analysis generated', 1);
 

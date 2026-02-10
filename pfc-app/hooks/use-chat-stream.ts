@@ -12,6 +12,11 @@ import { StreamingHandler, detectArtifacts } from '@/libs/agent-runtime/Streamin
 export function useChatStream() {
   const abortRef = useRef<AbortController | null>(null);
 
+  // Pause/resume refs — buffer text events while paused
+  const pausedRef = useRef(false);
+  const textBufferRef = useRef('');
+  const reasoningBufferRef = useRef('');
+
   const sendQuery = useCallback(async (query: string, chatId?: string) => {
     const store = usePFCStore.getState();
     const steeringStore = useSteeringStore.getState();
@@ -23,6 +28,11 @@ export function useChatStream() {
 
     const controller = new AbortController();
     abortRef.current = controller;
+
+    // Reset pause state for new query
+    pausedRef.current = false;
+    textBufferRef.current = '';
+    reasoningBufferRef.current = '';
 
     // Optimistic: add user message immediately
     store.submitQuery(query);
@@ -156,13 +166,21 @@ export function useChatStream() {
                 break;
 
               case 'reasoning':
-                streamHandler.handleChunk({ type: 'reasoning', text: event.text });
-                store.appendReasoningText(event.text);
+                if (pausedRef.current) {
+                  reasoningBufferRef.current += event.text;
+                } else {
+                  streamHandler.handleChunk({ type: 'reasoning', text: event.text });
+                  store.appendReasoningText(event.text);
+                }
                 break;
 
               case 'text-delta':
-                streamHandler.handleChunk({ type: 'text', text: event.text });
-                store.appendStreamingText(event.text);
+                if (pausedRef.current) {
+                  textBufferRef.current += event.text;
+                } else {
+                  streamHandler.handleChunk({ type: 'text', text: event.text });
+                  store.appendStreamingText(event.text);
+                }
                 break;
 
               case 'soar':
@@ -269,11 +287,37 @@ export function useChatStream() {
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
-      usePFCStore.getState().stopStreaming();
+      pausedRef.current = false;
+      textBufferRef.current = '';
+      reasoningBufferRef.current = '';
+      const store = usePFCStore.getState();
+      store.stopStreaming();
+      store.setThinkingPaused(false);
     }
   }, []);
 
-  return { sendQuery, abort };
+  const pause = useCallback(() => {
+    pausedRef.current = true;
+    usePFCStore.getState().setThinkingPaused(true);
+  }, []);
+
+  const resume = useCallback(() => {
+    pausedRef.current = false;
+    const store = usePFCStore.getState();
+    store.setThinkingPaused(false);
+
+    // Flush buffered text
+    if (textBufferRef.current) {
+      store.appendStreamingText(textBufferRef.current);
+      textBufferRef.current = '';
+    }
+    if (reasoningBufferRef.current) {
+      store.appendReasoningText(reasoningBufferRef.current);
+      reasoningBufferRef.current = '';
+    }
+  }, []);
+
+  return { sendQuery, abort, pause, resume };
 }
 
 // ═══════════════════════════════════════════════════════════════════

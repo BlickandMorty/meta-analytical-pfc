@@ -144,6 +144,8 @@ function ConceptCanvas({
   const graphRef = useRef<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const animRef = useRef<number>(0);
   const timeRef = useRef(0);
+  const frameSkipRef = useRef(false);
+  const tabHiddenRef = useRef(document.hidden);
 
   const graphKey = concepts.join('|');
   useEffect(() => {
@@ -153,6 +155,14 @@ function ConceptCanvas({
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Skip when tab hidden
+    if (tabHiddenRef.current) { animRef.current = requestAnimationFrame(draw); return; }
+
+    // 30fps throttle
+    frameSkipRef.current = !frameSkipRef.current;
+    if (frameSkipRef.current) { animRef.current = requestAnimationFrame(draw); return; }
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -254,13 +264,7 @@ function ConceptCanvas({
       ctx.stroke();
     }
 
-    // ── Ambient radial glow ──
-    const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * 0.48);
-    bgGrad.addColorStop(0, 'rgba(139,124,246,0.04)');
-    bgGrad.addColorStop(0.5, 'rgba(193,95,60,0.02)');
-    bgGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, W, H);
+    // Ambient radial glow removed for performance
 
     // ── Layer 1: Edges (quadratic bezier with gradient + particles) ──
     for (const edge of edges) {
@@ -301,12 +305,6 @@ function ConceptCanvas({
         const py = (1 - pt) * (1 - pt) * ay + 2 * (1 - pt) * pt * cpy + pt * pt * by;
 
         const particleR = 1.5 + edge.strength * 0.8;
-        const particleGlow = ctx.createRadialGradient(px, py, 0, px, py, particleR * 3);
-        particleGlow.addColorStop(0, a.color + '60');
-        particleGlow.addColorStop(1, a.color + '00');
-        ctx.fillStyle = particleGlow;
-        ctx.fillRect(px - particleR * 3, py - particleR * 3, particleR * 6, particleR * 6);
-
         ctx.beginPath();
         ctx.arc(px, py, particleR, 0, Math.PI * 2);
         ctx.fillStyle = a.color + 'CC';
@@ -321,39 +319,16 @@ function ConceptCanvas({
       const pulse = node.isCenter ? Math.sin(t * 2) * 3 : Math.sin(t * 1.5 + node.x * 0.01) * 1.5;
       const r = node.radius + pulse;
 
-      // Outer glow halo
-      const glowGrad = ctx.createRadialGradient(nx, ny, r * 0.3, nx, ny, r * 2.8);
-      glowGrad.addColorStop(0, node.color + '18');
-      glowGrad.addColorStop(1, node.color + '00');
-      ctx.fillStyle = glowGrad;
-      ctx.beginPath();
-      ctx.arc(nx, ny, r * 2.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Node body with gradient
-      const nodeGrad = ctx.createRadialGradient(nx - r * 0.25, ny - r * 0.25, 0, nx, ny, r);
-      nodeGrad.addColorStop(0, node.color + (node.isCenter ? 'FF' : 'BB'));
-      nodeGrad.addColorStop(1, node.color + (node.isCenter ? 'CC' : '70'));
+      // Node body (solid fill — avoids per-frame gradient creation)
       ctx.beginPath();
       ctx.arc(nx, ny, r, 0, Math.PI * 2);
-      ctx.fillStyle = nodeGrad;
+      ctx.fillStyle = node.color + (node.isCenter ? 'DD' : '99');
       ctx.fill();
 
       // Border ring
-      ctx.beginPath();
-      ctx.arc(nx, ny, r, 0, Math.PI * 2);
       ctx.strokeStyle = node.color + '90';
       ctx.lineWidth = node.isCenter ? 2 : 1.2;
       ctx.stroke();
-
-      // Inner highlight (specular)
-      const specGrad = ctx.createRadialGradient(nx - r * 0.3, ny - r * 0.35, 0, nx, ny, r * 0.7);
-      specGrad.addColorStop(0, 'rgba(255,255,255,0.25)');
-      specGrad.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = specGrad;
-      ctx.beginPath();
-      ctx.arc(nx, ny, r * 0.7, 0, Math.PI * 2);
-      ctx.fill();
 
       // Center node orbital ring
       if (node.isCenter) {
@@ -420,8 +395,13 @@ function ConceptCanvas({
   }, [isProcessing, harmonyKeyDistance]);
 
   useEffect(() => {
+    const onVis = () => { tabHiddenRef.current = document.hidden; };
+    document.addEventListener('visibilitychange', onVis);
     animRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animRef.current);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      cancelAnimationFrame(animRef.current);
+    };
   }, [draw]);
 
   return (
