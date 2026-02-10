@@ -129,15 +129,17 @@ const panelVariants = {
 };
 
 const responseVariants = {
-  initial: { opacity: 0, scaleY: 0 },
+  initial: { opacity: 0, filter: 'blur(6px)', y: 4 },
   animate: {
     opacity: 1,
-    scaleY: 1,
+    filter: 'blur(0px)',
+    y: 0,
     transition: { duration: 0.3, ease: CUPERTINO_EASE },
   },
   exit: {
     opacity: 0,
-    scaleY: 0,
+    filter: 'blur(6px)',
+    y: 4,
     transition: { duration: 0.2, ease: CUPERTINO_EASE },
   },
 };
@@ -588,7 +590,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
                 <motion.div
                   variants={responseVariants}
                   initial="initial" animate="animate" exit="exit"
-                  style={{ flexShrink: 0, overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
+                  style={{ flexShrink: 0, overflow: 'hidden', transform: 'translateZ(0)' }}
                 >
                   <div ref={responseRef} style={{
                     maxHeight: 100, overflowY: 'auto', padding: '0.375rem 0.75rem',

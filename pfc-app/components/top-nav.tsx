@@ -91,14 +91,14 @@ const MODE_STYLES: Record<string, { label: string }> = {
 /* ─── Theming helpers ─── */
 function bubbleBg(isActive: boolean, isDark: boolean, disabled?: boolean) {
   if (disabled) return 'transparent';
-  if (isActive) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)';
-  return isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)';
+  if (isActive) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)';
+  return isDark ? 'rgba(35,32,28,0.45)' : 'rgba(215,200,180,0.25)';
 }
 
 function bubbleColor(isActive: boolean, isDark: boolean, disabled?: boolean) {
   if (disabled) return isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)';
-  if (isActive) return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)';
-  return isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)';
+  if (isActive) return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)';
+  return isDark ? 'rgba(155,150,137,0.7)' : 'rgba(80,65,45,0.55)';
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -401,11 +401,11 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 fontWeight: isTabActive ? 650 : 500,
                 letterSpacing: '-0.01em',
                 color: isTabActive
-                  ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-                  : (isDark ? 'rgba(155,150,137,0.65)' : 'rgba(0,0,0,0.4)'),
+                  ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)')
+                  : (isDark ? 'rgba(155,150,137,0.65)' : 'rgba(80,65,45,0.55)'),
                 background: isTabActive
-                  ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
-                  : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
+                  ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)')
+                  : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(215,200,180,0.25)'),
                 backdropFilter: 'blur(12px) saturate(1.4)',
                 WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
                 whiteSpace: 'nowrap',
