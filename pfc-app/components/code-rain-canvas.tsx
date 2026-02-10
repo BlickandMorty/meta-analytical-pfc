@@ -384,8 +384,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
     function resetColumns() {
       columnsRef.current = [];
-      // Reduced density: /60 instead of /42 = ~30% fewer columns
-      const colCount = Math.floor((cachedW / 60) * lightModeMultiplier);
+      const colCount = Math.floor((cachedW / 42) * lightModeMultiplier);
       for (let i = 0; i < colCount; i++) {
         columnsRef.current.push(createColumn(cachedW, cachedH));
       }
@@ -408,10 +407,10 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     resize();
     window.addEventListener('resize', resize);
 
-    // Periodic reset every 30 seconds (less frequent with fewer columns)
+    // Periodic reset every 20 seconds to keep syntax from getting too crowded
     const resetInterval = setInterval(() => {
       resetColumns();
-    }, 30000);
+    }, 20000);
 
     // ── Piñata event listener ──
     function onPinata(e: Event) {
@@ -425,13 +424,12 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     window.addEventListener('pfc-pinata', onPinata);
 
     // Cached search-bar rect
-    // Power-saving: further reduce animation frequency + speed
-    const STRIKEOUT_SPEED = 1 / 160;     // Much slower (was /110)
-    const STRIKEOUT_CHANCE = 0.0003;     // Rare (was 0.0008)
-    const EDIT_SPEED = 1 / 240;          // Much slower typing (was /180)
-    const EDIT_CHANCE = 0.0002;          // Rare (was 0.0006)
-    const CODEBLOCK_SPEED = 1 / 360;    // Much slower block typing (was /260)
-    const CODEBLOCK_CHANCE = 0.0001;    // Very rare (was 0.00025)
+    const STRIKEOUT_SPEED = 1 / 90;
+    const STRIKEOUT_CHANCE = 0.0015;
+    const EDIT_SPEED = 1 / 140;
+    const EDIT_CHANCE = 0.001;
+    const CODEBLOCK_SPEED = 1 / 200;
+    const CODEBLOCK_CHANCE = 0.0004;
     let cursorClock = 0;
 
     const fontCache = new Map<number, string>();
@@ -482,8 +480,8 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     const onMotionChange = (e: MediaQueryListEvent) => { reducedMotion = e.matches; };
     motionQuery.addEventListener('change', onMotionChange);
 
-    // Frame skip counter for ~20fps throttle (draw every 3rd frame)
-    let frameSkipCounter = 0;
+    // Frame skip counter for 30fps throttle (draw every other frame)
+    let frameSkip = false;
 
     function draw(timestamp: number) {
       if (!canvas || !ctx) return;
@@ -494,15 +492,15 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       // Skip drawing when user prefers reduced motion
       if (reducedMotion) { rafRef.current = requestAnimationFrame(draw); return; }
 
-      // Throttle to ~20fps: draw every 3rd frame (major CPU/GPU savings)
-      frameSkipCounter = (frameSkipCounter + 1) % 3;
-      if (frameSkipCounter !== 0) { rafRef.current = requestAnimationFrame(draw); return; }
+      // Throttle to ~30fps: skip every other frame (halves CPU/GPU work)
+      frameSkip = !frameSkip;
+      if (frameSkip) { rafRef.current = requestAnimationFrame(draw); return; }
 
       const delta = timestamp - lastTimeRef.current;
       lastTimeRef.current = timestamp;
       if (delta > 200) { rafRef.current = requestAnimationFrame(draw); return; }
-      // dt accounts for the 3-frame gap (~50ms instead of ~16ms)
-      const dt = Math.min(delta / 16.67, 4);
+      // dt accounts for the 2-frame gap (~33ms instead of ~16ms)
+      const dt = Math.min(delta / 16.67, 3);
       const dtSec = delta / 1000;
 
       const w = cachedW;
@@ -514,34 +512,46 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
       // ════════════════════════════════════════════════════════════
       // LAYER 1: Background rain columns
+      //
+      // Two-phase rendering to eliminate canvas state thrashing:
+      //   Phase 1 — Update positions + animation state (no draws)
+      //   Phase 2 — Batch draws grouped by font size
+      //
+      // The main perf bottleneck was ctx.font = ... called once per
+      // column per frame (~30+ times). Setting ctx.font triggers
+      // font resolution in the browser, which is expensive. By
+      // grouping columns with the same font size, we only set the
+      // font ~5 times instead of ~30+.
       // ════════════════════════════════════════════════════════════
+
+      // ── Phase 1: Update all column state (zero draws) ──
+      // Buckets for phase 2 batching. Key = rounded font size.
+      const idleBuckets = new Map<number, RainColumn[]>();
+      const animatingCols: RainColumn[] = [];
 
       for (const col of columnsRef.current) {
         col.y += col.speed * dt;
 
-        // Skip off-screen columns entirely (major perf win)
-        if (col.y > h + 60 || col.y < -200) {
-          if (col.y > h + 60) {
-            const tier = pickSizeTier();
-            col.sizeTier = tier;
-            applyTier(col, tier);
-            col.y = -Math.random() * 200 - 50;
-            col.x = Math.random() * w;
-            col.tokenIndex = Math.floor(Math.random() * col.tokens.length);
-            col.strikeout = 0;
-            col.editing = 0;
-            col.codeblock = 0;
-          }
+        // Off-screen: recycle or skip
+        if (col.y > h + 60) {
+          const tier = pickSizeTier();
+          col.sizeTier = tier;
+          applyTier(col, tier);
+          col.y = -Math.random() * 200 - 50;
+          col.x = Math.random() * w;
+          col.tokenIndex = Math.floor(Math.random() * col.tokens.length);
+          col.strikeout = 0;
+          col.editing = 0;
+          col.codeblock = 0;
           continue;
         }
-
-        const token = col.tokens[col.tokenIndex % col.tokens.length];
-        ctx.font = getFont(col.fontSize);
+        if (col.y < -200) continue;
 
         const isIdle = col.strikeout === 0 && col.editing === 0 && col.codeblock === 0;
 
-        // Merge animation trigger checks into single branch
+        // Trigger new animations (only for normal-tier, on-screen, idle columns)
         if (isIdle && col.sizeTier === 'normal' && col.y > 0 && col.y < h) {
+          const token = col.tokens[col.tokenIndex % col.tokens.length];
           const r = Math.random();
           if (r < STRIKEOUT_CHANCE) {
             col.strikeout = 0.001;
@@ -566,6 +576,54 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
           }
         }
 
+        // Advance animation timers
+        if (col.strikeout > 0) {
+          col.strikeout += STRIKEOUT_SPEED * dt;
+          if (col.strikeout >= 1) col.strikeout = 0;
+        }
+        if (col.editing > 0) {
+          col.editing += EDIT_SPEED * dt;
+          if (col.editing >= 1) col.editing = 0;
+        }
+        if (col.codeblock > 0) {
+          col.codeblock += CODEBLOCK_SPEED * dt;
+          if (col.codeblock >= 1) col.codeblock = 0;
+        }
+
+        // Cycle tokens occasionally
+        if (Math.random() < 0.02) col.tokenIndex++;
+
+        // Bucket for phase 2
+        if (col.strikeout > 0 || col.editing > 0 || col.codeblock > 0) {
+          animatingCols.push(col);
+        } else {
+          const key = Math.round(col.fontSize);
+          let bucket = idleBuckets.get(key);
+          if (!bucket) { bucket = []; idleBuckets.set(key, bucket); }
+          bucket.push(col);
+        }
+      }
+
+      // ── Phase 2a: Batch-draw idle columns by font size ──
+      // This is the key optimization: ctx.font is set once per
+      // unique rounded font size instead of once per column.
+      for (const [fontSize, cols] of idleBuckets) {
+        ctx.font = getFont(fontSize); // set ONCE per bucket
+        for (const col of cols) {
+          const token = col.tokens[col.tokenIndex % col.tokens.length];
+          const blurDim = col.blur > 0 ? Math.max(0.3, 1 - col.blur * 0.06) : 1;
+          const alpha = (isDark ? col.opacity * 0.9 : col.opacity * 0.65) * blurDim;
+          ctx.fillStyle = token.color;
+          ctx.globalAlpha = Math.min(alpha, 1);
+          ctx.fillText(token.text, col.x, col.y);
+        }
+      }
+
+      // ── Phase 2b: Draw animating columns (rare, ~1-3 at a time) ──
+      // These need per-column font changes but are so few it doesn't matter.
+      for (const col of animatingCols) {
+        ctx.font = getFont(col.fontSize);
+
         // ── Strikeout animation ──
         if (col.strikeout > 0) {
           const p = col.strikeout;
@@ -576,7 +634,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
           ctx.fillStyle = drawColor;
           ctx.globalAlpha = strikeAlpha;
-          ctx.font = getFont(col.fontSize);
           ctx.fillText(col.strikeoutText, col.x, col.strikeoutY);
 
           if (p > 0.3) {
@@ -592,8 +649,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
             ctx.lineTo(col.x - 2 + (textWidth + 4) * lineProgress, lineY);
             ctx.stroke();
           }
-          col.strikeout += STRIKEOUT_SPEED * dt;
-          if (col.strikeout >= 1) col.strikeout = 0;
         }
 
         // ── Code-edit animation ──
@@ -631,8 +686,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
             showCursor = false;
           }
 
-          ctx.font = getFont(col.fontSize);
-
           if (displayText.length > 0) {
             ctx.fillStyle = displayColor;
             ctx.globalAlpha = editAlpha * fadeAlpha;
@@ -649,11 +702,9 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
             ctx.globalAlpha = editAlpha * fadeAlpha * 0.8;
             ctx.fillRect(cursorX + 1, cursorY, Math.max(1, col.fontSize * 0.07), cursorH);
           }
-          col.editing += EDIT_SPEED * dt;
-          if (col.editing >= 1) col.editing = 0;
         }
 
-        // ── Code block typewriter (blurred for depth) ──
+        // ── Code block typewriter ──
         if (col.codeblock > 0) {
           const p = col.codeblock;
           const snippet = CODE_SNIPPETS[col.codeblockIdx % CODE_SNIPPETS.length];
@@ -668,7 +719,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
           const blockAlpha = (isDark ? 0.5 : 0.4) * bgFadeIn * fadeOut;
 
           ctx.font = getFont(blockFontSize);
-          // Code blocks drawn at reduced alpha instead of blur filter
           const cbAlpha = blockAlpha * 0.7;
 
           if (p > 0.05) {
@@ -698,22 +748,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
               }
             }
           }
-          col.codeblock += CODEBLOCK_SPEED * dt;
-          if (col.codeblock >= 1) col.codeblock = 0;
         }
-
-        // ── Normal token drawing ──
-        // No canvas filter (was causing per-column GPU composition switching = stutter)
-        // Depth is simulated via opacity + font size from applyTier()
-        if (col.strikeout === 0 && col.editing === 0 && col.codeblock === 0) {
-          const blurDim = col.blur > 0 ? Math.max(0.3, 1 - col.blur * 0.06) : 1;
-          const alpha = (isDark ? col.opacity * 0.9 : col.opacity * 0.65) * blurDim;
-          ctx.fillStyle = token.color;
-          ctx.globalAlpha = Math.min(alpha, 1);
-          ctx.fillText(token.text, col.x, col.y);
-        }
-
-        if (Math.random() < 0.02) col.tokenIndex++;
       }
 
       // ════════════════════════════════════════════════════════════
