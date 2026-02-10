@@ -340,11 +340,11 @@ function BacklinksPanel({
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            initial={{ opacity: 0, scaleY: 0 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0 }}
             transition={{ duration: 0.15, ease: ease.cupertino }}
-            style={{ overflow: 'hidden' }}
+            style={{ overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginTop: '0.75rem' }}>
               {uniqueSourcePages.map(({ page, link }) => (

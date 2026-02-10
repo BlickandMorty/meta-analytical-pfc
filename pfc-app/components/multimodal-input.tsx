@@ -491,11 +491,11 @@ export function MultimodalInput({
         <AnimatePresence>
           {showTyping && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              exit={{ opacity: 0, scaleY: 0 }}
               transition={{ duration: 0.25, ease: M3_EASE }}
-              style={{ overflow: 'hidden' }}
+              style={{ overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
             >
               <div style={{
                 borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.2)'}`,

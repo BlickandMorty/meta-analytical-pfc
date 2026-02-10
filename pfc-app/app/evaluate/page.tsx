@@ -121,11 +121,12 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0, scaleY: 0 }}
+            animate={{ opacity: 1, scaleY: 1 }}
+            exit={{ opacity: 0, scaleY: 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
+            style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
           >
             <div className="px-4 pb-4 space-y-3 border-t border-border/30 pt-3">
               {dim.findings.length > 0 && (

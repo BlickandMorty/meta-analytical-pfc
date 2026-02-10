@@ -22,11 +22,11 @@ interface PageShellProps {
 }
 
 const headerVariants = {
-  hidden: { opacity: 0, y: 12, filter: 'blur(6px)' },
+  hidden: { opacity: 0, y: 12, scale: 0.98 },
   visible: {
     opacity: 1,
     y: 0,
-    filter: 'blur(0px)',
+    scale: 1,
     transition: { type: 'spring' as const, stiffness: 400, damping: 30, mass: 0.5 },
   },
 };

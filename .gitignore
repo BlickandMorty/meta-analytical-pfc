@@ -4,6 +4,7 @@ package-lock.json
 
 # Reference repos (cloned for research)
 siyuan-ref/
+aim-ref/
 
 # Environment
 .env

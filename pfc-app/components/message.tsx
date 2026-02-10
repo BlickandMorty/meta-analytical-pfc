@@ -200,11 +200,11 @@ function MessageInner({ message }: MessageProps) {
             <AnimatePresence>
               {deepOpen && (
                 <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
-                  style={{ overflow: 'hidden' }}
+                  initial={{ opacity: 0, scaleY: 0 }}
+                  animate={{ opacity: 1, scaleY: 1 }}
+                  exit={{ opacity: 0, scaleY: 0 }}
+                  transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+                  style={{ overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
                 >
                   <div style={{
                     display: 'flex',

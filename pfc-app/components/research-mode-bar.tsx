@@ -274,12 +274,13 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 <div style={{
                   position: 'absolute',
                   top: '0.125rem',
-                  left: researchModeControls.autoExtractCitations ? '1rem' : '0.125rem',
+                  left: '0.125rem',
                   width: '0.875rem',
                   height: '0.875rem',
                   borderRadius: '50%',
                   background: 'white',
-                  transition: 'left 0.2s',
+                  transform: researchModeControls.autoExtractCitations ? 'translateX(0.875rem) translateZ(0)' : 'translateX(0) translateZ(0)',
+                  transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                 }} />
               </div>
@@ -320,12 +321,13 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 <div style={{
                   position: 'absolute',
                   top: '0.125rem',
-                  left: researchModeControls.showVisualizationPreview ? '1rem' : '0.125rem',
+                  left: '0.125rem',
                   width: '0.875rem',
                   height: '0.875rem',
                   borderRadius: '50%',
                   background: 'white',
-                  transition: 'left 0.2s',
+                  transform: researchModeControls.showVisualizationPreview ? 'translateX(0.875rem) translateZ(0)' : 'translateX(0) translateZ(0)',
+                  transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                 }} />
               </div>
@@ -379,12 +381,13 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 <div style={{
                   position: 'absolute',
                   top: '0.125rem',
-                  left: researchModeControls.deepResearchEnabled && features.deepResearch ? '1rem' : '0.125rem',
+                  left: '0.125rem',
                   width: '0.875rem',
                   height: '0.875rem',
                   borderRadius: '50%',
                   background: 'white',
-                  transition: 'left 0.2s',
+                  transform: researchModeControls.deepResearchEnabled && features.deepResearch ? 'translateX(0.875rem) translateZ(0)' : 'translateX(0) translateZ(0)',
+                  transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                 }} />
               </div>

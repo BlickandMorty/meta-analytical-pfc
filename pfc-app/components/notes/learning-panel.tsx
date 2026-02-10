@@ -84,37 +84,33 @@ const fabVariants = {
 };
 
 const popoverVariants = {
-  initial: { opacity: 0, scale: 0.92, y: 8, filter: 'blur(6px)' },
+  initial: { opacity: 0, scale: 0.92, y: 8 },
   animate: {
     opacity: 1,
     scale: 1,
     y: 0,
-    filter: 'blur(0px)',
     transition: { duration: 0.35, ease: CUPERTINO_EASE },
   },
   exit: {
     opacity: 0,
     scale: 0.92,
     y: 8,
-    filter: 'blur(6px)',
     transition: { duration: 0.2, ease: CUPERTINO_EASE },
   },
 };
 
 const panelVariants = {
-  initial: { opacity: 0, scale: 0.92, y: 16, filter: 'blur(8px)' },
+  initial: { opacity: 0, scale: 0.92, y: 16 },
   animate: {
     opacity: 1,
     scale: 1,
     y: 0,
-    filter: 'blur(0px)',
     transition: { duration: 0.4, ease: CUPERTINO_EASE },
   },
   exit: {
     opacity: 0,
     scale: 0.92,
     y: 16,
-    filter: 'blur(8px)',
     transition: { duration: 0.25, ease: CUPERTINO_EASE },
   },
 };

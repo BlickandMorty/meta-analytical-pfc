@@ -86,11 +86,12 @@ export function LiveControls() {
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+          initial={{ opacity: 0, scaleY: 0 }}
+          animate={{ opacity: 1, scaleY: 1 }}
+          exit={{ opacity: 0, scaleY: 0 }}
+          transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
           className="overflow-hidden"
+          style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
         >
           <div className="mx-auto max-w-3xl px-4 pb-3">
             <div className="rounded-2xl p-4 space-y-4 border border-border/15" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(12px) saturate(1.3)', WebkitBackdropFilter: 'blur(12px) saturate(1.3)' }}>

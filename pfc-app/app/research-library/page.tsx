@@ -190,9 +190,10 @@ export default function ResearchLibraryPage() {
         <AnimatePresence>
           {showAddForm && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              exit={{ opacity: 0, scaleY: 0 }}
+              style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
             >
               <GlassSection title="Add New Paper">
                 <div className="grid grid-cols-2 gap-3">
@@ -427,10 +428,11 @@ export default function ResearchLibraryPage() {
                   <AnimatePresence>
                     {editingId === paper.id && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
+                        initial={{ opacity: 0, scaleY: 0 }}
+                        animate={{ opacity: 1, scaleY: 1 }}
+                        exit={{ opacity: 0, scaleY: 0 }}
                         className="pt-2"
+                        style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
                       >
                         <textarea
                           value={noteText}

@@ -122,15 +122,15 @@ const panelVariants = {
 };
 
 const responseVariants = {
-  initial: { opacity: 0, height: 0 },
+  initial: { opacity: 0, scaleY: 0 },
   animate: {
     opacity: 1,
-    height: 'auto',
+    scaleY: 1,
     transition: { duration: 0.3, ease: CUPERTINO_EASE },
   },
   exit: {
     opacity: 0,
-    height: 0,
+    scaleY: 0,
     transition: { duration: 0.2, ease: CUPERTINO_EASE },
   },
 };
@@ -496,7 +496,7 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
               initial="initial"
               animate="animate"
               exit="exit"
-              style={{ flexShrink: 0, overflow: 'hidden' }}
+              style={{ flexShrink: 0, overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
             >
               <div
                 ref={responseRef}

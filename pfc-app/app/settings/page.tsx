@@ -254,7 +254,7 @@ export default function SettingsPage() {
           {/* API sub-panel */}
           <AnimatePresence>
             {inferenceMode === 'api' && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-4 pt-4 border-t border-border/20">
+              <motion.div initial={{ opacity: 0, scaleY: 0 }} animate={{ opacity: 1, scaleY: 1 }} exit={{ opacity: 0, scaleY: 0 }} className="space-y-4 pt-4 border-t border-border/20" style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}>
                 <div>
                   <label className="text-sm font-semibold text-muted-foreground mb-2 block">Provider</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -301,7 +301,7 @@ export default function SettingsPage() {
           {/* Local (Ollama) sub-panel */}
           <AnimatePresence>
             {inferenceMode === 'local' && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-4 pt-4 border-t border-border/20">
+              <motion.div initial={{ opacity: 0, scaleY: 0 }} animate={{ opacity: 1, scaleY: 1 }} exit={{ opacity: 0, scaleY: 0 }} className="space-y-4 pt-4 border-t border-border/20" style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className={cn('h-2 w-2 rounded-full', ollamaChecking ? 'bg-pfc-yellow animate-pulse' : ollamaAvailable ? 'bg-pfc-green' : 'bg-pfc-red')} />
@@ -433,7 +433,7 @@ export default function SettingsPage() {
           </div>
           <AnimatePresence>
             {suiteTier === 'full' && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="pt-3 border-t border-border/20">
+              <motion.div initial={{ opacity: 0, scaleY: 0 }} animate={{ opacity: 1, scaleY: 1 }} exit={{ opacity: 0, scaleY: 0 }} className="pt-3 border-t border-border/20" style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold">Measurement Suite</p>

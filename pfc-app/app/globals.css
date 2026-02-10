@@ -644,13 +644,13 @@ html {
    Accordion
    ───────────────────────────────────────────────────────── */
 @keyframes accordion-down {
-  from { height: 0; }
-  to { height: var(--radix-accordion-content-height); }
+  from { opacity: 0; transform: scaleY(0); transform-origin: top; }
+  to { opacity: 1; transform: scaleY(1); transform-origin: top; }
 }
 
 @keyframes accordion-up {
-  from { height: var(--radix-accordion-content-height); }
-  to { height: 0; }
+  from { opacity: 1; transform: scaleY(1); transform-origin: top; }
+  to { opacity: 0; transform: scaleY(0); transform-origin: top; }
 }
 
 /* ─────────────────────────────────────────────────────────
