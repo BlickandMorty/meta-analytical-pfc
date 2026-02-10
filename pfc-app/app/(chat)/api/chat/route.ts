@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { runPipeline, type ConversationContext } from '@/lib/engine/simulate';
 import type { SteeringBias } from '@/lib/engine/steering/types';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
+import type { SOARConfig } from '@/lib/engine/soar/types';
 import {
   saveMessage,
   createChat,
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
   let controls: Record<string, unknown> | undefined;
   let steeringBias: SteeringBias | undefined;
   let inferenceConfig: InferenceConfig | undefined;
+  let soarConfig: SOARConfig | undefined;
   let conversationContext: ConversationContext | undefined;
 
   try {
@@ -77,6 +79,7 @@ export async function POST(request: NextRequest) {
     controls = body.controls;
     steeringBias = body.steeringBias;
     inferenceConfig = body.inferenceConfig;
+    soarConfig = body.soarConfig;
 
     if (!query || typeof query !== 'string') {
       return new Response('Missing query', { status: 400 });
@@ -127,6 +130,7 @@ export async function POST(request: NextRequest) {
   const capturedContext = conversationContext;
   const capturedSteeringBias = steeringBias;
   const capturedInferenceConfig = inferenceConfig;
+  const capturedSoarConfig = soarConfig;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -145,6 +149,7 @@ export async function POST(request: NextRequest) {
           capturedContext,
           capturedSteeringBias,
           capturedInferenceConfig,
+          capturedSoarConfig,
         )) {
           const data = JSON.stringify(event);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));

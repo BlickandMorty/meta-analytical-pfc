@@ -20,6 +20,7 @@ import { createPortalSlice } from './slices/portal';
 import { createUISlice } from './slices/ui';
 import { createNotesSlice } from './slices/notes';
 import { createLearningSlice } from './slices/learning';
+import { createSOARSlice } from './slices/soar';
 
 // Slice types — local imports for composition + re-exports for consumers
 import type { MessageSliceState, MessageSliceActions } from './slices/message';
@@ -34,6 +35,7 @@ import type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifa
 import type { UISliceState, UISliceActions } from './slices/ui';
 import type { NotesSliceState, NotesSliceActions } from './slices/notes';
 import type { LearningSliceState, LearningSliceActions } from './slices/learning';
+import type { SOARSliceState, SOARSliceActions } from './slices/soar';
 
 // Re-export slice types for consumers
 export type { MessageSliceState, MessageSliceActions } from './slices/message';
@@ -48,6 +50,7 @@ export type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifa
 export type { UISliceState, UISliceActions } from './slices/ui';
 export type { NotesSliceState, NotesSliceActions } from './slices/notes';
 export type { LearningSliceState, LearningSliceActions } from './slices/learning';
+export type { SOARSliceState, SOARSliceActions } from './slices/soar';
 
 // Re-export constants
 export { STAGES, STAGE_LABELS } from '@/lib/constants';
@@ -68,7 +71,8 @@ export type PFCStoreState =
   & PortalSliceState
   & UISliceState
   & NotesSliceState
-  & LearningSliceState;
+  & LearningSliceState
+  & SOARSliceState;
 
 export type PFCStoreActions =
   & MessageSliceActions
@@ -83,6 +87,7 @@ export type PFCStoreActions =
   & UISliceActions
   & NotesSliceActions
   & LearningSliceActions
+  & SOARSliceActions
   & { reset: () => void };
 
 export type PFCState = PFCStoreState & PFCStoreActions;
@@ -106,6 +111,7 @@ export const usePFCStore = create<PFCState>()(
     ...createUISlice(set, get),
     ...createNotesSlice(set, get),
     ...createLearningSlice(set, get),
+    ...createSOARSlice(set, get),
 
     // Global reset — preserves tier settings, cortex, and codebase analyses
     reset: () => {
@@ -183,6 +189,10 @@ export const usePFCStore = create<PFCState>()(
         // Reset learning (preserve history)
         learningSession: null,
         learningStreamText: '',
+
+        // Reset SOAR (preserve config)
+        soarSession: null,
+        soarSessionHistory: [],
       });
     },
   })),

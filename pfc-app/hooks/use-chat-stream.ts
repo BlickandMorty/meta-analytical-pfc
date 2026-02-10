@@ -87,6 +87,9 @@ export function useChatStream() {
     // ── Inference config ─────────────────────────────────────
     const inferenceConfig = store.getInferenceConfig();
 
+    // ── SOAR config ────────────────────────────────────────
+    const soarConfig = store.soarConfig;
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -98,6 +101,7 @@ export function useChatStream() {
           ...(mergedControls && { controls: mergedControls }),
           ...(hasSteering && { steeringBias }),
           inferenceConfig,
+          ...(soarConfig?.enabled && { soarConfig }),
         }),
         signal: controller.signal,
       });
@@ -159,6 +163,13 @@ export function useChatStream() {
               case 'text-delta':
                 streamHandler.handleChunk({ type: 'text', text: event.text });
                 store.appendStreamingText(event.text);
+                break;
+
+              case 'soar':
+                // SOAR events are informational — logged for debugging
+                if (store.soarConfig?.verbose) {
+                  console.log('[SOAR]', event.event, event.data);
+                }
                 break;
 
               case 'complete': {

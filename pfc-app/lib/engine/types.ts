@@ -124,6 +124,7 @@ export type PipelineEvent =
   | { type: 'signals'; data: Partial<SignalUpdate> }
   | { type: 'text-delta'; text: string }
   | { type: 'reasoning'; text: string }
+  | { type: 'soar'; event: string; data: Record<string, unknown> }
   | { type: 'complete'; dualMessage: DualMessage; truthAssessment: TruthAssessment; confidence: number; grade: string; mode: string; signals: SignalUpdate }
   | { type: 'error'; message: string };
 

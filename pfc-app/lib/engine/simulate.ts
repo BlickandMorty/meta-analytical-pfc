@@ -27,6 +27,9 @@ import {
   llmGenerateArbitration,
   llmGenerateTruthAssessment,
 } from './llm/generate';
+import { runSOAR, quickProbe } from './soar';
+import type { SOARConfig, SOARSession } from './soar/types';
+import { DEFAULT_SOAR_CONFIG } from './soar/types';
 
 // ═════════════════════════════════════════════════════════════════════
 // ██ CONVERSATION CONTEXT — follow-up query detection
@@ -860,6 +863,7 @@ export async function* runPipeline(
   context?: ConversationContext,
   steeringBias?: SteeringBias,
   inferenceConfig?: InferenceConfig,
+  soarConfig?: SOARConfig,
 ): AsyncGenerator<PipelineEvent> {
   const qa = analyzeQuery(query, context);
   const signals = generateSignals(qa, controls, steeringBias);
@@ -930,6 +934,67 @@ export async function* runPipeline(
       stageResults[5] = { stage: 'meta_analysis', status: 'complete', summary: 'meta_analysis', detail: generateStageDetail('meta_analysis', qa), value: 1 };
       await sleep(100);
       yield stageEvent('meta_analysis', 'complete', stageResults[5].detail, 1);
+
+      // ── SOAR: Meta-Reasoning Loop (if enabled and at edge of learnability) ──
+      const effectiveSoarConfig = soarConfig ?? DEFAULT_SOAR_CONFIG;
+      let soarSession: SOARSession | null = null;
+      if (effectiveSoarConfig.enabled) {
+        const probe = quickProbe(qa, {
+          confidence: signals.confidence,
+          entropy: signals.entropy,
+          dissonance: signals.dissonance,
+        }, effectiveSoarConfig);
+
+        yield { type: 'soar', event: 'probe', data: { atEdge: probe.atEdge, difficulty: probe.estimatedDifficulty, reason: probe.reason } };
+
+        if (probe.atEdge || !effectiveSoarConfig.autoDetect) {
+          yield { type: 'soar', event: 'start', data: { recommendedDepth: probe.recommendedDepth } };
+
+          const inferenceMode = inferenceConfig?.mode ?? 'simulation';
+          soarSession = await runSOAR(
+            isLLM ? model : null,
+            query,
+            qa,
+            {
+              confidence: signals.confidence,
+              entropy: signals.entropy,
+              dissonance: signals.dissonance,
+              healthScore: signals.healthScore,
+              persistenceEntropy: signals.tda.persistenceEntropy,
+            },
+            inferenceMode,
+            effectiveSoarConfig,
+            (event) => {
+              // SOAR events are emitted but we can't yield from a callback
+              // so we just log. The session result carries all data.
+            },
+          );
+
+          yield { type: 'soar', event: 'complete', data: {
+            improved: soarSession.overallImproved,
+            iterations: soarSession.iterationsCompleted,
+            reward: soarSession.rewards.reduce((s, r) => s + r.composite, 0),
+            contradictions: soarSession.contradictionScan?.contradictions.length ?? 0,
+          }};
+
+          // If SOAR improved signals, update them for downstream stages
+          if (soarSession.overallImproved && soarSession.finalSignals) {
+            signals.confidence = soarSession.finalSignals.confidence;
+            signals.entropy = soarSession.finalSignals.entropy;
+            signals.dissonance = soarSession.finalSignals.dissonance;
+            signals.healthScore = soarSession.finalSignals.healthScore;
+            signals.tda.persistenceEntropy = soarSession.finalSignals.persistenceEntropy;
+
+            yield { type: 'signals', data: {
+              confidence: signals.confidence,
+              entropy: signals.entropy,
+              dissonance: signals.dissonance,
+              healthScore: signals.healthScore,
+              tda: signals.tda,
+            }};
+          }
+        }
+      }
 
       // ── Stage 7-8: Bayesian + Synthesis — parallel LLM calls ──
       yield stageEvent('bayesian', 'active', 'Computing Bayesian posteriors...');
@@ -1124,6 +1189,56 @@ export async function* runPipeline(
     value: 1,
     status: 'complete',
   };
+
+  // ── SOAR in simulation mode ──
+  const simSoarConfig = soarConfig ?? DEFAULT_SOAR_CONFIG;
+  if (simSoarConfig.enabled) {
+    const probe = quickProbe(qa, {
+      confidence: signals.confidence,
+      entropy: signals.entropy,
+      dissonance: signals.dissonance,
+    }, simSoarConfig);
+
+    yield { type: 'soar', event: 'probe', data: { atEdge: probe.atEdge, difficulty: probe.estimatedDifficulty, reason: probe.reason } };
+
+    if (probe.atEdge || !simSoarConfig.autoDetect) {
+      yield { type: 'soar', event: 'start', data: { recommendedDepth: probe.recommendedDepth } };
+
+      const simSoarSession = await runSOAR(
+        null, query, qa,
+        {
+          confidence: signals.confidence,
+          entropy: signals.entropy,
+          dissonance: signals.dissonance,
+          healthScore: signals.healthScore,
+          persistenceEntropy: signals.tda.persistenceEntropy,
+        },
+        'simulation',
+        simSoarConfig,
+      );
+
+      yield { type: 'soar', event: 'complete', data: {
+        improved: simSoarSession.overallImproved,
+        iterations: simSoarSession.iterationsCompleted,
+        reward: simSoarSession.rewards.reduce((s, r) => s + r.composite, 0),
+        contradictions: simSoarSession.contradictionScan?.contradictions.length ?? 0,
+      }};
+
+      if (simSoarSession.overallImproved && simSoarSession.finalSignals) {
+        signals.confidence = simSoarSession.finalSignals.confidence;
+        signals.entropy = simSoarSession.finalSignals.entropy;
+        signals.dissonance = simSoarSession.finalSignals.dissonance;
+        signals.healthScore = simSoarSession.finalSignals.healthScore;
+
+        yield { type: 'signals', data: {
+          confidence: signals.confidence,
+          entropy: signals.entropy,
+          dissonance: signals.dissonance,
+          healthScore: signals.healthScore,
+        }};
+      }
+    }
+  }
 
   // Template-generated content
   const rawAnalysis = generateRawAnalysis(qa);
