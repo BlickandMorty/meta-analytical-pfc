@@ -217,8 +217,8 @@ function GreetingTypewriter({ isDark }: { isDark: boolean }) {
     return spans;
   }, [displayText, def]);
 
-  const fontSize = isCode ? '2.25rem' : '3.25rem';
-  const cursorHeight = isCode ? '2.25rem' : '3.125rem';
+  const fontSize = isCode ? '2.75rem' : '3.25rem';
+  const cursorHeight = isCode ? '2.75rem' : '3.125rem';
 
   return (
     <h1

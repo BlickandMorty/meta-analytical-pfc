@@ -26,6 +26,8 @@ import {
   MaximizeIcon,
   MinimizeIcon,
   FileTextIcon,
+  EyeIcon,
+  PencilIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -562,6 +564,9 @@ export default function NotesPage() {
   // ── Zen mode (distraction-free) ──
   const [zenMode, setZenMode] = useState(false);
 
+  // ── Read / Write mode ──
+  const [editorMode, setEditorMode] = useState<'write' | 'read'>('write');
+
   // ── Resizable sidebar ──
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const isResizing = useRef(false);
@@ -797,6 +802,22 @@ export default function NotesPage() {
             </>
           )}
 
+          {/* Read / Write mode toggle */}
+          <ToolbarBtn
+            onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
+            title={editorMode === 'write' ? 'Switch to read mode' : 'Switch to write mode'}
+            isActive
+            activeColor={editorMode === 'read' ? c.green : c.accent}
+            bgColor={editorMode === 'read'
+              ? (isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)')
+              : c.toolbarBtnBg}
+          >
+            {editorMode === 'read'
+              ? <EyeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+              : <PencilIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+            }
+          </ToolbarBtn>
+
           {/* Zen mode toggle */}
           <ToolbarBtn
             onClick={() => setZenMode((v) => !v)}
@@ -853,24 +874,19 @@ export default function NotesPage() {
                 {/* Notebook breadcrumb */}
                 <Breadcrumb page={activePage} c={c} />
 
-                {/* Notion-style banner */}
-                <motion.div
-                  layoutId="page-banner"
-                  style={{
-                    height: '6rem',
-                    borderRadius: '0.75rem',
-                    marginBottom: '2rem',
-                    background: activePage.isJournal ? c.journalGrad : c.pageGrad,
-                    contain: 'paint',
-                  }}
-                />
-
-                {/* Page header */}
-                <div style={{ marginBottom: '2.5rem' }}>
+                {/* Title header — centered with book GIF */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  marginBottom: '2.5rem',
+                  paddingTop: '0.5rem',
+                }}>
                   {/* Journal badge */}
                   {activePage.isJournal && (
                     <div style={{
-                      display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem',
+                      display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem',
                     }}>
                       <CalendarIcon style={{ width: '0.875rem', height: '0.875rem', color: c.green }} />
                       <span style={{
@@ -882,7 +898,7 @@ export default function NotesPage() {
 
                   {/* Tags */}
                   {activePage.tags.length > 0 && (
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                       {activePage.tags.map((tag: string) => (
                         <motion.span
                           key={tag}
@@ -904,37 +920,64 @@ export default function NotesPage() {
                     </div>
                   )}
 
-                  {/* Title — editable or typewriter */}
-                  {isEditingTitle ? (
-                    <input
-                      ref={titleRef}
-                      value={titleDraft}
-                      onChange={(e) => setTitleDraft(e.target.value)}
-                      onBlur={handleTitleCommit}
-                      onKeyDown={handleTitleKeyDown}
-                      autoFocus
-                      style={{
-                        width: '100%',
-                        fontSize: '3rem',
-                        fontWeight: 700,
-                        letterSpacing: '-0.035em',
-                        lineHeight: 1.15,
-                        color: c.text,
-                        background: 'transparent',
-                        border: 'none',
-                        outline: 'none',
-                        padding: 0,
-                        caretColor: c.accent,
-                        fontFamily: 'var(--font-display)',
-                      }}
-                    />
-                  ) : (
-                    <NoteTitleTypewriter
-                      title={activePage.title}
-                      isDark={isDark}
-                      onClick={handleTitleClick}
-                    />
-                  )}
+                  {/* Title row — book GIF + title centered */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.75rem',
+                  }}>
+                    <PixelBook size={48} />
+
+                    {/* Title — editable always, typewriter only in read mode */}
+                    {isEditingTitle ? (
+                      <input
+                        ref={titleRef}
+                        value={titleDraft}
+                        onChange={(e) => setTitleDraft(e.target.value)}
+                        onBlur={handleTitleCommit}
+                        onKeyDown={handleTitleKeyDown}
+                        autoFocus
+                        style={{
+                          fontSize: '2.5rem',
+                          fontWeight: 700,
+                          letterSpacing: '-0.035em',
+                          lineHeight: 1.15,
+                          color: c.text,
+                          background: 'transparent',
+                          border: 'none',
+                          outline: 'none',
+                          padding: 0,
+                          caretColor: c.accent,
+                          fontFamily: 'var(--font-display)',
+                          textAlign: 'center',
+                          maxWidth: '32rem',
+                        }}
+                      />
+                    ) : editorMode === 'read' ? (
+                      <NoteTitleTypewriter
+                        title={activePage.title}
+                        isDark={isDark}
+                        onClick={handleTitleClick}
+                      />
+                    ) : (
+                      <h1
+                        onClick={handleTitleClick}
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '2.5rem',
+                          letterSpacing: '-0.035em',
+                          lineHeight: 1.15,
+                          fontWeight: 700,
+                          margin: 0,
+                          cursor: 'text',
+                          color: c.text,
+                        }}
+                      >
+                        {activePage.title}
+                      </h1>
+                    )}
+                  </div>
                 </div>
 
                 {/* Block editor */}

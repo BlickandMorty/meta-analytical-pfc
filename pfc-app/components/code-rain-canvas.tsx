@@ -531,8 +531,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
           const fadeOut = p > 0.7 ? 1 - easeInOut((p - 0.7) / 0.3) : 1;
           const strikeAlpha = (isDark ? 0.55 : 0.45) * fadeOut;
 
-          ctx.save();
-          if (col.blur > 0) ctx.filter = getBlurFilter(col.blur);
           ctx.fillStyle = drawColor;
           ctx.globalAlpha = strikeAlpha;
           ctx.font = getFont(col.fontSize);
@@ -551,9 +549,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
             ctx.lineTo(col.x - 2 + (textWidth + 4) * lineProgress, lineY);
             ctx.stroke();
           }
-
-          ctx.filter = 'none';
-          ctx.restore();
           col.strikeout += STRIKEOUT_SPEED * dt;
           if (col.strikeout >= 1) col.strikeout = 0;
         }
@@ -593,8 +588,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
             showCursor = false;
           }
 
-          ctx.save();
-          if (col.blur > 0) ctx.filter = getBlurFilter(col.blur);
           ctx.font = getFont(col.fontSize);
 
           if (displayText.length > 0) {
@@ -613,9 +606,6 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
             ctx.globalAlpha = editAlpha * fadeAlpha * 0.8;
             ctx.fillRect(cursorX + 1, cursorY, Math.max(1, col.fontSize * 0.07), cursorH);
           }
-
-          ctx.filter = 'none';
-          ctx.restore();
           col.editing += EDIT_SPEED * dt;
           if (col.editing >= 1) col.editing = 0;
         }
@@ -634,9 +624,9 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
           const fadeOut = p > 0.85 ? 1 - easeInOut((p - 0.85) / 0.15) : 1;
           const blockAlpha = (isDark ? 0.5 : 0.4) * bgFadeIn * fadeOut;
 
-          ctx.save();
-          ctx.filter = getBlurFilter(2.5);
           ctx.font = getFont(blockFontSize);
+          // Code blocks drawn at reduced alpha instead of blur filter
+          const cbAlpha = blockAlpha * 0.7;
 
           if (p > 0.05) {
             const typeProgress = Math.min((p - 0.05) / 0.80, 1);
@@ -654,32 +644,30 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
 
               const ly = col.codeblockY + li * lineH;
               ctx.fillStyle = line.color;
-              ctx.globalAlpha = blockAlpha;
+              ctx.globalAlpha = cbAlpha;
               ctx.fillText(visibleText, col.x, ly);
 
               if (visibleChars < line.text.length && cursorOn && fadeOut > 0.5) {
                 const cw = getMeasure(visibleText, 8);
                 ctx.fillStyle = CURSOR_COLOR;
-                ctx.globalAlpha = blockAlpha * 0.7;
+                ctx.globalAlpha = cbAlpha * 0.7;
                 ctx.fillRect(col.x + cw + 1, ly - blockFontSize * 0.7, 1, blockFontSize * 0.85);
               }
             }
           }
-
-          ctx.restore();
           col.codeblock += CODEBLOCK_SPEED * dt;
           if (col.codeblock >= 1) col.codeblock = 0;
         }
 
         // ── Normal token drawing ──
+        // No canvas filter (was causing per-column GPU composition switching = stutter)
+        // Depth is simulated via opacity + font size from applyTier()
         if (col.strikeout === 0 && col.editing === 0 && col.codeblock === 0) {
-          const alpha = isDark ? col.opacity * 0.9 : col.opacity * 0.65;
+          const blurDim = col.blur > 0 ? Math.max(0.3, 1 - col.blur * 0.06) : 1;
+          const alpha = (isDark ? col.opacity * 0.9 : col.opacity * 0.65) * blurDim;
           ctx.fillStyle = token.color;
           ctx.globalAlpha = Math.min(alpha, 1);
-
-          if (col.blur > 0) ctx.filter = getBlurFilter(col.blur);
           ctx.fillText(token.text, col.x, col.y);
-          if (col.blur > 0) ctx.filter = 'none';
         }
 
         if (Math.random() < 0.02) col.tokenIndex++;
