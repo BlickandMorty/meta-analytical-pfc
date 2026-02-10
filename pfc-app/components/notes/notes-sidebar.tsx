@@ -86,6 +86,8 @@ export const NotesSidebar = memo(function NotesSidebar() {
   const searchNotes        = usePFCStore((s) => s.searchNotes);
   const getOrCreateTodayJournal = usePFCStore((s) => s.getOrCreateTodayJournal);
   const createNoteBook     = usePFCStore((s) => s.createNoteBook);
+  const movePageToBook     = usePFCStore((s) => s.movePageToBook);
+  const addPageToBook      = usePFCStore((s) => s.addPageToBook);
 
   // Local state
   const [view, setView] = useState<SidebarView>('pages');
@@ -180,6 +182,16 @@ export const NotesSidebar = memo(function NotesSidebar() {
   const handleNewBook = useCallback(() => {
     createNoteBook('New Notebook');
   }, [createNoteBook]);
+
+  const handleNewPageInBook = useCallback((bookId: string) => {
+    const pageId = createPage('Untitled');
+    addPageToBook(bookId, pageId);
+    setActivePage(pageId);
+  }, [createPage, addPageToBook, setActivePage]);
+
+  const handleMovePageToBook = useCallback((pageId: string, targetBookId: string | null) => {
+    movePageToBook(pageId, targetBookId);
+  }, [movePageToBook]);
 
   if (!sidebarOpen) return null;
 
@@ -368,6 +380,8 @@ export const NotesSidebar = memo(function NotesSidebar() {
                 onStartRename={startRename}
                 onRenameChange={setRenameValue}
                 onCommitRename={commitRename}
+                onMovePageToBook={handleMovePageToBook}
+                onNewPageInBook={handleNewPageInBook}
               />
             </motion.div>
           ) : view === 'journals' ? (
@@ -410,6 +424,8 @@ export const NotesSidebar = memo(function NotesSidebar() {
                 onRenameChange={setRenameValue}
                 onCommitRename={commitRename}
                 onNewBook={handleNewBook}
+                onMovePageToBook={handleMovePageToBook}
+                onNewPageInBook={handleNewPageInBook}
               />
             </motion.div>
           )}
@@ -445,13 +461,15 @@ interface PagesViewProps {
   onStartRename: (id: string, title: string) => void;
   onRenameChange: (val: string) => void;
   onCommitRename: () => void;
+  onMovePageToBook: (pageId: string, targetBookId: string | null) => void;
+  onNewPageInBook: (bookId: string) => void;
 }
 
 function PagesView({
   c, pinnedPages, favoritePages, recentPages, booksWithPages, standalonePages,
   expandedBooks, activePageId, renamingId, renameValue,
   onToggleBook, onSelectPage, onDelete, onToggleFavorite, onTogglePin,
-  onStartRename, onRenameChange, onCommitRename,
+  onStartRename, onRenameChange, onCommitRename, onMovePageToBook, onNewPageInBook,
 }: PagesViewProps) {
   const hasAnything = pinnedPages.length > 0 || favoritePages.length > 0 || standalonePages.length > 0 || booksWithPages.length > 0;
 
@@ -478,6 +496,8 @@ function PagesView({
               onStartRename={onStartRename}
               onRenameChange={onRenameChange}
               onCommitRename={onCommitRename}
+              onMovePageToBook={onMovePageToBook}
+              allBooks={booksWithPages}
             />
           ))}
         </Section>
@@ -498,6 +518,8 @@ function PagesView({
               onStartRename={onStartRename}
               onRenameChange={onRenameChange}
               onCommitRename={onCommitRename}
+              onMovePageToBook={onMovePageToBook}
+              allBooks={booksWithPages}
             />
           ))}
         </Section>
@@ -516,6 +538,9 @@ function PagesView({
               onDelete={onDelete} onToggleFavorite={onToggleFavorite}
               onTogglePin={onTogglePin} onStartRename={onStartRename}
               onRenameChange={onRenameChange} onCommitRename={onCommitRename}
+              onMovePageToBook={onMovePageToBook}
+              onNewPageInBook={onNewPageInBook}
+              allBooks={booksWithPages}
             />
           ))}
         </Section>
@@ -536,6 +561,8 @@ function PagesView({
               onStartRename={onStartRename}
               onRenameChange={onRenameChange}
               onCommitRename={onCommitRename}
+              onMovePageToBook={onMovePageToBook}
+              allBooks={booksWithPages}
             />
           ))}
         </Section>
@@ -622,13 +649,15 @@ interface BooksViewProps {
   onRenameChange: (val: string) => void;
   onCommitRename: () => void;
   onNewBook: () => void;
+  onMovePageToBook: (pageId: string, targetBookId: string | null) => void;
+  onNewPageInBook: (bookId: string) => void;
 }
 
 function BooksView({
   c, booksWithPages, expandedBooks, activePageId,
   renamingId, renameValue, onToggleBook, onSelectPage, onDelete,
   onToggleFavorite, onTogglePin, onStartRename, onRenameChange,
-  onCommitRename, onNewBook,
+  onCommitRename, onNewBook, onMovePageToBook, onNewPageInBook,
 }: BooksViewProps) {
   if (booksWithPages.length === 0) {
     return (
@@ -687,6 +716,9 @@ function BooksView({
           onDelete={onDelete} onToggleFavorite={onToggleFavorite}
           onTogglePin={onTogglePin} onStartRename={onStartRename}
           onRenameChange={onRenameChange} onCommitRename={onCommitRename}
+          onMovePageToBook={onMovePageToBook}
+          onNewPageInBook={onNewPageInBook}
+          allBooks={booksWithPages}
         />
       ))}
     </>
@@ -766,22 +798,47 @@ interface FolderItemProps {
   onStartRename: (id: string, title: string) => void;
   onRenameChange: (val: string) => void;
   onCommitRename: () => void;
+  onMovePageToBook: (pageId: string, targetBookId: string | null) => void;
+  onNewPageInBook: (bookId: string) => void;
+  allBooks: (NoteBook & { pages: NotePage[] })[];
 }
 
 const FolderItem = memo(function FolderItem({
   c, book, isExpanded, activePageId, renamingId, renameValue,
   onToggle, onSelectPage, onDelete, onToggleFavorite, onTogglePin,
   onStartRename, onRenameChange, onCommitRename,
+  onMovePageToBook, onNewPageInBook, allBooks,
 }: FolderItemProps) {
   const [hovered, setHovered] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const FolderIco = isExpanded ? FolderOpenIcon : FolderIcon;
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    const pageId = e.dataTransfer.types.includes('application/x-page-id');
+    if (!pageId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => setDragOver(false), []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const pageId = e.dataTransfer.getData('application/x-page-id');
+    if (pageId) onMovePageToBook(pageId, book.id);
+  }, [book.id, onMovePageToBook]);
 
   return (
     <div style={{ marginBottom: 1 }}>
       <div
         onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseLeave={() => { setHovered(false); setDragOver(false); }}
         onClick={() => onToggle(book.id)}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -790,8 +847,10 @@ const FolderItem = memo(function FolderItem({
           cursor: 'pointer',
           borderRadius: 5,
           margin: '0 4px',
-          transition: 'background 0.1s',
-          background: hovered ? c.hover : 'transparent',
+          transition: 'background 0.1s, outline 0.1s',
+          background: dragOver ? `${c.accent}18` : hovered ? c.hover : 'transparent',
+          outline: dragOver ? `2px dashed ${c.accent}` : '2px dashed transparent',
+          outlineOffset: -2,
         }}
       >
         <ChevronRightIcon style={{
@@ -805,7 +864,7 @@ const FolderItem = memo(function FolderItem({
         <FolderIco style={{
           width: 14,
           height: 14,
-          color: c.accent,
+          color: dragOver ? c.text : c.accent,
           flexShrink: 0,
         }} />
         <span style={{
@@ -819,7 +878,20 @@ const FolderItem = memo(function FolderItem({
         }}>
           {book.title}
         </span>
-        {!hovered && (
+        {hovered && !dragOver ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onNewPageInBook(book.id); }}
+            title="New page in notebook"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 18, height: 18, borderRadius: 3, border: 'none',
+              background: 'transparent', color: c.muted, cursor: 'pointer',
+              padding: 0, flexShrink: 0,
+            }}
+          >
+            <PlusIcon style={{ width: 12, height: 12 }} />
+          </button>
+        ) : !dragOver && (
           <span style={{
             fontSize: '10px',
             fontWeight: 500,
@@ -855,6 +927,8 @@ const FolderItem = memo(function FolderItem({
                 onStartRename={onStartRename}
                 onRenameChange={onRenameChange}
                 onCommitRename={onCommitRename}
+                onMovePageToBook={onMovePageToBook}
+                allBooks={allBooks}
               />
             ))}
             {book.pages.length === 0 && (
@@ -864,7 +938,7 @@ const FolderItem = memo(function FolderItem({
                 color: c.muted,
                 fontStyle: 'italic',
               }}>
-                Empty notebook
+                Drop pages here or click + to create
               </div>
             )}
           </motion.div>
@@ -892,14 +966,18 @@ interface FileItemProps {
   onStartRename: (id: string, title: string) => void;
   onRenameChange: (val: string) => void;
   onCommitRename: () => void;
+  onMovePageToBook?: (pageId: string, targetBookId: string | null) => void;
+  allBooks?: (NoteBook & { pages: NotePage[] })[];
 }
 
 const FileItem = memo(function FileItem({
   c, page, isActive, isRenaming, renameValue, depth,
   onSelect, onDelete, onToggleFavorite, onTogglePin,
   onStartRename, onRenameChange, onCommitRename,
+  onMovePageToBook, allBooks,
 }: FileItemProps) {
   const [hovered, setHovered] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -909,10 +987,22 @@ const FileItem = memo(function FileItem({
     }
   }, [isRenaming]);
 
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/x-page-id', page.id);
+    e.dataTransfer.setData('text/plain', page.title);
+    setDragging(true);
+  }, [page.id, page.title]);
+
+  const handleDragEnd = useCallback(() => setDragging(false), []);
+
   const paddingLeft = 12 + depth * 18;
 
   return (
     <div
+      draggable={!isRenaming}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => { if (!isRenaming) onSelect(page.id); }}
@@ -921,12 +1011,13 @@ const FileItem = memo(function FileItem({
         alignItems: 'center',
         gap: 6,
         padding: `3px 8px 3px ${paddingLeft}px`,
-        cursor: 'pointer',
+        cursor: dragging ? 'grabbing' : 'pointer',
         borderRadius: 5,
         margin: '0 4px',
-        transition: 'background 0.1s',
+        transition: 'background 0.1s, opacity 0.15s',
         background: isActive ? c.active : hovered ? c.hover : 'transparent',
         minHeight: 27,
+        opacity: dragging ? 0.45 : 1,
       }}
     >
       {page.icon ? (
@@ -1002,6 +1093,8 @@ const FileItem = memo(function FileItem({
           onToggleFavorite={onToggleFavorite}
           onTogglePin={onTogglePin}
           onStartRename={onStartRename}
+          onMovePageToBook={onMovePageToBook}
+          allBooks={allBooks}
         />
       )}
     </div>
@@ -1104,11 +1197,17 @@ interface ItemContextMenuProps {
   onToggleFavorite: (id: string) => void;
   onTogglePin: (id: string) => void;
   onStartRename: (id: string, title: string) => void;
+  onMovePageToBook?: (pageId: string, targetBookId: string | null) => void;
+  allBooks?: (NoteBook & { pages: NotePage[] })[];
 }
 
 const ItemContextMenu = memo(function ItemContextMenu({
   c, page, onDelete, onToggleFavorite, onTogglePin, onStartRename,
+  onMovePageToBook, allBooks,
 }: ItemContextMenuProps) {
+  // Find which book this page is currently in (if any)
+  const currentBook = allBooks?.find((b) => b.pageIds.includes(page.id));
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -1170,6 +1269,59 @@ const ItemContextMenu = memo(function ItemContextMenu({
           }} />
           {page.pinned ? 'Unpin' : 'Pin to top'}
         </DropdownMenuItem>
+
+        {/* Move to Notebook sub-section */}
+        {onMovePageToBook && allBooks && allBooks.length > 0 && (
+          <>
+            <DropdownMenuSeparator style={{ background: c.border, margin: '3px 0' }} />
+            <div style={{
+              padding: '3px 8px 2px',
+              fontSize: '10px',
+              fontWeight: 700,
+              color: c.muted,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+            }}>
+              Move to
+            </div>
+            {allBooks.map((book) => {
+              const isCurrent = book.id === currentBook?.id;
+              return (
+                <DropdownMenuItem
+                  key={book.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isCurrent) onMovePageToBook(page.id, book.id);
+                  }}
+                  className="gap-2 cursor-pointer"
+                  style={{
+                    fontSize: '12px',
+                    padding: '5px 8px',
+                    borderRadius: 4,
+                    opacity: isCurrent ? 0.5 : 1,
+                  }}
+                >
+                  <FolderIcon style={{ width: 12, height: 12, color: c.accent }} />
+                  {book.title}
+                  {isCurrent && (
+                    <span style={{ fontSize: '10px', color: c.muted, marginLeft: 'auto' }}>current</span>
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
+            {currentBook && (
+              <DropdownMenuItem
+                onClick={(e) => { e.stopPropagation(); onMovePageToBook(page.id, null); }}
+                className="gap-2 cursor-pointer"
+                style={{ fontSize: '12px', padding: '5px 8px', borderRadius: 4, color: c.muted }}
+              >
+                <FileIcon style={{ width: 12, height: 12 }} />
+                Remove from notebook
+              </DropdownMenuItem>
+            )}
+          </>
+        )}
+
         <DropdownMenuSeparator style={{ background: c.border, margin: '3px 0' }} />
         <DropdownMenuItem
           onClick={(e) => { e.stopPropagation(); onDelete(page.id); }}

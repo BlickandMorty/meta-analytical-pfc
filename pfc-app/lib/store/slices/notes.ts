@@ -84,6 +84,7 @@ export interface NotesSliceActions {
   createNoteBook: (title: string, pageIds?: string[]) => string;
   addPageToBook: (bookId: string, pageId: string) => void;
   removePageFromBook: (bookId: string, pageId: string) => void;
+  movePageToBook: (pageId: string, targetBookId: string | null) => void;
 
   // AI
   startNoteAIGeneration: (pageId: string, blockId: string | null, prompt: string) => void;
@@ -769,6 +770,23 @@ export const createNotesSlice = (set: any, get: any) => ({
           : b
       ),
     }));
+    debouncedSave(get);
+  },
+
+  movePageToBook: (pageId: string, targetBookId: string | null) => {
+    set((s: any) => {
+      const now = Date.now();
+      // Remove from any existing book, then add to target
+      const updated = s.noteBooks.map((b: NoteBook) => {
+        const hadPage = b.pageIds.includes(pageId);
+        const isTarget = b.id === targetBookId;
+        let ids = hadPage ? b.pageIds.filter((id: string) => id !== pageId) : b.pageIds;
+        if (isTarget && !ids.includes(pageId)) ids = [...ids, pageId];
+        if (hadPage || isTarget) return { ...b, pageIds: ids, updatedAt: now };
+        return b;
+      });
+      return { noteBooks: updated };
+    });
     debouncedSave(get);
   },
 
