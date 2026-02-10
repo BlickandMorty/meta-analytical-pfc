@@ -384,7 +384,8 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
     function resetColumns() {
       columnsRef.current = [];
-      const colCount = Math.floor((cachedW / 42) * lightModeMultiplier);
+      // Reduced density: /60 instead of /42 = ~30% fewer columns
+      const colCount = Math.floor((cachedW / 60) * lightModeMultiplier);
       for (let i = 0; i < colCount; i++) {
         columnsRef.current.push(createColumn(cachedW, cachedH));
       }
@@ -407,10 +408,10 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     resize();
     window.addEventListener('resize', resize);
 
-    // Periodic reset every 20 seconds to keep syntax from getting too crowded
+    // Periodic reset every 30 seconds (less frequent with fewer columns)
     const resetInterval = setInterval(() => {
       resetColumns();
-    }, 20000);
+    }, 30000);
 
     // ── Piñata event listener ──
     function onPinata(e: Event) {
@@ -424,12 +425,13 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     window.addEventListener('pfc-pinata', onPinata);
 
     // Cached search-bar rect
-    const STRIKEOUT_SPEED = 1 / 110;     // Slower animation (was /90)
-    const STRIKEOUT_CHANCE = 0.0008;     // Less frequent (was 0.0015)
-    const EDIT_SPEED = 1 / 180;          // Slower typing (was /140)
-    const EDIT_CHANCE = 0.0006;          // Less frequent (was 0.001)
-    const CODEBLOCK_SPEED = 1 / 260;    // Slower block typing (was /200)
-    const CODEBLOCK_CHANCE = 0.00025;   // Less frequent (was 0.0004)
+    // Power-saving: further reduce animation frequency + speed
+    const STRIKEOUT_SPEED = 1 / 160;     // Much slower (was /110)
+    const STRIKEOUT_CHANCE = 0.0003;     // Rare (was 0.0008)
+    const EDIT_SPEED = 1 / 240;          // Much slower typing (was /180)
+    const EDIT_CHANCE = 0.0002;          // Rare (was 0.0006)
+    const CODEBLOCK_SPEED = 1 / 360;    // Much slower block typing (was /260)
+    const CODEBLOCK_CHANCE = 0.0001;    // Very rare (was 0.00025)
     let cursorClock = 0;
 
     const fontCache = new Map<number, string>();
@@ -480,8 +482,8 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     const onMotionChange = (e: MediaQueryListEvent) => { reducedMotion = e.matches; };
     motionQuery.addEventListener('change', onMotionChange);
 
-    // Frame skip counter for 30fps throttle (draw every other frame)
-    let frameSkip = false;
+    // Frame skip counter for ~20fps throttle (draw every 3rd frame)
+    let frameSkipCounter = 0;
 
     function draw(timestamp: number) {
       if (!canvas || !ctx) return;
@@ -492,15 +494,15 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       // Skip drawing when user prefers reduced motion
       if (reducedMotion) { rafRef.current = requestAnimationFrame(draw); return; }
 
-      // Throttle to ~30fps: skip every other frame (halves CPU/GPU work)
-      frameSkip = !frameSkip;
-      if (frameSkip) { rafRef.current = requestAnimationFrame(draw); return; }
+      // Throttle to ~20fps: draw every 3rd frame (major CPU/GPU savings)
+      frameSkipCounter = (frameSkipCounter + 1) % 3;
+      if (frameSkipCounter !== 0) { rafRef.current = requestAnimationFrame(draw); return; }
 
       const delta = timestamp - lastTimeRef.current;
       lastTimeRef.current = timestamp;
       if (delta > 200) { rafRef.current = requestAnimationFrame(draw); return; }
-      // dt accounts for the 2-frame gap (~33ms instead of ~16ms)
-      const dt = Math.min(delta / 16.67, 3);
+      // dt accounts for the 3-frame gap (~50ms instead of ~16ms)
+      const dt = Math.min(delta / 16.67, 4);
       const dtSec = delta / 1000;
 
       const w = cachedW;
@@ -516,6 +518,22 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
       for (const col of columnsRef.current) {
         col.y += col.speed * dt;
+
+        // Skip off-screen columns entirely (major perf win)
+        if (col.y > h + 60 || col.y < -200) {
+          if (col.y > h + 60) {
+            const tier = pickSizeTier();
+            col.sizeTier = tier;
+            applyTier(col, tier);
+            col.y = -Math.random() * 200 - 50;
+            col.x = Math.random() * w;
+            col.tokenIndex = Math.floor(Math.random() * col.tokens.length);
+            col.strikeout = 0;
+            col.editing = 0;
+            col.codeblock = 0;
+          }
+          continue;
+        }
 
         const token = col.tokens[col.tokenIndex % col.tokens.length];
         ctx.font = getFont(col.fontSize);
@@ -696,18 +714,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
         }
 
         if (Math.random() < 0.02) col.tokenIndex++;
-
-        if (col.y > h + 50) {
-          const tier = pickSizeTier();
-          col.sizeTier = tier;
-          applyTier(col, tier);
-          col.y = -Math.random() * 200 - 50;
-          col.x = Math.random() * w;
-          col.tokenIndex = Math.floor(Math.random() * col.tokens.length);
-          col.strikeout = 0;
-          col.editing = 0;
-          col.codeblock = 0;
-        }
       }
 
       // ════════════════════════════════════════════════════════════
