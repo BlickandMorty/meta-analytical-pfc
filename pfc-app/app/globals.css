@@ -251,23 +251,23 @@
 }
 
 /* ─────────────────────────────────────────────────────────
-   Dark theme — Near-OLED with dark gray elevated surfaces
+   Dark theme — warm dark (not OLED) with elevated surfaces
    ───────────────────────────────────────────────────────── */
 .dark {
-  --background: #111110;
+  --background: #0E0D0B;
   --foreground: #E8E4DE;
-  --card: rgba(28, 27, 25, 0.85);
+  --card: rgba(24, 23, 21, 0.85);
   --card-foreground: #E8E4DE;
-  --popover: rgba(28, 27, 25, 0.95);
+  --popover: rgba(24, 23, 21, 0.95);
   --popover-foreground: #E8E4DE;
   --primary: #C4956A;
-  --primary-foreground: #111110;
-  --secondary: #1C1B19;
+  --primary-foreground: #0E0D0B;
+  --secondary: #191816;
   --secondary-foreground: #E8E4DE;
-  --muted: #1C1B19;
+  --muted: #191816;
   --muted-foreground: #9B9689;
   --accent: #C4956A;
-  --accent-foreground: #111110;
+  --accent-foreground: #0E0D0B;
   --destructive: #C75E5E;
   --destructive-foreground: #E8E4DE;
   --border: rgba(50, 49, 45, 0.5);
@@ -275,16 +275,16 @@
   --ring: #C4956A;
 
   /* Chat surface — unified with background, no two-tone */
-  --chat-surface: #111110;
+  --chat-surface: #0E0D0B;
 
   /* M3 Surface container hierarchy — warm dark tones */
-  --m3-surface: #111110;
-  --m3-surface-dim: #0D0D0C;
+  --m3-surface: #0E0D0B;
+  --m3-surface-dim: #0A0908;
   --m3-surface-bright: #3B3936;
-  --m3-surface-container-lowest: #0A0A09;
-  --m3-surface-container: #1C1B19;
-  --m3-surface-container-high: #262523;
-  --m3-surface-container-highest: #312F2C;
+  --m3-surface-container-lowest: #080807;
+  --m3-surface-container: #181716;
+  --m3-surface-container-high: #222120;
+  --m3-surface-container-highest: #2C2B29;
 
   /* M3 Color roles — warm brown primary (dark variant) */
   --m3-primary: #E0B896;

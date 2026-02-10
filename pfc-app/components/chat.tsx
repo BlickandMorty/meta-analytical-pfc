@@ -367,7 +367,7 @@ export function Chat() {
                   overflow: 'hidden',
                   background: isDark
                     ? 'var(--m3-surface-container)'
-                    : 'rgba(239,235,226,0.8)',
+                    : 'rgba(255,255,255,0.82)',
                   border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'rgba(190,183,170,0.15)'}`,
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',

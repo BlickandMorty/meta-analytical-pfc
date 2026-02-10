@@ -787,6 +787,10 @@ export function CodeRainCanvas({ isDark }: { isDark: boolean }) {
 // ═══════════════════════════════════════════════════════════════════════
 
 export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
+  // Dark mode: no vignette — flat dark background with visible code rain
+  if (isDark) return null;
+
+  // Light mode: soft edge fade to blend rain into the cream background
   return (
     <div
       style={{
@@ -794,9 +798,7 @@ export function CodeRainOverlays({ isDark }: { isDark: boolean }) {
         inset: 0,
         zIndex: 0,
         pointerEvents: 'none',
-        background: isDark
-          ? 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.92) 100%)'
-          : 'radial-gradient(ellipse at center, transparent 30%, rgba(240,232,222,0.92) 100%)',
+        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(240,232,222,0.92) 100%)',
       }}
     />
   );
