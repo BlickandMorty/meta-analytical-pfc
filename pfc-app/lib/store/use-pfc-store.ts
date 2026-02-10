@@ -134,6 +134,7 @@ export const usePFCStore = create<PFCState>()(
         reasoningText: freshMsg.reasoningText,
         reasoningDuration: freshMsg.reasoningDuration,
         isReasoning: freshMsg.isReasoning,
+        isThinkingPaused: freshMsg.isThinkingPaused,
         activeMessageLayer: freshMsg.activeMessageLayer,
 
         // Reset pipeline state

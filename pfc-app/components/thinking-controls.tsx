@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
   SquareIcon,
+  PauseIcon,
+  PlayIcon,
   RouteIcon,
   FocusIcon,
   SearchIcon,
@@ -44,6 +46,8 @@ const STEER_SUGGESTIONS: { label: string; icon: typeof ActivityIcon; hint: strin
 interface ThinkingControlsProps {
   isDark: boolean;
   onStop?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
 }
 
 const MODE_ICON: Record<string, typeof CpuIcon> = {
@@ -52,9 +56,10 @@ const MODE_ICON: Record<string, typeof CpuIcon> = {
   simulation: MonitorIcon,
 };
 
-export const ThinkingControls = memo(function ThinkingControls({ isDark, onStop }: ThinkingControlsProps) {
+export const ThinkingControls = memo(function ThinkingControls({ isDark, onStop, onPause, onResume }: ThinkingControlsProps) {
   const isProcessing = usePFCStore((s) => s.isProcessing);
   const isStreaming = usePFCStore((s) => s.isStreaming);
+  const isThinkingPaused = usePFCStore((s) => s.isThinkingPaused);
   const inferenceMode = usePFCStore((s) => s.inferenceMode);
   const setPendingReroute = usePFCStore((s) => s.setPendingReroute);
   const [showReroute, setShowReroute] = useState(false);
@@ -65,6 +70,14 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark, onStop 
   const handleStop = useCallback(() => {
     onStop?.();
   }, [onStop]);
+
+  const handlePauseResume = useCallback(() => {
+    if (isThinkingPaused) {
+      onResume?.();
+    } else {
+      onPause?.();
+    }
+  }, [isThinkingPaused, onPause, onResume]);
 
   const [showSteer, setShowSteer] = useState(false);
 
@@ -165,6 +178,29 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark, onStop 
       >
         <SquareIcon style={{ height: '0.75rem', width: '0.75rem' }} />
       </motion.button>
+
+      {/* Pause/Resume — local mode only, buffers stream events */}
+      {features.playPause && (
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          onClick={handlePauseResume}
+          style={{
+            ...btnBase,
+            gap: '0.25rem',
+            padding: '0.25rem 0.5rem',
+            fontSize: '0.625rem',
+            fontWeight: 500,
+            color: isThinkingPaused ? 'var(--color-pfc-green)' : (isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)'),
+          }}
+          title={isThinkingPaused ? 'Resume thinking' : 'Pause thinking'}
+        >
+          {isThinkingPaused
+            ? <PlayIcon style={{ height: '0.75rem', width: '0.75rem' }} />
+            : <PauseIcon style={{ height: '0.75rem', width: '0.75rem' }} />
+          }
+          <span>{isThinkingPaused ? 'Resume' : 'Pause'}</span>
+        </motion.button>
+      )}
 
       {/* Reroute — available on all modes */}
       {features.rerouteThinking && (

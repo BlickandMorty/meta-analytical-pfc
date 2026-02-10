@@ -269,7 +269,7 @@ export function Chat() {
   const chatViewMode = usePFCStore((s) => s.chatViewMode);
   const tierFeatures = usePFCStore((s) => s.tierFeatures);
   const inferenceMode = usePFCStore((s) => s.inferenceMode);
-  const { sendQuery, abort } = useChatStream();
+  const { sendQuery, abort, pause, resume } = useChatStream();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -514,7 +514,7 @@ export function Chat() {
                 {/* Thinking Controls */}
                 {(isProcessing || isStreaming) && researchChatMode && (
                   <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.375rem 1rem' }}>
-                    <ThinkingControls isDark={isDark} onStop={abort} />
+                    <ThinkingControls isDark={isDark} onStop={abort} onPause={pause} onResume={resume} />
                   </div>
                 )}
 
