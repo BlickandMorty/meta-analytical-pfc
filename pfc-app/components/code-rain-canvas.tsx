@@ -370,17 +370,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
   const pinataRef = useRef<PinataParticle[]>([]);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
-  const resetTimerRef = useRef<number>(0);
-  const clearedRef = useRef(false);
-
-  // Clear wallpaper when search is focused — don't restore on unfocus
-  useEffect(() => {
-    if (searchFocused) {
-      columnsRef.current = [];
-      pinataRef.current = [];
-      clearedRef.current = true;
-    }
-  }, [searchFocused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -401,7 +390,6 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
       for (let i = 0; i < colCount; i++) {
         columnsRef.current.push(createColumn(cachedW, cachedH));
       }
-      clearedRef.current = false;
     }
 
     function resize() {
@@ -415,9 +403,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
       cachedW = window.innerWidth;
       cachedH = window.innerHeight;
-      if (!clearedRef.current) {
-        resetColumns();
-      }
+      resetColumns();
     }
 
     resize();
@@ -425,9 +411,7 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
 
     // Periodic reset every 20 seconds to keep syntax from getting too crowded
     const resetInterval = setInterval(() => {
-      if (!clearedRef.current) {
-        resetColumns();
-      }
+      resetColumns();
     }, 20000);
 
     // ── Piñata event listener ──
@@ -794,7 +778,14 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
   return (
     <canvas
       ref={canvasRef}
-      style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: 'none',
+        opacity: searchFocused ? 0 : 1,
+        transition: 'opacity 0.3s ease',
+      }}
     />
   );
 }
