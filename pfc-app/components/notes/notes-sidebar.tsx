@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { memo, useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
@@ -23,6 +23,7 @@ import {
   FileIcon,
   ClockIcon,
   FolderPlusIcon,
+  NetworkIcon,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -31,6 +32,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+
+const GraphView = lazy(() =>
+  import('@/components/notes/graph-view').then((m) => ({ default: m.GraphView })),
+);
 
 /* ------------------------------------------------------------------ */
 /*  Constants & Easing                                                  */
@@ -60,7 +65,7 @@ function t(isDark: boolean) {
   };
 }
 
-type SidebarView = 'pages' | 'journals' | 'books';
+type SidebarView = 'pages' | 'journals' | 'books' | 'graph';
 
 /* ------------------------------------------------------------------ */
 /*  Main Sidebar                                                        */
@@ -199,6 +204,7 @@ export const NotesSidebar = memo(function NotesSidebar() {
     { id: 'pages', label: 'Pages', icon: <FileIcon style={{ width: 12, height: 12 }} /> },
     { id: 'journals', label: 'Journal', icon: <CalendarIcon style={{ width: 12, height: 12 }} /> },
     { id: 'books', label: 'Books', icon: <BookOpenIcon style={{ width: 12, height: 12 }} /> },
+    { id: 'graph', label: 'Graph', icon: <NetworkIcon style={{ width: 12, height: 12 }} /> },
   ];
 
   return (
@@ -400,7 +406,7 @@ export const NotesSidebar = memo(function NotesSidebar() {
                 onDelete={deletePage}
               />
             </motion.div>
-          ) : (
+          ) : view === 'books' ? (
             <motion.div
               key="books"
               initial={{ opacity: 0 }}
@@ -427,6 +433,23 @@ export const NotesSidebar = memo(function NotesSidebar() {
                 onMovePageToBook={handleMovePageToBook}
                 onNewPageInBook={handleNewPageInBook}
               />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="graph"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              style={{ height: '100%' }}
+            >
+              <Suspense fallback={
+                <div style={{ padding: '2rem', textAlign: 'center', color: c.muted, fontSize: '12px' }}>
+                  Loading graph...
+                </div>
+              }>
+                <GraphView />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>

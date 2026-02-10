@@ -279,13 +279,34 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   renamePage: (pageId: string, newTitle: string) => {
-    set((s: any) => ({
-      notePages: s.notePages.map((p: NotePage) =>
-        p.id === pageId
-          ? { ...p, title: newTitle, name: normalizePageName(newTitle), updatedAt: Date.now() }
-          : p
-      ),
-    }));
+    const s = get();
+    const page = s.notePages.find((p: NotePage) => p.id === pageId);
+    if (!page) return;
+    const oldTitle = page.title;
+
+    set((s: any) => {
+      // Update all blocks that reference the old page name via [[links]]
+      const escOld = oldTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const linkRegex = new RegExp(`\\[\\[${escOld}\\]\\]`, 'gi');
+      const updatedBlocks = s.noteBlocks.map((b: NoteBlock) => {
+        if (b.refs.some((r: string) => normalizePageName(r) === normalizePageName(oldTitle))) {
+          const newContent = b.content.replace(linkRegex, `[[${newTitle}]]`);
+          return { ...b, content: newContent, refs: extractPageLinks(newContent), updatedAt: Date.now() };
+        }
+        return b;
+      });
+
+      return {
+        notePages: s.notePages.map((p: NotePage) =>
+          p.id === pageId
+            ? { ...p, title: newTitle, name: normalizePageName(newTitle), updatedAt: Date.now() }
+            : p
+        ),
+        noteBlocks: updatedBlocks,
+      };
+    });
+
+    get().rebuildPageLinks();
     debouncedSave(get);
   },
 

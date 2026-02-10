@@ -606,6 +606,16 @@ export default function NotesPage() {
     if (ready) loadNotesFromStorage();
   }, [ready, loadNotesFromStorage]);
 
+  // ── Save notes on tab close / navigation away ──
+  const saveNotesToStorage = usePFCStore((s) => s.saveNotesToStorage);
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      saveNotesToStorage();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveNotesToStorage]);
+
   // ── Active page ──
   const activePage = useMemo(
     () => notePages.find((p: NotePage) => p.id === activePageId) ?? null,
@@ -1007,7 +1017,7 @@ export default function NotesPage() {
                 </div>
 
                 {/* Block editor */}
-                <BlockEditor pageId={activePageId} />
+                <BlockEditor pageId={activePageId} readOnly={editorMode === 'read'} />
 
                 {/* Backlinks panel */}
                 <BacklinksPanel pageId={activePageId} c={c} />

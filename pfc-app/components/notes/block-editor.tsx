@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useTheme } from 'next-themes';
-import type { NoteBlock, BlockType, SlashCommand } from '@/lib/notes/types';
-import { SLASH_COMMANDS, SLASH_CATEGORIES, stripHtml } from '@/lib/notes/types';
+import type { NoteBlock, NotePage, BlockType, SlashCommand } from '@/lib/notes/types';
+import { SLASH_COMMANDS, SLASH_CATEGORIES, stripHtml, normalizePageName } from '@/lib/notes/types';
 import {
   GripVerticalIcon,
   PlusIcon,
@@ -56,6 +56,153 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'image': ImageIcon, 'frame': FrameIcon, 'link': LinkIcon, 'sparkles': SparklesIcon,
   'book-open': BookOpenIcon, 'expand': ExpandIcon, 'pen-line': PenLineIcon, 'type': TypeIcon,
 };
+
+// ── Process [[page links]] for display (non-editing blocks) ──
+function processContentLinks(html: string): string {
+  const parts = html.split(/(<[^>]*>)/);
+  return parts
+    .map((part) => {
+      if (part.startsWith('<')) return part;
+      return part.replace(
+        /\[\[([^\]]+)\]\]/g,
+        '<span class="pfc-page-link" data-page-ref="$1">$1</span>',
+      );
+    })
+    .join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PageLinkPopup — autocomplete for [[page links]]
+// ═══════════════════════════════════════════════════════════════════
+
+function PageLinkPopup({
+  query,
+  position,
+  isDark,
+  onSelect,
+  onClose,
+  selectedIndex,
+}: {
+  query: string;
+  position: { top: number; left: number };
+  isDark: boolean;
+  onSelect: (page: NotePage) => void;
+  onClose: () => void;
+  selectedIndex: number;
+}) {
+  const notePages = usePFCStore((s) => s.notePages);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return notePages.slice(0, 12);
+    return notePages
+      .filter((p: NotePage) => p.title.toLowerCase().includes(q) || p.name.includes(q))
+      .slice(0, 12);
+  }, [query, notePages]);
+
+  useEffect(() => {
+    if (!menuRef.current) return;
+    const el = menuRef.current.querySelector('[data-selected="true"]');
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }, [selectedIndex]);
+
+  if (filtered.length === 0 && !query.trim()) return null;
+
+  return (
+    <div
+      ref={menuRef}
+      style={{
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        zIndex: 50,
+        width: '16rem',
+        maxHeight: '18rem',
+        overflowY: 'auto',
+        borderRadius: '12px',
+        background: isDark ? 'rgba(40,36,30,0.95)' : 'rgba(255,255,255,0.97)',
+        border: `1px solid ${isDark ? 'rgba(79,69,57,0.4)' : 'rgba(190,183,170,0.25)'}`,
+        boxShadow: isDark
+          ? '0 8px 32px rgba(0,0,0,0.5)'
+          : '0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06)',
+        padding: '6px',
+        backdropFilter: 'blur(20px) saturate(1.3)',
+        animation: 'toolbar-in 0.12s cubic-bezier(0.32, 0.72, 0, 1)',
+      }}
+    >
+      <div style={{
+        fontSize: '0.625rem',
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.25)',
+        padding: '6px 8px 4px',
+      }}>
+        {query.trim() ? 'Link to page' : 'Recent pages'}
+      </div>
+      {filtered.length === 0 ? (
+        <div style={{
+          padding: '8px',
+          fontSize: '0.75rem',
+          color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+        }}>
+          No pages found — Enter to create &quot;{query}&quot;
+        </div>
+      ) : (
+        filtered.map((page: NotePage, idx: number) => {
+          const isSelected = idx === selectedIndex;
+          return (
+            <button
+              key={page.id}
+              data-selected={isSelected ? 'true' : undefined}
+              onClick={() => onSelect(page)}
+              onMouseDown={(e) => e.preventDefault()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                padding: '6px 8px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+                background: isSelected
+                  ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.08)')
+                  : 'transparent',
+                color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.8)',
+                transition: 'background 0.1s',
+              }}
+            >
+              <LinkIcon style={{ width: '12px', height: '12px', color: '#C4956A', flexShrink: 0 }} />
+              <span style={{
+                fontSize: '0.8125rem',
+                fontWeight: 550,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {page.title}
+              </span>
+              {page.isJournal && (
+                <span style={{
+                  fontSize: '0.5625rem',
+                  color: '#34D399',
+                  fontWeight: 500,
+                  marginLeft: 'auto',
+                  flexShrink: 0,
+                }}>
+                  Journal
+                </span>
+              )}
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // Floating Formatting Toolbar (appears on text selection)
@@ -290,6 +437,66 @@ function SlashMenu({
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// EmbeddedPageContent — renders a page's blocks inline (read-only)
+// ═══════════════════════════════════════════════════════════════════
+
+const EmbeddedPageContent = memo(function EmbeddedPageContent({
+  pageId,
+  isDark,
+}: {
+  pageId: string;
+  isDark: boolean;
+}) {
+  const noteBlocks = usePFCStore((s) => s.noteBlocks);
+  const blocks = useMemo(
+    () => noteBlocks
+      .filter((b: NoteBlock) => b.pageId === pageId)
+      .sort((a: NoteBlock, b: NoteBlock) => a.order.localeCompare(b.order))
+      .slice(0, 8), // Limit for performance
+    [noteBlocks, pageId],
+  );
+
+  if (blocks.length === 0) {
+    return (
+      <div style={{
+        fontSize: '0.75rem',
+        color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.25)',
+        fontStyle: 'italic',
+      }}>
+        Empty page
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      {blocks.map((b) => (
+        <div
+          key={b.id}
+          style={{
+            fontSize: b.type === 'heading' ? '0.875rem' : '0.8125rem',
+            fontWeight: b.type === 'heading' ? 600 : 400,
+            lineHeight: 1.6,
+            color: isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.6)',
+            paddingLeft: `${b.indent * 1}rem`,
+          }}
+          dangerouslySetInnerHTML={{ __html: processContentLinks(b.content) || '&nbsp;' }}
+        />
+      ))}
+      {blocks.length >= 8 && (
+        <div style={{
+          fontSize: '0.6875rem',
+          color: isDark ? 'rgba(196,149,106,0.4)' : 'rgba(196,149,106,0.5)',
+          fontWeight: 500,
+        }}>
+          Click to view full page →
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // BlockItem — single block with contentEditable + all interactions
 // ═══════════════════════════════════════════════════════════════════
 
@@ -305,6 +512,8 @@ const BlockItem = memo(function BlockItem({
   onDragStart,
   onDragOver,
   onDrop,
+  readOnly,
+  onNavigateToPage,
 }: {
   block: NoteBlock;
   isEditing: boolean;
@@ -317,6 +526,8 @@ const BlockItem = memo(function BlockItem({
   onDragStart: (blockId: string) => void;
   onDragOver: (blockId: string) => void;
   onDrop: () => void;
+  readOnly?: boolean;
+  onNavigateToPage?: (pageTitle: string) => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const updateBlockContent = usePFCStore((s) => s.updateBlockContent);
@@ -339,6 +550,13 @@ const BlockItem = memo(function BlockItem({
   const [slashIdx, setSlashIdx] = useState(0);
   const slashStartRef = useRef<number>(-1);
 
+  // [[ page link popup state
+  const [bracketOpen, setBracketOpen] = useState(false);
+  const [bracketQuery, setBracketQuery] = useState('');
+  const [bracketPos, setBracketPos] = useState({ top: 0, left: 0 });
+  const [bracketIdx, setBracketIdx] = useState(0);
+  const bracketStartRef = useRef<number>(-1);
+
   // Hover state
   const [hovered, setHovered] = useState(false);
 
@@ -346,11 +564,13 @@ const BlockItem = memo(function BlockItem({
   const suppressInputRef = useRef(false);
 
   // Sync content from store → DOM on mount and when block changes
+  // When not editing, render [[links]] as clickable styled spans
   useEffect(() => {
     if (contentRef.current && !isEditing) {
-      if (contentRef.current.innerHTML !== block.content) {
+      const displayContent = processContentLinks(block.content);
+      if (contentRef.current.innerHTML !== displayContent) {
         suppressInputRef.current = true;
-        contentRef.current.innerHTML = block.content;
+        contentRef.current.innerHTML = displayContent;
       }
     }
   }, [block.content, isEditing]);
@@ -396,7 +616,44 @@ const BlockItem = memo(function BlockItem({
         setSlashIdx(0);
       }
     }
-  }, [block.id, updateBlockContent, slashOpen]);
+
+    // [[ bracket link tracking
+    if (bracketOpen) {
+      const text = contentRef.current.textContent ?? '';
+      const afterBracket = text.slice(bracketStartRef.current + 2);
+      if (afterBracket.includes(']]')) {
+        setBracketOpen(false);
+      } else {
+        setBracketQuery(afterBracket);
+        setBracketIdx(0);
+      }
+    }
+
+    // Detect [[ being typed — open page link popup
+    if (!bracketOpen && !slashOpen) {
+      const text = contentRef.current.textContent ?? '';
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        // Get text content up to cursor
+        const beforeRange = document.createRange();
+        beforeRange.setStart(contentRef.current, 0);
+        beforeRange.setEnd(range.startContainer, range.startOffset);
+        const tmpDiv = document.createElement('div');
+        tmpDiv.appendChild(beforeRange.cloneContents());
+        const textBefore = tmpDiv.textContent ?? '';
+
+        if (textBefore.endsWith('[[')) {
+          const rect = range.getBoundingClientRect();
+          setBracketPos({ top: rect.bottom + 4, left: rect.left });
+          setBracketOpen(true);
+          setBracketQuery('');
+          setBracketIdx(0);
+          bracketStartRef.current = textBefore.length - 2;
+        }
+      }
+    }
+  }, [block.id, updateBlockContent, slashOpen, bracketOpen]);
 
   // ── Apply inline formatting (SiYuan keyboard shortcuts) ──
   const applyFormat = useCallback((command: string) => {
@@ -457,6 +714,53 @@ const BlockItem = memo(function BlockItem({
     // Remove the slash text
     const text = contentRef.current.textContent ?? '';
     const beforeSlash = text.slice(0, slashStartRef.current);
+
+    // Handle page-link: insert [[ and open page link popup
+    if (cmd.action === 'page-link') {
+      const newContent = beforeSlash + '[[';
+      suppressInputRef.current = true;
+      contentRef.current.innerHTML = newContent;
+      updateBlockContent(block.id, newContent);
+      // Place cursor after [[
+      requestAnimationFrame(() => {
+        if (!contentRef.current) return;
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(contentRef.current);
+        range.collapse(false);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        // Open bracket popup
+        const rect = range.getBoundingClientRect();
+        setBracketPos({ top: rect.bottom + 4, left: rect.left });
+        setBracketOpen(true);
+        setBracketQuery('');
+        setBracketIdx(0);
+        bracketStartRef.current = beforeSlash.length;
+      });
+      return;
+    }
+
+    // Handle embed-page: change to embed type
+    if (cmd.action === 'embed-page') {
+      suppressInputRef.current = true;
+      contentRef.current.innerHTML = '';
+      updateBlockContent(block.id, '');
+      changeBlockType(block.id, 'embed', {});
+      // Open bracket popup so user can select which page to embed
+      requestAnimationFrame(() => {
+        const el = contentRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        setBracketPos({ top: rect.bottom + 4, left: rect.left });
+        setBracketOpen(true);
+        setBracketQuery('');
+        setBracketIdx(0);
+        bracketStartRef.current = 0;
+      });
+      return;
+    }
+
     suppressInputRef.current = true;
     contentRef.current.innerHTML = beforeSlash;
     updateBlockContent(block.id, beforeSlash);
@@ -471,6 +775,59 @@ const BlockItem = memo(function BlockItem({
       changeBlockType(block.id, cmd.blockType, props);
     }
   }, [block.id, updateBlockContent, changeBlockType]);
+
+  // ── Page link bracket select ──
+  const handleBracketSelect = useCallback((page: NotePage) => {
+    setBracketOpen(false);
+    if (!contentRef.current) return;
+
+    const text = contentRef.current.textContent ?? '';
+
+    if (block.type === 'embed') {
+      // For embed blocks, store the page ID in properties
+      usePFCStore.setState((s) => ({
+        noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
+          b.id === block.id
+            ? { ...b, properties: { ...b.properties, embedPageId: page.id, embedPageTitle: page.title }, updatedAt: Date.now() }
+            : b,
+        ),
+      }));
+      setTimeout(() => usePFCStore.getState().saveNotesToStorage(), 100);
+      return;
+    }
+
+    // For regular blocks, insert [[PageTitle]] at the bracket position
+    const beforeBracket = text.slice(0, bracketStartRef.current);
+    const afterQuery = text.slice(bracketStartRef.current + 2 + bracketQuery.length);
+    const newContent = beforeBracket + '[[' + page.title + ']]' + afterQuery;
+    suppressInputRef.current = true;
+    contentRef.current.innerHTML = newContent;
+    updateBlockContent(block.id, newContent);
+
+    // Place cursor after the closing ]]
+    requestAnimationFrame(() => {
+      if (!contentRef.current) return;
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(contentRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    });
+  }, [block.id, block.type, bracketQuery, updateBlockContent]);
+
+  // ── Click handler for page links ──
+  const handleContentClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('pfc-page-link')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const pageRef = target.getAttribute('data-page-ref');
+      if (pageRef && onNavigateToPage) {
+        onNavigateToPage(pageRef);
+      }
+    }
+  }, [onNavigateToPage]);
 
   // ── Keyboard handler — all shortcuts ──
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -502,6 +859,31 @@ const BlockItem = memo(function BlockItem({
       if (e.key === 'ArrowUp') { e.preventDefault(); setSlashIdx((i) => Math.max(i - 1, 0)); return; }
       if (e.key === 'Enter') { e.preventDefault(); if (filtered[slashIdx]) handleSlashSelect(filtered[slashIdx]); return; }
       if (e.key === 'Escape') { e.preventDefault(); setSlashOpen(false); return; }
+    }
+
+    // ── [[ page link popup nav ──
+    if (bracketOpen) {
+      const allPages = usePFCStore.getState().notePages;
+      const q = bracketQuery.toLowerCase().trim();
+      const filtered = q
+        ? allPages.filter((p: NotePage) => p.title.toLowerCase().includes(q) || p.name.includes(q)).slice(0, 12)
+        : allPages.slice(0, 12);
+
+      if (e.key === 'ArrowDown') { e.preventDefault(); setBracketIdx((i) => Math.min(i + 1, filtered.length - 1)); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setBracketIdx((i) => Math.max(i - 1, 0)); return; }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (filtered[bracketIdx]) {
+          handleBracketSelect(filtered[bracketIdx]);
+        } else if (bracketQuery.trim()) {
+          // Create new page with the typed name
+          const newPageId = usePFCStore.getState().ensurePage(bracketQuery.trim());
+          const newPage = usePFCStore.getState().notePages.find((p: NotePage) => p.id === newPageId);
+          if (newPage) handleBracketSelect(newPage);
+        }
+        return;
+      }
+      if (e.key === 'Escape') { e.preventDefault(); setBracketOpen(false); return; }
     }
 
     // ── Enter — split block at cursor ──
@@ -648,6 +1030,7 @@ const BlockItem = memo(function BlockItem({
     }
   }, [
     block, pageId, blockIndex, slashOpen, slashQuery, slashIdx,
+    bracketOpen, bracketQuery, bracketIdx, handleBracketSelect,
     createBlock, deleteBlock, indentBlock, outdentBlock, setEditingBlock,
     handleSlashSelect, changeBlockType, splitBlock, mergeBlockUp,
     applyFormat, undo, redo, onNavigate,
@@ -789,6 +1172,56 @@ const BlockItem = memo(function BlockItem({
 
   // ── Drag-over visual state ──
   const [dragOver, setDragOver] = useState(false);
+
+  // ── Embed block — renders embedded page content ──
+  if (block.type === 'embed') {
+    const embedPageId = block.properties.embedPageId;
+    const embedPageTitle = block.properties.embedPageTitle;
+
+    return (
+      <div
+        className="pfc-block"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          paddingLeft: `${block.indent * 1.5}rem`,
+          transform: 'translateZ(0)',
+          contain: 'layout style',
+          marginBottom: '4px',
+        }}
+      >
+        <div style={{
+          border: `1px solid ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.2)'}`,
+          borderRadius: '8px',
+          padding: '12px 16px',
+          background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(196,149,106,0.02)',
+          cursor: embedPageId ? 'pointer' : 'default',
+        }}
+        onClick={() => {
+          if (embedPageId && onNavigateToPage && embedPageTitle) {
+            onNavigateToPage(embedPageTitle);
+          }
+        }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: isDark ? 'rgba(196,149,106,0.6)' : 'rgba(196,149,106,0.7)',
+            marginBottom: embedPageId ? '8px' : 0,
+          }}>
+            <FrameIcon style={{ width: '12px', height: '12px' }} />
+            {embedPageId ? `Embedded: ${embedPageTitle ?? 'Page'}` : 'Select a page to embed (use / → Embed Page)'}
+          </div>
+          {embedPageId && (
+            <EmbeddedPageContent pageId={embedPageId} isDark={isDark} />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // ── Divider block (non-editable) ──
   if (block.type === 'divider') {
@@ -936,11 +1369,12 @@ const BlockItem = memo(function BlockItem({
       {/* ── Content area (contentEditable with rich formatting) ── */}
       <div
         ref={contentRef}
-        contentEditable
+        contentEditable={!readOnly}
         suppressContentEditableWarning
         onFocus={onFocus}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
+        onClick={handleContentClick}
         data-block-id={block.id}
         data-placeholder={
           block.type === 'heading' ? `Heading ${block.properties.level || '1'}`
@@ -973,6 +1407,18 @@ const BlockItem = memo(function BlockItem({
           selectedIndex={slashIdx}
         />
       )}
+
+      {/* ── [[ Page link popup ── */}
+      {bracketOpen && (
+        <PageLinkPopup
+          query={bracketQuery}
+          position={bracketPos}
+          isDark={isDark}
+          onSelect={handleBracketSelect}
+          onClose={() => setBracketOpen(false)}
+          selectedIndex={bracketIdx}
+        />
+      )}
     </div>
   );
 });
@@ -982,15 +1428,31 @@ const BlockItem = memo(function BlockItem({
 // Handles floating toolbar, drag-drop coordination, block navigation
 // ═══════════════════════════════════════════════════════════════════
 
-export function BlockEditor({ pageId }: { pageId: string }) {
+export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: boolean }) {
   const { resolvedTheme } = useTheme();
   const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
 
   const noteBlocks = usePFCStore((s) => s.noteBlocks);
+  const notePages = usePFCStore((s) => s.notePages);
   const editingBlockId = usePFCStore((s) => s.editingBlockId);
   const setEditingBlock = usePFCStore((s) => s.setEditingBlock);
   const createBlock = usePFCStore((s) => s.createBlock);
   const moveBlock = usePFCStore((s) => s.moveBlock);
+  const setActivePage = usePFCStore((s) => s.setActivePage);
+  const ensurePage = usePFCStore((s) => s.ensurePage);
+
+  // ── Navigate to a page by title (from [[link]] click) ──
+  const handleNavigateToPage = useCallback((pageTitle: string) => {
+    const normalized = normalizePageName(pageTitle);
+    const existing = notePages.find((p: NotePage) => p.name === normalized || p.title === pageTitle);
+    if (existing) {
+      setActivePage(existing.id);
+    } else {
+      // Create page if it doesn't exist
+      const newId = ensurePage(pageTitle);
+      setActivePage(newId);
+    }
+  }, [notePages, setActivePage, ensurePage]);
 
   // Floating toolbar position (null = hidden)
   const [toolbarPos, setToolbarPos] = useState<{ top: number; left: number } | null>(null);
@@ -1147,6 +1609,8 @@ export function BlockEditor({ pageId }: { pageId: string }) {
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
+            readOnly={readOnly}
+            onNavigateToPage={handleNavigateToPage}
           />
         ))}
 
@@ -1195,6 +1659,18 @@ export function BlockEditor({ pageId }: { pageId: string }) {
           background: rgba(251,191,36,0.25);
           padding: 0 2px;
           border-radius: 2px;
+        }
+        .pfc-page-link {
+          color: #C4956A;
+          cursor: pointer;
+          border-bottom: 1px solid rgba(196,149,106,0.3);
+          font-weight: 500;
+          transition: border-color 0.15s, color 0.15s;
+          text-decoration: none;
+        }
+        .pfc-page-link:hover {
+          border-bottom-color: #C4956A;
+          color: #D4B896;
         }
       `}</style>
     </>
