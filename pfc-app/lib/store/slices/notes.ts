@@ -2,12 +2,12 @@
 
 import type {
   NoteBlock, NotePage, NoteBook, PageLink,
-  NoteSearchResult, NoteAIState,
+  NoteSearchResult, NoteAIState, BlockType,
 } from '@/lib/notes/types';
 import {
   generateBlockId, generatePageId, normalizePageName,
   createEmptyBlock, createNewPage, getTodayJournalDate,
-  extractPageLinks, orderBetween,
+  extractPageLinks, orderBetween, migrateBlock,
 } from '@/lib/notes/types';
 
 // State
@@ -42,7 +42,7 @@ export interface NotesSliceActions {
   togglePagePin: (pageId: string) => void;
 
   // Block operations
-  createBlock: (pageId: string, parentId?: string | null, afterBlockId?: string | null, content?: string) => string;
+  createBlock: (pageId: string, parentId?: string | null, afterBlockId?: string | null, content?: string, type?: BlockType) => string;
   updateBlockContent: (blockId: string, content: string) => void;
   deleteBlock: (blockId: string) => void;
   indentBlock: (blockId: string) => void;
@@ -179,7 +179,7 @@ export const createNotesSlice = (set: any, get: any) => ({
 
   // ── Block operations ──
 
-  createBlock: (pageId: string, parentId: string | null = null, afterBlockId: string | null = null, content: string = ''): string => {
+  createBlock: (pageId: string, parentId: string | null = null, afterBlockId: string | null = null, content: string = '', type: BlockType = 'paragraph'): string => {
     const s = get();
     const siblings = s.noteBlocks.filter((b: NoteBlock) => b.pageId === pageId && b.parentId === parentId);
 
@@ -196,6 +196,7 @@ export const createNotesSlice = (set: any, get: any) => ({
 
     const block: NoteBlock = {
       id: generateBlockId(),
+      type,
       content,
       parentId,
       pageId,
@@ -479,7 +480,8 @@ export const createNotesSlice = (set: any, get: any) => ({
       const booksRaw = localStorage.getItem(STORAGE_KEY_BOOKS);
 
       const notePages = pagesRaw ? JSON.parse(pagesRaw) : [];
-      const noteBlocks = blocksRaw ? JSON.parse(blocksRaw) : [];
+      const rawBlocks = blocksRaw ? JSON.parse(blocksRaw) : [];
+      const noteBlocks = rawBlocks.map(migrateBlock);
       const noteBooks = booksRaw ? JSON.parse(booksRaw) : [];
 
       set({ notePages, noteBlocks, noteBooks });

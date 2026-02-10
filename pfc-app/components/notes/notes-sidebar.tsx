@@ -2,7 +2,9 @@
 
 import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
+import type { NotePage, NoteBook } from '@/lib/notes/types';
 import {
   FileTextIcon,
   FolderIcon,
@@ -17,6 +19,10 @@ import {
   TrashIcon,
   PencilIcon,
   XIcon,
+  BookOpenIcon,
+  FileIcon,
+  ClockIcon,
+  FolderPlusIcon,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -27,33 +33,37 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 /* ------------------------------------------------------------------ */
-/*  Constants                                                          */
+/*  Constants & Easing                                                  */
 /* ------------------------------------------------------------------ */
 
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
-/* sidebar width is controlled by the parent (NotesPage) */
+const SPRING = { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.5 };
 
 /* ------------------------------------------------------------------ */
-/*  Theme helpers                                                      */
+/*  Theme                                                               */
 /* ------------------------------------------------------------------ */
 
 function t(isDark: boolean) {
   return {
-    bg:       isDark ? 'rgba(20,19,17,0.95)'      : 'rgba(218,212,200,0.95)',
-    text:     isDark ? 'rgba(237,224,212,0.9)'     : 'rgba(43,42,39,0.9)',
-    muted:    isDark ? 'rgba(156,143,128,0.5)'     : 'rgba(0,0,0,0.35)',
-    border:   isDark ? 'rgba(79,69,57,0.3)'        : 'rgba(208,196,180,0.3)',
-    hover:    isDark ? 'rgba(244,189,111,0.06)'    : 'rgba(0,0,0,0.04)',
-    active:   isDark ? 'rgba(244,189,111,0.12)'    : 'rgba(244,189,111,0.10)',
-    accent:   '#C4956A',
-    icon:     isDark ? 'rgba(156,143,128,0.5)'     : 'rgba(0,0,0,0.3)',
-    inputBg:  isDark ? 'rgba(79,69,57,0.3)'        : 'rgba(208,196,180,0.2)',
-    danger:   '#E05252',
+    bg:        isDark ? 'rgba(20,19,17,0.96)'       : 'rgba(218,212,200,0.96)',
+    text:      isDark ? 'rgba(237,224,212,0.9)'      : 'rgba(43,42,39,0.9)',
+    muted:     isDark ? 'rgba(156,143,128,0.5)'      : 'rgba(0,0,0,0.35)',
+    border:    isDark ? 'rgba(79,69,57,0.25)'         : 'rgba(208,196,180,0.25)',
+    hover:     isDark ? 'rgba(244,189,111,0.06)'      : 'rgba(0,0,0,0.04)',
+    active:    isDark ? 'rgba(244,189,111,0.12)'      : 'rgba(244,189,111,0.10)',
+    accent:    '#C4956A',
+    icon:      isDark ? 'rgba(156,143,128,0.45)'      : 'rgba(0,0,0,0.28)',
+    inputBg:   isDark ? 'rgba(79,69,57,0.25)'         : 'rgba(208,196,180,0.18)',
+    danger:    '#E05252',
+    tabBg:     isDark ? 'rgba(79,69,57,0.2)'          : 'rgba(208,196,180,0.15)',
+    tabActive: isDark ? 'rgba(244,189,111,0.15)'      : 'rgba(244,189,111,0.12)',
   };
 }
 
+type SidebarView = 'pages' | 'journals' | 'books';
+
 /* ------------------------------------------------------------------ */
-/*  Main sidebar component                                             */
+/*  Main Sidebar                                                        */
 /* ------------------------------------------------------------------ */
 
 export const NotesSidebar = memo(function NotesSidebar() {
@@ -63,7 +73,6 @@ export const NotesSidebar = memo(function NotesSidebar() {
   const isDark = mounted ? resolvedTheme === 'dark' : true;
   const c = t(isDark);
 
-  // -- Store selectors --
   const notePages          = usePFCStore((s) => s.notePages);
   const noteBooks          = usePFCStore((s) => s.noteBooks);
   const activePageId       = usePFCStore((s) => s.activePageId);
@@ -76,25 +85,38 @@ export const NotesSidebar = memo(function NotesSidebar() {
   const togglePagePin      = usePFCStore((s) => s.togglePagePin);
   const searchNotes        = usePFCStore((s) => s.searchNotes);
   const getOrCreateTodayJournal = usePFCStore((s) => s.getOrCreateTodayJournal);
-  const toggleNotesSidebar = usePFCStore((s) => s.toggleNotesSidebar);
   const createNoteBook     = usePFCStore((s) => s.createNoteBook);
 
-  // -- Local state --
+  // Local state
+  const [view, setView] = useState<SidebarView>('pages');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedBooks, setExpandedBooks] = useState<Set<string>>(new Set());
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
 
-  // -- Search filtering --
+  // Search
   const searchResults = useMemo(
     () => (searchQuery.trim() ? searchNotes(searchQuery) : []),
     [searchQuery, searchNotes],
   );
   const isSearching = searchQuery.trim().length > 0;
 
-  // -- Derived data: pinned, books with pages, standalone pages --
+  // Derived data
   const pinnedPages = useMemo(
     () => notePages.filter((p) => p.pinned).sort((a, b) => b.updatedAt - a.updatedAt),
+    [notePages],
+  );
+
+  const favoritePages = useMemo(
+    () => notePages.filter((p) => p.favorite && !p.pinned).sort((a, b) => b.updatedAt - a.updatedAt),
+    [notePages],
+  );
+
+  const journalPages = useMemo(
+    () => notePages
+      .filter((p) => p.isJournal)
+      .sort((a, b) => (b.journalDate ?? '').localeCompare(a.journalDate ?? '')),
     [notePages],
   );
 
@@ -104,9 +126,17 @@ export const NotesSidebar = memo(function NotesSidebar() {
     return ids;
   }, [noteBooks]);
 
+  const recentPages = useMemo(
+    () => notePages
+      .filter((p) => !p.isJournal && !p.pinned)
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 20),
+    [notePages],
+  );
+
   const standalonePages = useMemo(
     () => notePages
-      .filter((p) => !p.pinned && !bookPageIds.has(p.id))
+      .filter((p) => !p.pinned && !p.isJournal && !bookPageIds.has(p.id))
       .sort((a, b) => b.updatedAt - a.updatedAt),
     [notePages, bookPageIds],
   );
@@ -116,19 +146,14 @@ export const NotesSidebar = memo(function NotesSidebar() {
       ...book,
       pages: book.pageIds
         .map((id) => notePages.find((p) => p.id === id))
-        .filter(Boolean) as typeof notePages,
+        .filter(Boolean) as NotePage[],
     })),
     [noteBooks, notePages],
   );
 
-  // -- Handlers --
-  const handleNewPage = useCallback(() => {
-    createPage('Untitled');
-  }, [createPage]);
-
-  const handleTodayJournal = useCallback(() => {
-    getOrCreateTodayJournal();
-  }, [getOrCreateTodayJournal]);
+  // Handlers
+  const handleNewPage = useCallback(() => { createPage('Untitled'); }, [createPage]);
+  const handleTodayJournal = useCallback(() => { getOrCreateTodayJournal(); }, [getOrCreateTodayJournal]);
 
   const toggleBook = useCallback((bookId: string) => {
     setExpandedBooks((prev) => {
@@ -152,42 +177,162 @@ export const NotesSidebar = memo(function NotesSidebar() {
     setRenameValue('');
   }, [renamingId, renameValue, renamePage]);
 
+  const handleNewBook = useCallback(() => {
+    createNoteBook('New Notebook');
+  }, [createNoteBook]);
+
   if (!sidebarOpen) return null;
 
-  return (
-        <aside
-          style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            background: c.bg,
-            borderRight: `1px solid ${c.border}`,
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-            fontSize: '14px',
-            color: c.text,
-            userSelect: 'none',
-            overflow: 'hidden',
-          }}
-        >
-          {/* ── Header ── */}
-          <SidebarHeader
-            c={c}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-          />
+  const viewTabs: { id: SidebarView; label: string; icon: React.ReactNode }[] = [
+    { id: 'pages', label: 'Pages', icon: <FileIcon style={{ width: 12, height: 12 }} /> },
+    { id: 'journals', label: 'Journal', icon: <CalendarIcon style={{ width: 12, height: 12 }} /> },
+    { id: 'books', label: 'Books', icon: <BookOpenIcon style={{ width: 12, height: 12 }} /> },
+  ];
 
-          {/* ── Scrollable tree area ── */}
-          <div
+  return (
+    <aside
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        background: c.bg,
+        borderRight: `1px solid ${c.border}`,
+        fontFamily: 'var(--font-sans)',
+        fontSize: '13px',
+        color: c.text,
+        userSelect: 'none',
+        overflow: 'hidden',
+      }}
+    >
+      {/* ── Header: Search ── */}
+      <div style={{
+        padding: '12px 10px 8px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        flexShrink: 0,
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative' }}>
+          <SearchIcon style={{
+            position: 'absolute',
+            left: 8,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: 12,
+            height: 12,
+            color: searchFocused ? c.accent : c.icon,
+            pointerEvents: 'none',
+            transition: 'color 0.15s',
+          }} />
+          <input
+            type="text"
+            placeholder="Search notes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             style={{
-              flex: 1,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              scrollbarWidth: 'thin',
-              padding: '6px 0',
+              width: '100%',
+              height: 28,
+              paddingLeft: 28,
+              paddingRight: searchQuery ? 26 : 8,
+              fontSize: '12px',
+              fontWeight: 400,
+              fontFamily: 'var(--font-sans)',
+              borderRadius: 6,
+              border: `1px solid ${searchFocused ? c.accent + '40' : c.border}`,
+              background: c.inputBg,
+              color: c.text,
+              outline: 'none',
+              transition: 'border-color 0.15s',
             }}
-          >
-            {isSearching ? (
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute',
+                right: 5,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 16,
+                height: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 3,
+                border: 'none',
+                background: 'transparent',
+                color: c.muted,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <XIcon style={{ width: 10, height: 10 }} />
+            </button>
+          )}
+        </div>
+
+        {/* View tabs */}
+        {!isSearching && (
+          <div style={{
+            display: 'flex',
+            gap: '2px',
+            padding: '2px',
+            borderRadius: 6,
+            background: c.tabBg,
+          }}>
+            {viewTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setView(tab.id)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  height: 24,
+                  fontSize: '11px',
+                  fontWeight: view === tab.id ? 600 : 500,
+                  fontFamily: 'var(--font-sans)',
+                  borderRadius: 4,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s cubic-bezier(0.32,0.72,0,1)',
+                  background: view === tab.id ? c.tabActive : 'transparent',
+                  color: view === tab.id ? c.accent : c.muted,
+                }}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Scrollable tree area ── */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          scrollbarWidth: 'thin',
+          padding: '4px 0',
+        }}
+      >
+        <AnimatePresence mode="wait">
+          {isSearching ? (
+            <motion.div
+              key="search"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+            >
               <SearchResults
                 c={c}
                 results={searchResults}
@@ -195,10 +340,20 @@ export const NotesSidebar = memo(function NotesSidebar() {
                 activePageId={activePageId}
                 onSelectPage={setActivePage}
               />
-            ) : (
-              <TreeView
+            </motion.div>
+          ) : view === 'pages' ? (
+            <motion.div
+              key="pages"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+            >
+              <PagesView
                 c={c}
                 pinnedPages={pinnedPages}
+                favoritePages={favoritePages}
+                recentPages={recentPages}
                 booksWithPages={booksWithPages}
                 standalonePages={standalonePages}
                 expandedBooks={expandedBooks}
@@ -214,141 +369,70 @@ export const NotesSidebar = memo(function NotesSidebar() {
                 onRenameChange={setRenameValue}
                 onCommitRename={commitRename}
               />
-            )}
-          </div>
-
-          {/* ── Bottom bar ── */}
-          <BottomBar
-            c={c}
-            onNewPage={handleNewPage}
-            onTodayJournal={handleTodayJournal}
-          />
-
-        </aside>
-  );
-});
-
-/* ================================================================== */
-/*  Sidebar Header                                                     */
-/* ================================================================== */
-
-interface SidebarHeaderProps {
-  c: ReturnType<typeof t>;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
-}
-
-const SidebarHeader = memo(function SidebarHeader({
-  c, searchQuery, onSearchChange,
-}: SidebarHeaderProps) {
-  return (
-    <div style={{
-      padding: '14px 12px 10px',
-      borderBottom: `1px solid ${c.border}`,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '10px',
-    }}>
-      {/* Title */}
-      <span style={{
-        fontSize: '11px',
-        fontWeight: 700,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color: c.muted,
-      }}>
-        Files
-      </span>
-
-      {/* Search input */}
-      <div style={{ position: 'relative' }}>
-        <SearchIcon style={{
-          position: 'absolute',
-          left: 8,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: 13,
-          height: 13,
-          color: c.icon,
-          pointerEvents: 'none',
-        }} />
-        <input
-          type="text"
-          placeholder="Search..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          style={{
-            width: '100%',
-            height: 30,
-            paddingLeft: 30,
-            paddingRight: searchQuery ? 28 : 8,
-            fontSize: '13px',
-            fontWeight: 400,
-            borderRadius: 4,
-            border: `1px solid ${c.border}`,
-            background: c.inputBg,
-            color: c.text,
-            outline: 'none',
-          }}
-        />
-        {searchQuery && (
-          <button
-            onClick={() => onSearchChange('')}
-            style={{
-              position: 'absolute',
-              right: 6,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: 18,
-              height: 18,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 3,
-              border: 'none',
-              background: 'transparent',
-              color: c.muted,
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            <XIcon style={{ width: 12, height: 12 }} />
-          </button>
-        )}
+            </motion.div>
+          ) : view === 'journals' ? (
+            <motion.div
+              key="journals"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+            >
+              <JournalsView
+                c={c}
+                journalPages={journalPages}
+                activePageId={activePageId}
+                onSelectPage={setActivePage}
+                onDelete={deletePage}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="books"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+            >
+              <BooksView
+                c={c}
+                booksWithPages={booksWithPages}
+                expandedBooks={expandedBooks}
+                activePageId={activePageId}
+                renamingId={renamingId}
+                renameValue={renameValue}
+                onToggleBook={toggleBook}
+                onSelectPage={setActivePage}
+                onDelete={deletePage}
+                onToggleFavorite={togglePageFavorite}
+                onTogglePin={togglePagePin}
+                onStartRename={startRename}
+                onRenameChange={setRenameValue}
+                onCommitRename={commitRename}
+                onNewBook={handleNewBook}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+
+      {/* ── Bottom bar ── */}
+      <BottomBar c={c} onNewPage={handleNewPage} onTodayJournal={handleTodayJournal} />
+    </aside>
   );
 });
 
 /* ================================================================== */
-/*  Tree View                                                          */
+/*  Pages View                                                          */
 /* ================================================================== */
 
-interface TreePage {
-  id: string;
-  title: string;
-  icon?: string;
-  tags: string[];
-  favorite: boolean;
-  pinned: boolean;
-  isJournal: boolean;
-  journalDate?: string;
-  updatedAt: number;
-}
-
-interface BookWithPages {
-  id: string;
-  title: string;
-  description?: string;
-  pageIds: string[];
-  pages: TreePage[];
-}
-
-interface TreeViewProps {
+interface PagesViewProps {
   c: ReturnType<typeof t>;
-  pinnedPages: TreePage[];
-  booksWithPages: BookWithPages[];
-  standalonePages: TreePage[];
+  pinnedPages: NotePage[];
+  favoritePages: NotePage[];
+  recentPages: NotePage[];
+  booksWithPages: (NoteBook & { pages: NotePage[] })[];
+  standalonePages: NotePage[];
   expandedBooks: Set<string>;
   activePageId: string | null;
   renamingId: string | null;
@@ -363,56 +447,32 @@ interface TreeViewProps {
   onCommitRename: () => void;
 }
 
-function TreeView({
-  c,
-  pinnedPages,
-  booksWithPages,
-  standalonePages,
-  expandedBooks,
-  activePageId,
-  renamingId,
-  renameValue,
-  onToggleBook,
-  onSelectPage,
-  onDelete,
-  onToggleFavorite,
-  onTogglePin,
-  onStartRename,
-  onRenameChange,
-  onCommitRename,
-}: TreeViewProps) {
-  const hasAnything = pinnedPages.length > 0 || booksWithPages.length > 0 || standalonePages.length > 0;
+function PagesView({
+  c, pinnedPages, favoritePages, recentPages, booksWithPages, standalonePages,
+  expandedBooks, activePageId, renamingId, renameValue,
+  onToggleBook, onSelectPage, onDelete, onToggleFavorite, onTogglePin,
+  onStartRename, onRenameChange, onCommitRename,
+}: PagesViewProps) {
+  const hasAnything = pinnedPages.length > 0 || favoritePages.length > 0 || standalonePages.length > 0 || booksWithPages.length > 0;
 
   if (!hasAnything) {
     return (
-      <div style={{
-        padding: '40px 20px',
-        textAlign: 'center',
-        color: c.muted,
-        fontSize: '13px',
-      }}>
-        No pages yet. Create one to get started.
-      </div>
+      <EmptyState c={c} message="No pages yet. Create one to get started." />
     );
   }
 
   return (
     <>
-      {/* ── Pinned section ── */}
+      {/* Pinned */}
       {pinnedPages.length > 0 && (
-        <div style={{ marginBottom: 4 }}>
-          <SectionHeader c={c} label="Pinned" />
+        <Section c={c} label="Pinned" icon={<PinIcon style={{ width: 10, height: 10 }} />}>
           {pinnedPages.map((page) => (
             <FileItem
-              key={page.id}
-              c={c}
-              page={page}
+              key={page.id} c={c} page={page}
               isActive={page.id === activePageId}
               isRenaming={page.id === renamingId}
-              renameValue={renameValue}
-              depth={0}
-              onSelect={onSelectPage}
-              onDelete={onDelete}
+              renameValue={renameValue} depth={0}
+              onSelect={onSelectPage} onDelete={onDelete}
               onToggleFavorite={onToggleFavorite}
               onTogglePin={onTogglePin}
               onStartRename={onStartRename}
@@ -420,47 +480,213 @@ function TreeView({
               onCommitRename={onCommitRename}
             />
           ))}
-        </div>
+        </Section>
       )}
 
-      {/* ── Books (folders) ── */}
+      {/* Favorites */}
+      {favoritePages.length > 0 && (
+        <Section c={c} label="Favorites" icon={<StarIcon style={{ width: 10, height: 10 }} />}>
+          {favoritePages.map((page) => (
+            <FileItem
+              key={page.id} c={c} page={page}
+              isActive={page.id === activePageId}
+              isRenaming={page.id === renamingId}
+              renameValue={renameValue} depth={0}
+              onSelect={onSelectPage} onDelete={onDelete}
+              onToggleFavorite={onToggleFavorite}
+              onTogglePin={onTogglePin}
+              onStartRename={onStartRename}
+              onRenameChange={onRenameChange}
+              onCommitRename={onCommitRename}
+            />
+          ))}
+        </Section>
+      )}
+
+      {/* Notebooks */}
+      {booksWithPages.length > 0 && (
+        <Section c={c} label="Notebooks">
+          {booksWithPages.map((book) => (
+            <FolderItem
+              key={book.id} c={c} book={book}
+              isExpanded={expandedBooks.has(book.id)}
+              activePageId={activePageId}
+              renamingId={renamingId} renameValue={renameValue}
+              onToggle={onToggleBook} onSelectPage={onSelectPage}
+              onDelete={onDelete} onToggleFavorite={onToggleFavorite}
+              onTogglePin={onTogglePin} onStartRename={onStartRename}
+              onRenameChange={onRenameChange} onCommitRename={onCommitRename}
+            />
+          ))}
+        </Section>
+      )}
+
+      {/* Recent / standalone pages */}
+      {standalonePages.length > 0 && (
+        <Section c={c} label="Recent" icon={<ClockIcon style={{ width: 10, height: 10 }} />}>
+          {standalonePages.map((page) => (
+            <FileItem
+              key={page.id} c={c} page={page}
+              isActive={page.id === activePageId}
+              isRenaming={page.id === renamingId}
+              renameValue={renameValue} depth={0}
+              onSelect={onSelectPage} onDelete={onDelete}
+              onToggleFavorite={onToggleFavorite}
+              onTogglePin={onTogglePin}
+              onStartRename={onStartRename}
+              onRenameChange={onRenameChange}
+              onCommitRename={onCommitRename}
+            />
+          ))}
+        </Section>
+      )}
+    </>
+  );
+}
+
+/* ================================================================== */
+/*  Journals View                                                       */
+/* ================================================================== */
+
+interface JournalsViewProps {
+  c: ReturnType<typeof t>;
+  journalPages: NotePage[];
+  activePageId: string | null;
+  onSelectPage: (id: string) => void;
+  onDelete: (id: string) => void;
+}
+
+function JournalsView({ c, journalPages, activePageId, onSelectPage, onDelete }: JournalsViewProps) {
+  if (journalPages.length === 0) {
+    return (
+      <EmptyState c={c} message="No journal entries yet. Start today's journal below." />
+    );
+  }
+
+  // Group by month
+  const grouped = useMemo(() => {
+    const groups: Record<string, NotePage[]> = {};
+    for (const page of journalPages) {
+      const date = page.journalDate ?? '';
+      const month = date.slice(0, 7); // YYYY-MM
+      if (!groups[month]) groups[month] = [];
+      groups[month].push(page);
+    }
+    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+  }, [journalPages]);
+
+  return (
+    <>
+      {grouped.map(([month, pages]) => {
+        const d = new Date(month + '-01T00:00:00');
+        const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        return (
+          <Section key={month} c={c} label={label}>
+            {pages.map((page) => {
+              const isActive = page.id === activePageId;
+              return (
+                <JournalItem
+                  key={page.id}
+                  c={c}
+                  page={page}
+                  isActive={isActive}
+                  onSelect={onSelectPage}
+                  onDelete={onDelete}
+                />
+              );
+            })}
+          </Section>
+        );
+      })}
+    </>
+  );
+}
+
+/* ================================================================== */
+/*  Books View                                                          */
+/* ================================================================== */
+
+interface BooksViewProps {
+  c: ReturnType<typeof t>;
+  booksWithPages: (NoteBook & { pages: NotePage[] })[];
+  expandedBooks: Set<string>;
+  activePageId: string | null;
+  renamingId: string | null;
+  renameValue: string;
+  onToggleBook: (id: string) => void;
+  onSelectPage: (id: string) => void;
+  onDelete: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onStartRename: (id: string, title: string) => void;
+  onRenameChange: (val: string) => void;
+  onCommitRename: () => void;
+  onNewBook: () => void;
+}
+
+function BooksView({
+  c, booksWithPages, expandedBooks, activePageId,
+  renamingId, renameValue, onToggleBook, onSelectPage, onDelete,
+  onToggleFavorite, onTogglePin, onStartRename, onRenameChange,
+  onCommitRename, onNewBook,
+}: BooksViewProps) {
+  if (booksWithPages.length === 0) {
+    return (
+      <div style={{ padding: '30px 16px', textAlign: 'center' }}>
+        <EmptyState c={c} message="No notebooks yet." />
+        <button
+          onClick={onNewBook}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            marginTop: 12,
+            padding: '6px 14px',
+            fontSize: '12px',
+            fontWeight: 600,
+            fontFamily: 'var(--font-sans)',
+            borderRadius: 6,
+            border: 'none',
+            background: `${c.accent}18`,
+            color: c.accent,
+            cursor: 'pointer',
+          }}
+        >
+          <FolderPlusIcon style={{ width: 13, height: 13 }} />
+          New Notebook
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '6px 12px 4px',
+      }}>
+        <SectionLabel c={c} label="Notebooks" />
+        <button
+          onClick={onNewBook}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 20, height: 20, borderRadius: 4, border: 'none',
+            background: 'transparent', color: c.muted, cursor: 'pointer', padding: 0,
+          }}
+        >
+          <PlusIcon style={{ width: 12, height: 12 }} />
+        </button>
+      </div>
       {booksWithPages.map((book) => (
         <FolderItem
-          key={book.id}
-          c={c}
-          book={book}
+          key={book.id} c={c} book={book}
           isExpanded={expandedBooks.has(book.id)}
           activePageId={activePageId}
-          renamingId={renamingId}
-          renameValue={renameValue}
-          onToggle={onToggleBook}
-          onSelectPage={onSelectPage}
-          onDelete={onDelete}
-          onToggleFavorite={onToggleFavorite}
-          onTogglePin={onTogglePin}
-          onStartRename={onStartRename}
-          onRenameChange={onRenameChange}
-          onCommitRename={onCommitRename}
-        />
-      ))}
-
-      {/* ── Standalone pages (root-level files) ── */}
-      {standalonePages.map((page) => (
-        <FileItem
-          key={page.id}
-          c={c}
-          page={page}
-          isActive={page.id === activePageId}
-          isRenaming={page.id === renamingId}
-          renameValue={renameValue}
-          depth={0}
-          onSelect={onSelectPage}
-          onDelete={onDelete}
-          onToggleFavorite={onToggleFavorite}
-          onTogglePin={onTogglePin}
-          onStartRename={onStartRename}
-          onRenameChange={onRenameChange}
-          onCommitRename={onCommitRename}
+          renamingId={renamingId} renameValue={renameValue}
+          onToggle={onToggleBook} onSelectPage={onSelectPage}
+          onDelete={onDelete} onToggleFavorite={onToggleFavorite}
+          onTogglePin={onTogglePin} onStartRename={onStartRename}
+          onRenameChange={onRenameChange} onCommitRename={onCommitRename}
         />
       ))}
     </>
@@ -468,31 +694,66 @@ function TreeView({
 }
 
 /* ================================================================== */
-/*  Section Header                                                     */
+/*  Shared components                                                   */
 /* ================================================================== */
 
-function SectionHeader({ c, label }: { c: ReturnType<typeof t>; label: string }) {
+function EmptyState({ c, message }: { c: ReturnType<typeof t>; message: string }) {
   return (
     <div style={{
-      padding: '8px 12px 4px',
-      fontSize: '11px',
+      padding: '36px 20px',
+      textAlign: 'center',
+      color: c.muted,
+      fontSize: '12px',
+      lineHeight: 1.5,
+    }}>
+      {message}
+    </div>
+  );
+}
+
+function SectionLabel({ c, label, icon }: { c: ReturnType<typeof t>; label: string; icon?: React.ReactNode }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+      fontSize: '10px',
       fontWeight: 700,
       letterSpacing: '0.06em',
       textTransform: 'uppercase',
       color: c.muted,
     }}>
+      {icon}
       {label}
     </div>
   );
 }
 
+function Section({
+  c, label, icon, children,
+}: {
+  c: ReturnType<typeof t>;
+  label: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ padding: '8px 12px 3px' }}>
+        <SectionLabel c={c} label={label} icon={icon} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 /* ================================================================== */
-/*  Folder Item (Book)                                                 */
+/*  Folder Item (Notebook)                                              */
 /* ================================================================== */
 
 interface FolderItemProps {
   c: ReturnType<typeof t>;
-  book: BookWithPages;
+  book: NoteBook & { pages: NotePage[] };
   isExpanded: boolean;
   activePageId: string | null;
   renamingId: string | null;
@@ -508,27 +769,15 @@ interface FolderItemProps {
 }
 
 const FolderItem = memo(function FolderItem({
-  c,
-  book,
-  isExpanded,
-  activePageId,
-  renamingId,
-  renameValue,
-  onToggle,
-  onSelectPage,
-  onDelete,
-  onToggleFavorite,
-  onTogglePin,
-  onStartRename,
-  onRenameChange,
-  onCommitRename,
+  c, book, isExpanded, activePageId, renamingId, renameValue,
+  onToggle, onSelectPage, onDelete, onToggleFavorite, onTogglePin,
+  onStartRename, onRenameChange, onCommitRename,
 }: FolderItemProps) {
   const [hovered, setHovered] = useState(false);
   const FolderIco = isExpanded ? FolderOpenIcon : FolderIcon;
 
   return (
-    <div style={{ marginBottom: 2 }}>
-      {/* Folder row */}
+    <div style={{ marginBottom: 1 }}>
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -536,34 +785,29 @@ const FolderItem = memo(function FolderItem({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: 5,
           padding: '4px 8px 4px 12px',
           cursor: 'pointer',
-          borderRadius: 4,
+          borderRadius: 5,
           margin: '0 4px',
           transition: 'background 0.1s',
           background: hovered ? c.hover : 'transparent',
         }}
       >
-        {/* Disclosure triangle */}
         <ChevronRightIcon style={{
-          width: 14,
-          height: 14,
+          width: 13,
+          height: 13,
           color: c.muted,
           flexShrink: 0,
           transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-          transition: 'transform 0.15s ease',
+          transition: 'transform 0.15s cubic-bezier(0.32,0.72,0,1)',
         }} />
-
-        {/* Folder icon */}
         <FolderIco style={{
-          width: 15,
-          height: 15,
+          width: 14,
+          height: 14,
           color: c.accent,
           flexShrink: 0,
         }} />
-
-        {/* Title */}
         <span style={{
           flex: 1,
           fontSize: '13px',
@@ -575,50 +819,68 @@ const FolderItem = memo(function FolderItem({
         }}>
           {book.title}
         </span>
-
-        {/* Page count */}
         {!hovered && (
           <span style={{
-            fontSize: '11px',
+            fontSize: '10px',
             fontWeight: 500,
             color: c.muted,
             flexShrink: 0,
+            background: c.tabBg,
+            borderRadius: 3,
+            padding: '1px 5px',
           }}>
             {book.pageIds.length}
           </span>
         )}
       </div>
 
-      {/* Children */}
-      {isExpanded && book.pages.map((page) => (
-        <FileItem
-          key={page.id}
-          c={c}
-          page={page}
-          isActive={page.id === activePageId}
-          isRenaming={page.id === renamingId}
-          renameValue={renameValue}
-          depth={1}
-          onSelect={onSelectPage}
-          onDelete={onDelete}
-          onToggleFavorite={onToggleFavorite}
-          onTogglePin={onTogglePin}
-          onStartRename={onStartRename}
-          onRenameChange={onRenameChange}
-          onCommitRename={onCommitRename}
-        />
-      ))}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: CUPERTINO }}
+            style={{ overflow: 'hidden' }}
+          >
+            {book.pages.map((page) => (
+              <FileItem
+                key={page.id} c={c} page={page}
+                isActive={page.id === activePageId}
+                isRenaming={page.id === renamingId}
+                renameValue={renameValue} depth={1}
+                onSelect={onSelectPage} onDelete={onDelete}
+                onToggleFavorite={onToggleFavorite}
+                onTogglePin={onTogglePin}
+                onStartRename={onStartRename}
+                onRenameChange={onRenameChange}
+                onCommitRename={onCommitRename}
+              />
+            ))}
+            {book.pages.length === 0 && (
+              <div style={{
+                padding: '6px 12px 6px 42px',
+                fontSize: '11px',
+                color: c.muted,
+                fontStyle: 'italic',
+              }}>
+                Empty notebook
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });
 
 /* ================================================================== */
-/*  File Item (Page)                                                   */
+/*  File Item (Page)                                                    */
 /* ================================================================== */
 
 interface FileItemProps {
   c: ReturnType<typeof t>;
-  page: TreePage;
+  page: NotePage;
   isActive: boolean;
   isRenaming: boolean;
   renameValue: string;
@@ -633,24 +895,13 @@ interface FileItemProps {
 }
 
 const FileItem = memo(function FileItem({
-  c,
-  page,
-  isActive,
-  isRenaming,
-  renameValue,
-  depth,
-  onSelect,
-  onDelete,
-  onToggleFavorite,
-  onTogglePin,
-  onStartRename,
-  onRenameChange,
-  onCommitRename,
+  c, page, isActive, isRenaming, renameValue, depth,
+  onSelect, onDelete, onToggleFavorite, onTogglePin,
+  onStartRename, onRenameChange, onCommitRename,
 }: FileItemProps) {
   const [hovered, setHovered] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus rename input when entering rename mode
   useEffect(() => {
     if (isRenaming && renameInputRef.current) {
       renameInputRef.current.focus();
@@ -658,7 +909,7 @@ const FileItem = memo(function FileItem({
     }
   }, [isRenaming]);
 
-  const paddingLeft = 12 + depth * 20;
+  const paddingLeft = 12 + depth * 18;
 
   return (
     <div
@@ -671,31 +922,29 @@ const FileItem = memo(function FileItem({
         gap: 6,
         padding: `3px 8px 3px ${paddingLeft}px`,
         cursor: 'pointer',
-        borderRadius: 4,
+        borderRadius: 5,
         margin: '0 4px',
         transition: 'background 0.1s',
         background: isActive ? c.active : hovered ? c.hover : 'transparent',
-        minHeight: 28,
+        minHeight: 27,
       }}
     >
-      {/* File icon */}
-      {page.isJournal ? (
+      {page.icon ? (
+        <span style={{ fontSize: '13px', flexShrink: 0, lineHeight: 1 }}>{page.icon}</span>
+      ) : page.isJournal ? (
         <CalendarIcon style={{
-          width: 14,
-          height: 14,
-          color: isActive ? c.accent : c.icon,
+          width: 13, height: 13,
+          color: isActive ? '#34D399' : c.icon,
           flexShrink: 0,
         }} />
       ) : (
         <FileTextIcon style={{
-          width: 14,
-          height: 14,
+          width: 13, height: 13,
           color: isActive ? c.accent : c.icon,
           flexShrink: 0,
         }} />
       )}
 
-      {/* Title or rename input */}
       {isRenaming ? (
         <input
           ref={renameInputRef}
@@ -709,58 +958,46 @@ const FileItem = memo(function FileItem({
           onClick={(e) => e.stopPropagation()}
           style={{
             flex: 1,
-            fontSize: '13px',
-            fontWeight: 600,
+            fontSize: '12px',
+            fontWeight: 500,
+            fontFamily: 'var(--font-sans)',
             background: c.inputBg,
             border: `1px solid ${c.accent}`,
-            borderRadius: 3,
+            borderRadius: 4,
             color: c.text,
-            padding: '1px 4px',
+            padding: '1px 6px',
             outline: 'none',
             minWidth: 0,
+            height: 22,
           }}
         />
       ) : (
         <span style={{
           flex: 1,
-          fontSize: '13px',
-          fontWeight: isActive ? 600 : 500,
-          color: isActive ? c.text : (hovered ? c.text : c.text),
+          fontSize: '12.5px',
+          fontWeight: isActive ? 600 : 450,
+          color: c.text,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          opacity: isActive ? 1 : 0.8,
+          opacity: isActive ? 1 : 0.78,
         }}>
           {page.title || 'Untitled'}
         </span>
       )}
 
-      {/* Pinned indicator */}
+      {/* Indicators */}
       {page.pinned && !hovered && (
-        <PinIcon style={{
-          width: 11,
-          height: 11,
-          color: c.accent,
-          flexShrink: 0,
-        }} />
+        <PinIcon style={{ width: 10, height: 10, color: c.accent, flexShrink: 0 }} />
       )}
-
-      {/* Favorite indicator */}
       {page.favorite && !page.pinned && !hovered && (
-        <StarIcon style={{
-          width: 11,
-          height: 11,
-          color: '#FBBF24',
-          fill: '#FBBF24',
-          flexShrink: 0,
-        }} />
+        <StarIcon style={{ width: 10, height: 10, color: '#FBBF24', fill: '#FBBF24', flexShrink: 0 }} />
       )}
 
-      {/* Context menu (on hover) */}
+      {/* Context menu on hover */}
       {hovered && !isRenaming && (
         <ItemContextMenu
-          c={c}
-          page={page}
+          c={c} page={page}
           onDelete={onDelete}
           onToggleFavorite={onToggleFavorite}
           onTogglePin={onTogglePin}
@@ -772,12 +1009,97 @@ const FileItem = memo(function FileItem({
 });
 
 /* ================================================================== */
-/*  Item Context Menu                                                  */
+/*  Journal Item                                                        */
+/* ================================================================== */
+
+interface JournalItemProps {
+  c: ReturnType<typeof t>;
+  page: NotePage;
+  isActive: boolean;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+}
+
+const JournalItem = memo(function JournalItem({ c, page, isActive, onSelect, onDelete }: JournalItemProps) {
+  const [hovered, setHovered] = useState(false);
+
+  // Format journal date nicely
+  const dateLabel = useMemo(() => {
+    if (!page.journalDate) return page.title;
+    const d = new Date(page.journalDate + 'T00:00:00');
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (page.journalDate === today.toISOString().slice(0, 10)) return 'Today';
+    if (page.journalDate === yesterday.toISOString().slice(0, 10)) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+  }, [page.journalDate, page.title]);
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={() => onSelect(page.id)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '3px 8px 3px 12px',
+        cursor: 'pointer',
+        borderRadius: 5,
+        margin: '0 4px',
+        transition: 'background 0.1s',
+        background: isActive ? c.active : hovered ? c.hover : 'transparent',
+        minHeight: 27,
+      }}
+    >
+      <CalendarIcon style={{
+        width: 13, height: 13,
+        color: isActive ? '#34D399' : c.icon,
+        flexShrink: 0,
+      }} />
+      <span style={{
+        flex: 1,
+        fontSize: '12.5px',
+        fontWeight: isActive ? 600 : 450,
+        color: c.text,
+        opacity: isActive ? 1 : 0.78,
+      }}>
+        {dateLabel}
+      </span>
+      <span style={{
+        fontSize: '10px',
+        color: c.muted,
+        flexShrink: 0,
+      }}>
+        {page.journalDate?.slice(5) /* MM-DD */}
+      </span>
+
+      {hovered && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(page.id); }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 18, height: 18, borderRadius: 3, border: 'none',
+            background: 'transparent', color: c.danger, cursor: 'pointer',
+            padding: 0, flexShrink: 0,
+          }}
+        >
+          <TrashIcon style={{ width: 11, height: 11 }} />
+        </button>
+      )}
+    </div>
+  );
+});
+
+/* ================================================================== */
+/*  Context Menu                                                        */
 /* ================================================================== */
 
 interface ItemContextMenuProps {
   c: ReturnType<typeof t>;
-  page: TreePage;
+  page: NotePage;
   onDelete: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   onTogglePin: (id: string) => void;
@@ -793,52 +1115,45 @@ const ItemContextMenu = memo(function ItemContextMenu({
         <button
           onClick={(e) => e.stopPropagation()}
           style={{
-            width: 20,
-            height: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 3,
-            border: 'none',
-            background: 'transparent',
-            color: c.muted,
-            cursor: 'pointer',
-            flexShrink: 0,
-            padding: 0,
-            opacity: 0.7,
+            width: 18, height: 18,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: 3, border: 'none',
+            background: 'transparent', color: c.muted,
+            cursor: 'pointer', flexShrink: 0, padding: 0,
+            opacity: 0.65,
           }}
         >
-          <MoreHorizontalIcon style={{ width: 14, height: 14 }} />
+          <MoreHorizontalIcon style={{ width: 13, height: 13 }} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         sideOffset={4}
         style={{
-          minWidth: 160,
+          minWidth: 150,
           background: c.bg,
           border: `1px solid ${c.border}`,
-          borderRadius: 6,
+          borderRadius: 8,
           padding: 4,
-          fontSize: '13px',
+          fontSize: '12px',
+          backdropFilter: 'blur(20px)',
         }}
       >
         <DropdownMenuItem
           onClick={(e) => { e.stopPropagation(); onStartRename(page.id, page.title); }}
           className="gap-2 cursor-pointer"
-          style={{ fontSize: '13px', padding: '6px 8px', borderRadius: 4 }}
+          style={{ fontSize: '12px', padding: '5px 8px', borderRadius: 4 }}
         >
-          <PencilIcon style={{ width: 14, height: 14 }} />
+          <PencilIcon style={{ width: 12, height: 12 }} />
           Rename
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={(e) => { e.stopPropagation(); onToggleFavorite(page.id); }}
           className="gap-2 cursor-pointer"
-          style={{ fontSize: '13px', padding: '6px 8px', borderRadius: 4 }}
+          style={{ fontSize: '12px', padding: '5px 8px', borderRadius: 4 }}
         >
           <StarIcon style={{
-            width: 14,
-            height: 14,
+            width: 12, height: 12,
             fill: page.favorite ? '#FBBF24' : 'none',
             color: page.favorite ? '#FBBF24' : 'currentColor',
           }} />
@@ -847,22 +1162,21 @@ const ItemContextMenu = memo(function ItemContextMenu({
         <DropdownMenuItem
           onClick={(e) => { e.stopPropagation(); onTogglePin(page.id); }}
           className="gap-2 cursor-pointer"
-          style={{ fontSize: '13px', padding: '6px 8px', borderRadius: 4 }}
+          style={{ fontSize: '12px', padding: '5px 8px', borderRadius: 4 }}
         >
           <PinIcon style={{
-            width: 14,
-            height: 14,
+            width: 12, height: 12,
             color: page.pinned ? c.accent : 'currentColor',
           }} />
           {page.pinned ? 'Unpin' : 'Pin to top'}
         </DropdownMenuItem>
-        <DropdownMenuSeparator style={{ background: c.border, margin: '4px 0' }} />
+        <DropdownMenuSeparator style={{ background: c.border, margin: '3px 0' }} />
         <DropdownMenuItem
           onClick={(e) => { e.stopPropagation(); onDelete(page.id); }}
           className="gap-2 cursor-pointer"
-          style={{ fontSize: '13px', padding: '6px 8px', borderRadius: 4, color: c.danger }}
+          style={{ fontSize: '12px', padding: '5px 8px', borderRadius: 4, color: c.danger }}
         >
-          <TrashIcon style={{ width: 14, height: 14 }} />
+          <TrashIcon style={{ width: 12, height: 12 }} />
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -871,7 +1185,7 @@ const ItemContextMenu = memo(function ItemContextMenu({
 });
 
 /* ================================================================== */
-/*  Search Results                                                     */
+/*  Search Results                                                      */
 /* ================================================================== */
 
 interface SearchResultsProps {
@@ -892,59 +1206,38 @@ interface SearchResultsProps {
 function SearchResults({ c, results, query, activePageId, onSelectPage }: SearchResultsProps) {
   if (results.length === 0) {
     return (
-      <div style={{
-        padding: '40px 20px',
-        textAlign: 'center',
-        color: c.muted,
-        fontSize: '13px',
-      }}>
-        No results for &ldquo;{query}&rdquo;
-      </div>
+      <EmptyState c={c} message={`No results for \u201c${query}\u201d`} />
     );
   }
 
   return (
     <div>
-      <SectionHeader c={c} label={`${results.length} result${results.length !== 1 ? 's' : ''}`} />
-      {results.map((result, idx) => {
-        const isActive = result.pageId === activePageId;
-        return (
-          <SearchResultItem
-            key={`${result.pageId}-${result.blockId ?? idx}`}
-            c={c}
-            result={result}
-            query={query}
-            isActive={isActive}
-            onSelect={onSelectPage}
-          />
-        );
-      })}
+      <div style={{ padding: '6px 12px 3px' }}>
+        <SectionLabel c={c} label={`${results.length} result${results.length !== 1 ? 's' : ''}`} icon={<SearchIcon style={{ width: 10, height: 10 }} />} />
+      </div>
+      {results.map((result, idx) => (
+        <SearchResultItem
+          key={`${result.pageId}-${result.blockId ?? idx}`}
+          c={c}
+          result={result}
+          query={query}
+          isActive={result.pageId === activePageId}
+          onSelect={onSelectPage}
+        />
+      ))}
     </div>
   );
 }
 
-/* ================================================================== */
-/*  Search Result Item                                                 */
-/* ================================================================== */
-
-interface SearchResultItemProps {
+const SearchResultItem = memo(function SearchResultItem({
+  c, result, query, isActive, onSelect,
+}: {
   c: ReturnType<typeof t>;
-  result: {
-    type: 'page' | 'block';
-    pageId: string;
-    blockId?: string;
-    title: string;
-    snippet: string;
-    score: number;
-  };
+  result: { type: 'page' | 'block'; pageId: string; blockId?: string; title: string; snippet: string; score: number };
   query: string;
   isActive: boolean;
   onSelect: (id: string) => void;
-}
-
-const SearchResultItem = memo(function SearchResultItem({
-  c, result, query, isActive, onSelect,
-}: SearchResultItemProps) {
+}) {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -958,39 +1251,30 @@ const SearchResultItem = memo(function SearchResultItem({
         gap: 6,
         padding: '5px 8px 5px 12px',
         margin: '0 4px',
-        borderRadius: 4,
+        borderRadius: 5,
         cursor: 'pointer',
         transition: 'background 0.1s',
         background: isActive ? c.active : hovered ? c.hover : 'transparent',
       }}
     >
       <FileTextIcon style={{
-        width: 14,
-        height: 14,
+        width: 13, height: 13,
         color: isActive ? c.accent : c.icon,
-        flexShrink: 0,
-        marginTop: 2,
+        flexShrink: 0, marginTop: 2,
       }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: '13px',
-          fontWeight: 600,
-          color: c.text,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
+          fontSize: '12.5px', fontWeight: 600, color: c.text,
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           opacity: isActive ? 1 : 0.85,
         }}>
           {result.title}
         </div>
-        {result.snippet && (
+        {result.snippet && result.type === 'block' && (
           <div
             style={{
-              fontSize: '12px',
-              fontWeight: 400,
-              color: c.muted,
-              marginTop: 2,
-              lineHeight: 1.4,
+              fontSize: '11px', fontWeight: 400, color: c.muted,
+              marginTop: 1, lineHeight: 1.4,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
@@ -1002,12 +1286,21 @@ const SearchResultItem = memo(function SearchResultItem({
           />
         )}
       </div>
+      {result.type === 'block' && (
+        <span style={{
+          fontSize: '9px', fontWeight: 600, color: c.muted,
+          background: c.tabBg, borderRadius: 3, padding: '1px 4px',
+          flexShrink: 0, marginTop: 2,
+        }}>
+          Block
+        </span>
+      )}
     </div>
   );
 });
 
 /* ================================================================== */
-/*  Bottom Bar                                                         */
+/*  Bottom Bar                                                          */
 /* ================================================================== */
 
 interface BottomBarProps {
@@ -1019,77 +1312,63 @@ interface BottomBarProps {
 const BottomBar = memo(function BottomBar({ c, onNewPage, onTodayJournal }: BottomBarProps) {
   return (
     <div style={{
-      padding: '8px 8px',
+      padding: '6px 6px',
       borderTop: `1px solid ${c.border}`,
       display: 'flex',
-      gap: 4,
+      gap: 3,
+      flexShrink: 0,
     }}>
-      <button
-        onClick={onNewPage}
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 5,
-          height: 30,
-          fontSize: '13px',
-          fontWeight: 600,
-          borderRadius: 4,
-          border: 'none',
-          background: 'transparent',
-          color: c.muted,
-          cursor: 'pointer',
-          transition: 'background 0.1s, color 0.1s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = c.hover;
-          e.currentTarget.style.color = c.text;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = c.muted;
-        }}
-      >
-        <PlusIcon style={{ width: 14, height: 14 }} />
+      <BottomButton c={c} onClick={onNewPage} hoverColor={c.text}>
+        <PlusIcon style={{ width: 13, height: 13 }} />
         New Page
-      </button>
-      <button
-        onClick={onTodayJournal}
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 5,
-          height: 30,
-          fontSize: '13px',
-          fontWeight: 600,
-          borderRadius: 4,
-          border: 'none',
-          background: 'transparent',
-          color: c.muted,
-          cursor: 'pointer',
-          transition: 'background 0.1s, color 0.1s',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = c.hover;
-          e.currentTarget.style.color = c.accent;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = c.muted;
-        }}
-      >
-        <CalendarIcon style={{ width: 14, height: 14 }} />
+      </BottomButton>
+      <BottomButton c={c} onClick={onTodayJournal} hoverColor={c.accent}>
+        <CalendarIcon style={{ width: 13, height: 13 }} />
         Today
-      </button>
+      </BottomButton>
     </div>
   );
 });
 
+function BottomButton({
+  c, onClick, hoverColor, children,
+}: {
+  c: ReturnType<typeof t>;
+  onClick: () => void;
+  hoverColor: string;
+  children: React.ReactNode;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 5,
+        height: 28,
+        fontSize: '12px',
+        fontWeight: 600,
+        fontFamily: 'var(--font-sans)',
+        borderRadius: 5,
+        border: 'none',
+        background: hovered ? c.hover : 'transparent',
+        color: hovered ? hoverColor : c.muted,
+        cursor: 'pointer',
+        transition: 'background 0.1s, color 0.1s',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 /* ================================================================== */
-/*  Utilities                                                          */
+/*  Utilities                                                           */
 /* ================================================================== */
 
 function highlightQuery(text: string, query: string, c: ReturnType<typeof t>): string {
