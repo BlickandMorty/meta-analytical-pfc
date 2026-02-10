@@ -1074,7 +1074,12 @@ export async function* runPipeline(
           LLM_TIMEOUT,
           'Truth assessment',
         );
-      } catch {
+      } catch (truthError) {
+        console.error('[runPipeline] Truth assessment LLM call failed, using computed fallback:', truthError);
+        yield {
+          type: 'error',
+          message: `Truth assessment LLM call failed — using signal-based computation instead: ${truthError instanceof Error ? truthError.message : 'timeout'}`,
+        };
         truthAssessment = generateTruthAssessment(dualMessage, {
           entropy: signals.entropy,
           dissonance: signals.dissonance,

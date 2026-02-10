@@ -45,8 +45,10 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
   pageBId,
   onClose,
 }: ConceptCorrelationPanelProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'oled';
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   const notePages = usePFCStore((s) => s.notePages);
   const extractConcepts = usePFCStore((s) => s.extractConcepts);

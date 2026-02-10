@@ -76,18 +76,19 @@ export async function attemptStone(
         temperature: 0.6, // Lower temperature for focused reasoning
       });
 
-      // Estimate confidence/entropy from response characteristics
+      // Estimate confidence/entropy from response characteristics (deterministic)
       const responseLength = result.text.length;
       const hasQualifiers = /however|although|but|caveat|uncertain|unclear/i.test(result.text);
       const hasStructure = /first|second|third|therefore|thus|consequently/i.test(result.text);
+      const lengthFactor = Math.min(1, responseLength / 2000); // Normalize response length
 
       const confidenceAfter = Math.min(0.9,
         0.3 + (hasStructure ? 0.15 : 0) + (responseLength > 500 ? 0.1 : 0) - (hasQualifiers ? 0.05 : 0)
-        + Math.random() * 0.2
+        + lengthFactor * 0.15 + stone.relativeDifficulty * 0.05
       );
       const entropyAfter = Math.max(0.1,
         0.5 - (hasStructure ? 0.1 : 0) + (hasQualifiers ? 0.1 : 0)
-        + Math.random() * 0.15
+        + (1 - lengthFactor) * 0.1
       );
 
       return {
@@ -107,15 +108,15 @@ export async function attemptStone(
 }
 
 function simulateStoneAttempt(stone: SteppingStone, startTime: number): StoneAttempt {
-  // Simulate a response with progressive improvement
-  const quality = 0.4 + stone.relativeDifficulty * 0.3 + Math.random() * 0.2;
+  // Simulate a response with progressive improvement (deterministic from stone properties)
+  const quality = 0.4 + stone.relativeDifficulty * 0.3 + stone.order * 0.05;
 
   return {
     stoneId: stone.id,
-    response: `[Simulated reasoning for: "${stone.question}"]\n\nTargeting skill: ${stone.targetSkill}\n\nThe key insight is that this problem requires ${stone.targetSkill.toLowerCase()}, which involves systematically decomposing the question into verifiable sub-claims and evaluating each against available evidence. The structural pattern here mirrors the target problem's core reasoning challenge.`,
+    response: `[Simulation] Reasoning for: "${stone.question}"\n\nTargeting skill: ${stone.targetSkill}\n\nThe key insight is that this problem requires ${stone.targetSkill.toLowerCase()}, which involves systematically decomposing the question into verifiable sub-claims and evaluating each against available evidence. The structural pattern here mirrors the target problem's core reasoning challenge.`,
     confidenceAfter: Math.min(0.85, 0.3 + quality * 0.4),
     entropyAfter: Math.max(0.15, 0.6 - quality * 0.3),
-    durationMs: Date.now() - startTime + Math.random() * 500,
+    durationMs: Date.now() - startTime + 200,
     contributedToContext: true,
   };
 }
@@ -194,13 +195,15 @@ export async function attemptTarget(
       const hasUncertainty = /uncertain|unclear|limited|caveat|however|although/i.test(text);
       const hasDepth = length > 1000;
 
+      const lengthFactor = Math.min(1, length / 3000);
+
       const confidence = Math.min(0.9,
         0.35
         + (hasEvidence ? 0.12 : 0)
         + (hasStructure ? 0.1 : 0)
         + (hasDepth ? 0.08 : 0)
         + (attempts.length * 0.04) // Curriculum completion bonus
-        + Math.random() * 0.1
+        + lengthFactor * 0.08
       );
 
       const entropy = Math.max(0.1,
@@ -208,14 +211,14 @@ export async function attemptTarget(
         - (hasStructure ? 0.12 : 0)
         - (hasDepth ? 0.05 : 0)
         + (hasUncertainty ? 0.08 : 0)
-        + Math.random() * 0.1
+        + (1 - lengthFactor) * 0.08
       );
 
       const dissonance = Math.max(0.05,
         0.4
         - (hasEvidence ? 0.1 : 0)
         - (attempts.length * 0.03)
-        + Math.random() * 0.1
+        + (hasUncertainty ? 0.05 : 0)
       );
 
       const healthScore = Math.max(0.25,
@@ -248,17 +251,17 @@ function simulateFinalAttempt(
     ? attempts.reduce((sum, a) => sum + a.confidenceAfter, 0) / attempts.length
     : 0.3;
 
-  const confidence = Math.min(0.85, 0.25 + curriculumBonus + avgStoneConfidence * 0.3 + Math.random() * 0.1);
-  const entropy = Math.max(0.1, 0.6 - curriculumBonus - Math.random() * 0.1);
-  const dissonance = Math.max(0.05, 0.5 - curriculumBonus * 0.8 - Math.random() * 0.1);
+  const confidence = Math.min(0.85, 0.25 + curriculumBonus + avgStoneConfidence * 0.3 + attempts.length * 0.02);
+  const entropy = Math.max(0.1, 0.6 - curriculumBonus - avgStoneConfidence * 0.08);
+  const dissonance = Math.max(0.05, 0.5 - curriculumBonus * 0.8 - avgStoneConfidence * 0.05);
   const healthScore = Math.max(0.25, 1 - entropy * 0.45 - dissonance * 0.35);
 
   return {
-    analysis: `[Simulated enhanced analysis after ${attempts.length}-step curriculum]\n\nHaving built reasoning scaffolding through ${attempts.length} preparatory problems, the analysis benefits from practiced decomposition, adversarial thinking, and structural transfer skills. The curriculum approach yielded a ${(curriculumBonus * 100).toFixed(0)}% confidence boost over baseline.`,
+    analysis: `[Simulation] Enhanced analysis after ${attempts.length}-step curriculum.\n\nHaving built reasoning scaffolding through ${attempts.length} preparatory problems, the analysis benefits from practiced decomposition, adversarial thinking, and structural transfer skills. The curriculum approach yielded a ${(curriculumBonus * 100).toFixed(0)}% confidence boost over baseline.`,
     confidence,
     entropy,
     dissonance,
     healthScore,
-    durationMs: Date.now() - startTime + Math.random() * 1000,
+    durationMs: Date.now() - startTime + 300,
   };
 }

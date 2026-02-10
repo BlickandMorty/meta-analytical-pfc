@@ -1066,7 +1066,7 @@ const FileItem = memo(function FileItem({
           onChange={(e) => onRenameChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') onCommitRename();
-            if (e.key === 'Escape') onCommitRename();
+            if (e.key === 'Escape') { e.currentTarget.blur(); }
           }}
           onBlur={onCommitRename}
           onClick={(e) => e.stopPropagation()}

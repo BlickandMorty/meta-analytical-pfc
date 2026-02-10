@@ -933,9 +933,18 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   switchVault: (vaultId: string) => {
-    // Save current vault first
-    get().saveNotesToStorage();
-    // Clear current data
+    // Save current vault synchronously (not debounced) to prevent data loss
+    try {
+      const s = get();
+      const oldVid = s.activeVaultId;
+      if (oldVid) {
+        localStorage.setItem(vaultKey(oldVid, 'pages'), JSON.stringify(s.notePages));
+        localStorage.setItem(vaultKey(oldVid, 'blocks'), JSON.stringify(s.noteBlocks));
+        localStorage.setItem(vaultKey(oldVid, 'books'), JSON.stringify(s.noteBooks));
+        localStorage.setItem(vaultKey(oldVid, 'concepts'), JSON.stringify(s.concepts));
+      }
+    } catch {}
+    // Clear current data and switch
     set({
       notePages: [],
       noteBlocks: [],
@@ -965,7 +974,11 @@ export const createNotesSlice = (set: any, get: any) => ({
       localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
       const newActiveId = s.activeVaultId === vaultId ? (vaults[0]?.id ?? null) : s.activeVaultId;
       if (newActiveId !== s.activeVaultId) {
-        localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, newActiveId ?? '');
+        if (newActiveId) {
+          localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, newActiveId);
+        } else {
+          localStorage.removeItem(STORAGE_KEY_ACTIVE_VAULT);
+        }
       }
       return { vaults, activeVaultId: newActiveId };
     });

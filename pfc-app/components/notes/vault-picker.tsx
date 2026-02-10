@@ -179,9 +179,13 @@ export const VaultPicker = memo(function VaultPicker() {
                       onChange={(e) => setRenameValue(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleRename();
-                        if (e.key === 'Escape') { setRenamingId(null); }
+                        if (e.key === 'Escape') {
+                          setRenamingId(null);
+                          e.currentTarget.blur();
+                          return; // Prevent onBlur from calling handleRename
+                        }
                       }}
-                      onBlur={handleRename}
+                      onBlur={() => { if (renamingId) handleRename(); }}
                       onClick={(e) => e.stopPropagation()}
                       style={{
                         width: '100%',

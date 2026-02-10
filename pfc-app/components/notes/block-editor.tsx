@@ -645,7 +645,9 @@ const BlockItem = memo(function BlockItem({
 
         if (textBefore.endsWith('[[')) {
           const rect = range.getBoundingClientRect();
-          setBracketPos({ top: rect.bottom + 4, left: rect.left });
+          // Constrain popup to viewport (256px = popup width)
+          const safeLeft = Math.max(8, Math.min(rect.left, window.innerWidth - 264));
+          setBracketPos({ top: rect.bottom + 4, left: safeLeft });
           setBracketOpen(true);
           setBracketQuery('');
           setBracketIdx(0);

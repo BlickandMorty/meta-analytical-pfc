@@ -135,9 +135,12 @@ export async function generateCurriculum(
         iteration,
         teacherRationale: result.object.rationale,
       };
-    } catch {
-      // Fallback to simulation on LLM error
-      return generateSimulatedCurriculum(query, qa, numStones, iteration, curriculumId, startTime);
+    } catch (err) {
+      // Fallback to simulation on LLM error — rationale marks it clearly
+      console.error('[SOAR Teacher] LLM curriculum generation failed:', err);
+      const fallback = generateSimulatedCurriculum(query, qa, numStones, iteration, curriculumId, startTime);
+      fallback.teacherRationale = `[LLM Error Fallback] ${err instanceof Error ? err.message : 'Unknown error'}. ${fallback.teacherRationale}`;
+      return fallback;
     }
   }
 
