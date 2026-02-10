@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback, useMemo, useEffect } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
@@ -11,16 +11,18 @@ import {
   TrashIcon,
   PencilIcon,
   ChevronRightIcon,
-  FileTextIcon,
   FolderIcon,
   XIcon,
   CheckIcon,
-  HardDriveIcon,
 } from 'lucide-react';
 
 const CUPERTINO = [0.32, 0.72, 0, 1] as const;
 
-export const VaultPicker = memo(function VaultPicker() {
+interface VaultPickerProps {
+  onClose?: () => void;
+}
+
+export const VaultPicker = memo(function VaultPicker({ onClose }: VaultPickerProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -35,66 +37,23 @@ export const VaultPicker = memo(function VaultPicker() {
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
-  const [selectedDir, setSelectedDir] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const hasDirectoryPicker = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+  const handleSelectVault = useCallback((vaultId: string) => {
+    switchVault(vaultId);
+    onClose?.();
+  }, [switchVault, onClose]);
 
-  const handlePickDirectory = useCallback(async () => {
-    if (!hasDirectoryPicker) return;
-    try {
-      const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
-      setSelectedDir(handle.name);
-      if (!newName.trim()) setNewName(handle.name);
-      // Store handle in IndexedDB for persistence
-      try {
-        const db = await new Promise<IDBDatabase>((resolve, reject) => {
-          const req = indexedDB.open('pfc-vault-handles', 1);
-          req.onupgradeneeded = () => { req.result.createObjectStore('handles'); };
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-        const tx = db.transaction('handles', 'readwrite');
-        tx.objectStore('handles').put(handle, `pending`);
-        db.close();
-      } catch { /* IndexedDB not available, handle still usable for session */ }
-    } catch (e: any) {
-      if (e?.name !== 'AbortError') console.error('Directory picker error:', e);
-    }
-  }, [newName, hasDirectoryPicker]);
-
-  const handleCreate = useCallback(async () => {
+  const handleCreate = useCallback(() => {
     const name = newName.trim() || 'New Vault';
     const id = createVault(name);
-    // If a directory handle was selected, persist it keyed to the vault ID
-    if (selectedDir) {
-      try {
-        const db = await new Promise<IDBDatabase>((resolve, reject) => {
-          const req = indexedDB.open('pfc-vault-handles', 1);
-          req.onupgradeneeded = () => { req.result.createObjectStore('handles'); };
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-        const tx = db.transaction('handles', 'readwrite');
-        const store = tx.objectStore('handles');
-        // Move pending handle to vault-specific key
-        const getReq = store.get('pending');
-        getReq.onsuccess = () => {
-          if (getReq.result) {
-            store.put(getReq.result, `vault-${id}`);
-            store.delete('pending');
-          }
-        };
-        db.close();
-      } catch { /* ignore */ }
-    }
     switchVault(id);
     setCreating(false);
     setNewName('');
-    setSelectedDir(null);
-  }, [newName, selectedDir, createVault, switchVault]);
+    onClose?.();
+  }, [newName, createVault, switchVault, onClose]);
 
   const handleRename = useCallback(() => {
     if (renamingId && renameValue.trim()) {
@@ -122,17 +81,20 @@ export const VaultPicker = memo(function VaultPicker() {
   const accent = '#C4956A';
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 100,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: glassBackground,
-      backdropFilter: 'blur(40px) saturate(1.5)',
-      WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
-    }}>
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: glassBackground,
+        backdropFilter: 'blur(40px) saturate(1.5)',
+        WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -176,7 +138,7 @@ export const VaultPicker = memo(function VaultPicker() {
             margin: '0.375rem 0 0',
             lineHeight: 1.5,
           }}>
-            Vaults are isolated workspaces stored in your browser. Optionally link a local folder for file-based backup.
+            Vaults are isolated workspaces stored in your browser.
           </p>
         </div>
 
@@ -201,7 +163,7 @@ export const VaultPicker = memo(function VaultPicker() {
                 animate={{ opacity: 1, y: 0 }}
                 onMouseEnter={() => setHoveredId(vault.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                onClick={() => { if (!isRenaming) switchVault(vault.id); }}
+                onClick={() => { if (!isRenaming) handleSelectVault(vault.id); }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -232,7 +194,7 @@ export const VaultPicker = memo(function VaultPicker() {
                         if (e.key === 'Escape') {
                           setRenamingId(null);
                           e.currentTarget.blur();
-                          return; // Prevent onBlur from calling handleRename
+                          return;
                         }
                       }}
                       onBlur={() => { if (renamingId) handleRename(); }}
@@ -357,7 +319,7 @@ export const VaultPicker = memo(function VaultPicker() {
                     onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleCreate();
-                      if (e.key === 'Escape') { setCreating(false); setSelectedDir(null); }
+                      if (e.key === 'Escape') setCreating(false);
                     }}
                     placeholder="Vault name..."
                     style={{
@@ -385,7 +347,7 @@ export const VaultPicker = memo(function VaultPicker() {
                     <CheckIcon style={{ width: 16, height: 16 }} />
                   </button>
                   <button
-                    onClick={() => { setCreating(false); setSelectedDir(null); }}
+                    onClick={() => setCreating(false)}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: 36, height: 36, borderRadius: 8, border: `1px solid ${border}`,
@@ -395,7 +357,6 @@ export const VaultPicker = memo(function VaultPicker() {
                     <XIcon style={{ width: 14, height: 14 }} />
                   </button>
                 </div>
-                {/* Storage info */}
                 <p style={{
                   fontSize: '0.6875rem',
                   color: muted,
@@ -403,90 +364,8 @@ export const VaultPicker = memo(function VaultPicker() {
                   lineHeight: 1.5,
                   padding: '0 2px',
                 }}>
-                  Data is saved in your browser automatically. Link a folder to also sync to disk.
+                  Data is saved in your browser automatically.
                 </p>
-                {/* Local directory picker — only shown if supported */}
-                {hasDirectoryPicker ? (
-                  selectedDir ? (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 12px',
-                      fontSize: '0.75rem',
-                      fontWeight: 500,
-                      color: accent,
-                      background: `${accent}08`,
-                      border: `1px solid ${accent}25`,
-                      borderRadius: 8,
-                    }}>
-                      <FolderOpenIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
-                      <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {selectedDir}/
-                      </span>
-                      <button
-                        onClick={() => setSelectedDir(null)}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          width: 18, height: 18, borderRadius: 4,
-                          background: 'transparent', border: 'none',
-                          color: muted, cursor: 'pointer', flexShrink: 0,
-                        }}
-                      >
-                        <XIcon style={{ width: 10, height: 10 }} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        onClick={handlePickDirectory}
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          padding: '8px 12px',
-                          fontSize: '0.6875rem',
-                          fontWeight: 500,
-                          fontFamily: 'inherit',
-                          color: muted,
-                          background: 'transparent',
-                          border: `1px dashed ${border}`,
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <FolderOpenIcon style={{ width: 12, height: 12, flexShrink: 0 }} />
-                        Open folder
-                      </button>
-                      <button
-                        onClick={handlePickDirectory}
-                        style={{
-                          flex: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          padding: '8px 12px',
-                          fontSize: '0.6875rem',
-                          fontWeight: 500,
-                          fontFamily: 'inherit',
-                          color: muted,
-                          background: 'transparent',
-                          border: `1px dashed ${border}`,
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <HardDriveIcon style={{ width: 12, height: 12, flexShrink: 0 }} />
-                        New folder
-                      </button>
-                    </div>
-                  )
-                ) : null}
               </div>
             </motion.div>
           ) : (
@@ -515,6 +394,30 @@ export const VaultPicker = memo(function VaultPicker() {
             </motion.button>
           )}
         </AnimatePresence>
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            padding: '10px',
+            fontSize: '0.8125rem',
+            fontWeight: 500,
+            fontFamily: 'inherit',
+            color: muted,
+            background: 'transparent',
+            border: `1px solid ${border}`,
+            borderRadius: 10,
+            cursor: 'pointer',
+            transition: 'background 0.15s',
+          }}
+        >
+          <XIcon style={{ width: 14, height: 14 }} />
+          Close
+        </button>
       </motion.div>
     </div>
   );

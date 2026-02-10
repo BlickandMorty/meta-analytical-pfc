@@ -27,8 +27,7 @@ import {
   FolderOpenIcon,
   XIcon,
   LayoutGridIcon,
-  HomeIcon,
-  PlusSquareIcon,
+  MousePointerClickIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -49,7 +48,6 @@ const NoteAIChat = dynamic(
   () => import('@/components/notes/note-ai-chat').then((m) => ({ default: m.NoteAIChat })),
   { ssr: false },
 );
-// LearningPanel is now fused into NoteAIChat
 const VaultPicker = dynamic(
   () => import('@/components/notes/vault-picker').then((m) => ({ default: m.VaultPicker })),
   { ssr: false },
@@ -60,10 +58,6 @@ const ConceptCorrelationPanel = dynamic(
 );
 const NoteCanvas = dynamic(
   () => import('@/components/notes/note-canvas').then((m) => ({ default: m.NoteCanvas })),
-  { ssr: false },
-);
-const FormatRibbon = dynamic(
-  () => import('@/components/notes/format-ribbon').then((m) => ({ default: m.FormatRibbon })),
   { ssr: false },
 );
 
@@ -545,6 +539,21 @@ function ToolbarBtn({
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Notes Mode type — mutually exclusive: 'notes' (markdown) or 'canvas'
+// ═══════════════════════════════════════════════════════════════════
+
+type NotesViewMode = 'notes' | 'canvas';
+
+function loadViewMode(): NotesViewMode {
+  if (typeof window === 'undefined') return 'notes';
+  return (localStorage.getItem('pfc-notes-view-mode') as NotesViewMode) || 'notes';
+}
+
+function saveViewMode(mode: NotesViewMode) {
+  localStorage.setItem('pfc-notes-view-mode', mode);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Main Notes Page
 // ═══════════════════════════════════════════════════════════════════
 
@@ -588,16 +597,17 @@ export default function NotesPage() {
   // ── Read / Write mode ──
   const [editorMode, setEditorMode] = useState<'write' | 'read'>('write');
 
+  // ── View mode: notes (markdown) vs canvas — mutually exclusive ──
+  const [viewMode, setViewMode] = useState<NotesViewMode>('notes');
+  useEffect(() => { setViewMode(loadViewMode()); }, []);
+  const handleSetViewMode = useCallback((mode: NotesViewMode) => {
+    setViewMode(mode);
+    saveViewMode(mode);
+  }, []);
+
   // ── Floating sidebar panel ──
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelHovered, setPanelHovered] = useState(false);
-
-  // ── Ribbon tabs (Home / Insert) ──
-  type RibbonTab = 'home' | 'insert';
-  const [ribbonTab, setRibbonTab] = useState<RibbonTab>('home');
-  const [ribbonOpen, setRibbonOpen] = useState(true);
-  const [homeHovered, setHomeHovered] = useState(false);
-  const [insertHovered, setInsertHovered] = useState(false);
 
   // ── Load vault index on mount ──
   useEffect(() => {
@@ -722,7 +732,7 @@ export default function NotesPage() {
         contain: 'layout style',
       }}
     >
-      {/* ── Full-page editor area ── */}
+      {/* ── Full-page editor/canvas area ── */}
       <div
         onDragOver={(e) => {
           if (e.dataTransfer.types.includes('application/x-page-id')) {
@@ -743,139 +753,213 @@ export default function NotesPage() {
           transform: 'translateZ(0)',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
+          // Add top padding so content doesn't hide behind the TopNav
+          paddingTop: '3rem',
         } as React.CSSProperties}
       >
         <AnimatePresence mode="wait">
           {activePageId && activePage && mounted ? (
-            <motion.div
-              key={activePageId}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={spring.standard}
-              style={{
-                maxWidth: zenMode ? '42rem' : '52rem',
-                margin: '0 auto',
-                padding: zenMode ? '3rem 2rem 8rem' : '1.5rem 4rem 8rem',
-                transition: 'max-width 0.3s cubic-bezier(0.32,0.72,0,1), padding 0.3s cubic-bezier(0.32,0.72,0,1)',
-              }}
-            >
-              {/* Title header */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                marginBottom: '2.5rem',
-                paddingTop: '1rem',
-              }}>
-                {activePage.isJournal && (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.5rem',
-                  }}>
-                    <CalendarIcon style={{ width: '0.75rem', height: '0.75rem', color: c.green }} />
-                    <span style={{
-                      fontSize: '0.6875rem', fontWeight: 600, color: c.green,
-                      letterSpacing: '0.04em', textTransform: 'uppercase',
-                    }}>Journal</span>
-                  </div>
-                )}
-
+            viewMode === 'canvas' ? (
+              /* ═══ CANVAS MODE — full-screen canvas ═══ */
+              <motion.div
+                key={`canvas-${activePageId}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  position: 'relative',
+                }}
+              >
+                {/* Floating page title in canvas mode */}
                 <div style={{
+                  position: 'fixed',
+                  top: 52,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 35,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.75rem',
-                  minHeight: '4rem',
+                  gap: '0.5rem',
+                  padding: '0.375rem 1rem',
+                  borderRadius: '9999px',
+                  background: isDark ? 'rgba(20,19,17,0.85)' : 'rgba(248,244,238,0.85)',
+                  backdropFilter: 'blur(16px) saturate(1.4)',
+                  WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+                  border: `1px solid ${c.border}`,
                 }}>
-                  <div style={{ flexShrink: 0, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PixelBook size={48} />
+                  {activePage.isJournal && (
+                    <CalendarIcon style={{ width: '0.6875rem', height: '0.6875rem', color: c.green }} />
+                  )}
+                  <span
+                    onClick={handleTitleClick}
+                    style={{
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      color: c.text,
+                      cursor: 'text',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    {isEditingTitle ? (
+                      <input
+                        ref={titleRef}
+                        value={titleDraft}
+                        onChange={(e) => setTitleDraft(e.target.value)}
+                        onBlur={handleTitleCommit}
+                        onKeyDown={handleTitleKeyDown}
+                        autoFocus
+                        style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          color: c.text,
+                          background: 'transparent',
+                          border: 'none',
+                          outline: 'none',
+                          padding: 0,
+                          caretColor: c.accent,
+                          fontFamily: 'inherit',
+                          width: '12rem',
+                        }}
+                      />
+                    ) : activePage.title}
+                  </span>
+                </div>
+
+                {activeVaultId && (
+                  <NoteCanvas pageId={activePageId} vaultId={activeVaultId} />
+                )}
+              </motion.div>
+            ) : (
+              /* ═══ NOTES MODE — markdown block editor ═══ */
+              <motion.div
+                key={`notes-${activePageId}`}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={spring.standard}
+                style={{
+                  maxWidth: zenMode ? '42rem' : '52rem',
+                  margin: '0 auto',
+                  padding: zenMode ? '3rem 2rem 8rem' : '1.5rem 4rem 8rem',
+                  transition: 'max-width 0.3s cubic-bezier(0.32,0.72,0,1), padding 0.3s cubic-bezier(0.32,0.72,0,1)',
+                }}
+              >
+                {/* Title header */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  marginBottom: '2.5rem',
+                  paddingTop: '1rem',
+                }}>
+                  {activePage.isJournal && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.5rem',
+                    }}>
+                      <CalendarIcon style={{ width: '0.75rem', height: '0.75rem', color: c.green }} />
+                      <span style={{
+                        fontSize: '0.6875rem', fontWeight: 600, color: c.green,
+                        letterSpacing: '0.04em', textTransform: 'uppercase',
+                      }}>Journal</span>
+                    </div>
+                  )}
+
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.75rem',
+                    minHeight: '4rem',
+                  }}>
+                    <div style={{ flexShrink: 0, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <PixelBook size={48} />
+                    </div>
+
+                    {isEditingTitle ? (
+                      <input
+                        ref={titleRef}
+                        value={titleDraft}
+                        onChange={(e) => setTitleDraft(e.target.value)}
+                        onBlur={handleTitleCommit}
+                        onKeyDown={handleTitleKeyDown}
+                        autoFocus
+                        style={{
+                          fontSize: '2.5rem',
+                          fontWeight: 700,
+                          letterSpacing: '-0.035em',
+                          lineHeight: 1.15,
+                          color: c.text,
+                          background: 'transparent',
+                          border: 'none',
+                          outline: 'none',
+                          padding: 0,
+                          caretColor: c.accent,
+                          fontFamily: 'var(--font-display)',
+                          textAlign: 'center',
+                          maxWidth: '32rem',
+                        }}
+                      />
+                    ) : editorMode === 'read' ? (
+                      <NoteTitleTypewriter
+                        title={activePage.title}
+                        isDark={isDark}
+                        onClick={handleTitleClick}
+                      />
+                    ) : (
+                      <h1
+                        onClick={handleTitleClick}
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: '2.5rem',
+                          letterSpacing: '-0.035em',
+                          lineHeight: 1.15,
+                          fontWeight: 700,
+                          margin: 0,
+                          cursor: 'text',
+                          color: c.text,
+                        }}
+                      >
+                        {activePage.title}
+                      </h1>
+                    )}
                   </div>
 
-                  {isEditingTitle ? (
-                    <input
-                      ref={titleRef}
-                      value={titleDraft}
-                      onChange={(e) => setTitleDraft(e.target.value)}
-                      onBlur={handleTitleCommit}
-                      onKeyDown={handleTitleKeyDown}
-                      autoFocus
-                      style={{
-                        fontSize: '2.5rem',
-                        fontWeight: 700,
-                        letterSpacing: '-0.035em',
-                        lineHeight: 1.15,
-                        color: c.text,
-                        background: 'transparent',
-                        border: 'none',
-                        outline: 'none',
-                        padding: 0,
-                        caretColor: c.accent,
-                        fontFamily: 'var(--font-display)',
-                        textAlign: 'center',
-                        maxWidth: '32rem',
-                      }}
-                    />
-                  ) : editorMode === 'read' ? (
-                    <NoteTitleTypewriter
-                      title={activePage.title}
-                      isDark={isDark}
-                      onClick={handleTitleClick}
-                    />
-                  ) : (
-                    <h1
-                      onClick={handleTitleClick}
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '2.5rem',
-                        letterSpacing: '-0.035em',
-                        lineHeight: 1.15,
-                        fontWeight: 700,
-                        margin: 0,
-                        cursor: 'text',
-                        color: c.text,
-                      }}
-                    >
-                      {activePage.title}
-                    </h1>
+                  {activePage.tags.length > 0 && (
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {activePage.tags.map((tag: string) => (
+                        <motion.span
+                          key={tag}
+                          whileHover={{ scale: 1.05 }}
+                          transition={spring.snappy}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
+                            fontSize: '0.8125rem', fontWeight: 500,
+                            color: c.muted,
+                            background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
+                            borderRadius: '9999px', padding: '0.25rem 0.75rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <HashIcon style={{ width: '0.625rem', height: '0.625rem' }} />
+                          {tag}
+                        </motion.span>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                {activePage.tags.length > 0 && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    {activePage.tags.map((tag: string) => (
-                      <motion.span
-                        key={tag}
-                        whileHover={{ scale: 1.05 }}
-                        transition={spring.snappy}
-                        style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                          fontSize: '0.8125rem', fontWeight: 500,
-                          color: c.muted,
-                          background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
-                          borderRadius: '9999px', padding: '0.25rem 0.75rem',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <HashIcon style={{ width: '0.625rem', height: '0.625rem' }} />
-                        {tag}
-                      </motion.span>
-                    ))}
-                  </div>
-                )}
-              </div>
+                <BlockEditor pageId={activePageId} readOnly={editorMode === 'read'} />
 
-              <BlockEditor pageId={activePageId} readOnly={editorMode === 'read'} />
-
-              {/* OneNote-style canvas text boxes */}
-              {activeVaultId && (
-                <NoteCanvas pageId={activePageId} vaultId={activeVaultId} />
-              )}
-
-              <BacklinksPanel pageId={activePageId} c={c} />
-              <PageStats pageId={activePageId} page={activePage} c={c} />
-            </motion.div>
+                <BacklinksPanel pageId={activePageId} c={c} />
+                <PageStats pageId={activePageId} page={activePage} c={c} />
+              </motion.div>
+            )
           ) : (
+            /* ═══ LANDING — no active page ═══ */
             <motion.div
               key="landing"
               initial={{ opacity: 0, scale: 0.96 }}
@@ -971,128 +1055,9 @@ export default function NotesPage() {
           )}
         </AnimatePresence>
 
-        {/* ═══ Home + Insert NavBubble tabs — top-left ═══ */}
+        {/* ═══ Floating toolbar — top-right (below TopNav) ═══ */}
         {mounted && (
-          <div style={{
-            position: 'fixed',
-            top: 12,
-            left: 16,
-            zIndex: 40,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.375rem',
-          }}>
-            {/* Tab row */}
-            <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-              {/* Home tab NavBubble */}
-              <button
-                onClick={() => { setRibbonTab('home'); setRibbonOpen(true); }}
-                onMouseEnter={() => setHomeHovered(true)}
-                onMouseLeave={() => setHomeHovered(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: (homeHovered || (ribbonTab === 'home' && ribbonOpen)) ? '0.4rem' : '0rem',
-                  cursor: 'pointer',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: (homeHovered || (ribbonTab === 'home' && ribbonOpen)) ? '0.4rem 0.85rem' : '0.4rem 0.55rem',
-                  height: '2.25rem',
-                  fontSize: '0.8125rem',
-                  fontWeight: (ribbonTab === 'home' && ribbonOpen) ? 650 : 500,
-                  letterSpacing: '-0.01em',
-                  color: (ribbonTab === 'home' && ribbonOpen)
-                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-                    : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
-                  background: (ribbonTab === 'home' && ribbonOpen)
-                    ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
-                    : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
-                  backdropFilter: 'blur(12px) saturate(1.4)',
-                  WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  transition: `padding 0.3s ${CUP_EASE}, gap 0.3s ${CUP_EASE}, background 0.15s ease, color 0.15s ease`,
-                  transform: 'translateZ(0)',
-                }}
-              >
-                <HomeIcon style={{
-                  height: '0.9375rem', width: '0.9375rem', flexShrink: 0,
-                  color: (ribbonTab === 'home' && ribbonOpen) ? '#C4956A' : 'inherit',
-                  transition: 'color 0.15s',
-                }} />
-                <span style={{
-                  display: 'inline-block',
-                  maxWidth: (homeHovered || (ribbonTab === 'home' && ribbonOpen)) ? '4rem' : '0rem',
-                  opacity: (homeHovered || (ribbonTab === 'home' && ribbonOpen)) ? 1 : 0,
-                  overflow: 'hidden', whiteSpace: 'nowrap',
-                  transition: `max-width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
-                }}>
-                  Home
-                </span>
-              </button>
-
-              {/* Insert tab NavBubble */}
-              <button
-                onClick={() => { setRibbonTab('insert'); setRibbonOpen(true); }}
-                onMouseEnter={() => setInsertHovered(true)}
-                onMouseLeave={() => setInsertHovered(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: (insertHovered || (ribbonTab === 'insert' && ribbonOpen)) ? '0.4rem' : '0rem',
-                  cursor: 'pointer',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: (insertHovered || (ribbonTab === 'insert' && ribbonOpen)) ? '0.4rem 0.85rem' : '0.4rem 0.55rem',
-                  height: '2.25rem',
-                  fontSize: '0.8125rem',
-                  fontWeight: (ribbonTab === 'insert' && ribbonOpen) ? 650 : 500,
-                  letterSpacing: '-0.01em',
-                  color: (ribbonTab === 'insert' && ribbonOpen)
-                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-                    : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
-                  background: (ribbonTab === 'insert' && ribbonOpen)
-                    ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
-                    : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
-                  backdropFilter: 'blur(12px) saturate(1.4)',
-                  WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  transition: `padding 0.3s ${CUP_EASE}, gap 0.3s ${CUP_EASE}, background 0.15s ease, color 0.15s ease`,
-                  transform: 'translateZ(0)',
-                }}
-              >
-                <PlusSquareIcon style={{
-                  height: '0.9375rem', width: '0.9375rem', flexShrink: 0,
-                  color: (ribbonTab === 'insert' && ribbonOpen) ? '#C4956A' : 'inherit',
-                  transition: 'color 0.15s',
-                }} />
-                <span style={{
-                  display: 'inline-block',
-                  maxWidth: (insertHovered || (ribbonTab === 'insert' && ribbonOpen)) ? '4rem' : '0rem',
-                  opacity: (insertHovered || (ribbonTab === 'insert' && ribbonOpen)) ? 1 : 0,
-                  overflow: 'hidden', whiteSpace: 'nowrap',
-                  transition: `max-width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
-                }}>
-                  Insert
-                </span>
-              </button>
-            </div>
-
-            {/* Format ribbon — below tabs */}
-            <AnimatePresence>
-              {ribbonOpen && activePageId && (
-                <FormatRibbon isDark={isDark} activeTab={ribbonTab} onTabChange={setRibbonTab} />
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* ═══ Floating Sidebar Toggle Bubble — top-right ═══ */}
-        {mounted && (
-          <div style={{ position: 'fixed', top: 12, right: 16, zIndex: 40, display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+          <div style={{ position: 'fixed', top: 52, right: 16, zIndex: 40, display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
             {/* Notes home — deselect active page to return to landing */}
             {activePage && (
               <ToolbarBtn
@@ -1125,30 +1090,71 @@ export default function NotesPage() {
                 >
                   <PinIcon style={{ width: '0.8rem', height: '0.8rem' }} />
                 </ToolbarBtn>
-                <ToolbarBtn
-                  onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
-                  title={editorMode === 'write' ? 'Read mode' : 'Write mode'}
-                  isActive
-                  activeColor={editorMode === 'read' ? c.green : c.accent}
-                  bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+
+                {/* Notes Mode / Canvas Mode toggle */}
+                <button
+                  onClick={() => handleSetViewMode(viewMode === 'notes' ? 'canvas' : 'notes')}
+                  title={viewMode === 'notes' ? 'Switch to Canvas mode' : 'Switch to Notes mode'}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.3rem 0.65rem',
+                    height: '1.75rem',
+                    borderRadius: '9999px',
+                    border: 'none',
+                    fontSize: '0.6875rem',
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    color: viewMode === 'canvas' ? '#22D3EE' : c.accent,
+                    background: isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)',
+                    backdropFilter: 'blur(12px) saturate(1.4)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                    transition: 'color 0.15s, background 0.15s',
+                  }}
                 >
-                  {editorMode === 'read'
-                    ? <EyeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                    : <PencilIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                  }
-                </ToolbarBtn>
-                <ToolbarBtn
-                  onClick={() => setZenMode((v) => !v)}
-                  title={zenMode ? 'Exit zen' : 'Zen mode'}
-                  isActive={zenMode}
-                  activeColor={c.accent}
-                  bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
-                >
-                  {zenMode
-                    ? <MinimizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                    : <MaximizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                  }
-                </ToolbarBtn>
+                  {viewMode === 'canvas' ? (
+                    <>
+                      <MousePointerClickIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
+                      Canvas
+                    </>
+                  ) : (
+                    <>
+                      <FileTextIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
+                      Notes
+                    </>
+                  )}
+                </button>
+
+                {viewMode === 'notes' && (
+                  <>
+                    <ToolbarBtn
+                      onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
+                      title={editorMode === 'write' ? 'Read mode' : 'Write mode'}
+                      isActive
+                      activeColor={editorMode === 'read' ? c.green : c.accent}
+                      bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+                    >
+                      {editorMode === 'read'
+                        ? <EyeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                        : <PencilIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                      }
+                    </ToolbarBtn>
+                    <ToolbarBtn
+                      onClick={() => setZenMode((v) => !v)}
+                      title={zenMode ? 'Exit zen' : 'Zen mode'}
+                      isActive={zenMode}
+                      activeColor={c.accent}
+                      bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+                    >
+                      {zenMode
+                        ? <MinimizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                        : <MaximizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                      }
+                    </ToolbarBtn>
+                  </>
+                )}
               </>
             )}
 
@@ -1188,9 +1194,9 @@ export default function NotesPage() {
                 cursor: 'pointer',
                 border: 'none',
                 borderRadius: '9999px',
-                padding: panelBubbleExpanded ? '0.5rem 1rem' : '0.5rem 0.625rem',
-                height: '2.5rem',
-                fontSize: '0.875rem',
+                padding: panelBubbleExpanded ? '0.4rem 0.85rem' : '0.4rem 0.55rem',
+                height: '1.75rem',
+                fontSize: '0.6875rem',
                 fontWeight: panelOpen ? 650 : 500,
                 letterSpacing: '-0.01em',
                 color: panelOpen
@@ -1208,7 +1214,7 @@ export default function NotesPage() {
               }}
             >
               <LayoutGridIcon style={{
-                height: '1.0625rem', width: '1.0625rem', flexShrink: 0,
+                height: '0.75rem', width: '0.75rem', flexShrink: 0,
                 color: panelOpen ? '#C4956A' : 'inherit',
                 transition: 'color 0.15s',
               }} />
@@ -1219,7 +1225,7 @@ export default function NotesPage() {
                 overflow: 'hidden', whiteSpace: 'nowrap',
                 transition: `max-width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
               }}>
-                notes
+                pages
               </span>
             </button>
           </div>
@@ -1236,10 +1242,10 @@ export default function NotesPage() {
               transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
               style={{
                 position: 'fixed',
-                top: 52,
+                top: 88,
                 right: 16,
                 width: 300,
-                maxHeight: 'calc(100vh - 80px)',
+                maxHeight: 'calc(100vh - 110px)',
                 display: 'flex',
                 flexDirection: 'column',
                 background: isDark ? 'rgba(20,19,17,0.96)' : 'rgba(248,244,238,0.96)',
@@ -1272,13 +1278,13 @@ export default function NotesPage() {
         </AnimatePresence>
 
         {/* ═══ Fused AI button — NoteAIChat with AI Learn built in ═══ */}
-        {activePageId && mounted && (
+        {activePageId && mounted && viewMode === 'notes' && (
           <NoteAIChat pageId={activePageId} activeBlockId={editingBlockId} />
         )}
 
         {/* Vault picker overlay */}
         {showVaultPicker && mounted && (
-          <VaultPicker />
+          <VaultPicker onClose={() => setShowVaultPicker(false)} />
         )}
 
         {/* Concept correlation panel */}

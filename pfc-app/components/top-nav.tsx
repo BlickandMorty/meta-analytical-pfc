@@ -522,8 +522,8 @@ export function TopNav() {
     router.push(href);
   }, [router, clearMessages, pathname, chatMessages.length]);
 
-  // Hide TopNav entirely on notes page — notes has its own floating UI
-  if (isOnNotes) return null;
+  // Notes page: show nav but skip analytics expansion logic
+  // (notes has its own floating toolbar for notes-specific controls)
 
   return (
     <nav
