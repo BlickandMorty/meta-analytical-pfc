@@ -67,6 +67,9 @@ outputs/
 *.pkl
 *.joblib
 
+# Next.js build output (root level)
+.next/
+
 # Caches
 .cache/
 **/.cache/
