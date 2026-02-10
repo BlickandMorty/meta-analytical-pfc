@@ -155,8 +155,20 @@ export default function SettingsPage() {
   };
 
   const handleOllamaUrlChange = (url: string) => {
-    setOllamaBaseUrl(url);
-    localStorage.setItem('pfc-ollama-url', url);
+    // Sanitize: trim whitespace and remove trailing slash
+    const cleaned = url.trim().replace(/\/+$/, '');
+    setOllamaBaseUrl(cleaned);
+    localStorage.setItem('pfc-ollama-url', cleaned);
+  };
+
+  const isValidOllamaUrl = (url: string): boolean => {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
   };
 
   const handleOllamaModelChange = (model: string) => {
@@ -319,11 +331,14 @@ export default function SettingsPage() {
                     <div className={cn('h-2 w-2 rounded-full', ollamaChecking ? 'bg-pfc-yellow animate-pulse' : ollamaAvailable ? 'bg-pfc-green' : 'bg-pfc-red')} />
                     <span className="text-sm text-muted-foreground">{ollamaChecking ? 'Checking...' : ollamaAvailable ? `Ollama running (${ollamaModels.length} models)` : 'Ollama not detected'}</span>
                   </div>
-                  <GlassBubbleButton size="sm" color="green" onClick={checkOllama} disabled={ollamaChecking}>{ollamaChecking ? <PixelBook size={14} /> : 'Check'}</GlassBubbleButton>
+                  <GlassBubbleButton size="sm" color="green" onClick={checkOllama} disabled={ollamaChecking || !isValidOllamaUrl(ollamaBaseUrl)}>{ollamaChecking ? <PixelBook size={14} /> : 'Check'}</GlassBubbleButton>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-muted-foreground mb-2 block">Ollama URL</label>
-                  <Input type="text" placeholder="http://localhost:11434" value={ollamaBaseUrl} onChange={(e) => handleOllamaUrlChange(e.target.value)} className="font-mono text-sm rounded-xl" />
+                  <Input type="url" placeholder="http://localhost:11434" value={ollamaBaseUrl} onChange={(e) => handleOllamaUrlChange(e.target.value)} className={`font-mono text-sm rounded-xl ${ollamaBaseUrl && !isValidOllamaUrl(ollamaBaseUrl) ? 'border-pfc-red/50 focus:ring-pfc-red/50' : ''}`} />
+                  {ollamaBaseUrl && !isValidOllamaUrl(ollamaBaseUrl) && (
+                    <p className="text-xs text-pfc-red/70 mt-1">URL must start with http:// or https://</p>
+                  )}
                 </div>
                 {ollamaAvailable && ollamaModels.length > 0 && (
                   <div>

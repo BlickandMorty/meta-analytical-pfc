@@ -11,6 +11,7 @@ import type {
   DualMessage,
   LaymanSummary,
   PipelineEvent,
+  PipelineControls,
   StageResult,
   SignalUpdate,
   SafetyState,
@@ -708,15 +709,6 @@ function generateLaymanSummary(qa: QueryAnalysis, rawAnalysis: string): LaymanSu
 // ═════════════════════════════════════════════════════════════════════
 // ██ SIGNAL GENERATION — correlated with query properties
 // ═════════════════════════════════════════════════════════════════════
-
-interface PipelineControls {
-  focusDepthOverride?: number;
-  temperatureOverride?: number;
-  complexityBias?: number;
-  adversarialIntensity?: number;
-  bayesianPriorStrength?: number;
-  conceptWeights?: Record<string, number>;
-}
 
 function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steeringBias?: SteeringBias): SignalUpdate & { grade: string; mode: string } {
   // Apply complexity bias from controls

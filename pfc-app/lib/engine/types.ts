@@ -143,6 +143,17 @@ export interface SignalUpdate {
   harmonyKeyDistance: number;
 }
 
+// --- Pipeline Controls (shared between store and engine) ---
+
+export interface PipelineControls {
+  focusDepthOverride: number | null;
+  temperatureOverride: number | null;
+  complexityBias: number;
+  adversarialIntensity: number;
+  bayesianPriorStrength: number;
+  conceptWeights?: Record<string, number>;
+}
+
 // --- Chat Message (for DB serialization) ---
 
 export interface ChatMessage {

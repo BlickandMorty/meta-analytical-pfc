@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { runPipeline, type ConversationContext } from '@/lib/engine/simulate';
+import type { PipelineControls } from '@/lib/engine/types';
 import type { SteeringBias } from '@/lib/engine/steering/types';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
 import type { SOARConfig } from '@/lib/engine/soar/types';
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
   let resolvedChatId: string;
   let query: string;
   let existingChat: Awaited<ReturnType<typeof getChatById>>;
-  let controls: Record<string, unknown> | undefined;
+  let controls: PipelineControls | undefined;
   let steeringBias: SteeringBias | undefined;
   let inferenceConfig: InferenceConfig | undefined;
   let soarConfig: SOARConfig | undefined;
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
         // Run the pipeline and stream events (with conversation context)
         for await (const event of runPipeline(
           capturedQuery,
-          controls as Parameters<typeof runPipeline>[1],
+          controls,
           capturedContext,
           capturedSteeringBias,
           capturedInferenceConfig,

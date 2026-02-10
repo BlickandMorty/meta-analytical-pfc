@@ -1,16 +1,9 @@
 'use client';
 
-// ---------------------------------------------------------------------------
-// Pipeline Controls type
-// ---------------------------------------------------------------------------
+import type { PipelineControls } from '@/lib/engine/types';
 
-export interface PipelineControls {
-  focusDepthOverride: number | null;
-  temperatureOverride: number | null;
-  complexityBias: number;
-  adversarialIntensity: number;
-  bayesianPriorStrength: number;
-}
+// Re-export so existing imports from this file still work
+export type { PipelineControls } from '@/lib/engine/types';
 
 export const defaultControls: PipelineControls = {
   focusDepthOverride: null,
