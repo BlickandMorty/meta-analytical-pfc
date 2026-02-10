@@ -128,55 +128,6 @@ export interface RerouteInstruction {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Code Language Analyzer Types
-// ═══════════════════════════════════════════════════════════════════
-
-/** Supported programming languages for analysis */
-export type ProgrammingLanguage =
-  | 'typescript' | 'javascript' | 'python' | 'rust' | 'go'
-  | 'java' | 'kotlin' | 'swift' | 'c' | 'cpp'
-  | 'csharp' | 'ruby' | 'php' | 'dart' | 'elixir'
-  | 'zig' | 'lua' | 'scala' | 'haskell' | 'ocaml';
-
-/** Project category that influences language recommendation */
-export type ProjectCategory =
-  | 'web-frontend' | 'web-backend' | 'mobile-native' | 'mobile-cross'
-  | 'desktop-app' | 'cli-tool' | 'game-engine' | 'game-scripting'
-  | 'ml-training' | 'ml-inference' | 'data-pipeline' | 'embedded'
-  | 'systems' | 'blockchain' | 'api-service' | 'devtools'
-  | 'library' | 'compiler' | 'database' | 'networking';
-
-/** Language fitness score for a category */
-export interface LanguageFitScore {
-  language: ProgrammingLanguage;
-  overallScore: number;         // 0-100
-  performanceScore: number;     // 0-100
-  ecosystemScore: number;       // 0-100
-  devExperienceScore: number;   // 0-100
-  maintainabilityScore: number; // 0-100
-  hiringPoolScore: number;      // 0-100
-  reasoning: string;
-  bestFor: string[];
-  tradeoffs: string[];
-  recommendedLibs: string[];
-  recommendedRepos: string[];
-}
-
-/** A codebase analysis result */
-export interface CodebaseAnalysis {
-  id: string;
-  timestamp: number;
-  projectName: string;
-  currentLanguage: ProgrammingLanguage;
-  category: ProjectCategory;
-  scores: LanguageFitScore[];
-  topRecommendation: ProgrammingLanguage;
-  migrationComplexity: 'trivial' | 'moderate' | 'significant' | 'massive';
-  estimatedFiles: number;
-  aiSummary: string;
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // Inference-Mode Feature Gating
 // ═══════════════════════════════════════════════════════════════════
 
@@ -247,8 +198,6 @@ export interface SuiteTierFeatures {
   deepResearch: boolean;
 
   // Programming-level
-  codeAnalyzer: boolean;
-  codebaseTools: boolean;
   steeringLab: boolean;
 
   // Measurement-level
@@ -279,8 +228,6 @@ export function getSuiteTierFeatures(tier: SuiteTier): SuiteTierFeatures {
         thoughtVisualizer: 'simplified',
         researchMode: true,
         deepResearch: false,
-        codeAnalyzer: false,
-        codebaseTools: false,
         steeringLab: false,
         pipelineVisualizer: false,
         signalDiagnostics: false,
@@ -303,8 +250,6 @@ export function getSuiteTierFeatures(tier: SuiteTier): SuiteTierFeatures {
         thoughtVisualizer: 'full',
         researchMode: true,
         deepResearch: true,
-        codeAnalyzer: true,
-        codebaseTools: true,
         steeringLab: true,
         pipelineVisualizer: false,
         signalDiagnostics: false,
@@ -328,8 +273,6 @@ export function getSuiteTierFeatures(tier: SuiteTier): SuiteTierFeatures {
         thoughtVisualizer: 'full',
         researchMode: true,
         deepResearch: true,
-        codeAnalyzer: true,
-        codebaseTools: true,
         steeringLab: true,
         pipelineVisualizer: true,
         signalDiagnostics: true,

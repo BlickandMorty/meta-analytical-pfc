@@ -15,7 +15,6 @@ export interface TierSliceState {
   suiteTier: SuiteTier;
   suiteMode: SuiteMode;
   measurementEnabled: boolean;
-  programmingEnabled: boolean;
   tierFeatures: SuiteTierFeatures;
 }
 
@@ -38,7 +37,6 @@ export const createTierSlice = (set: any, get: any) => ({
   suiteTier: 'programming' as SuiteTier,
   suiteMode: 'programming' as SuiteMode,
   measurementEnabled: false,
-  programmingEnabled: true,
   tierFeatures: getSuiteTierFeatures('programming'),
 
   // --- actions ---
@@ -49,7 +47,6 @@ export const createTierSlice = (set: any, get: any) => ({
       suiteTier: tier,
       suiteMode: tier,
       measurementEnabled: features.pipelineVisualizer,
-      programmingEnabled: features.codeAnalyzer,
       tierFeatures: features,
     });
     if (typeof window !== 'undefined') {

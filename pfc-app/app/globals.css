@@ -167,7 +167,7 @@
   --glass-blur: 20px;
   --glass-blur-heavy: 24px;
 
-  /* Chat surface — same as bg */
+  /* Chat surface — unified with background, no two-tone */
   --chat-surface: #F5F0E8;
 
 }
@@ -196,8 +196,8 @@
   --input: rgba(45, 44, 40, 0.5);
   --ring: #C4956A;
 
-  /* Chat surface — slightly elevated from bg */
-  --chat-surface: #161615;
+  /* Chat surface — unified with background, no two-tone */
+  --chat-surface: #111110;
 
   /* Sidebar — lighter gray for contrast against OLED bg */
   --sidebar: rgba(28, 27, 25, 0.9);

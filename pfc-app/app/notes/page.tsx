@@ -175,7 +175,7 @@ export default function NotesPage() {
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
-          background: isDark ? '#161615' : '#F5F0E8',
+          background: 'var(--background)',
         }}
       >
         {/* Toolbar */}

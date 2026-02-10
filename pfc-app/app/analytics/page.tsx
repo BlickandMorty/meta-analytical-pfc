@@ -64,16 +64,26 @@ export default function AnalyticsPage() {
   useEffect(() => { setMounted(true); }, []);
   const isDark = mounted ? resolvedTheme === 'dark' : true;
 
+  // Listen for tab changes from nav bar sub-bubbles
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const key = (e as CustomEvent).detail as TabKey;
+      if (TABS.some((t) => t.key === key)) setActiveTab(key);
+    };
+    window.addEventListener('pfc-analytics-tab', handler);
+    return () => window.removeEventListener('pfc-analytics-tab', handler);
+  }, []);
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--chat-surface)' }}>
-      {/* ── Sticky tab bar ── */}
+    <div style={{ minHeight: '100vh', background: 'var(--background)' }}>
+      {/* ── Sticky tab bar (secondary, below nav sub-bubbles) ── */}
       <div
         style={{
           position: 'sticky',
           top: '2.625rem',
           zIndex: 20,
           padding: '0.75rem 1rem 0',
-          background: 'var(--chat-surface)',
+          background: 'var(--background)',
         }}
       >
         <div
@@ -117,7 +127,7 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2, ease: CUPERTINO_EASE }}
+          transition={{ duration: 0.3, ease: CUPERTINO_EASE }}
         >
           {activeTab === 'pipeline' && <PipelinePage />}
           {activeTab === 'signals' && <DiagnosticsPage />}

@@ -173,10 +173,9 @@ export const usePFCStore = create<PFCState>()(
         synthesisReport: freshUI.synthesisReport,
         showSynthesis: freshUI.showSynthesis,
 
-        // Preserve tier, cortex, and analyses
-        // (suiteTier, measurementEnabled, programmingEnabled, tierFeatures stay)
+        // Preserve tier and cortex
+        // (suiteTier, measurementEnabled, tierFeatures stay)
         // (cortexArchive stays)
-        // (codebaseAnalyses stays)
         // (conceptWeights reset)
         conceptWeights: {},
         queryConceptHistory: [],

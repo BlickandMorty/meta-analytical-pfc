@@ -1,7 +1,6 @@
 'use client';
 
 import type { SynthesisReport, TruthAssessment } from '@/lib/engine/types';
-import type { CodebaseAnalysis } from '@/lib/research/types';
 
 // ---------------------------------------------------------------------------
 // State interface
@@ -14,7 +13,6 @@ export interface UISliceState {
   sidebarOpen: boolean;
   showTruthBot: boolean;
   latestTruthAssessment: TruthAssessment | null;
-  codebaseAnalyses: CodebaseAnalysis[];
 }
 
 // ---------------------------------------------------------------------------
@@ -29,8 +27,6 @@ export interface UISliceActions {
   setSidebarOpen: (open: boolean) => void;
   toggleTruthBot: () => void;
   setTruthAssessment: (assessment: TruthAssessment) => void;
-  addCodebaseAnalysis: (analysis: CodebaseAnalysis) => void;
-  removeCodebaseAnalysis: (id: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,7 +41,6 @@ export const createUISlice = (set: any, get: any) => ({
   sidebarOpen: false,
   showTruthBot: true,
   latestTruthAssessment: null as TruthAssessment | null,
-  codebaseAnalyses: [] as CodebaseAnalysis[],
 
   // --- actions ---
 
@@ -68,30 +63,4 @@ export const createUISlice = (set: any, get: any) => ({
 
   setTruthAssessment: (assessment: TruthAssessment) =>
     set({ latestTruthAssessment: assessment }),
-
-  addCodebaseAnalysis: (analysis: CodebaseAnalysis) =>
-    set((s: any) => {
-      const updated = [analysis, ...s.codebaseAnalyses].slice(0, 100);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          'pfc-codebase-analyses',
-          JSON.stringify(updated),
-        );
-      }
-      return { codebaseAnalyses: updated };
-    }),
-
-  removeCodebaseAnalysis: (id: string) =>
-    set((s: any) => {
-      const updated = s.codebaseAnalyses.filter(
-        (a: CodebaseAnalysis) => a.id !== id,
-      );
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          'pfc-codebase-analyses',
-          JSON.stringify(updated),
-        );
-      }
-      return { codebaseAnalyses: updated };
-    }),
 });

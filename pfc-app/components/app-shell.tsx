@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { TopNav } from './top-nav';
 import type { InferenceMode, ApiProvider } from '@/lib/engine/llm/config';
-import type { SuiteTier, ResearchPaper, ResearchBook, CodebaseAnalysis } from '@/lib/research/types';
+import type { SuiteTier, ResearchPaper, ResearchBook } from '@/lib/research/types';
 import { detectDevice, cacheDeviceProfile } from '@/lib/device-detection';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -78,16 +78,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     } catch { /* ignore corrupt data */ }
 
-    // --- Load codebase analyses ---
-    try {
-      const storedAnalyses = localStorage.getItem('pfc-codebase-analyses');
-      if (storedAnalyses) {
-        const analyses = JSON.parse(storedAnalyses) as CodebaseAnalysis[];
-        for (const analysis of analyses) {
-          usePFCStore.getState().addCodebaseAnalysis(analysis);
-        }
-      }
-    } catch { /* ignore corrupt data */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
