@@ -463,11 +463,11 @@ export function CodeRainCanvas({ isDark, searchFocused }: { isDark: boolean; sea
     let cachedW = window.innerWidth;
     let cachedH = window.innerHeight;
     // Light mode gets more particles for visibility
-    const lightModeMultiplier = isDark ? 1 : 2.0;
+    const densityMultiplier = isDark ? 1.5 : 2.0;
 
     function resetColumns() {
       columnsRef.current = [];
-      const colCount = Math.floor((cachedW / 42) * lightModeMultiplier);
+      const colCount = Math.floor((cachedW / 42) * densityMultiplier);
       for (let i = 0; i < colCount; i++) {
         columnsRef.current.push(createColumn(cachedW, cachedH));
       }

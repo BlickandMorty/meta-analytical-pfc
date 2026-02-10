@@ -574,6 +574,8 @@ export default function NotesPage() {
   const activeVaultId = usePFCStore((s) => s.activeVaultId);
   const vaultReady = usePFCStore((s) => s.vaultReady);
   const loadVaultIndex = usePFCStore((s) => s.loadVaultIndex);
+  const createVault = usePFCStore((s) => s.createVault);
+  const switchVault = usePFCStore((s) => s.switchVault);
   const [showVaultPicker, setShowVaultPicker] = useState(false);
 
   // ── Concept correlation ──
@@ -604,12 +606,13 @@ export default function NotesPage() {
     }
   }, [ready, loadVaultIndex]);
 
-  // ── Show vault picker if no vaults exist ──
+  // ── Auto-create a default vault if none exist ──
   useEffect(() => {
     if (vaultReady && vaults.length === 0) {
-      setShowVaultPicker(true);
+      const id = createVault('My Notes');
+      switchVault(id);
     }
-  }, [vaultReady, vaults.length]);
+  }, [vaultReady, vaults.length, createVault, switchVault]);
 
   // ── Load notes when vault is selected ──
   useEffect(() => {
@@ -1090,6 +1093,18 @@ export default function NotesPage() {
         {/* ═══ Floating Sidebar Toggle Bubble — top-right ═══ */}
         {mounted && (
           <div style={{ position: 'fixed', top: 12, right: 16, zIndex: 40, display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+            {/* Notes home — deselect active page to return to landing */}
+            {activePage && (
+              <ToolbarBtn
+                onClick={() => setActivePage(null)}
+                title="Notes home"
+                isActive={false}
+                bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
+              >
+                <PenLineIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+              </ToolbarBtn>
+            )}
+
             {/* Page quick-actions — only when a page is active */}
             {activePage && (
               <>
