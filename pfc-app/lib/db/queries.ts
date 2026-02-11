@@ -13,7 +13,7 @@ export async function getOrCreateUser(userId: string) {
   if (existing) return existing;
 
   const newUser = { id: userId, createdAt: new Date() };
-  db.insert(user).values(newUser).run();
+  await db.insert(user).values(newUser).run();
   return newUser;
 }
 
@@ -29,12 +29,12 @@ export async function createChat({
   title: string;
 }) {
   const now = new Date();
-  db.insert(chat)
+  await db.insert(chat)
     .values({ id, userId, title, createdAt: now, updatedAt: now })
     .run();
 
   // Create default signals for this chat
-  db.insert(chatSignals)
+  await db.insert(chatSignals)
     .values({
       id: generateUUID(),
       chatId: id,
@@ -45,10 +45,15 @@ export async function createChat({
   return { id, userId, title, createdAt: now, updatedAt: now };
 }
 
-export async function getChatsByUserId(userId: string) {
+export async function getChatsByUserId(
+  userId: string,
+  opts?: { limit?: number; offset?: number },
+) {
   return db.query.chat.findMany({
     where: eq(chat.userId, userId),
     orderBy: [desc(chat.updatedAt)],
+    limit: opts?.limit ?? 50,
+    offset: opts?.offset ?? 0,
   });
 }
 
@@ -59,23 +64,28 @@ export async function getChatById(chatId: string) {
 }
 
 export async function updateChatTitle(chatId: string, title: string) {
-  db.update(chat)
+  await db.update(chat)
     .set({ title, updatedAt: new Date() })
     .where(eq(chat.id, chatId))
     .run();
 }
 
 export async function deleteChat(chatId: string) {
-  db.delete(chat).where(eq(chat.id, chatId)).run();
+  await db.delete(chat).where(eq(chat.id, chatId)).run();
 }
 
 // --- Messages ---
 
-export async function getMessagesByChatId(chatId: string) {
-  return db.query.message.findMany({
+export async function getMessagesByChatId(
+  chatId: string,
+  opts?: { limit?: number; orderBy?: 'asc' | 'desc' },
+) {
+  const results = db.query.message.findMany({
     where: eq(message.chatId, chatId),
-    orderBy: [message.createdAt],
+    orderBy: opts?.orderBy === 'desc' ? [desc(message.createdAt)] : [message.createdAt],
+    ...(opts?.limit ? { limit: opts.limit } : {}),
   });
+  return results;
 }
 
 export async function saveMessage({
@@ -99,7 +109,7 @@ export async function saveMessage({
   evidenceGrade?: string;
   mode?: string;
 }) {
-  db.insert(message)
+  await db.insert(message)
     .values({
       id,
       chatId,
@@ -115,7 +125,7 @@ export async function saveMessage({
     .run();
 
   // Update chat's updatedAt
-  db.update(chat)
+  await db.update(chat)
     .set({ updatedAt: new Date() })
     .where(eq(chat.id, chatId))
     .run();
@@ -145,7 +155,7 @@ export async function updateSignals(
     concepts: string;
   }>
 ) {
-  db.update(chatSignals)
+  await db.update(chatSignals)
     .set({ ...signals, updatedAt: new Date() })
     .where(eq(chatSignals.chatId, chatId))
     .run();
@@ -164,7 +174,7 @@ export async function savePipelineRun({
   messageId: string;
   stages: string;
 }) {
-  db.insert(pipelineRun)
+  await db.insert(pipelineRun)
     .values({
       id,
       chatId,
@@ -176,7 +186,7 @@ export async function savePipelineRun({
 }
 
 export async function completePipelineRun(runId: string) {
-  db.update(pipelineRun)
+  await db.update(pipelineRun)
     .set({ completedAt: new Date() })
     .where(eq(pipelineRun.id, runId))
     .run();

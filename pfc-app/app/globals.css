@@ -48,6 +48,15 @@
   font-display: swap;
 }
 
+/* ── Minecraft — pixel display font ── */
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/fonts/Minecraft.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Legacy display fonts ── */
 @font-face {
   font-family: 'Ubuntu';
@@ -86,7 +95,7 @@
 
   /* PFC brand — Claude-inspired warm palette */
   --color-pfc-ember: #C4956A;
-  --color-pfc-violet: #C4956A;
+  --color-pfc-violet: #9B7DB8;
   --color-pfc-green: #34D399;
   --color-pfc-yellow: #D4A843;
   --color-pfc-red: #C75E5E;
@@ -133,15 +142,7 @@
   --duration-long3: 550ms;
   --duration-long4: 600ms;
 
-  /* Legacy duration aliases */
-  --anim-duration-superfast: 80ms;
-  --anim-duration-fast: 150ms;
-  --anim-duration-moderate: 300ms;
-  --anim-duration-slow: 450ms;
-
-  /* Blur tiers — stripped saturate for perf, GPU-light */
-  --blur-s: blur(8px);
-  --blur-m: blur(12px);
+  /* Blur — GPU-light */
   --blur-l: blur(14px);
 
   /* M3 Shape — rounded pill system */
@@ -506,11 +507,8 @@ button {
 }
 
 /* ─────────────────────────────────────────────────────────
-   Smooth scrolling & selection
+   Scrolling & selection — optimized for 120fps
    ───────────────────────────────────────────────────────── */
-html {
-  scroll-behavior: smooth;
-}
 
 ::selection {
   background-color: rgba(196, 149, 106, 0.25);
@@ -577,14 +575,6 @@ html {
   box-shadow: var(--shadow-s);
   border-radius: var(--radius-obs-xl);
 }
-
-/* ─────────────────────────────────────────────────────────
-   M3 Surface utilities
-   ───────────────────────────────────────────────────────── */
-.m3-surface              { background: var(--m3-surface); }
-.m3-surface-container    { background: var(--m3-surface-container); }
-.m3-surface-container-high { background: var(--m3-surface-container-high); }
-.m3-surface-container-highest { background: var(--m3-surface-container-highest); }
 
 /* ─────────────────────────────────────────────────────────
    Prose — M3-inspired reading experience
@@ -733,13 +723,6 @@ html {
    Reduced motion — respect user preferences
    ───────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --anim-duration-superfast: 0ms;
-    --anim-duration-fast: 0ms;
-    --anim-duration-moderate: 0ms;
-    --anim-duration-slow: 0ms;
-  }
-
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -762,7 +745,6 @@ textarea:focus-visible,
 select:focus-visible {
   outline: none !important;
   box-shadow: none !important;
-  ring: none;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -781,18 +763,6 @@ select:focus-visible {
 @keyframes thinking-pulse {
   0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
-}
-
-.thinking-indicator {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  color: var(--color-pfc-violet);
-  animation: thinking-pulse 2s var(--anim-motion-cupertino) infinite;
-}
-
-.thinking-indicator svg {
-  animation: thinking-shake 0.8s var(--anim-motion-cupertino) infinite;
 }
 
 /* Thinking shimmer text effect */

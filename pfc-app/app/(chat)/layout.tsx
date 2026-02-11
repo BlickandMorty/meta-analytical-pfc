@@ -1,6 +1,7 @@
 'use client';
 
 import { useSetupGuard } from '@/hooks/use-setup-guard';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { motion } from 'framer-motion';
 
 export default function ChatLayout({
@@ -24,8 +25,10 @@ export default function ChatLayout({
 
   return (
     <div className="relative h-screen overflow-hidden">
-      <main className="absolute inset-0 overflow-hidden" style={{ paddingTop: '3.25rem' }}>
-        {children}
+      <main className="absolute inset-0 overflow-hidden">
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
     </div>
   );

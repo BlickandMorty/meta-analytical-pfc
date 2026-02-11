@@ -44,6 +44,10 @@ import type { LearningSession } from '@/lib/notes/learning-protocol';
 interface NoteAIChatProps {
   pageId: string;
   activeBlockId?: string | null;
+  /** When true, panel is expanded (controlled by parent toolbar) */
+  isOpen?: boolean;
+  /** Called when the panel wants to close itself */
+  onClose?: () => void;
 }
 
 type QuickAction = {
@@ -202,7 +206,7 @@ type AITab = 'ask' | 'learn';
 
 // ── Component ──────────────────────────────────────────────────────
 
-export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
+export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAIChatProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -211,7 +215,16 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
   const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   // ── Local UI state ──
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Controlled via parent toolbar props; fallback to internal state
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = isOpen ?? internalExpanded;
+  const setIsExpanded = onClose
+    ? (v: boolean | ((prev: boolean) => boolean)) => {
+        const next = typeof v === 'function' ? v(isExpanded) : v;
+        if (!next && onClose) onClose();
+        else setInternalExpanded(next);
+      }
+    : setInternalExpanded;
   const [inputValue, setInputValue] = useState('');
   const [copied, setCopied] = useState(false);
   const [hasResponse, setHasResponse] = useState(false);
@@ -266,9 +279,13 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
   useEffect(() => {
     if (learnIsActive || learnIsCompleted) {
       setActiveTab('learn');
-      if (!isExpanded) setIsExpanded(true);
+      if (!isExpanded) {
+        // If controlled externally, we can't set expanded directly
+        // The parent toolbar will handle showing us
+        setInternalExpanded(true);
+      }
     }
-  }, [learnIsActive, learnIsCompleted]);
+  }, [learnIsActive, learnIsCompleted, isExpanded]);
 
   const isGenerating = noteAI?.isGenerating ?? false;
   const generatedText = noteAI?.generatedText ?? '';
@@ -302,14 +319,16 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
       if (e.key === 'Escape' && isExpanded) {
         if (isGenerating) {
           stopNoteAIGeneration();
+        } else if (onClose) {
+          onClose();
         } else {
-          setIsExpanded(false);
+          setInternalExpanded(false);
         }
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isExpanded, isGenerating, stopNoteAIGeneration]);
+  }, [isExpanded, isGenerating, stopNoteAIGeneration, onClose]);
 
   // ── Handlers ──
 
@@ -380,8 +399,12 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
     if (isGenerating) {
       stopNoteAIGeneration();
     }
-    setIsExpanded(false);
-  }, [isGenerating, stopNoteAIGeneration]);
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalExpanded(false);
+    }
+  }, [isGenerating, stopNoteAIGeneration, onClose]);
 
   // ── Styles ──
 
@@ -413,49 +436,10 @@ export function NoteAIChat({ pageId, activeBlockId }: NoteAIChatProps) {
     ? 'rgba(255, 255, 255, 0.06)'
     : 'rgba(0, 0, 0, 0.04)';
 
-  // ── Collapsed pill — larger, fused AI button ──
+  // ── Collapsed state: render nothing (toolbar button handles this) ──
 
   if (!isExpanded) {
-    return (
-      <AnimatePresence mode="wait">
-        <motion.button
-          key="pill"
-          variants={pillVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          onClick={() => setIsExpanded(true)}
-          style={{
-            position: 'fixed',
-            bottom: 20,
-            right: 20,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.55rem 1.1rem',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            letterSpacing: '-0.01em',
-            color: '#C4956A',
-            background: glassBackground,
-            border: `1px solid ${glassBorder}`,
-            borderRadius: '9999px',
-            cursor: 'pointer',
-            backdropFilter: 'blur(12px) saturate(1.3)',
-            WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
-            boxShadow: 'none',
-            zIndex: 50,
-          }}
-          whileTap={{ scale: 0.92 }}
-          whileHover={{ scale: 1.04 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-        >
-          <Sparkles style={{ width: 16, height: 16 }} />
-          AI
-          <Brain style={{ width: 14, height: 14, opacity: 0.6 }} />
-        </motion.button>
-      </AnimatePresence>
-    );
+    return null;
   }
 
   // ── Expanded panel with tabs ──

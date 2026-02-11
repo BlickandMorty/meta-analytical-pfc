@@ -9,30 +9,58 @@ import type { SignalSnapshot, QueryAnalysisSnapshot } from '@/lib/engine/steerin
 import type { TruthAssessmentInput } from '@/lib/engine/steering/feedback';
 import { StreamingHandler, detectArtifacts } from '@/libs/agent-runtime/StreamingHandler';
 
+// ── Buffer limits to prevent memory exhaustion when paused ──
+const MAX_BUFFER_SIZE = 5 * 1024 * 1024; // 5MB
+
 export function useChatStream() {
   const abortRef = useRef<AbortController | null>(null);
+  const isStreamingRef = useRef(false);
 
   // Pause/resume refs — buffer text events while paused
   const pausedRef = useRef(false);
   const textBufferRef = useRef('');
   const reasoningBufferRef = useRef('');
 
+  // Error tracking for malformed JSON chunks
+  const parseErrorCountRef = useRef(0);
+
   const sendQuery = useCallback(async (query: string, chatId?: string) => {
+    // Guard: if already streaming, abort previous and wait for cleanup
+    if (isStreamingRef.current) {
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+      // Wait for the previous stream to clean up via Promise (avoids busy-wait CPU spin)
+      await new Promise<void>((resolve) => {
+        const maxWait = 2000;
+        const start = Date.now();
+        const check = () => {
+          if (!isStreamingRef.current || Date.now() - start >= maxWait) {
+            if (isStreamingRef.current) {
+              isStreamingRef.current = false;
+              abortRef.current = null;
+            }
+            resolve();
+          } else {
+            setTimeout(check, 50);
+          }
+        };
+        check();
+      });
+    }
+
     const store = usePFCStore.getState();
     const steeringStore = useSteeringStore.getState();
 
-    // Abort any existing stream
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
-
     const controller = new AbortController();
     abortRef.current = controller;
+    isStreamingRef.current = true;
 
     // Reset pause state for new query
     pausedRef.current = false;
     textBufferRef.current = '';
     reasoningBufferRef.current = '';
+    parseErrorCountRef.current = 0;
 
     // Optimistic: add user message immediately
     store.submitQuery(query);
@@ -88,8 +116,6 @@ export function useChatStream() {
       : undefined;
 
     // ── Compute steering bias ──────────────────────────────────
-    // Build a lightweight query feature vector from the query text
-    // (mirrors analyzeQuery logic from simulate.ts but client-side)
     const queryFeatures = extractQueryFeatures(query);
     const steeringBias = steeringStore.computeBias(queryFeatures);
     const hasSteering = steeringBias.steeringStrength > 0.01;
@@ -130,6 +156,9 @@ export function useChatStream() {
         const { done, value } = await reader.read();
         if (done) break;
 
+        // ── Check abort signal between reads ──
+        if (controller.signal.aborted) break;
+
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n\n');
         buffer = lines.pop() || '';
@@ -167,6 +196,11 @@ export function useChatStream() {
 
               case 'reasoning':
                 if (pausedRef.current) {
+                  // ── Fix 1A: Cap buffer size, auto-flush if exceeded ──
+                  if (reasoningBufferRef.current.length + event.text.length > MAX_BUFFER_SIZE) {
+                    store.appendReasoningText(reasoningBufferRef.current);
+                    reasoningBufferRef.current = '';
+                  }
                   reasoningBufferRef.current += event.text;
                 } else {
                   streamHandler.handleChunk({ type: 'reasoning', text: event.text });
@@ -176,6 +210,11 @@ export function useChatStream() {
 
               case 'text-delta':
                 if (pausedRef.current) {
+                  // ── Fix 1A: Cap buffer size, auto-flush if exceeded ──
+                  if (textBufferRef.current.length + event.text.length > MAX_BUFFER_SIZE) {
+                    store.appendStreamingText(textBufferRef.current);
+                    textBufferRef.current = '';
+                  }
                   textBufferRef.current += event.text;
                 } else {
                   streamHandler.handleChunk({ type: 'text', text: event.text });
@@ -202,7 +241,6 @@ export function useChatStream() {
                 store.applySignalUpdate(event.signals);
 
                 // ── Record in steering memory ──────────────────
-                // Build signal and query snapshots from the completed event
                 const signalSnap: SignalSnapshot = {
                   confidence: event.confidence,
                   entropy: event.signals?.entropy ?? store.entropy,
@@ -233,8 +271,6 @@ export function useChatStream() {
                 const truthInput: TruthAssessmentInput | null = event.truthAssessment
                   ? {
                       overallTruthLikelihood: event.truthAssessment.overallTruthLikelihood ?? 0.5,
-                      // Consensus and disagreements come from arbitration (inside dualMessage),
-                      // not from TruthAssessment directly — use safe defaults
                       consensus: true,
                       disagreements: event.truthAssessment.weaknesses ?? [],
                     }
@@ -249,7 +285,6 @@ export function useChatStream() {
                 if (detectedArtifacts.length > 0) {
                   const latestMsg = store.messages[store.messages.length - 1];
                   const msgId = latestMsg?.id || 'unknown';
-                  // Push the first significant artifact to the portal
                   const art = detectedArtifacts[0];
                   store.openArtifact({
                     messageId: msgId,
@@ -269,7 +304,11 @@ export function useChatStream() {
                 break;
             }
           } catch {
-            // Skip malformed JSON
+            // ── Fix 2F: Track parse errors instead of silently swallowing ──
+            parseErrorCountRef.current++;
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[stream] Malformed JSON chunk skipped:', data.slice(0, 120));
+            }
           }
         }
       }
@@ -280,6 +319,7 @@ export function useChatStream() {
       store.stopStreaming();
     } finally {
       abortRef.current = null;
+      isStreamingRef.current = false;
     }
   }, []);
 
@@ -287,6 +327,7 @@ export function useChatStream() {
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
+      isStreamingRef.current = false;
       pausedRef.current = false;
       textBufferRef.current = '';
       reasoningBufferRef.current = '';
@@ -306,7 +347,7 @@ export function useChatStream() {
     const store = usePFCStore.getState();
     store.setThinkingPaused(false);
 
-    // Flush buffered text
+    // ── Fix 1A: Flush buffered text (already size-capped above) ──
     if (textBufferRef.current) {
       store.appendStreamingText(textBufferRef.current);
       textBufferRef.current = '';
@@ -371,7 +412,6 @@ function extractQueryFeatures(query: string): QueryFeatureVector {
   }
 
   // Complexity: based on word count, sentences, entities
-  const sentences = query.split(/[.!?]+/).filter(s => s.trim()).length;
   const entities = words.filter(w => w.length > 5 && /^[A-Z]/.test(w)).length;
   const complexity = Math.min(1, 0.3 + (words.length / 40) * 0.5 + (entities / 8) * 0.3);
 

@@ -1,18 +1,21 @@
 'use client';
 
 import type { SynthesisReport, TruthAssessment } from '@/lib/engine/types';
+import type { SuiteTier } from '@/lib/research/types';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ---------------------------------------------------------------------------
 // State interface
 // ---------------------------------------------------------------------------
 
+export type ChatMode = 'measurement' | 'research' | 'plain';
+
 export interface UISliceState {
   synthesisReport: SynthesisReport | null;
   showSynthesis: boolean;
-  arcadeMode: boolean;
-  sidebarOpen: boolean;
   showTruthBot: boolean;
   latestTruthAssessment: TruthAssessment | null;
+  chatMode: ChatMode;
 }
 
 // ---------------------------------------------------------------------------
@@ -22,25 +25,22 @@ export interface UISliceState {
 export interface UISliceActions {
   setSynthesisReport: (report: SynthesisReport) => void;
   toggleSynthesisView: () => void;
-  toggleArcadeMode: () => void;
-  toggleSidebar: () => void;
-  setSidebarOpen: (open: boolean) => void;
   toggleTruthBot: () => void;
   setTruthAssessment: (assessment: TruthAssessment) => void;
+  setChatMode: (mode: ChatMode) => void;
 }
 
 // ---------------------------------------------------------------------------
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createUISlice = (set: any, get: any) => ({
+export const createUISlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   synthesisReport: null as SynthesisReport | null,
   showSynthesis: false,
-  arcadeMode: false,
-  sidebarOpen: false,
   showTruthBot: true,
   latestTruthAssessment: null as TruthAssessment | null,
+  chatMode: 'research' as ChatMode,
 
   // --- actions ---
 
@@ -48,19 +48,26 @@ export const createUISlice = (set: any, get: any) => ({
     set({ synthesisReport: report, showSynthesis: true }),
 
   toggleSynthesisView: () =>
-    set((s: any) => ({ showSynthesis: !s.showSynthesis })),
-
-  toggleArcadeMode: () =>
-    set((s: any) => ({ arcadeMode: !s.arcadeMode })),
-
-  toggleSidebar: () =>
-    set((s: any) => ({ sidebarOpen: !s.sidebarOpen })),
-
-  setSidebarOpen: (open: boolean) => set({ sidebarOpen: open }),
+    set((s) => ({ showSynthesis: !s.showSynthesis })),
 
   toggleTruthBot: () =>
-    set((s: any) => ({ showTruthBot: !s.showTruthBot })),
+    set((s) => ({ showTruthBot: !s.showTruthBot })),
 
   setTruthAssessment: (assessment: TruthAssessment) =>
     set({ latestTruthAssessment: assessment }),
+
+  setChatMode: (mode: ChatMode) => {
+    const tierMap: Record<ChatMode, SuiteTier> = {
+      measurement: 'full',
+      research: 'programming',
+      plain: 'notes',
+    };
+    // UI-owned state only
+    set({ chatMode: mode });
+    // Cascade: use research slice's own toggle to keep ownership clear
+    // researchChatMode is owned by research slice — use flat store set
+    set({ researchChatMode: mode !== 'plain' });
+    // Cascade to tier system so all feature gating updates
+    get().setSuiteTier(tierMap[mode]);
+  },
 });

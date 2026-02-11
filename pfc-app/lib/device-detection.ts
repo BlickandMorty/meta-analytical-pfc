@@ -118,7 +118,7 @@ function fallbackProfile(): DeviceProfile {
 }
 
 /** Storage key for persisted device profile */
-export const DEVICE_PROFILE_KEY = 'pfc-device-profile';
+const DEVICE_PROFILE_KEY = 'pfc-device-profile';
 
 /** Cache device profile to localStorage */
 export function cacheDeviceProfile(profile: DeviceProfile): void {
@@ -128,13 +128,3 @@ export function cacheDeviceProfile(profile: DeviceProfile): void {
   } catch { /* quota exceeded — ignore */ }
 }
 
-/** Load cached device profile */
-export function loadCachedDeviceProfile(): DeviceProfile | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(DEVICE_PROFILE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}

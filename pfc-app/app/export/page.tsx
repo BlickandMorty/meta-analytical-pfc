@@ -108,7 +108,7 @@ export default function ExportPage() {
 
         {/* Data Type Selection */}
         <GlassSection title="What to Export">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {DATA_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const isActive = selectedData === opt.value;
@@ -119,13 +119,22 @@ export default function ExportPage() {
                   active={isActive}
                   color="violet"
                   fullWidth
-                  className="flex-col text-left"
+                  style={{
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    textAlign: 'left',
+                    borderRadius: '1rem',
+                    paddingTop: '0.75rem',
+                    paddingBottom: '0.75rem',
+                    paddingLeft: '1rem',
+                    paddingRight: '1rem',
+                  }}
                 >
                   <div className="flex items-center gap-2 w-full">
-                    <Icon style={{ height: 14, width: 14, flexShrink: 0 }} />
+                    <Icon style={{ height: 14, width: 14, flexShrink: 0, color: isActive ? '#C4956A' : 'inherit', transition: 'color 0.15s' }} />
                     <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{opt.label}</span>
                   </div>
-                  <span style={{ fontSize: '0.5625rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
+                  <span style={{ fontSize: '0.5625rem', opacity: 0.5, fontWeight: 400, whiteSpace: 'normal', lineHeight: 1.4, marginTop: '0.125rem' }}>{opt.desc}</span>
                 </GlassBubbleButton>
               );
             })}
@@ -134,7 +143,7 @@ export default function ExportPage() {
 
         {/* Format Selection */}
         <GlassSection title="Export Format">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             {FORMAT_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const isActive = selectedFormat === opt.value;
@@ -147,12 +156,20 @@ export default function ExportPage() {
                   active={isActive}
                   color="cyan"
                   fullWidth
-                  className="flex-col"
+                  style={{
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    borderRadius: '1rem',
+                    paddingTop: '0.75rem',
+                    paddingBottom: '0.75rem',
+                    paddingLeft: '0.75rem',
+                    paddingRight: '0.75rem',
+                  }}
                   disabled={disabled}
                 >
-                  <Icon style={{ height: 16, width: 16 }} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{opt.label}</span>
-                  <span style={{ fontSize: '0.5rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
+                  <Icon style={{ height: 16, width: 16, color: isActive ? '#22D3EE' : 'inherit', transition: 'color 0.15s' }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, marginTop: '0.25rem' }}>{opt.label}</span>
+                  <span style={{ fontSize: '0.5rem', opacity: 0.5, fontWeight: 400, whiteSpace: 'normal', lineHeight: 1.3 }}>{opt.desc}</span>
                 </GlassBubbleButton>
               );
             })}

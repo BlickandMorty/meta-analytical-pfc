@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { TruthAssessment } from '@/lib/engine/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -11,25 +11,28 @@ interface TruthBotCardProps {
   assessment: TruthAssessment;
 }
 
-export function TruthBotCard({ assessment }: TruthBotCardProps) {
+function TruthBotCardBase({ assessment }: TruthBotCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const truthPct = Math.round(assessment.overallTruthLikelihood * 100);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="w-full">
-        <Card className="border-pfc-cyan/20 hover:border-pfc-cyan/40 transition-colors cursor-pointer">
+        <Card className="border-pfc-cyan/20 hover:border-pfc-cyan/40 transition-colors cursor-pointer" style={{ fontFamily: 'var(--font-sans)' }}>
           <CardHeader className="p-3 pb-0">
             <CardTitle className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <ShieldCheckIcon className="h-3.5 w-3.5 text-pfc-cyan" />
-                <span className="font-medium text-muted-foreground">Truth Assessment</span>
+                <span className="font-medium text-muted-foreground" style={{ fontFamily: 'var(--font-sans)' }}>Truth Assessment</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className={cn(
-                  'font-mono text-sm font-bold',
-                  truthPct > 60 ? 'text-pfc-green' : truthPct > 35 ? 'text-pfc-yellow' : 'text-pfc-red'
-                )}>
+                <span
+                  className={cn(
+                    'text-sm font-bold',
+                    truthPct > 60 ? 'text-pfc-green' : truthPct > 35 ? 'text-pfc-yellow' : 'text-pfc-red'
+                  )}
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                >
                   {truthPct}%
                 </span>
                 <ChevronDownIcon className={cn('h-3 w-3 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
@@ -40,7 +43,7 @@ export function TruthBotCard({ assessment }: TruthBotCardProps) {
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <Card className="border-pfc-cyan/20 mt-1 border-t-0 rounded-t-none">
+        <Card className="border-pfc-cyan/20 mt-1 border-t-0 rounded-t-none" style={{ fontFamily: 'var(--font-sans)' }}>
           <CardContent className="p-3 space-y-3">
             {/* Signal Interpretation */}
             <Section title="Signal Interpretation" content={assessment.signalInterpretation} />
@@ -90,8 +93,10 @@ export function TruthBotCard({ assessment }: TruthBotCardProps) {
 function Section({ title, content, children }: { title: string; content?: string; children?: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 mb-1">{title}</p>
-      {content ? <p className="text-xs text-foreground/80 leading-[1.7] break-words">{content}</p> : children}
+      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 mb-1" style={{ fontFamily: 'var(--font-sans)' }}>{title}</p>
+      {content ? <p className="text-xs text-foreground/80 leading-[1.7] break-words" style={{ fontFamily: 'var(--font-sans)' }}>{content}</p> : children}
     </div>
   );
 }
+
+export const TruthBotCard = memo(TruthBotCardBase);

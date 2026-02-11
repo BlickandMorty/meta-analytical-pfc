@@ -4,6 +4,7 @@ import type { TDASnapshot, SafetyState } from '@/lib/engine/types';
 import type { InferenceMode } from '@/lib/engine/llm/config';
 import type { PipelineControls } from './controls';
 import type { SignalHistoryEntry } from './pipeline';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ---------------------------------------------------------------------------
 // Cortex Snapshot type
@@ -82,14 +83,14 @@ export interface CortexSliceActions {
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createCortexSlice = (set: any, get: any) => ({
+export const createCortexSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   cortexArchive: [] as CortexSnapshot[],
 
   // --- actions ---
 
   saveCortexSnapshot: (label: string) =>
-    set((s: any) => {
+    set((s) => {
       const snapshot: CortexSnapshot = {
         id: `cortex-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         label,
@@ -127,7 +128,7 @@ export const createCortexSlice = (set: any, get: any) => ({
     }),
 
   deleteCortexSnapshot: (id: string) =>
-    set((s: any) => {
+    set((s) => {
       const updated = s.cortexArchive.filter(
         (snap: CortexSnapshot) => snap.id !== id,
       );
@@ -136,7 +137,7 @@ export const createCortexSlice = (set: any, get: any) => ({
     }),
 
   restoreCortexSnapshot: (id: string) =>
-    set((s: any) => {
+    set((s) => {
       const snap = s.cortexArchive.find(
         (sn: CortexSnapshot) => sn.id === id,
       );

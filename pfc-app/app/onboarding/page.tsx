@@ -6,7 +6,6 @@ import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
-import { CodeRainCanvas, CodeRainOverlays } from '@/components/code-rain-canvas';
 import {
   KeyIcon,
   ArrowRightIcon,
@@ -195,9 +194,6 @@ export default function OnboardingPage() {
         background: isDark ? '#050508' : '#FCFAF8',
       }}
     >
-      {mounted && <CodeRainCanvas isDark={isDark} />}
-      <CodeRainOverlays isDark={isDark} />
-
       <button
         onClick={handleSkip}
         style={{

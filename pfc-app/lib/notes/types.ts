@@ -18,6 +18,7 @@ export type BlockType =
   | 'numbered-item'
   | 'todo'
   | 'divider'
+  | 'page-break'
   | 'image'
   | 'table'
   | 'embed'
@@ -254,6 +255,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   { id: 'quote', label: 'Quote', icon: 'quote', description: 'Block quote', category: 'basic', keywords: ['quote', 'blockquote', 'citation'], action: 'quote', blockType: 'quote' },
   { id: 'callout', label: 'Callout', icon: 'alert-circle', description: 'Highlighted callout box', category: 'basic', keywords: ['callout', 'alert', 'info', 'warning', 'tip', 'admonition'], action: 'callout', blockType: 'callout' },
   { id: 'divider', label: 'Divider', icon: 'minus', description: 'Horizontal rule', category: 'basic', keywords: ['divider', 'hr', 'line', 'separator', 'rule'], action: 'divider', blockType: 'divider' },
+  { id: 'page-break', label: 'Page Break', icon: 'minus', description: 'Prominent page section break', category: 'basic', keywords: ['page', 'break', 'section', 'separator', 'split'], action: 'page-break', blockType: 'page-break' },
   { id: 'toggle', label: 'Toggle', icon: 'chevron-right', description: 'Collapsible section', category: 'basic', keywords: ['toggle', 'collapse', 'expand', 'dropdown', 'accordion'], action: 'toggle', blockType: 'toggle' },
 
   // ── Lists ──
@@ -442,6 +444,7 @@ export function blockTypeIcon(type: BlockType): string {
     case 'numbered-item': return 'list-ordered';
     case 'todo': return 'check-square';
     case 'divider': return 'minus';
+    case 'page-break': return 'minus';
     case 'image': return 'image';
     case 'table': return 'table';
     case 'embed': return 'frame';

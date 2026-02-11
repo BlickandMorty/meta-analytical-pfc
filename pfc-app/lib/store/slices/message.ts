@@ -18,6 +18,7 @@ import type {
 } from '@/lib/research/types';
 import type { PipelineStage } from '@/lib/constants';
 import { STAGES, STAGE_LABELS } from '@/lib/constants';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -89,7 +90,7 @@ export interface MessageSliceActions {
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createMessageSlice = (set: any, get: any) => ({
+export const createMessageSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   messages: [] as ChatMessage[],
   streamingText: '',
@@ -110,7 +111,8 @@ export const createMessageSlice = (set: any, get: any) => ({
 
   submitQuery: (query: string) => {
     const id = `msg-${++msgId}`;
-    set((s: any) => ({
+    // Message-slice-owned state only — pipeline/UI state updated via their own actions
+    set((s) => ({
       messages: [
         ...s.messages,
         {
@@ -125,10 +127,6 @@ export const createMessageSlice = (set: any, get: any) => ({
         },
       ],
       pendingAttachments: [],
-      isProcessing: true,
-      pipelineStages: freshPipeline(),
-      activeStage: 'triage',
-      showSynthesis: false,
       streamingText: '',
       isStreaming: false,
       // Reset reasoning for new query
@@ -136,6 +134,13 @@ export const createMessageSlice = (set: any, get: any) => ({
       reasoningDuration: null,
       isReasoning: false,
     }));
+    // Use pipeline slice's own state via composed set (flat store, same batch)
+    set({
+      isProcessing: true,
+      pipelineStages: freshPipeline(),
+      activeStage: 'triage' as const,
+      showSynthesis: false,
+    });
   },
 
   completeProcessing: (
@@ -146,7 +151,7 @@ export const createMessageSlice = (set: any, get: any) => ({
     truthAssessment?: TruthAssessment,
   ) => {
     const id = `msg-${++msgId}`;
-    set((s: any) => {
+    set((s) => {
       // Record signal history entry
       const historyEntry = {
         timestamp: Date.now(),
@@ -208,20 +213,7 @@ export const createMessageSlice = (set: any, get: any) => ({
           : undefined;
 
       return {
-        isProcessing: false,
-        isStreaming: false,
-        activeStage: null,
-        confidence,
-        queriesProcessed: s.queriesProcessed + 1,
-        totalTraces: s.totalTraces + 1,
-        latestTruthAssessment: truthAssessment ?? null,
-        signalHistory: newHistory,
-        conceptWeights: newConceptWeights,
-        queryConceptHistory: newConceptHistory,
-        pipelineStages: s.pipelineStages.map((sr: StageResult) => ({
-          ...sr,
-          status: 'complete' as StageStatus,
-        })),
+        // Message-slice-owned state
         messages: [
           ...s.messages,
           {
@@ -239,38 +231,58 @@ export const createMessageSlice = (set: any, get: any) => ({
           },
         ],
         streamingText: '',
+        isStreaming: false,
         // Reset reasoning state after completion
         reasoningText: '',
         reasoningDuration: null,
         isReasoning: false,
+        // Pipeline/signal state — flat store allows setting these fields
+        isProcessing: false,
+        activeStage: null,
+        confidence,
+        queriesProcessed: s.queriesProcessed + 1,
+        totalTraces: s.totalTraces + 1,
+        latestTruthAssessment: truthAssessment ?? null,
+        signalHistory: newHistory,
+        // Concepts state
+        conceptWeights: newConceptWeights,
+        queryConceptHistory: newConceptHistory,
+        pipelineStages: s.pipelineStages.map((sr: StageResult) => ({
+          ...sr,
+          status: 'complete' as StageStatus,
+        })),
       };
     });
   },
 
   toggleMessageLayer: () =>
-    set((s: any) => ({
+    set((s) => ({
       activeMessageLayer: s.activeMessageLayer === 'raw' ? 'layman' : 'raw',
     })),
 
   loadMessages: (messages: ChatMessage[]) => set({ messages }),
 
-  clearMessages: () =>
-    set(() => ({
+  clearMessages: () => {
+    // Message-slice-owned state
+    set({
       messages: [],
       currentChatId: null,
-      isProcessing: false,
       isStreaming: false,
       streamingText: '',
-      pipelineStages: freshPipeline(),
-      activeStage: null,
-      // Also clear reasoning on message clear
       reasoningText: '',
       reasoningDuration: null,
       isReasoning: false,
-    })),
+    });
+    // Pipeline state reset — flat store allows setting these fields
+    set({
+      isProcessing: false,
+      pipelineStages: freshPipeline(),
+      activeStage: null,
+    });
+  },
 
   appendStreamingText: (text: string) =>
-    set((s: any) => ({ streamingText: s.streamingText + text })),
+    set((s) => ({ streamingText: s.streamingText + text })),
 
   startStreaming: () => set({ isStreaming: true, streamingText: '' }),
 
@@ -279,12 +291,12 @@ export const createMessageSlice = (set: any, get: any) => ({
   clearStreamingText: () => set({ streamingText: '' }),
 
   addAttachment: (file: FileAttachment) =>
-    set((s: any) => ({
+    set((s) => ({
       pendingAttachments: [...s.pendingAttachments, file],
     })),
 
   removeAttachment: (id: string) =>
-    set((s: any) => ({
+    set((s) => ({
       pendingAttachments: s.pendingAttachments.filter(
         (f: FileAttachment) => f.id !== id,
       ),
@@ -295,13 +307,12 @@ export const createMessageSlice = (set: any, get: any) => ({
   // --- NEW: reasoning actions ---
 
   appendReasoningText: (text: string) =>
-    set((s: any) => ({ reasoningText: s.reasoningText + text })),
+    set((s) => ({ reasoningText: s.reasoningText + text })),
 
   startReasoning: () =>
     set({ isReasoning: true, reasoningText: '', reasoningDuration: null }),
 
   stopReasoning: () => {
-    const s = get();
     // If we were reasoning, calculate the duration based on when reasoning started
     // We don't have a start timestamp stored, so stopReasoning just marks it done.
     // The caller can set reasoningDuration explicitly if needed.

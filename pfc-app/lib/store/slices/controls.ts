@@ -1,6 +1,7 @@
 'use client';
 
 import type { PipelineControls } from '@/lib/engine/types';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // Re-export so existing imports from this file still work
 export type { PipelineControls } from '@/lib/engine/types';
@@ -47,7 +48,7 @@ export interface ControlsSliceActions {
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createControlsSlice = (set: any, get: any) => ({
+export const createControlsSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   liveControlsOpen: false,
   controls: { ...defaultControls },
@@ -61,10 +62,10 @@ export const createControlsSlice = (set: any, get: any) => ({
   // --- actions ---
 
   toggleLiveControls: () =>
-    set((s: any) => ({ liveControlsOpen: !s.liveControlsOpen })),
+    set((s) => ({ liveControlsOpen: !s.liveControlsOpen })),
 
   setControls: (partial: Partial<PipelineControls>) =>
-    set((s: any) => ({ controls: { ...s.controls, ...partial } })),
+    set((s) => ({ controls: { ...s.controls, ...partial } })),
 
   resetControls: () => set({ controls: { ...defaultControls } }),
 
@@ -72,7 +73,7 @@ export const createControlsSlice = (set: any, get: any) => ({
     signal: 'confidence' | 'entropy' | 'dissonance' | 'healthScore',
     value: number | null,
   ) =>
-    set((s: any) => ({
+    set((s) => ({
       userSignalOverrides: { ...s.userSignalOverrides, [signal]: value },
     })),
 

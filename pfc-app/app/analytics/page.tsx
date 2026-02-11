@@ -15,15 +15,15 @@ const EvaluatePage = dynamic(() => import('../evaluate/page'), { ssr: false });
 const ConceptAtlasPage = dynamic(() => import('../concept-atlas/page'), { ssr: false });
 const SteeringLabPage = dynamic(() => import('../steering-lab/page'), { ssr: false });
 const CortexArchivePage = dynamic(() => import('../cortex-archive/page'), { ssr: false });
-const ResearchCopilotPage = dynamic(() => import('../research-copilot/page'), { ssr: false });
 const PipelinePage = dynamic(() => import('../pipeline/page'), { ssr: false });
+const ResearchHubPage = dynamic(() => import('../research-copilot/page'), { ssr: false });
 
 /* ═══════════════════════════════════════════════════════════
    Tab definitions (shared with top-nav analytics sub-bubbles)
    ═══════════════════════════════════════════════════════════ */
 
 const TABS = [
-  'research', 'archive', 'steering', 'pipeline',
+  'archive', 'research', 'steering', 'pipeline',
   'signals', 'visualizer', 'evaluate', 'concepts',
 ] as const;
 
@@ -36,7 +36,7 @@ const M3_EASE = [0.2, 0, 0, 1] as const;
    ═══════════════════════════════════════════════════════════ */
 
 export default function AnalyticsPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>('research');
+  const [activeTab, setActiveTab] = useState<TabKey>('archive');
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
   }, [activeTab, mounted]);
 
   return (
-    <div style={{ minHeight: '100vh', paddingTop: '3.5rem', background: 'var(--m3-surface)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--m3-surface)' }}>
       {/* ── Tab content — nav lives in TopNav ── */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -74,8 +74,8 @@ export default function AnalyticsPage() {
           {activeTab === 'evaluate' && <EvaluatePage />}
           {activeTab === 'concepts' && <ConceptAtlasPage />}
           {activeTab === 'steering' && <SteeringLabPage />}
-          {activeTab === 'research' && <ResearchCopilotPage />}
           {activeTab === 'archive' && <CortexArchivePage />}
+          {activeTab === 'research' && <ResearchHubPage />}
         </motion.div>
       </AnimatePresence>
     </div>

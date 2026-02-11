@@ -1,20 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { MessageSquareIcon, ClockIcon } from 'lucide-react';
+import { MessageSquareIcon, ClockIcon, ArrowRightIcon } from 'lucide-react';
 
 const ENTER_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 };
 
-interface ChatEntry {
+export interface ChatEntry {
   id: string;
   title: string;
   createdAt: string | number | Date;
   updatedAt: string | number | Date;
 }
 
-function formatRelativeTime(date: Date): string {
+export function formatRelativeTime(date: Date): string {
   const now = Date.now();
   const ts = date.getTime();
   const diffMs = now - ts;
@@ -34,7 +34,7 @@ function formatRelativeTime(date: Date): string {
   });
 }
 
-function parseTimestamp(value: string | number | Date): Date {
+export function parseTimestamp(value: string | number | Date): Date {
   if (value instanceof Date) return value;
   if (typeof value === 'number') {
     return new Date(value < 1e12 ? value * 1000 : value);
@@ -42,9 +42,14 @@ function parseTimestamp(value: string | number | Date): Date {
   return new Date(value);
 }
 
-export function RecentChats({ isDark }: { isDark: boolean }) {
+interface RecentChatsProps {
+  isDark: boolean;
+  onShowAll?: (allChats: ChatEntry[]) => void;
+}
+
+function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
   const router = useRouter();
-  const [chats, setChats] = useState<ChatEntry[]>([]);
+  const [allChats, setAllChats] = useState<ChatEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -57,7 +62,7 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         if (!cancelled && data.chats) {
-          setChats(data.chats.slice(0, 8));
+          setAllChats(data.chats);
         }
       } catch {
         // Silently fail
@@ -70,7 +75,10 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
     return () => { cancelled = true; };
   }, []);
 
-  if (loading || chats.length === 0) return null;
+  if (loading || allChats.length === 0) return null;
+
+  const displayChats = allChats.slice(0, 4);
+  const hasMore = allChats.length > 4;
 
   return (
     <motion.div
@@ -79,13 +87,14 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
       transition={{ ...ENTER_SPRING, delay: 0.28 }}
       style={{
         width: '100%',
+        maxWidth: '32rem',
+        margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
         gap: '0.625rem',
-        transform: 'translateZ(0)',
       }}
     >
-      {/* Header */}
+      {/* Header with optional "All Chats" button */}
       <div
         style={{
           display: 'flex',
@@ -109,21 +118,51 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
             textTransform: 'uppercase',
             color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
             fontFamily: 'var(--font-sans)',
+            flex: 1,
           }}
         >
           Recent Sessions
         </span>
+
+        {/* "All Chats" pill button — only when overflow */}
+        {hasMore && onShowAll && (
+          <motion.button
+            onClick={() => onShowAll(allChats)}
+            whileHover={{ scale: 1.04, y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={ENTER_SPRING}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+              padding: '0.25rem 0.625rem',
+              borderRadius: '9999px',
+              border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+              background: isDark ? 'rgba(22,21,19,0.85)' : 'rgba(237,232,222,0.85)',
+              cursor: 'pointer',
+              fontSize: '0.625rem',
+              fontWeight: 600,
+              color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)',
+              fontFamily: 'var(--font-sans)',
+              letterSpacing: '0.02em',
+              transition: 'color 0.15s, background 0.15s',
+            }}
+          >
+            All Chats
+            <ArrowRightIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
+          </motion.button>
+        )}
       </div>
 
-      {/* NavBubble-style pill grid */}
+      {/* Octa-style full-width card rows */}
       <div
         style={{
           display: 'flex',
-          flexWrap: 'wrap',
+          flexDirection: 'column',
           gap: '0.375rem',
         }}
       >
-        {chats.map((chat, idx) => {
+        {displayChats.map((chat, idx) => {
           const isHovered = hoveredId === chat.id;
           const updatedDate = parseTimestamp(chat.updatedAt);
           const timeStr = formatRelativeTime(updatedDate);
@@ -131,73 +170,80 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
           return (
             <motion.button
               key={chat.id}
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ ...ENTER_SPRING, delay: 0.3 + idx * 0.04 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => router.push(`/chat/${chat.id}`)}
               onMouseEnter={() => setHoveredId(chat.id)}
               onMouseLeave={() => setHoveredId(null)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 0.75rem',
-                borderRadius: 'var(--shape-md)',
+                gap: '0.75rem',
+                padding: '0.625rem 0.875rem',
+                borderRadius: 'var(--shape-lg)',
                 cursor: 'pointer',
                 textAlign: 'left',
-                maxWidth: '100%',
-                background: isHovered
-                  ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.08)')
-                  : (isDark ? 'rgba(196,149,106,0.05)' : 'rgba(235,230,222,0.55)'),
-                backdropFilter: 'blur(10px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(10px) saturate(1.3)',
-                boxShadow: isDark
-                  ? '0 1px 2px rgba(0,0,0,0.15)'
-                  : '0 1px 3px rgba(0,0,0,0.04)',
-                border: `1px solid ${isDark ? 'rgba(196,149,106,0.08)' : 'rgba(190,183,170,0.15)'}`,
-                transition: 'background 0.15s ease, transform 0.15s ease',
+                width: '100%',
+                background: isDark
+                  ? (isHovered ? 'rgba(55,50,45,0.45)' : 'rgba(28,27,25,0.5)')
+                  : (isHovered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)'),
+                boxShadow: isHovered
+                  ? (isDark
+                    ? '0 2px 8px -1px rgba(0,0,0,0.3), 0 1px 3px -1px rgba(0,0,0,0.2)'
+                    : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.04)')
+                  : 'none',
+                border: `1px solid ${
+                  isHovered
+                    ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.2)')
+                    : (isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)')
+                }`,
+                transition: 'all 0.2s ease',
                 overflow: 'hidden',
               }}
             >
               <MessageSquareIcon
                 style={{
-                  height: '0.8125rem',
-                  width: '0.8125rem',
+                  height: '0.9375rem',
+                  width: '0.9375rem',
                   flexShrink: 0,
                   color: isHovered
                     ? '#C4956A'
-                    : (isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)'),
+                    : (isDark ? 'rgba(155,150,137,0.45)' : 'rgba(0,0,0,0.2)'),
                   transition: 'color 0.15s',
                 }}
               />
-              <span
-                style={{
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  color: isHovered
-                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
-                    : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  fontFamily: 'var(--font-sans)',
-                  transition: 'color 0.15s',
-                }}
-              >
-                {chat.title}
-              </span>
-              <span
-                style={{
-                  fontSize: '0.625rem',
-                  fontWeight: 500,
-                  color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)',
-                  flexShrink: 0,
-                  fontFamily: 'var(--font-sans)',
-                }}
-              >
-                {timeStr}
-              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: '0.8125rem',
+                    fontWeight: 500,
+                    color: isHovered
+                      ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
+                      : (isDark ? 'rgba(155,150,137,0.75)' : 'rgba(0,0,0,0.5)'),
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontFamily: 'var(--font-sans)',
+                    transition: 'color 0.15s',
+                  }}
+                >
+                  {chat.title}
+                </div>
+                <div
+                  style={{
+                    fontSize: '0.625rem',
+                    fontWeight: 500,
+                    color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)',
+                    fontFamily: 'var(--font-sans)',
+                    marginTop: '0.125rem',
+                  }}
+                >
+                  {timeStr}
+                </div>
+              </div>
             </motion.button>
           );
         })}
@@ -205,3 +251,5 @@ export function RecentChats({ isDark }: { isDark: boolean }) {
     </motion.div>
   );
 }
+
+export const RecentChats = memo(RecentChatsBase);

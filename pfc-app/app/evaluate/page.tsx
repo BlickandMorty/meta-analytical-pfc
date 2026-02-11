@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from 'next-themes';
 import {
   FlaskConicalIcon,
   SendIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
+  ChevronRightIcon,
   AlertTriangleIcon,
   CheckCircle2Icon,
   TrendingUpIcon,
@@ -15,15 +15,17 @@ import {
   ZapIcon,
   BookOpenIcon,
   GaugeIcon,
+  XIcon,
+  PlusIcon,
+  BrainCircuitIcon,
+  LayersIcon,
+  TargetIcon,
+  ActivityIcon,
 } from 'lucide-react';
 
 import { PageShell, GlassSection } from '@/components/page-shell';
 import { PixelBook } from '@/components/pixel-book';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { cn } from '@/lib/utils';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import type {
   MLProjectEvaluation,
@@ -33,108 +35,392 @@ import type {
 } from '@/lib/engine/ml-evaluator';
 
 // ---------------------------------------------------------------------------
-// Project type options
+// Constants & Config
 // ---------------------------------------------------------------------------
 
-const PROJECT_TYPES: { value: ProjectType; label: string; icon: string }[] = [
-  { value: 'classifier', label: 'Classifier', icon: '🎯' },
-  { value: 'regressor', label: 'Regressor', icon: '📈' },
-  { value: 'recommender', label: 'Recommender', icon: '🔮' },
-  { value: 'clustering', label: 'Clustering', icon: '🫧' },
-  { value: 'anomaly_detection', label: 'Anomaly Detection', icon: '🔍' },
-  { value: 'time_series', label: 'Time Series', icon: '⏱️' },
-  { value: 'nlp_pipeline', label: 'NLP Pipeline', icon: '💬' },
-  { value: 'computer_vision', label: 'Computer Vision', icon: '👁️' },
-  { value: 'reinforcement_learning', label: 'Reinforcement Learning', icon: '🎮' },
-  { value: 'data_tool', label: 'Data Tool', icon: '🔧' },
-  { value: 'etl_pipeline', label: 'ETL Pipeline', icon: '🔄' },
-  { value: 'general_ml', label: 'General ML', icon: '🧠' },
+const PROJECT_TYPES: { value: ProjectType; label: string }[] = [
+  { value: 'classifier', label: 'Classifier' },
+  { value: 'regressor', label: 'Regressor' },
+  { value: 'recommender', label: 'Recommender' },
+  { value: 'clustering', label: 'Clustering' },
+  { value: 'anomaly_detection', label: 'Anomaly Detection' },
+  { value: 'time_series', label: 'Time Series' },
+  { value: 'nlp_pipeline', label: 'NLP Pipeline' },
+  { value: 'computer_vision', label: 'Computer Vision' },
+  { value: 'reinforcement_learning', label: 'RL' },
+  { value: 'data_tool', label: 'Data Tool' },
+  { value: 'etl_pipeline', label: 'ETL Pipeline' },
+  { value: 'general_ml', label: 'General ML' },
 ];
+
+const DIMENSION_ICONS: Record<string, React.ReactNode> = {
+  architecture: <LayersIcon style={{ width: 14, height: 14 }} />,
+  data_handling: <ActivityIcon style={{ width: 14, height: 14 }} />,
+  feature_engineering: <SparklesIcon style={{ width: 14, height: 14 }} />,
+  model_selection: <TargetIcon style={{ width: 14, height: 14 }} />,
+  training_methodology: <BrainCircuitIcon style={{ width: 14, height: 14 }} />,
+  evaluation_rigor: <GaugeIcon style={{ width: 14, height: 14 }} />,
+  robustness: <ShieldCheckIcon style={{ width: 14, height: 14 }} />,
+  interpretability: <BookOpenIcon style={{ width: 14, height: 14 }} />,
+  code_quality: <ZapIcon style={{ width: 14, height: 14 }} />,
+  deployment_readiness: <FlaskConicalIcon style={{ width: 14, height: 14 }} />,
+  innovation: <SparklesIcon style={{ width: 14, height: 14 }} />,
+  documentation: <BookOpenIcon style={{ width: 14, height: 14 }} />,
+};
+
+/* Cupertino easing */
+const CUPERTINO = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const SPRING_SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 30, mass: 0.5 };
+const SPRING_SOFT = { type: 'spring' as const, stiffness: 350, damping: 28, mass: 0.6 };
 
 // ---------------------------------------------------------------------------
 // Score helpers
 // ---------------------------------------------------------------------------
 
 function scoreColor(score: number): string {
-  if (score >= 0.7) return 'text-pfc-green';
-  if (score >= 0.5) return 'text-pfc-yellow';
-  return 'text-pfc-red';
+  if (score >= 0.7) return '#34D399';
+  if (score >= 0.5) return '#FBBF24';
+  return '#F87171';
 }
 
-function scoreBarClass(score: number): string {
-  if (score >= 0.7) return '[&>div]:bg-pfc-green';
-  if (score >= 0.5) return '[&>div]:bg-pfc-yellow';
-  return '[&>div]:bg-pfc-red';
-}
-
-function gradeColor(grade: string): string {
-  if (grade.startsWith('A')) return 'text-pfc-green bg-pfc-green/10 border-pfc-green/30';
-  if (grade.startsWith('B')) return 'text-pfc-cyan bg-pfc-cyan/10 border-pfc-cyan/30';
-  if (grade.startsWith('C')) return 'text-pfc-yellow bg-pfc-yellow/10 border-pfc-yellow/30';
-  return 'text-pfc-red bg-pfc-red/10 border-pfc-red/30';
+function gradeAccent(grade: string): string {
+  if (grade.startsWith('A')) return '#34D399';
+  if (grade.startsWith('B')) return '#22D3EE';
+  if (grade.startsWith('C')) return '#FBBF24';
+  return '#F87171';
 }
 
 // ---------------------------------------------------------------------------
-// Dimension card
+// GlassInput — consistent styled input
 // ---------------------------------------------------------------------------
 
-function DimensionCard({ dim }: { dim: DimensionScore }) {
-  const [expanded, setExpanded] = useState(false);
+function GlassInput({
+  value,
+  onChange,
+  placeholder,
+  isDark,
+  type = 'text',
+  style: styleProp,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  isDark: boolean;
+  type?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{
+        width: '100%',
+        padding: '0.5rem 0.75rem',
+        borderRadius: '0.625rem',
+        border: `1px solid ${isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)'}`,
+        background: isDark ? 'rgba(30,28,26,0.6)' : 'rgba(255,255,255,0.5)',
+        backdropFilter: 'blur(8px)',
+        color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(0,0,0,0.75)',
+        fontSize: '0.8125rem',
+        outline: 'none',
+        transition: `border 0.2s ${CUPERTINO}, box-shadow 0.2s ${CUPERTINO}`,
+        ...styleProp,
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(196,149,106,0.4)';
+        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(196,149,106,0.08)';
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.borderColor = isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tag pill
+// ---------------------------------------------------------------------------
+
+function TagPill({
+  label,
+  onRemove,
+  isDark,
+}: {
+  label: string;
+  onRemove: () => void;
+  isDark: boolean;
+}) {
+  return (
+    <motion.span
+      initial={{ opacity: 0, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.85 }}
+      transition={SPRING_SNAPPY}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.25rem',
+        padding: '0.2rem 0.5rem',
+        borderRadius: '9999px',
+        fontSize: '0.6875rem',
+        fontWeight: 600,
+        background: isDark ? 'rgba(196,149,106,0.1)' : 'rgba(196,149,106,0.08)',
+        color: isDark ? 'rgba(196,149,106,0.9)' : 'rgba(160,120,80,0.9)',
+        border: `1px solid ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)'}`,
+        cursor: 'pointer',
+      }}
+      onClick={onRemove}
+    >
+      {label}
+      <XIcon style={{ width: 10, height: 10, opacity: 0.6 }} />
+    </motion.span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Animated Score Ring
+// ---------------------------------------------------------------------------
+
+function ScoreRing({
+  value,
+  max,
+  size = 80,
+  strokeWidth = 5,
+  color,
+  isDark,
+  children,
+}: {
+  value: number;
+  max: number;
+  size?: number;
+  strokeWidth?: number;
+  color: string;
+  isDark: boolean;
+  children?: React.ReactNode;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(value / max, 1);
 
   return (
-    <Card className="overflow-hidden">
-      <button
-        className="w-full text-left cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
+    <div style={{ position: 'relative', width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        {/* Track */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)'}
+          strokeWidth={strokeWidth}
+        />
+        {/* Progress */}
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: circumference * (1 - progress) }}
+          transition={{ duration: 1, ease: [0.32, 0.72, 0, 1], delay: 0.2 }}
+        />
+      </svg>
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+        }}
       >
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xs capitalize">
-              {dim.dimension.replace(/_/g, ' ')}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge className={cn('text-[10px] font-bold', gradeColor(dim.grade))}>
-                {dim.grade}
-              </Badge>
-              {expanded ? (
-                <ChevronUpIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
-              ) : (
-                <ChevronDownIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pb-3">
-          <div className="flex items-center gap-3">
-            <p className={cn('text-lg font-bold tabular-nums', scoreColor(dim.score))}>
-              {Math.round(dim.score * 100)}%
-            </p>
-            <Progress
-              value={dim.score * 100}
-              className={cn('flex-1 h-1.5', scoreBarClass(dim.score))}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Dimension Row — horizontal bar with expand
+// ---------------------------------------------------------------------------
+
+function DimensionRow({
+  dim,
+  index,
+  isDark,
+}: {
+  dim: DimensionScore;
+  index: number;
+  isDark: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const color = scoreColor(dim.score);
+  const pct = Math.round(dim.score * 100);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...SPRING_SOFT, delay: index * 0.04 }}
+      style={{
+        borderRadius: '0.75rem',
+        border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)'}`,
+        overflow: 'hidden',
+        background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+        transition: `border-color 0.2s ${CUPERTINO}`,
+      }}
+    >
+      {/* Header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          padding: '0.75rem 1rem',
+          cursor: 'pointer',
+          border: 'none',
+          background: 'transparent',
+          color: 'inherit',
+          textAlign: 'left',
+        }}
+      >
+        {/* Icon */}
+        <span style={{ color, opacity: 0.8, flexShrink: 0 }}>
+          {DIMENSION_ICONS[dim.dimension] ?? <FlaskConicalIcon style={{ width: 14, height: 14 }} />}
+        </span>
+
+        {/* Label */}
+        <span
+          style={{
+            flex: 1,
+            fontSize: '0.8125rem',
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            textTransform: 'capitalize',
+            color: isDark ? 'rgba(237,224,212,0.85)' : 'rgba(0,0,0,0.7)',
+          }}
+        >
+          {dim.dimension.replace(/_/g, ' ')}
+        </span>
+
+        {/* Score + Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 120 }}>
+          <div
+            style={{
+              flex: 1,
+              height: 4,
+              borderRadius: 2,
+              background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)',
+              overflow: 'hidden',
+            }}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1], delay: index * 0.04 + 0.2 }}
+              style={{
+                height: '100%',
+                borderRadius: 2,
+                background: color,
+              }}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground/60 mt-1.5">{dim.benchmarkComparison}</p>
-        </CardContent>
+          <span
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              color,
+              minWidth: 32,
+              textAlign: 'right',
+            }}
+          >
+            {pct}%
+          </span>
+        </div>
+
+        {/* Grade badge */}
+        <span
+          style={{
+            fontSize: '0.625rem',
+            fontWeight: 700,
+            padding: '0.125rem 0.375rem',
+            borderRadius: '9999px',
+            background: `${gradeAccent(dim.grade)}15`,
+            color: gradeAccent(dim.grade),
+            border: `1px solid ${gradeAccent(dim.grade)}25`,
+          }}
+        >
+          {dim.grade}
+        </span>
+
+        {/* Chevron */}
+        <motion.span
+          animate={{ rotate: expanded ? 90 : 0 }}
+          transition={SPRING_SNAPPY}
+          style={{ color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.2)', flexShrink: 0 }}
+        >
+          <ChevronRightIcon style={{ width: 14, height: 14 }} />
+        </motion.span>
       </button>
 
+      {/* Expanded detail */}
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={{ opacity: 0, scaleY: 0 }}
-            animate={{ opacity: 1, scaleY: 1 }}
-            exit={{ opacity: 0, scaleY: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-            style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+            style={{ overflow: 'hidden' }}
           >
-            <div className="px-4 pb-4 space-y-3 border-t border-border/30 pt-3">
+            <div
+              style={{
+                padding: '0 1rem 1rem',
+                borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.04)'}`,
+                paddingTop: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.625rem',
+              }}
+            >
               {dim.findings.length > 0 && (
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1.5">Findings</p>
+                  <p
+                    style={{
+                      fontSize: '0.5625rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                      marginBottom: '0.375rem',
+                    }}
+                  >
+                    Findings
+                  </p>
                   {dim.findings.map((f, i) => (
-                    <p key={i} className="text-[11px] text-muted-foreground flex items-start gap-1.5 mb-1">
-                      <CheckCircle2Icon className="h-3 w-3 mt-0.5 shrink-0 text-pfc-green/60" />
+                    <p
+                      key={i}
+                      style={{
+                        fontSize: '0.6875rem',
+                        color: isDark ? 'rgba(237,224,212,0.6)' : 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.375rem',
+                        marginBottom: '0.25rem',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <CheckCircle2Icon style={{ width: 11, height: 11, marginTop: 2, flexShrink: 0, color: '#34D399', opacity: 0.6 }} />
                       {f}
                     </p>
                   ))}
@@ -143,20 +429,89 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
 
               {dim.recommendations.length > 0 && (
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-pfc-ember/60 mb-1.5">Recommendations</p>
+                  <p
+                    style={{
+                      fontSize: '0.5625rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: 'rgba(196,149,106,0.6)',
+                      marginBottom: '0.375rem',
+                    }}
+                  >
+                    Recommendations
+                  </p>
                   {dim.recommendations.map((r, i) => (
-                    <p key={i} className="text-[11px] text-muted-foreground flex items-start gap-1.5 mb-1">
-                      <TrendingUpIcon className="h-3 w-3 mt-0.5 shrink-0 text-pfc-ember/60" />
+                    <p
+                      key={i}
+                      style={{
+                        fontSize: '0.6875rem',
+                        color: isDark ? 'rgba(237,224,212,0.6)' : 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.375rem',
+                        marginBottom: '0.25rem',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <TrendingUpIcon style={{ width: 11, height: 11, marginTop: 2, flexShrink: 0, color: '#C4956A', opacity: 0.6 }} />
                       {r}
                     </p>
                   ))}
                 </div>
               )}
+
+              <p
+                style={{
+                  fontSize: '0.625rem',
+                  color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.25)',
+                  fontStyle: 'italic',
+                  marginTop: '0.125rem',
+                }}
+              >
+                {dim.benchmarkComparison}
+              </p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </Card>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// RobustnessBar — mini labeled progress bar
+// ---------------------------------------------------------------------------
+
+function MetricBar({
+  label,
+  value,
+  isDark,
+}: {
+  label: string;
+  value: number;
+  isDark: boolean;
+}) {
+  const pct = Math.round(value * 100);
+  const color = scoreColor(value);
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+        <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(237,224,212,0.55)' : 'rgba(0,0,0,0.45)' }}>
+          {label}
+        </span>
+        <span style={{ fontSize: '0.6875rem', fontWeight: 600, fontVariantNumeric: 'tabular-nums', color }}>
+          {pct}%
+        </span>
+      </div>
+      <div style={{ height: 3, borderRadius: 1.5, background: isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
+          style={{ height: '100%', borderRadius: 1.5, background: color }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -166,6 +521,12 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
 
 export default function EvaluatePage() {
   const ready = useSetupGuard();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+
+  // Form state
   const [input, setInput] = useState<Partial<MLProjectInput>>({
     name: '',
     description: '',
@@ -185,29 +546,32 @@ export default function EvaluatePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Results ref for scroll-to
+  const resultsRef = useRef<HTMLDivElement>(null);
+
   const handleEvaluate = async () => {
     if (!input.name || !input.description) {
       setError('Please provide a project name and description');
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
       const res = await fetch('/api/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Evaluation failed');
       }
-
       const result = await res.json();
       setEvaluation(result);
+      // Smooth scroll to results after a tick
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Evaluation failed');
     } finally {
@@ -241,7 +605,7 @@ export default function EvaluatePage() {
 
   if (!ready) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--chat-surface)' }}>
         <PixelBook size={40} />
       </div>
     );
@@ -252,64 +616,116 @@ export default function EvaluatePage() {
       icon={FlaskConicalIcon}
       iconColor="var(--color-pfc-ember)"
       title="ML Evaluator"
-      subtitle="Proprietary intelligence assessment for ML projects"
+      subtitle="12-dimension intelligence assessment for ML projects"
     >
-      {/* ── Input Form ── */}
-      <GlassSection title="Project Intake" className="">
-        <p className="text-[11px] text-muted-foreground/60 mb-5">
-          Describe your ML project and we&apos;ll run a comprehensive 12-dimension evaluation
-          using proprietary assessment techniques inspired by SHAP/LIME feature attribution,
-          Process Reward Models, and enterprise MLOps benchmarks.
-        </p>
-
-        <div className="space-y-5">
-          {/* Name & description */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* ═══════════════════════════════════════════════════════
+          Input Form
+         ═══════════════════════════════════════════════════════ */}
+      <GlassSection title="Project Details">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Row 1: Name + Architecture */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                  marginBottom: '0.375rem',
+                  letterSpacing: '0.02em',
+                }}
+              >
                 Project Name *
               </label>
-              <input
-                type="text"
-                value={input.name}
-                onChange={(e) => setInput(prev => ({ ...prev, name: e.target.value }))}
+              <GlassInput
+                value={input.name ?? ''}
+                onChange={(v) => setInput(prev => ({ ...prev, name: v }))}
                 placeholder="e.g. Customer Churn Predictor"
-                className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+                isDark={isDark}
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                  marginBottom: '0.375rem',
+                  letterSpacing: '0.02em',
+                }}
+              >
                 Model Architecture
               </label>
-              <input
-                type="text"
-                value={input.modelArchitecture}
-                onChange={(e) => setInput(prev => ({ ...prev, modelArchitecture: e.target.value }))}
+              <GlassInput
+                value={input.modelArchitecture ?? ''}
+                onChange={(v) => setInput(prev => ({ ...prev, modelArchitecture: v }))}
                 placeholder="e.g. XGBoost, ResNet-50, LSTM"
-                className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+                isDark={isDark}
               />
             </div>
           </div>
 
+          {/* Description */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                marginBottom: '0.375rem',
+                letterSpacing: '0.02em',
+              }}
+            >
               Project Description *
             </label>
             <textarea
               value={input.description}
               onChange={(e) => setInput(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Describe what your ML project does, the problem it solves, data sources, preprocessing steps, training approach, evaluation methodology, and any specific techniques used. Be as detailed as possible for the best assessment."
+              placeholder="Describe what your ML project does, the problem it solves, data sources, preprocessing steps, training approach, evaluation methodology, and any specific techniques used."
               rows={4}
-              className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30 resize-none"
+              style={{
+                width: '100%',
+                padding: '0.625rem 0.75rem',
+                borderRadius: '0.625rem',
+                border: `1px solid ${isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)'}`,
+                background: isDark ? 'rgba(30,28,26,0.6)' : 'rgba(255,255,255,0.5)',
+                backdropFilter: 'blur(8px)',
+                color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(0,0,0,0.75)',
+                fontSize: '0.8125rem',
+                outline: 'none',
+                resize: 'none',
+                lineHeight: 1.6,
+                transition: `border 0.2s ${CUPERTINO}, box-shadow 0.2s ${CUPERTINO}`,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(196,149,106,0.4)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(196,149,106,0.08)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             />
           </div>
 
-          {/* Project type */}
+          {/* Project Type pills */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-2 block">
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                marginBottom: '0.5rem',
+                letterSpacing: '0.02em',
+              }}
+            >
               Project Type
             </label>
-            <div className="flex flex-wrap gap-1.5">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
               {PROJECT_TYPES.map((pt) => (
                 <GlassBubbleButton
                   key={pt.value}
@@ -318,131 +734,197 @@ export default function EvaluatePage() {
                   color="ember"
                   size="sm"
                 >
-                  <span>{pt.icon}</span>
                   {pt.label}
                 </GlassBubbleButton>
               ))}
             </div>
           </div>
 
-          {/* Tech stack */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Row 3: Tech stack + Dataset size */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                  marginBottom: '0.375rem',
+                  letterSpacing: '0.02em',
+                }}
+              >
                 Tech Stack
               </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <GlassInput
                   value={techStackInput}
-                  onChange={(e) => setTechStackInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addTechStack()}
-                  placeholder="e.g. pytorch, scikit-learn"
-                  className="flex-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+                  onChange={setTechStackInput}
+                  placeholder="e.g. pytorch"
+                  isDark={isDark}
+                  style={{ flex: 1 }}
                 />
-                <GlassBubbleButton onClick={addTechStack} color="violet" size="sm">Add</GlassBubbleButton>
+                <GlassBubbleButton onClick={addTechStack} color="ember" size="sm">
+                  <PlusIcon style={{ width: 14, height: 14 }} />
+                </GlassBubbleButton>
               </div>
               {(input.techStack ?? []).length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {(input.techStack ?? []).map((t, i) => (
-                    <Badge
-                      key={i}
-                      variant="secondary"
-                      className="text-[10px] cursor-pointer hover:bg-pfc-red/10"
-                      onClick={() => setInput(prev => ({
-                        ...prev,
-                        techStack: (prev.techStack ?? []).filter((_, idx) => idx !== i),
-                      }))}
-                    >
-                      {t} ✕
-                    </Badge>
-                  ))}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                  <AnimatePresence mode="popLayout">
+                    {(input.techStack ?? []).map((t, i) => (
+                      <TagPill
+                        key={`${t}-${i}`}
+                        label={t}
+                        isDark={isDark}
+                        onRemove={() =>
+                          setInput(prev => ({
+                            ...prev,
+                            techStack: (prev.techStack ?? []).filter((_, idx) => idx !== i),
+                          }))
+                        }
+                      />
+                    ))}
+                  </AnimatePresence>
                 </div>
               )}
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                  marginBottom: '0.375rem',
+                  letterSpacing: '0.02em',
+                }}
+              >
                 Dataset Size
               </label>
-              <input
-                type="text"
-                value={input.datasetSize}
-                onChange={(e) => setInput(prev => ({ ...prev, datasetSize: e.target.value }))}
-                placeholder="e.g. 100k rows, 50k images"
-                className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+              <GlassInput
+                value={input.datasetSize ?? ''}
+                onChange={(v) => setInput(prev => ({ ...prev, datasetSize: v }))}
+                placeholder="e.g. 100k rows"
+                isDark={isDark}
               />
             </div>
           </div>
 
           {/* Performance metrics */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                marginBottom: '0.375rem',
+                letterSpacing: '0.02em',
+              }}
+            >
               Performance Metrics
             </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <GlassInput
                 value={metricKey}
-                onChange={(e) => setMetricKey(e.target.value)}
-                placeholder="Metric name (e.g. accuracy)"
-                className="flex-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+                onChange={setMetricKey}
+                placeholder="Metric name"
+                isDark={isDark}
+                style={{ flex: 1 }}
               />
-              <input
-                type="text"
+              <GlassInput
                 value={metricValue}
-                onChange={(e) => setMetricValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addMetric()}
-                placeholder="Value (e.g. 0.92)"
-                className="w-28 rounded-lg border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-pfc-ember/30"
+                onChange={setMetricValue}
+                placeholder="Value"
+                isDark={isDark}
+                type="text"
+                style={{ width: '5rem' }}
               />
-              <GlassBubbleButton onClick={addMetric} color="violet" size="sm">Add</GlassBubbleButton>
+              <GlassBubbleButton onClick={addMetric} color="ember" size="sm">
+                <PlusIcon style={{ width: 14, height: 14 }} />
+              </GlassBubbleButton>
             </div>
             {Object.keys(input.performanceMetrics ?? {}).length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {Object.entries(input.performanceMetrics ?? {}).map(([k, v]) => (
-                  <Badge
-                    key={k}
-                    variant="secondary"
-                    className="text-[10px] cursor-pointer hover:bg-pfc-red/10"
-                    onClick={() => {
-                      const next = { ...(input.performanceMetrics ?? {}) };
-                      delete next[k];
-                      setInput(prev => ({ ...prev, performanceMetrics: next }));
-                    }}
-                  >
-                    {k}: {v} ✕
-                  </Badge>
-                ))}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+                <AnimatePresence mode="popLayout">
+                  {Object.entries(input.performanceMetrics ?? {}).map(([k, v]) => (
+                    <TagPill
+                      key={k}
+                      label={`${k}: ${v}`}
+                      isDark={isDark}
+                      onRemove={() => {
+                        const next = { ...(input.performanceMetrics ?? {}) };
+                        delete next[k];
+                        setInput(prev => ({ ...prev, performanceMetrics: next }));
+                      }}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
             )}
           </div>
 
           {/* Checkboxes */}
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={input.hasTests}
-                onChange={(e) => setInput(prev => ({ ...prev, hasTests: e.target.checked }))}
-                className="rounded border-border"
-              />
-              <span className="text-xs text-muted-foreground">Has test suite</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={input.hasDocumentation}
-                onChange={(e) => setInput(prev => ({ ...prev, hasDocumentation: e.target.checked }))}
-                className="rounded border-border"
-              />
-              <span className="text-xs text-muted-foreground">Has documentation</span>
-            </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            {[
+              { key: 'hasTests', label: 'Has test suite' },
+              { key: 'hasDocumentation', label: 'Has documentation' },
+            ].map(({ key, label }) => (
+              <label
+                key={key}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                }}
+              >
+                <motion.div
+                  whileTap={{ scale: 0.85 }}
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 4,
+                    border: `1.5px solid ${
+                      (input as Record<string, unknown>)[key]
+                        ? '#C4956A'
+                        : isDark ? 'rgba(79,69,57,0.5)' : 'rgba(0,0,0,0.15)'
+                    }`,
+                    background: (input as Record<string, unknown>)[key]
+                      ? 'rgba(196,149,106,0.2)'
+                      : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: `all 0.15s ${CUPERTINO}`,
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setInput(prev => ({ ...prev, [key]: !(prev as Record<string, unknown>)[key] }))}
+                >
+                  {Boolean((input as Record<string, unknown>)[key]) && (
+                    <CheckCircle2Icon style={{ width: 10, height: 10, color: '#C4956A' }} />
+                  )}
+                </motion.div>
+                <span onClick={() => setInput(prev => ({ ...prev, [key]: !(prev as Record<string, unknown>)[key] }))}>{label}</span>
+              </label>
+            ))}
           </div>
 
-          {/* Submit */}
-          {error && (
-            <p className="text-xs text-pfc-red">{error}</p>
-          )}
+          {/* Error + Submit */}
+          <AnimatePresence>
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                style={{ fontSize: '0.75rem', color: '#F87171' }}
+              >
+                {error}
+              </motion.p>
+            )}
+          </AnimatePresence>
+
           <GlassBubbleButton
             onClick={handleEvaluate}
             disabled={loading}
@@ -451,12 +933,17 @@ export default function EvaluatePage() {
           >
             {loading ? (
               <>
-                <PixelBook size={18} />
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                >
+                  <FlaskConicalIcon style={{ width: 16, height: 16 }} />
+                </motion.div>
                 Analyzing...
               </>
             ) : (
               <>
-                <SendIcon style={{ height: 16, width: 16 }} />
+                <SendIcon style={{ width: 14, height: 14 }} />
                 Run Evaluation
               </>
             )}
@@ -464,158 +951,339 @@ export default function EvaluatePage() {
         </div>
       </GlassSection>
 
-      {/* ── Results ── */}
+      {/* ═══════════════════════════════════════════════════════
+          Results
+         ═══════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {evaluation && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            ref={resultsRef}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.4 }}
-            className="space-y-6 mt-6"
+            transition={{ ...SPRING_SOFT, delay: 0.1 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}
           >
-            {/* ── Hero scores ── */}
+            {/* ── Hero Score Row ── */}
             <GlassSection title="Score Overview">
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="rounded-2xl glass-bubble-pill p-5 text-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-pfc-ember/5 to-transparent" />
-                  <div className="relative">
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Overall Score</p>
-                    <p className={cn('text-4xl font-black tabular-nums', scoreColor(evaluation.overallScore / 100))}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: '1rem',
+                }}
+              >
+                {/* Overall Score */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ ...SPRING_SNAPPY, delay: 0.15 }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '1.25rem 0.75rem',
+                    borderRadius: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.5)' : 'rgba(255,255,255,0.5)',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                  }}
+                >
+                  <ScoreRing
+                    value={evaluation.overallScore}
+                    max={100}
+                    size={72}
+                    strokeWidth={5}
+                    color={scoreColor(evaluation.overallScore / 100)}
+                    isDark={isDark}
+                  >
+                    <span style={{ fontSize: '1.375rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: scoreColor(evaluation.overallScore / 100) }}>
                       {evaluation.overallScore}
-                    </p>
-                    <Badge className={cn('mt-1.5 text-[10px] font-bold', gradeColor(evaluation.overallGrade))}>
-                      Grade {evaluation.overallGrade}
-                    </Badge>
-                  </div>
-                </div>
+                    </span>
+                  </ScoreRing>
+                  <span
+                    style={{
+                      fontSize: '0.5625rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                      marginTop: '0.5rem',
+                    }}
+                  >
+                    Overall Score
+                  </span>
+                  <span
+                    style={{
+                      marginTop: '0.25rem',
+                      fontSize: '0.625rem',
+                      fontWeight: 700,
+                      padding: '0.125rem 0.5rem',
+                      borderRadius: '9999px',
+                      background: `${gradeAccent(evaluation.overallGrade)}15`,
+                      color: gradeAccent(evaluation.overallGrade),
+                      border: `1px solid ${gradeAccent(evaluation.overallGrade)}25`,
+                    }}
+                  >
+                    Grade {evaluation.overallGrade}
+                  </span>
+                </motion.div>
 
-                <div className="rounded-2xl glass-bubble-pill p-5 text-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-pfc-violet/5 to-transparent" />
-                  <div className="relative">
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Project IQ</p>
-                    <p className="text-4xl font-black tabular-nums text-pfc-violet">
+                {/* Project IQ */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ ...SPRING_SNAPPY, delay: 0.2 }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '1.25rem 0.75rem',
+                    borderRadius: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.5)' : 'rgba(255,255,255,0.5)',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                  }}
+                >
+                  <ScoreRing
+                    value={evaluation.intelligenceQuotient}
+                    max={150}
+                    size={72}
+                    strokeWidth={5}
+                    color="#C4956A"
+                    isDark={isDark}
+                  >
+                    <span style={{ fontSize: '1.375rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#C4956A' }}>
                       {evaluation.intelligenceQuotient}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/50 mt-1.5">of 150</p>
-                  </div>
-                </div>
+                    </span>
+                  </ScoreRing>
+                  <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)', marginTop: '0.5rem' }}>
+                    Project IQ
+                  </span>
+                  <span style={{ fontSize: '0.625rem', color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.25)', marginTop: '0.25rem' }}>
+                    of 150
+                  </span>
+                </motion.div>
 
-                <div className="rounded-2xl glass-bubble-pill p-5 text-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-pfc-cyan/5 to-transparent" />
-                  <div className="relative">
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Maturity</p>
-                    <p className="text-lg font-bold capitalize text-pfc-cyan mt-2">
-                      {evaluation.maturityLevel}
-                    </p>
-                    <Badge variant="outline" className="mt-1.5 text-[10px]">
-                      P{evaluation.industryPercentile} Percentile
-                    </Badge>
-                  </div>
-                </div>
+                {/* Maturity */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ ...SPRING_SNAPPY, delay: 0.25 }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '1.25rem 0.75rem',
+                    borderRadius: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.5)' : 'rgba(255,255,255,0.5)',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '1.125rem',
+                      fontWeight: 700,
+                      textTransform: 'capitalize',
+                      color: '#22D3EE',
+                    }}
+                  >
+                    {evaluation.maturityLevel}
+                  </span>
+                  <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)', marginTop: '0.375rem' }}>
+                    Maturity Level
+                  </span>
+                  <span
+                    style={{
+                      marginTop: '0.375rem',
+                      fontSize: '0.625rem',
+                      fontWeight: 600,
+                      padding: '0.125rem 0.5rem',
+                      borderRadius: '9999px',
+                      background: isDark ? 'rgba(34,211,238,0.08)' : 'rgba(34,211,238,0.06)',
+                      color: '#22D3EE',
+                      border: `1px solid rgba(34,211,238,0.15)`,
+                    }}
+                  >
+                    P{evaluation.industryPercentile} Percentile
+                  </span>
+                </motion.div>
 
-                <div className="rounded-2xl glass-bubble-pill p-5 text-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-pfc-green/5 to-transparent" />
-                  <div className="relative">
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 mb-1">Deploy Ready</p>
-                    <p className={cn('text-4xl font-black tabular-nums', scoreColor(evaluation.readinessScore))}>
+                {/* Deploy Ready */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ ...SPRING_SNAPPY, delay: 0.3 }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '1.25rem 0.75rem',
+                    borderRadius: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.5)' : 'rgba(255,255,255,0.5)',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                  }}
+                >
+                  <ScoreRing
+                    value={evaluation.readinessScore}
+                    max={1}
+                    size={72}
+                    strokeWidth={5}
+                    color={scoreColor(evaluation.readinessScore)}
+                    isDark={isDark}
+                  >
+                    <span style={{ fontSize: '1.375rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: scoreColor(evaluation.readinessScore) }}>
                       {Math.round(evaluation.readinessScore * 100)}%
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/50 mt-1.5">
-                      Tech debt: {Math.round(evaluation.technicalDebt * 100)}%
-                    </p>
-                  </div>
-                </div>
+                    </span>
+                  </ScoreRing>
+                  <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)', marginTop: '0.5rem' }}>
+                    Deploy Ready
+                  </span>
+                  <span style={{ fontSize: '0.625rem', color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.25)', marginTop: '0.25rem' }}>
+                    Tech debt: {Math.round(evaluation.technicalDebt * 100)}%
+                  </span>
+                </motion.div>
               </div>
             </GlassSection>
 
-            {/* ── Dimension scores grid ── */}
+            {/* ── 12-Dimension Assessment ── */}
             <GlassSection title="12-Dimension Assessment">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {evaluation.dimensions.map((dim) => (
-                  <DimensionCard key={dim.dimension} dim={dim} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {evaluation.dimensions.map((dim, i) => (
+                  <DimensionRow key={dim.dimension} dim={dim} index={i} isDark={isDark} />
                 ))}
               </div>
             </GlassSection>
 
-            {/* ── Robustness & Calibration ── */}
+            {/* ── Robustness & Calibration (side by side) ── */}
             <GlassSection title="Robustness & Calibration">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {/* Robustness Profile */}
-                <div className="rounded-xl border border-border/30 p-4">
-                  <h4 className="text-sm flex items-center gap-2 mb-3 font-semibold">
-                    <ShieldCheckIcon className="h-4 w-4 text-pfc-ember" />
-                    Robustness Profile
-                  </h4>
-                  <div className="space-y-3">
-                    {[
-                      { label: 'Perturbation Sensitivity', value: 1 - evaluation.robustness.perturbationSensitivity, inverted: true },
-                      { label: 'Distribution Shift Resilience', value: evaluation.robustness.distributionShiftResilience },
-                      { label: 'Adversarial Resistance', value: evaluation.robustness.adversarialResistance },
-                      { label: 'Edge Case Coverage', value: evaluation.robustness.edgeCaseCoverage },
-                    ].map((item) => (
-                      <div key={item.label}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[11px] text-muted-foreground">{item.label}</span>
-                          <span className={cn('text-[11px] font-mono font-medium', scoreColor(item.value))}>
-                            {Math.round(item.value * 100)}%
-                          </span>
-                        </div>
-                        <Progress value={item.value * 100} className={cn('h-1.5', scoreBarClass(item.value))} />
-                      </div>
-                    ))}
-                    <div className="flex items-center gap-2 pt-2 border-t border-border/30">
-                      <span className="text-[11px] text-muted-foreground">Graceful Failure:</span>
-                      {evaluation.robustness.failureGracefully ? (
-                        <Badge className="text-[10px] bg-pfc-green/10 text-pfc-green border-pfc-green/30">Yes</Badge>
-                      ) : (
-                        <Badge className="text-[10px] bg-pfc-red/10 text-pfc-red border-pfc-red/30">No</Badge>
-                      )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {/* Robustness */}
+                <div
+                  style={{
+                    borderRadius: '0.75rem',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                    padding: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <ShieldCheckIcon style={{ width: 14, height: 14, color: '#C4956A' }} />
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.85)' : 'rgba(0,0,0,0.7)' }}>
+                      Robustness Profile
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <MetricBar label="Perturbation Resistance" value={1 - evaluation.robustness.perturbationSensitivity} isDark={isDark} />
+                    <MetricBar label="Distribution Shift Resilience" value={evaluation.robustness.distributionShiftResilience} isDark={isDark} />
+                    <MetricBar label="Adversarial Resistance" value={evaluation.robustness.adversarialResistance} isDark={isDark} />
+                    <MetricBar label="Edge Case Coverage" value={evaluation.robustness.edgeCaseCoverage} isDark={isDark} />
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        paddingTop: '0.5rem',
+                        borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.04)'}`,
+                      }}
+                    >
+                      <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)' }}>
+                        Graceful Failure:
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.625rem',
+                          fontWeight: 600,
+                          padding: '0.0625rem 0.375rem',
+                          borderRadius: '9999px',
+                          background: evaluation.robustness.failureGracefully ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)',
+                          color: evaluation.robustness.failureGracefully ? '#34D399' : '#F87171',
+                          border: `1px solid ${evaluation.robustness.failureGracefully ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
+                        }}
+                      >
+                        {evaluation.robustness.failureGracefully ? 'Yes' : 'No'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Calibration Profile */}
-                <div className="rounded-xl border border-border/30 p-4">
-                  <h4 className="text-sm flex items-center gap-2 mb-3 font-semibold">
-                    <GaugeIcon className="h-4 w-4 text-pfc-violet" />
-                    Calibration Profile
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[10px] text-muted-foreground/60 mb-0.5">ECE</p>
-                        <p className="text-xl font-bold tabular-nums text-pfc-violet">
-                          {evaluation.calibration.expectedCalibrationError.toFixed(3)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted-foreground/60 mb-0.5">Brier Score</p>
-                        <p className="text-xl font-bold tabular-nums text-pfc-cyan">
-                          {evaluation.calibration.brierScore.toFixed(3)}
-                        </p>
-                      </div>
+                {/* Calibration */}
+                <div
+                  style={{
+                    borderRadius: '0.75rem',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                    padding: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <GaugeIcon style={{ width: 14, height: 14, color: '#C4956A' }} />
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.85)' : 'rgba(0,0,0,0.7)' }}>
+                      Calibration Profile
+                    </span>
+                  </div>
+
+                  {/* ECE + Brier */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.75rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>
+                        ECE
+                      </span>
+                      <p style={{ fontSize: '1.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#C4956A', marginTop: 2 }}>
+                        {evaluation.calibration.expectedCalibrationError.toFixed(3)}
+                      </p>
                     </div>
-                    <div className="border-t border-border/30" />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>
+                        Brier Score
+                      </span>
+                      <p style={{ fontSize: '1.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#22D3EE', marginTop: 2 }}>
+                        {evaluation.calibration.brierScore.toFixed(3)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.04)'}`, paddingTop: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.75rem' }}>
                       <div>
-                        <p className="text-[10px] text-muted-foreground/60 mb-0.5">Overconfidence</p>
-                        <p className={cn('text-lg font-bold tabular-nums', evaluation.calibration.overconfidenceIndex > 0.2 ? 'text-pfc-red' : 'text-pfc-green')}>
+                        <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>
+                          Overconfidence
+                        </span>
+                        <p style={{
+                          fontSize: '1rem',
+                          fontWeight: 700,
+                          fontVariantNumeric: 'tabular-nums',
+                          color: evaluation.calibration.overconfidenceIndex > 0.2 ? '#F87171' : '#34D399',
+                          marginTop: 2,
+                        }}>
                           {(evaluation.calibration.overconfidenceIndex * 100).toFixed(1)}%
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-muted-foreground/60 mb-0.5">Underconfidence</p>
-                        <p className="text-lg font-bold tabular-nums text-pfc-yellow">
+                        <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>
+                          Underconfidence
+                        </span>
+                        <p style={{ fontSize: '1rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#FBBF24', marginTop: 2 }}>
                           {(evaluation.calibration.underconfidenceIndex * 100).toFixed(1)}%
                         </p>
                       </div>
                     </div>
-                    <div className="pt-2 border-t border-border/30">
-                      <span className="text-[11px] text-muted-foreground">Reliability Diagram: </span>
-                      <Badge variant="outline" className="text-[10px] capitalize">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '0.5rem', borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.15)' : 'rgba(0,0,0,0.03)'}` }}>
+                      <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)' }}>
+                        Reliability:
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.625rem',
+                          fontWeight: 600,
+                          padding: '0.0625rem 0.375rem',
+                          borderRadius: '9999px',
+                          textTransform: 'capitalize',
+                          background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                          color: '#C4956A',
+                          border: '1px solid rgba(196,149,106,0.15)',
+                        }}
+                      >
                         {evaluation.calibration.reliabilityDiagramShape.replace(/-/g, ' ')}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -624,49 +1292,102 @@ export default function EvaluatePage() {
 
             {/* ── Pattern Analysis ── */}
             <GlassSection title="Pattern Analysis">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                 {/* Anti-patterns */}
-                <div className={cn('rounded-xl border border-border/30 p-4', evaluation.patternAnalysis.antiPatterns.length > 0 && 'border-pfc-red/20')}>
-                  <h4 className="text-xs flex items-center gap-2 mb-3 font-semibold">
-                    <AlertTriangleIcon className="h-3.5 w-3.5 text-pfc-red" />
-                    Anti-Patterns Detected
-                  </h4>
+                <div
+                  style={{
+                    borderRadius: '0.75rem',
+                    border: `1px solid ${evaluation.patternAnalysis.antiPatterns.length > 0 ? 'rgba(248,113,113,0.2)' : isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                    padding: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                    <AlertTriangleIcon style={{ width: 13, height: 13, color: '#F87171' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.65)' }}>
+                      Anti-Patterns
+                    </span>
+                  </div>
                   {evaluation.patternAnalysis.antiPatterns.length === 0 ? (
-                    <p className="text-[11px] text-pfc-green flex items-center gap-1.5">
-                      <CheckCircle2Icon className="h-3 w-3" /> No anti-patterns detected
+                    <p style={{ fontSize: '0.6875rem', color: '#34D399', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <CheckCircle2Icon style={{ width: 11, height: 11 }} /> None detected
                     </p>
                   ) : (
-                    <div className="space-y-2">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       {evaluation.patternAnalysis.antiPatterns.map((ap, i) => (
-                        <div key={i} className="rounded-md bg-pfc-red/5 border border-pfc-red/15 px-2.5 py-2">
-                          <p className="text-[11px] font-medium text-pfc-red">{ap.name}</p>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{ap.impact}</p>
-                          <p className="text-[10px] text-pfc-ember mt-1">Fix: {ap.fix}</p>
+                        <div
+                          key={i}
+                          style={{
+                            borderRadius: '0.5rem',
+                            padding: '0.5rem',
+                            background: 'rgba(248,113,113,0.04)',
+                            border: '1px solid rgba(248,113,113,0.1)',
+                          }}
+                        >
+                          <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#F87171' }}>{ap.name}</p>
+                          <p style={{ fontSize: '0.625rem', color: isDark ? 'rgba(237,224,212,0.45)' : 'rgba(0,0,0,0.35)', marginTop: 2 }}>{ap.impact}</p>
+                          <p style={{ fontSize: '0.625rem', color: '#C4956A', marginTop: 3 }}>Fix: {ap.fix}</p>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Best practices */}
-                <div className="rounded-xl border border-border/30 p-4">
-                  <h4 className="text-xs flex items-center gap-2 mb-3 font-semibold">
-                    <CheckCircle2Icon className="h-3.5 w-3.5 text-pfc-green" />
-                    Best Practices
-                  </h4>
-                  <div className="space-y-1.5">
+                {/* Best Practices */}
+                <div
+                  style={{
+                    borderRadius: '0.75rem',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                    padding: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                    <CheckCircle2Icon style={{ width: 13, height: 13, color: '#34D399' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.65)' }}>
+                      Best Practices
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
                     {evaluation.patternAnalysis.bestPractices.map((bp, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[11px]">
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                         {bp.implemented ? (
-                          <CheckCircle2Icon className="h-3 w-3 text-pfc-green shrink-0" />
+                          <CheckCircle2Icon style={{ width: 11, height: 11, color: '#34D399', flexShrink: 0 }} />
                         ) : (
-                          <div className="h-3 w-3 rounded-full border border-muted-foreground/30 shrink-0" />
+                          <div
+                            style={{
+                              width: 11,
+                              height: 11,
+                              borderRadius: '50%',
+                              border: `1.5px solid ${isDark ? 'rgba(156,143,128,0.3)' : 'rgba(0,0,0,0.15)'}`,
+                              flexShrink: 0,
+                            }}
+                          />
                         )}
-                        <span className={bp.implemented ? 'text-foreground/80' : 'text-muted-foreground/60'}>
+                        <span
+                          style={{
+                            fontSize: '0.6875rem',
+                            color: bp.implemented
+                              ? (isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.6)')
+                              : (isDark ? 'rgba(156,143,128,0.45)' : 'rgba(0,0,0,0.3)'),
+                          }}
+                        >
                           {bp.name}
                         </span>
                         {bp.importance === 'essential' && !bp.implemented && (
-                          <Badge className="text-[8px] bg-pfc-red/10 text-pfc-red border-pfc-red/20 px-1 py-0">!</Badge>
+                          <span
+                            style={{
+                              fontSize: '0.5rem',
+                              fontWeight: 700,
+                              padding: '0 0.25rem',
+                              borderRadius: '9999px',
+                              background: 'rgba(248,113,113,0.1)',
+                              color: '#F87171',
+                              border: '1px solid rgba(248,113,113,0.15)',
+                            }}
+                          >
+                            !
+                          </span>
                         )}
                       </div>
                     ))}
@@ -674,33 +1395,49 @@ export default function EvaluatePage() {
                 </div>
 
                 {/* Innovation */}
-                <div className="rounded-xl border border-border/30 p-4">
-                  <h4 className="text-xs flex items-center gap-2 mb-3 font-semibold">
-                    <SparklesIcon className="h-3.5 w-3.5 text-pfc-violet" />
-                    Innovation & Complexity
-                  </h4>
-                  <div className="space-y-3">
-                    {evaluation.patternAnalysis.innovativeApproaches.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {evaluation.patternAnalysis.innovativeApproaches.map((ia, i) => (
-                          <Badge key={i} variant="secondary" className="text-[10px] bg-pfc-violet/10 text-pfc-violet border-pfc-violet/20">
-                            {ia}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-muted-foreground/50">No innovative approaches detected</p>
-                    )}
-                    <div className="border-t border-border/30" />
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-[10px] text-muted-foreground/60">Complexity</p>
-                        <Progress value={evaluation.patternAnalysis.complexityScore * 100} className="h-1.5 mt-1" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted-foreground/60">Modularity</p>
-                        <Progress value={evaluation.patternAnalysis.modularityScore * 100} className="h-1.5 mt-1" />
-                      </div>
+                <div
+                  style={{
+                    borderRadius: '0.75rem',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                    padding: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                    <SparklesIcon style={{ width: 13, height: 13, color: '#C4956A' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.65)' }}>
+                      Innovation
+                    </span>
+                  </div>
+                  {evaluation.patternAnalysis.innovativeApproaches.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                      {evaluation.patternAnalysis.innovativeApproaches.map((ia, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            fontSize: '0.625rem',
+                            fontWeight: 600,
+                            padding: '0.125rem 0.5rem',
+                            borderRadius: '9999px',
+                            background: 'rgba(196,149,106,0.08)',
+                            color: '#C4956A',
+                            border: '1px solid rgba(196,149,106,0.15)',
+                          }}
+                        >
+                          {ia}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.25)' }}>
+                      No innovative approaches detected
+                    </p>
+                  )}
+
+                  <div style={{ borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.04)'}`, marginTop: '0.75rem', paddingTop: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <MetricBar label="Complexity" value={evaluation.patternAnalysis.complexityScore} isDark={isDark} />
+                      <MetricBar label="Modularity" value={evaluation.patternAnalysis.modularityScore} isDark={isDark} />
                     </div>
                   </div>
                 </div>
@@ -709,52 +1446,106 @@ export default function EvaluatePage() {
 
             {/* ── Improvement Roadmap ── */}
             <GlassSection title="Improvement Roadmap">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                {/* Critical Issues */}
                 {evaluation.criticalIssues.length > 0 && (
-                  <div className="rounded-xl border border-pfc-red/20 p-4">
-                    <h4 className="text-xs text-pfc-red flex items-center gap-1.5 mb-3 font-semibold">
-                      <ZapIcon className="h-3.5 w-3.5" /> Critical Issues
-                    </h4>
+                  <div
+                    style={{
+                      borderRadius: '0.75rem',
+                      border: '1px solid rgba(248,113,113,0.2)',
+                      padding: '1rem',
+                      background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                      <ZapIcon style={{ width: 13, height: 13, color: '#F87171' }} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 650, color: '#F87171' }}>
+                        Critical Issues
+                      </span>
+                    </div>
                     {evaluation.criticalIssues.map((issue, i) => (
-                      <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{issue}</p>
+                      <p key={i} style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(237,224,212,0.55)' : 'rgba(0,0,0,0.45)', marginBottom: '0.375rem', lineHeight: 1.5 }}>
+                        {issue}
+                      </p>
                     ))}
                   </div>
                 )}
 
-                <div className="rounded-xl border border-pfc-ember/20 p-4">
-                  <h4 className="text-xs text-pfc-ember flex items-center gap-1.5 mb-3 font-semibold">
-                    <TrendingUpIcon className="h-3.5 w-3.5" /> Quick Wins
-                  </h4>
+                {/* Quick Wins */}
+                <div
+                  style={{
+                    borderRadius: '0.75rem',
+                    border: `1px solid ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.1)'}`,
+                    padding: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                    <TrendingUpIcon style={{ width: 13, height: 13, color: '#C4956A' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 650, color: '#C4956A' }}>
+                      Quick Wins
+                    </span>
+                  </div>
                   {evaluation.quickWins.length > 0 ? (
                     evaluation.quickWins.map((qw, i) => (
-                      <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{qw}</p>
+                      <p key={i} style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(237,224,212,0.55)' : 'rgba(0,0,0,0.45)', marginBottom: '0.375rem', lineHeight: 1.5 }}>
+                        {qw}
+                      </p>
                     ))
                   ) : (
-                    <p className="text-[11px] text-pfc-green">No urgent quick wins — solid foundation</p>
+                    <p style={{ fontSize: '0.6875rem', color: '#34D399' }}>Solid foundation</p>
                   )}
                 </div>
 
-                <div className="rounded-xl border border-border/30 p-4">
-                  <h4 className="text-xs text-pfc-violet flex items-center gap-1.5 mb-3 font-semibold">
-                    <BookOpenIcon className="h-3.5 w-3.5" /> Long-Term
-                  </h4>
+                {/* Long-Term */}
+                <div
+                  style={{
+                    borderRadius: '0.75rem',
+                    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(0,0,0,0.05)'}`,
+                    padding: '1rem',
+                    background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
+                    <BookOpenIcon style={{ width: 13, height: 13, color: '#C4956A' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.65)' }}>
+                      Long-Term
+                    </span>
+                  </div>
                   {evaluation.longTermRecommendations.length > 0 ? (
                     evaluation.longTermRecommendations.map((rec, i) => (
-                      <p key={i} className="text-[11px] text-muted-foreground mb-1.5">{rec}</p>
+                      <p key={i} style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(237,224,212,0.55)' : 'rgba(0,0,0,0.45)', marginBottom: '0.375rem', lineHeight: 1.5 }}>
+                        {rec}
+                      </p>
                     ))
                   ) : (
-                    <p className="text-[11px] text-pfc-green">Excellent long-term positioning</p>
+                    <p style={{ fontSize: '0.6875rem', color: '#34D399' }}>Excellent long-term positioning</p>
                   )}
                 </div>
               </div>
             </GlassSection>
 
-            {/* ── Comparable projects ── */}
-            <GlassSection className="pb-8">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-2">Comparable Benchmarks</p>
-              <div className="flex flex-wrap gap-1.5">
+            {/* ── Comparable Benchmarks ── */}
+            <GlassSection>
+              <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)', display: 'block', marginBottom: '0.5rem' }}>
+                Comparable Benchmarks
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
                 {evaluation.comparableProjects.map((cp, i) => (
-                  <Badge key={i} variant="outline" className="text-[10px]">{cp}</Badge>
+                  <span
+                    key={i}
+                    style={{
+                      fontSize: '0.625rem',
+                      fontWeight: 600,
+                      padding: '0.125rem 0.5rem',
+                      borderRadius: '9999px',
+                      background: isDark ? 'rgba(79,69,57,0.15)' : 'rgba(0,0,0,0.04)',
+                      color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.4)',
+                      border: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.06)'}`,
+                    }}
+                  >
+                    {cp}
+                  </span>
                 ))}
               </div>
             </GlassSection>

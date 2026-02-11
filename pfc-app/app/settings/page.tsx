@@ -19,7 +19,6 @@ import {
   RefreshCwIcon,
   CopyIcon,
   GaugeIcon,
-  WrenchIcon,
   CircleIcon,
   FlaskConicalIcon,
   LayersIcon,

@@ -2,6 +2,7 @@
 
 import type { SOARConfig, SOARSession } from '@/lib/engine/soar/types';
 import { DEFAULT_SOAR_CONFIG } from '@/lib/engine/soar/types';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ── localStorage keys ──
 const STORAGE_KEY_CONFIG = 'pfc-soar-config';
@@ -44,12 +45,10 @@ export interface SOARSliceActions {
   setSOARConfig: (patch: Partial<SOARConfig>) => void;
   setSOAREnabled: (enabled: boolean) => void;
   setSOARSession: (session: SOARSession | null) => void;
-  addSOARSessionToHistory: (session: SOARSession) => void;
-  resetSOARConfig: () => void;
 }
 
 // ── Slice creator ──
-export const createSOARSlice = (set: any, get: any) => ({
+export const createSOARSlice = (set: PFCSet, get: PFCGet) => ({
   // ── Initial state ──
   soarConfig: loadConfig(),
   soarSession: null as SOARSession | null,
@@ -58,7 +57,7 @@ export const createSOARSlice = (set: any, get: any) => ({
   // ── Actions ──
 
   setSOARConfig: (patch: Partial<SOARConfig>) => {
-    set((s: any) => {
+    set((s) => {
       const updated = { ...s.soarConfig, ...patch };
       saveConfig(updated);
       return { soarConfig: updated };
@@ -66,7 +65,7 @@ export const createSOARSlice = (set: any, get: any) => ({
   },
 
   setSOAREnabled: (enabled: boolean) => {
-    set((s: any) => {
+    set((s) => {
       const updated = { ...s.soarConfig, enabled };
       saveConfig(updated);
       return { soarConfig: updated };
@@ -75,30 +74,5 @@ export const createSOARSlice = (set: any, get: any) => ({
 
   setSOARSession: (session: SOARSession | null) => {
     set({ soarSession: session });
-  },
-
-  addSOARSessionToHistory: (session: SOARSession) => {
-    set((s: any) => {
-      const entry = {
-        id: session.id,
-        query: session.targetQuery.slice(0, 100),
-        improved: session.overallImproved,
-        iterations: session.iterationsCompleted,
-        reward: session.rewards.reduce((sum: number, r: any) => sum + r.composite, 0),
-        timestamp: session.startedAt,
-      };
-      return {
-        soarSessionHistory: [...s.soarSessionHistory, entry],
-      };
-    });
-  },
-
-  resetSOARConfig: () => {
-    saveConfig(DEFAULT_SOAR_CONFIG);
-    set({
-      soarConfig: DEFAULT_SOAR_CONFIG,
-      soarSession: null,
-      soarSessionHistory: [],
-    });
   },
 });

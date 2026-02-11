@@ -47,13 +47,20 @@ export type { ConceptsSliceState, ConceptsSliceActions, ConceptWeight, QueryConc
 export type { TierSliceState, TierSliceActions } from './slices/tier';
 export type { ResearchSliceState, ResearchSliceActions } from './slices/research';
 export type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifact, PortalViewType } from './slices/portal';
-export type { UISliceState, UISliceActions } from './slices/ui';
+export type { UISliceState, UISliceActions, ChatMode } from './slices/ui';
 export type { NotesSliceState, NotesSliceActions } from './slices/notes';
 export type { LearningSliceState, LearningSliceActions } from './slices/learning';
 export type { SOARSliceState, SOARSliceActions } from './slices/soar';
 
 // Re-export constants
 export { STAGES, STAGE_LABELS } from '@/lib/constants';
+
+// ═══════════════════════════════════════════════════════════════════
+// Slice creator helpers — typed set/get for all slices
+// ═══════════════════════════════════════════════════════════════════
+
+export type PFCSet = (partial: Partial<PFCState> | ((state: PFCState) => Partial<PFCState>)) => void;
+export type PFCGet = () => PFCState;
 
 // ═══════════════════════════════════════════════════════════════════
 // Aggregate store type

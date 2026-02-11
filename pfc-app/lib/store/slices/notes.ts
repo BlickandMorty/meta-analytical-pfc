@@ -5,6 +5,7 @@ import type {
   NoteSearchResult, NoteAIState, BlockType,
   Transaction, IOperation, Vault, Concept, ConceptCorrelation,
 } from '@/lib/notes/types';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 import {
   generateBlockId, generatePageId, normalizePageName,
   createEmptyBlock, createNewPage, getTodayJournalDate,
@@ -109,6 +110,7 @@ export interface NotesSliceActions {
   saveNotesToStorage: () => void;
 
   // Backlinks
+  rebuildPageLinks: () => void;
   getBacklinks: (pageId: string) => PageLink[];
 
   // Vault
@@ -132,6 +134,10 @@ const STORAGE_KEY_ACTIVE_VAULT = 'pfc-active-vault';
 const MAX_UNDO_STACK = 64;
 const SAVE_DEBOUNCE_MS = 500;
 
+// ── Module-level debounce timers (replaces globalThis hack) ──
+let _notesSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let _notesContentTimer: ReturnType<typeof setTimeout> | null = null;
+
 // Vault-scoped storage keys
 function vaultKey(vaultId: string, suffix: string): string {
   return `pfc-vault-${vaultId}-${suffix}`;
@@ -142,7 +148,7 @@ function vaultKey(vaultId: string, suffix: string): string {
 // Same pattern as connectLearningSSE in the learning slice
 // ═══════════════════════════════════════════════════════════════════
 
-function connectNoteAISSE(set: any, get: any) {
+function connectNoteAISSE(set: PFCSet, get: PFCGet) {
   const state = get();
   const noteAI: NoteAIState = state.noteAI;
   if (!noteAI || !noteAI.isGenerating) return;
@@ -210,7 +216,7 @@ function connectNoteAISSE(set: any, get: any) {
           const data = line.slice(6);
 
           if (data === '[DONE]') {
-            set((s: any) => ({
+            set((s) => ({
               noteAI: { ...s.noteAI, isGenerating: false },
             }));
             continue;
@@ -221,7 +227,7 @@ function connectNoteAISSE(set: any, get: any) {
 
             switch (event.type) {
               case 'text': {
-                set((s: any) => ({
+                set((s) => ({
                   noteAI: {
                     ...s.noteAI,
                     generatedText: s.noteAI.generatedText + event.text,
@@ -230,14 +236,14 @@ function connectNoteAISSE(set: any, get: any) {
                 break;
               }
               case 'done': {
-                set((s: any) => ({
+                set((s) => ({
                   noteAI: { ...s.noteAI, isGenerating: false },
                 }));
                 break;
               }
               case 'error': {
                 console.error('[note-ai] SSE error:', event.message);
-                set((s: any) => ({
+                set((s) => ({
                   noteAI: { ...s.noteAI, isGenerating: false },
                 }));
                 break;
@@ -251,7 +257,7 @@ function connectNoteAISSE(set: any, get: any) {
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         console.error('[note-ai] Stream error:', error);
-        set((s: any) => ({
+        set((s) => ({
           noteAI: { ...s.noteAI, isGenerating: false },
         }));
       }
@@ -265,7 +271,7 @@ function connectNoteAISSE(set: any, get: any) {
 // Slice Creator
 // ═══════════════════════════════════════════════════════════════════
 
-export const createNotesSlice = (set: any, get: any) => ({
+export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   // ── Initial State ──
   notePages: [] as NotePage[],
   noteBlocks: [] as NoteBlock[],
@@ -311,7 +317,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       doOps,
       undoOps,
     };
-    set((s: any) => ({
+    set((s) => ({
       undoStack: [...s.undoStack.slice(-MAX_UNDO_STACK + 1), txn],
       redoStack: [], // Clear redo on new action
     }));
@@ -357,7 +363,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       }
     }
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: blocks,
       undoStack: s.undoStack.slice(0, -1),
       redoStack: [...s.redoStack, txn],
@@ -404,7 +410,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       }
     }
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: blocks,
       redoStack: s.redoStack.slice(0, -1),
       undoStack: [...s.undoStack, txn],
@@ -422,7 +428,7 @@ export const createNotesSlice = (set: any, get: any) => ({
     const page = createNewPage(title, isJournal, journalDate);
     const firstBlock = createEmptyBlock(page.id, null, 'a0');
 
-    set((s: any) => ({
+    set((s) => ({
       notePages: [...s.notePages, page],
       noteBlocks: [...s.noteBlocks, firstBlock],
       activePageId: page.id,
@@ -433,7 +439,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   deletePage: (pageId: string) => {
-    set((s: any) => ({
+    set((s) => ({
       notePages: s.notePages.filter((p: NotePage) => p.id !== pageId),
       noteBlocks: s.noteBlocks.filter((b: NoteBlock) => b.pageId !== pageId),
       pageLinks: s.pageLinks.filter((l: PageLink) => l.sourcePageId !== pageId && l.targetPageId !== pageId),
@@ -448,7 +454,7 @@ export const createNotesSlice = (set: any, get: any) => ({
     if (!page) return;
     const oldTitle = page.title;
 
-    set((s: any) => {
+    set((s) => {
       // Update all blocks that reference the old page name via [[links]]
       const escOld = oldTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const linkRegex = new RegExp(`\\[\\[${escOld}\\]\\]`, 'gi');
@@ -485,7 +491,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   togglePageFavorite: (pageId: string) => {
-    set((s: any) => ({
+    set((s) => ({
       notePages: s.notePages.map((p: NotePage) =>
         p.id === pageId ? { ...p, favorite: !p.favorite } : p
       ),
@@ -494,7 +500,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   togglePagePin: (pageId: string) => {
-    set((s: any) => ({
+    set((s) => ({
       notePages: s.notePages.map((p: NotePage) =>
         p.id === pageId ? { ...p, pinned: !p.pinned } : p
       ),
@@ -544,7 +550,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       updatedAt: Date.now(),
     };
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: [...s.noteBlocks, block],
       editingBlockId: block.id,
     }));
@@ -566,7 +572,7 @@ export const createNotesSlice = (set: any, get: any) => ({
     if (!oldBlock) return;
 
     const refs = extractPageLinks(content);
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
         b.id === blockId ? { ...b, content, refs, updatedAt: Date.now() } : b
       ),
@@ -574,8 +580,9 @@ export const createNotesSlice = (set: any, get: any) => ({
 
     // Batch content updates (don't push a txn for every keystroke)
     // Transaction is pushed on blur or explicit save
-    clearTimeout((globalThis as any).__notesSaveTimer);
-    (globalThis as any).__notesSaveTimer = setTimeout(() => {
+    if (_notesContentTimer) clearTimeout(_notesContentTimer);
+    _notesContentTimer = setTimeout(() => {
+      _notesContentTimer = null;
       get().rebuildPageLinks();
       get().saveNotesToStorage();
     }, SAVE_DEBOUNCE_MS);
@@ -601,9 +608,36 @@ export const createNotesSlice = (set: any, get: any) => ({
 
     const deletedBlocks = s.noteBlocks.filter((b: NoteBlock) => toDelete.has(b.id));
 
-    set((s: any) => ({
+    // Find the best sibling to move cursor to (previous first, then next)
+    let nextEditId: string | null = null;
+    if (s.editingBlockId && toDelete.has(s.editingBlockId)) {
+      const pageBlocks = s.noteBlocks.filter((b: NoteBlock) => b.pageId === block.pageId && !toDelete.has(b.id));
+      const deletedIdx = s.noteBlocks.findIndex((b: NoteBlock) => b.id === blockId);
+      // Find closest preceding sibling that's not being deleted
+      let prevBlock: NoteBlock | null = null;
+      let nextBlock: NoteBlock | null = null;
+      for (let i = deletedIdx - 1; i >= 0; i--) {
+        const b = s.noteBlocks[i];
+        if (b.pageId === block.pageId && !toDelete.has(b.id)) {
+          prevBlock = b;
+          break;
+        }
+      }
+      if (!prevBlock) {
+        for (let i = deletedIdx + 1; i < s.noteBlocks.length; i++) {
+          const b = s.noteBlocks[i];
+          if (b.pageId === block.pageId && !toDelete.has(b.id)) {
+            nextBlock = b;
+            break;
+          }
+        }
+      }
+      nextEditId = (prevBlock ?? nextBlock)?.id ?? null;
+    }
+
+    set((s) => ({
       noteBlocks: s.noteBlocks.filter((b: NoteBlock) => !toDelete.has(b.id)),
-      editingBlockId: s.editingBlockId && toDelete.has(s.editingBlockId) ? null : s.editingBlockId,
+      editingBlockId: s.editingBlockId && toDelete.has(s.editingBlockId) ? nextEditId : s.editingBlockId,
     }));
 
     // Record transaction
@@ -623,7 +657,7 @@ export const createNotesSlice = (set: any, get: any) => ({
     const oldType = block.type;
     const oldProps = { ...block.properties };
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
         b.id === blockId
           ? { ...b, type, properties: { ...b.properties, ...props }, content: '', updatedAt: Date.now() }
@@ -654,11 +688,11 @@ export const createNotesSlice = (set: any, get: any) => ({
     if (idx <= 0) return null;
 
     const prevBlock = siblings[idx - 1];
-    if (prevBlock.type === 'divider') return null;
+    if (prevBlock.type === 'divider' || prevBlock.type === 'page-break') return null;
 
     const mergedContent = prevBlock.content + block.content;
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: s.noteBlocks
         .map((b: NoteBlock) => b.id === prevBlock.id ? { ...b, content: mergedContent, updatedAt: Date.now() } : b)
         .filter((b: NoteBlock) => b.id !== blockId),
@@ -710,7 +744,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       updatedAt: Date.now(),
     };
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: [
         ...s.noteBlocks.map((b: NoteBlock) =>
           b.id === blockId ? { ...b, content: htmlBefore, updatedAt: Date.now() } : b
@@ -752,7 +786,7 @@ export const createNotesSlice = (set: any, get: any) => ({
     const oldOrder = block.order;
     const oldIndent = block.indent;
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
         b.id === blockId
           ? { ...b, parentId: newParent.id, indent: (newParent.indent ?? 0) + 1, updatedAt: Date.now() }
@@ -780,7 +814,7 @@ export const createNotesSlice = (set: any, get: any) => ({
     const oldOrder = block.order;
     const oldIndent = block.indent;
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
         b.id === blockId
           ? { ...b, parentId: parent.parentId, indent: Math.max(0, (block.indent ?? 1) - 1), updatedAt: Date.now() }
@@ -823,7 +857,7 @@ export const createNotesSlice = (set: any, get: any) => ({
     const oldOrder = block.order;
     const oldIndent = block.indent;
 
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
         b.id === blockId
           ? { ...b, parentId: newParentId, order, indent: parentIndent, updatedAt: Date.now() }
@@ -840,7 +874,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   toggleBlockCollapse: (blockId: string) => {
-    set((s: any) => ({
+    set((s) => ({
       noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
         b.id === blockId ? { ...b, collapsed: !b.collapsed } : b
       ),
@@ -912,7 +946,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   // Sidebar
   // ═════════════════════════════════════════════════════════════════
 
-  toggleNotesSidebar: () => set((s: any) => ({ notesSidebarOpen: !s.notesSidebarOpen })),
+  toggleNotesSidebar: () => set((s) => ({ notesSidebarOpen: !s.notesSidebarOpen })),
 
   setNotesSidebarView: (view: 'pages' | 'journals' | 'books' | 'graph') =>
     set({ notesSidebarView: view }),
@@ -931,13 +965,13 @@ export const createNotesSlice = (set: any, get: any) => ({
       autoGenerated: false,
       chapters: [],
     };
-    set((s: any) => ({ noteBooks: [...s.noteBooks, book] }));
+    set((s) => ({ noteBooks: [...s.noteBooks, book] }));
     debouncedSave(get);
     return book.id;
   },
 
   addPageToBook: (bookId: string, pageId: string) => {
-    set((s: any) => ({
+    set((s) => ({
       noteBooks: s.noteBooks.map((b: NoteBook) =>
         b.id === bookId && !b.pageIds.includes(pageId)
           ? { ...b, pageIds: [...b.pageIds, pageId], updatedAt: Date.now() }
@@ -948,7 +982,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   removePageFromBook: (bookId: string, pageId: string) => {
-    set((s: any) => ({
+    set((s) => ({
       noteBooks: s.noteBooks.map((b: NoteBook) =>
         b.id === bookId
           ? { ...b, pageIds: b.pageIds.filter((id: string) => id !== pageId), updatedAt: Date.now() }
@@ -959,7 +993,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   movePageToBook: (pageId: string, targetBookId: string | null) => {
-    set((s: any) => {
+    set((s) => {
       const now = Date.now();
       // Remove from any existing book, then add to target
       const updated = s.noteBooks.map((b: NoteBook) => {
@@ -994,7 +1028,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   appendNoteAIText: (text: string) =>
-    set((s: any) => ({
+    set((s) => ({
       noteAI: { ...s.noteAI, generatedText: s.noteAI.generatedText + text },
     })),
 
@@ -1004,7 +1038,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       _noteAIAbortController.abort();
       _noteAIAbortController = null;
     }
-    set((s: any) => ({
+    set((s) => ({
       noteAI: { ...s.noteAI, isGenerating: false },
     }));
   },
@@ -1060,7 +1094,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       updatedAt: Date.now(),
       pageCount: 0,
     };
-    set((s: any) => ({ vaults: [...s.vaults, vault] }));
+    set((s) => ({ vaults: [...s.vaults, vault] }));
     try {
       const s = get();
       localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(s.vaults));
@@ -1105,7 +1139,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       localStorage.removeItem(vaultKey(vaultId, 'books'));
       localStorage.removeItem(vaultKey(vaultId, 'concepts'));
     } catch {}
-    set((s: any) => {
+    set((s) => {
       const vaults = s.vaults.filter((v: Vault) => v.id !== vaultId);
       localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
       const newActiveId = s.activeVaultId === vaultId ? (vaults[0]?.id ?? null) : s.activeVaultId;
@@ -1121,7 +1155,7 @@ export const createNotesSlice = (set: any, get: any) => ({
   },
 
   renameVault: (vaultId: string, name: string) => {
-    set((s: any) => {
+    set((s) => {
       const vaults = s.vaults.map((v: Vault) => v.id === vaultId ? { ...v, name, updatedAt: Date.now() } : v);
       localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
       return { vaults };
@@ -1187,7 +1221,7 @@ export const createNotesSlice = (set: any, get: any) => ({
     }
 
     // Merge with existing concepts (replace page's concepts)
-    set((s: any) => ({
+    set((s) => ({
       concepts: [
         ...s.concepts.filter((c: Concept) => c.sourcePageId !== pageId),
         ...newConcepts,
@@ -1198,12 +1232,12 @@ export const createNotesSlice = (set: any, get: any) => ({
   addConcept: (partial: Omit<Concept, 'id' | 'createdAt'>): string => {
     const id = `concept-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const concept: Concept = { ...partial, id, createdAt: Date.now() };
-    set((s: any) => ({ concepts: [...s.concepts, concept] }));
+    set((s) => ({ concepts: [...s.concepts, concept] }));
     return id;
   },
 
   removeConcept: (conceptId: string) => {
-    set((s: any) => ({
+    set((s) => ({
       concepts: s.concepts.filter((c: Concept) => c.id !== conceptId),
     }));
   },
@@ -1314,7 +1348,7 @@ export const createNotesSlice = (set: any, get: any) => ({
       localStorage.setItem(vaultKey(vid, 'concepts'), JSON.stringify(s.concepts));
 
       // Update vault page count
-      set((st: any) => ({
+      set((st) => ({
         vaults: st.vaults.map((v: Vault) =>
           v.id === vid ? { ...v, pageCount: s.notePages.length, updatedAt: Date.now() } : v
         ),
@@ -1356,9 +1390,10 @@ export const createNotesSlice = (set: any, get: any) => ({
 });
 
 // ── Debounced save helper ──
-function debouncedSave(get: any) {
-  clearTimeout((globalThis as any).__notesSaveTimer);
-  (globalThis as any).__notesSaveTimer = setTimeout(() => {
+function debouncedSave(get: PFCGet) {
+  if (_notesSaveTimer) clearTimeout(_notesSaveTimer);
+  _notesSaveTimer = setTimeout(() => {
+    _notesSaveTimer = null;
     get().saveNotesToStorage();
   }, 300);
 }

@@ -285,7 +285,6 @@ interface MultimodalInputProps {
   hero?: boolean;
   showControlsToggle?: boolean;
   inputStyle?: React.CSSProperties;
-  onFocusChange?: (focused: boolean) => void;
 }
 
 // Stable selectors
@@ -300,7 +299,6 @@ export function MultimodalInput({
   hero,
   showControlsToggle,
   inputStyle,
-  onFocusChange,
 }: MultimodalInputProps) {
   const toggleLiveControls = usePFCStore(selectToggleLiveControls);
   const liveControlsOpen = usePFCStore(selectLiveControlsOpen);
@@ -311,9 +309,20 @@ export function MultimodalInput({
   const [typingSuggestions, setTypingSuggestions] = useState<string[]>([]);
   const [brainGlow, setBrainGlow] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const brainGlowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSubmitRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { setThemeMounted(true); }, []);
+  useEffect(() => {
+    setThemeMounted(true);
+    return () => {
+      // Cleanup all timers on unmount
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+      if (brainGlowTimerRef.current) clearTimeout(brainGlowTimerRef.current);
+    };
+  }, []);
   const isDark = themeMounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   useEffect(() => {
@@ -337,18 +346,20 @@ export function MultimodalInput({
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed || isProcessing) return;
+    // Debounce rapid submissions (300ms)
+    if (Date.now() - lastSubmitRef.current < 300) return;
+    lastSubmitRef.current = Date.now();
 
     onSubmit(trimmed);
     setValue('');
     setFocused(false);
     setTypingSuggestions([]);
-    onFocusChange?.(false);
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.blur();
     }
-  }, [value, isProcessing, onSubmit, onFocusChange]);
+  }, [value, isProcessing, onSubmit]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -370,25 +381,28 @@ export function MultimodalInput({
     setFocused(false);
     setValue('');
     setTypingSuggestions([]);
-    onFocusChange?.(false);
     if (textareaRef.current) textareaRef.current.blur();
   };
 
   const handleFocus = () => {
     setFocused(true);
-    onFocusChange?.(true);
   };
 
   const handleBlur = () => {
-    setTimeout(() => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    blurTimerRef.current = setTimeout(() => {
+      blurTimerRef.current = null;
       setFocused(false);
-      onFocusChange?.(false);
     }, 200);
   };
 
   const handleBrainTap = useCallback(() => {
     setBrainGlow(true);
-    setTimeout(() => setBrainGlow(false), 800);
+    if (brainGlowTimerRef.current) clearTimeout(brainGlowTimerRef.current);
+    brainGlowTimerRef.current = setTimeout(() => {
+      brainGlowTimerRef.current = null;
+      setBrainGlow(false);
+    }, 800);
   }, []);
 
   const trimmedValue = value.trim();
@@ -441,10 +455,11 @@ export function MultimodalInput({
             onBlur={handleBlur}
             placeholder="Ask a research question..."
             className={cn(
-              'flex-1 resize-none bg-transparent leading-relaxed text-foreground placeholder:text-muted-foreground/40 outline-none ring-0 border-0 focus:outline-none focus:ring-0 focus:border-0 focus-visible:outline-none focus-visible:ring-0 p-0',
-              hero ? 'text-[0.9rem] min-h-[36px] max-h-[200px]' : 'text-sm min-h-[24px] max-h-[200px]',
+              'flex-1 resize-none bg-transparent leading-relaxed text-foreground placeholder:text-muted-foreground/40 outline-none border-0 focus:outline-none focus:border-0 focus-visible:outline-none px-0',
+              hero ? 'text-[0.9rem] min-h-[36px] max-h-[200px] py-[6px]' : 'text-sm min-h-[24px] max-h-[200px] py-0',
             )}
             rows={1}
+            maxLength={10000}
             disabled={isProcessing}
             style={{ boxShadow: 'none', ...inputStyle }}
           />

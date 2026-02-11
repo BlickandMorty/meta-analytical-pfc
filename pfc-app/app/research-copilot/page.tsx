@@ -1,583 +1,1456 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from 'next-themes';
 import {
   FlaskConicalIcon,
-  BrainCircuitIcon,
-  BookOpenIcon,
-  WrenchIcon,
-  LightbulbIcon,
-  TargetIcon,
   SearchIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
+  SparklesIcon,
+  FileTextIcon,
+  BookOpenIcon,
+  LightbulbIcon,
+  ShieldCheckIcon,
   ClipboardCopyIcon,
   CheckIcon,
-  LayersIcon,
-  BarChart3Icon,
-  ShieldCheckIcon,
-  GitBranchIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ExternalLinkIcon,
   ZapIcon,
-  NetworkIcon,
+  StarIcon,
+  AlertTriangleIcon,
+  Loader2Icon,
+  BookmarkPlusIcon,
+  LibraryIcon,
+  Trash2Icon,
+  TagIcon,
+  StickyNoteIcon,
+  DownloadIcon,
   FilterIcon,
+  UploadIcon,
 } from 'lucide-react';
-import { usePFCStore, type ConceptWeight } from '@/lib/store/use-pfc-store';
-import { cn } from '@/lib/utils';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PageShell, GlassSection } from '@/components/page-shell';
+import { PageShell, Section } from '@/components/page-shell';
+import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { PixelBook } from '@/components/pixel-book';
+import type { InferenceConfig } from '@/lib/engine/llm/config';
+import type { S2Paper } from '@/lib/engine/research/semantic-scholar';
+import { exportData, downloadExport, getMimeType } from '@/lib/research/export';
+import type { ResearchPaper, ExportFormat } from '@/lib/research/types';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+/* ═══════════════════════════════════════════════════════════════════
+   Design Tokens (matches evaluate page)
+   ═══════════════════════════════════════════════════════════════════ */
 
-interface ResearchTechnique {
-  id: string;
-  name: string;
-  category: 'statistical' | 'causal' | 'qualitative' | 'meta' | 'computational' | 'experimental';
-  description: string;
-  whenToUse: string;
-  strengths: string[];
-  limitations: string[];
-  relatedConcepts: string[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  icon: React.ReactNode;
-}
+const SPRING_SOFT = { type: 'spring' as const, stiffness: 300, damping: 25, mass: 0.6 };
+const CUP = 'cubic-bezier(0.32, 0.72, 0, 1)';
 
-interface ScaffoldingTool {
-  id: string;
-  name: string;
-  description: string;
-  category: 'design' | 'analysis' | 'validation' | 'reporting' | 'collaboration';
-  actionLabel: string;
-  icon: React.ReactNode;
-}
+/* ═══════════════════════════════════════════════════════════════════
+   Tabs
+   ═══════════════════════════════════════════════════════════════════ */
 
-interface StudyReference {
-  id: string;
-  title: string;
-  domain: string;
-  methodology: string;
-  keyConcept: string;
-  relevance: number; // 0-1 how relevant to current concepts
-}
+type HubTab = 'search' | 'novelty' | 'review' | 'citations' | 'ideas' | 'library';
 
-// ---------------------------------------------------------------------------
-// Static data — Research Techniques
-// ---------------------------------------------------------------------------
-
-const TECHNIQUES: ResearchTechnique[] = [
-  {
-    id: 'rct',
-    name: 'Randomized Controlled Trial',
-    category: 'experimental',
-    description: 'Gold standard for causal inference. Randomly assigns participants to treatment and control groups to isolate the effect of an intervention.',
-    whenToUse: 'When you need to establish causation, not just correlation. Best when ethical and practical constraints allow randomization.',
-    strengths: ['Strong internal validity', 'Controls for confounders', 'Clear causal interpretation'],
-    limitations: ['Expensive', 'May lack external validity', 'Ethical constraints'],
-    relatedConcepts: ['causality', 'confounding', 'effect_size', 'power'],
-    difficulty: 'advanced',
-    icon: <ShieldCheckIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'meta-analysis',
-    name: 'Meta-Analysis',
-    category: 'meta',
-    description: 'Quantitatively combines results from multiple studies to arrive at a pooled estimate. Uses weighting, heterogeneity assessment, and forest plots.',
-    whenToUse: 'When multiple studies exist on the same question and you want a summary effect. Also useful for identifying moderators of effects.',
-    strengths: ['Increased statistical power', 'Identifies patterns across studies', 'Quantifies heterogeneity'],
-    limitations: ['Garbage in, garbage out', 'Publication bias', 'Assumes comparable outcomes'],
-    relatedConcepts: ['heterogeneity', 'effect_size', 'bayesian_prior', 'replication'],
-    difficulty: 'advanced',
-    icon: <LayersIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'bayesian-updating',
-    name: 'Bayesian Updating',
-    category: 'statistical',
-    description: 'Starts with a prior belief and updates it with new evidence to form a posterior. Transparent about assumptions and handles uncertainty naturally.',
-    whenToUse: 'When you have informative priors, want to quantify uncertainty, or need to update beliefs incrementally as evidence arrives.',
-    strengths: ['Handles small samples well', 'Transparent priors', 'Natural uncertainty quantification'],
-    limitations: ['Prior specification can be controversial', 'Computationally intensive', 'Requires statistical expertise'],
-    relatedConcepts: ['bayesian_prior', 'confidence', 'evidence', 'inference'],
-    difficulty: 'intermediate',
-    icon: <GitBranchIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'causal-dag',
-    name: 'Causal DAG Analysis',
-    category: 'causal',
-    description: 'Uses directed acyclic graphs to model causal relationships. Identifies confounders, mediators, and colliders to guide analysis strategy.',
-    whenToUse: 'When you need to reason about causal structure before running statistical tests. Essential for observational studies.',
-    strengths: ['Explicit causal assumptions', 'Guides covariate selection', 'Identifies bias sources'],
-    limitations: ['Requires domain knowledge', 'Can be complex', 'Untestable assumptions'],
-    relatedConcepts: ['causality', 'confounding', 'coherence', 'framework'],
-    difficulty: 'intermediate',
-    icon: <NetworkIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'bradford-hill',
-    name: 'Bradford Hill Criteria',
-    category: 'causal',
-    description: 'Nine criteria for evaluating whether an observed association is causal: strength, consistency, specificity, temporality, biological gradient, plausibility, coherence, experiment, analogy.',
-    whenToUse: 'When evaluating epidemiological or observational evidence for causal claims. Useful as a systematic checklist.',
-    strengths: ['Systematic framework', 'Widely accepted', 'Multi-dimensional assessment'],
-    limitations: ['Criteria are not sufficient/necessary', 'Subjective weighting', 'Originally for epidemiology'],
-    relatedConcepts: ['causality', 'evidence', 'replication', 'effect_size'],
-    difficulty: 'beginner',
-    icon: <BarChart3Icon className="h-4 w-4" />,
-  },
-  {
-    id: 'adversarial-collab',
-    name: 'Adversarial Collaboration',
-    category: 'experimental',
-    description: 'Researchers with opposing views design and conduct a study together, agreeing on methodology and interpretation criteria in advance.',
-    whenToUse: 'When a research question is highly contested and standard approaches have failed to resolve disagreement.',
-    strengths: ['Reduces bias', 'Pre-registered', 'Builds consensus'],
-    limitations: ['Difficult to arrange', 'May compromise on design', 'Requires good faith'],
-    relatedConcepts: ['replication', 'bias', 'coherence'],
-    difficulty: 'advanced',
-    icon: <ZapIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'thematic-analysis',
-    name: 'Thematic Analysis',
-    category: 'qualitative',
-    description: 'Systematic identification, analysis, and reporting of patterns (themes) within qualitative data. Flexible and widely applicable.',
-    whenToUse: 'When working with interview transcripts, open-ended responses, or other qualitative data. When you want to capture the richness of human experience.',
-    strengths: ['Flexible', 'Accessible', 'Rich descriptions'],
-    limitations: ['Subjective', 'Hard to replicate', 'Can miss context'],
-    relatedConcepts: ['coherence', 'framework', 'inference'],
-    difficulty: 'beginner',
-    icon: <BookOpenIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'power-analysis',
-    name: 'Power Analysis',
-    category: 'statistical',
-    description: 'Calculates the sample size needed to detect an effect of a given size with a specified probability. Essential for study planning.',
-    whenToUse: 'Before running any study. Determines whether your planned sample size is adequate to detect meaningful effects.',
-    strengths: ['Prevents underpowered studies', 'Guides resource allocation', 'Required by many journals'],
-    limitations: ['Requires effect size estimate', 'Assumes specific test', 'Can be misused to justify small samples'],
-    relatedConcepts: ['effect_size', 'power', 'replication'],
-    difficulty: 'beginner',
-    icon: <TargetIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'sensitivity-analysis',
-    name: 'Sensitivity Analysis',
-    category: 'computational',
-    description: 'Tests how robust your conclusions are to changes in assumptions, model specifications, or analytical choices. A research integrity essential.',
-    whenToUse: 'After any analysis to check if conclusions hold under different reasonable assumptions. Required for credible research.',
-    strengths: ['Reveals fragility', 'Builds confidence', 'Identifies critical assumptions'],
-    limitations: ['Can generate many results', 'Judgment needed on what to vary', 'Time-consuming'],
-    relatedConcepts: ['confidence', 'evidence', 'bayesian_prior'],
-    difficulty: 'intermediate',
-    icon: <FilterIcon className="h-4 w-4" />,
-  },
+const HUB_TABS: { key: HubTab; label: string; icon: React.ReactNode }[] = [
+  { key: 'search', label: 'Paper Search', icon: <SearchIcon style={{ height: '0.8rem', width: '0.8rem' }} /> },
+  { key: 'novelty', label: 'Novelty Check', icon: <SparklesIcon style={{ height: '0.8rem', width: '0.8rem' }} /> },
+  { key: 'review', label: 'Paper Review', icon: <FileTextIcon style={{ height: '0.8rem', width: '0.8rem' }} /> },
+  { key: 'citations', label: 'Citation Search', icon: <BookOpenIcon style={{ height: '0.8rem', width: '0.8rem' }} /> },
+  { key: 'ideas', label: 'Idea Generator', icon: <LightbulbIcon style={{ height: '0.8rem', width: '0.8rem' }} /> },
+  { key: 'library', label: 'Library', icon: <LibraryIcon style={{ height: '0.8rem', width: '0.8rem' }} /> },
 ];
 
-// ---------------------------------------------------------------------------
-// Static data — Scaffolding Tools
-// ---------------------------------------------------------------------------
+/* ═══════════════════════════════════════════════════════════════════
+   GlassInput — shared input component
+   ═══════════════════════════════════════════════════════════════════ */
 
-const SCAFFOLDING_TOOLS: ScaffoldingTool[] = [
-  {
-    id: 'hypothesis-generator',
-    name: 'Hypothesis Generator',
-    description: 'Given your current concepts and signal state, generates testable hypotheses ranked by novelty and feasibility.',
-    category: 'design',
-    actionLabel: 'Generate Hypotheses',
-    icon: <LightbulbIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'study-designer',
-    name: 'Study Design Advisor',
-    description: 'Recommends study designs (RCT, cohort, cross-sectional, etc.) based on your research question and constraints.',
-    category: 'design',
-    actionLabel: 'Get Design Advice',
-    icon: <FlaskConicalIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'bias-detector',
-    name: 'Bias Detector',
-    description: 'Analyzes your current reasoning pipeline for potential cognitive and methodological biases based on signal patterns.',
-    category: 'validation',
-    actionLabel: 'Detect Biases',
-    icon: <ShieldCheckIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'effect-calculator',
-    name: 'Effect Size Calculator',
-    description: 'Computes and interprets effect sizes (Cohen\'s d, odds ratio, correlation) from your pipeline\'s statistical stage outputs.',
-    category: 'analysis',
-    actionLabel: 'Calculate Effects',
-    icon: <BarChart3Icon className="h-4 w-4" />,
-  },
-  {
-    id: 'replication-checker',
-    name: 'Replication Readiness',
-    description: 'Assesses how replicable your current findings would be based on power, effect size stability, and methodological transparency.',
-    category: 'validation',
-    actionLabel: 'Check Replicability',
-    icon: <GitBranchIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'concept-mapper',
-    name: 'Concept Relationship Mapper',
-    description: 'Exports the current concept hierarchy with weights as a structured research framework for further exploration.',
-    category: 'analysis',
-    actionLabel: 'Map Concepts',
-    icon: <NetworkIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'preregistration-helper',
-    name: 'Pre-Registration Draft',
-    description: 'Generates a structured pre-registration template based on your research question, hypotheses, and planned analyses.',
-    category: 'reporting',
-    actionLabel: 'Draft Pre-Registration',
-    icon: <BookOpenIcon className="h-4 w-4" />,
-  },
-  {
-    id: 'signal-interpreter',
-    name: 'Signal Interpreter',
-    description: 'Explains what your current PFC signal profile means for research quality, and suggests specific improvements.',
-    category: 'analysis',
-    actionLabel: 'Interpret Signals',
-    icon: <BrainCircuitIcon className="h-4 w-4" />,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const CATEGORY_COLORS: Record<string, string> = {
-  statistical: 'bg-pfc-violet/10 text-pfc-violet border-pfc-violet/20',
-  causal: 'bg-pfc-ember/10 text-pfc-ember border-pfc-ember/20',
-  qualitative: 'bg-pfc-green/10 text-pfc-green border-pfc-green/20',
-  meta: 'bg-pfc-yellow/10 text-pfc-yellow border-pfc-yellow/20',
-  computational: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
-  experimental: 'bg-pink-500/10 text-pink-500 border-pink-500/20',
-  design: 'bg-pfc-violet/10 text-pfc-violet border-pfc-violet/20',
-  analysis: 'bg-pfc-ember/10 text-pfc-ember border-pfc-ember/20',
-  validation: 'bg-pfc-green/10 text-pfc-green border-pfc-green/20',
-  reporting: 'bg-pfc-yellow/10 text-pfc-yellow border-pfc-yellow/20',
-  collaboration: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
-};
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: 'bg-pfc-green/15 text-pfc-green border-pfc-green/30',
-  intermediate: 'bg-pfc-yellow/15 text-pfc-yellow border-pfc-yellow/30',
-  advanced: 'bg-pfc-red/15 text-pfc-red border-pfc-red/30',
-};
-
-function generateStudyReferences(concepts: string[], weights: Record<string, ConceptWeight>): StudyReference[] {
-  // Generate contextual study references based on active concepts
-  const studies: StudyReference[] = [];
-  const conceptList = Object.keys(weights);
-
-  const studyTemplates = [
-    { domain: 'Methodology', methodology: 'Systematic Review', title: 'Assessing replication rates across {concept} research paradigms', keyConcept: 'replication' },
-    { domain: 'Statistics', methodology: 'Monte Carlo Simulation', title: 'Statistical power in {concept} studies: A simulation analysis', keyConcept: 'power' },
-    { domain: 'Meta-Science', methodology: 'Meta-Analysis', title: 'Publication bias and effect inflation in {concept} literature', keyConcept: 'bias' },
-    { domain: 'Causal Inference', methodology: 'DAG Analysis', title: 'Confounding structures in observational {concept} studies', keyConcept: 'confounding' },
-    { domain: 'Bayesian Methods', methodology: 'Bayesian Meta-Analysis', title: 'Prior sensitivity in {concept} evidence synthesis', keyConcept: 'bayesian_prior' },
-    { domain: 'Research Design', methodology: 'Pre-Registration Analysis', title: 'Deviation from pre-registered {concept} protocols', keyConcept: 'evidence' },
-    { domain: 'Epistemology', methodology: 'Philosophical Analysis', title: 'Epistemic standards for {concept} claims', keyConcept: 'coherence' },
-    { domain: 'Computational', methodology: 'Network Analysis', title: 'Concept co-occurrence networks in {concept} discourse', keyConcept: 'framework' },
-  ];
-
-  for (let i = 0; i < Math.min(conceptList.length * 2, 8); i++) {
-    const template = studyTemplates[i % studyTemplates.length];
-    const concept = conceptList[i % conceptList.length] || 'research';
-    const cw = weights[concept];
-    const relevance = cw ? Math.min(1, (cw.weight * cw.autoWeight) / 1.5) : 0.3;
-
-    studies.push({
-      id: `study-${i}`,
-      title: template.title.replace('{concept}', concept.replace(/_/g, ' ')),
-      domain: template.domain,
-      methodology: template.methodology,
-      keyConcept: template.keyConcept,
-      relevance,
-    });
-  }
-
-  return studies.sort((a, b) => b.relevance - a.relevance);
-}
-
-// ---------------------------------------------------------------------------
-// Technique Card
-// ---------------------------------------------------------------------------
-
-function TechniqueCard({
-  technique,
-  isRelevant,
+function GlassInput({
+  value,
+  onChange,
+  placeholder,
+  isDark,
+  multiline,
+  rows,
+  maxLength,
 }: {
-  technique: ResearchTechnique;
-  isRelevant: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  isDark: boolean;
+  multiline?: boolean;
+  rows?: number;
+  maxLength?: number;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const shared: React.CSSProperties = {
+    width: '100%',
+    padding: '0.625rem 1rem',
+    borderRadius: multiline ? '0.75rem' : '9999px',
+    fontSize: '0.8125rem',
+    border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(190,183,170,0.3)'}`,
+    background: isDark ? 'rgba(22,21,19,0.5)' : 'rgba(255,255,255,0.5)',
+    color: isDark ? 'rgba(237,224,212,1)' : 'rgba(60,45,30,0.85)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    outline: 'none',
+    transition: `border 0.15s ${CUP}`,
+    resize: multiline ? ('vertical' as const) : ('none' as const),
+  };
+
+  if (multiline) {
+    return (
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows ?? 4}
+        maxLength={maxLength ?? 50000}
+        style={shared}
+      />
+    );
+  }
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      maxLength={maxLength ?? 10000}
+      style={shared}
+    />
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Score Ring — compact animated score display
+   ═══════════════════════════════════════════════════════════════════ */
+
+function ScoreRing({ score, max, label, isDark, size = 48 }: {
+  score: number; max: number; label: string; isDark: boolean; size?: number;
+}) {
+  const pct = Math.min(score / max, 1);
+  const r = (size - 6) / 2;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference * (1 - pct);
+  const color = pct >= 0.75 ? '#34D399' : pct >= 0.5 ? '#FBBF24' : pct >= 0.25 ? '#FB923C' : '#F87171';
 
   return (
-    <Card className={cn(
-      'transition-all duration-200',
-      isRelevant && 'ring-1 ring-pfc-violet/20',
-    )}>
-      <CardHeader
-        className="cursor-pointer pb-2"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2.5">
-            <div className={cn('p-1.5 rounded-md shrink-0', CATEGORY_COLORS[technique.category])}>
-              {technique.icon}
-            </div>
-            <div>
-              <CardTitle className="text-sm">{technique.name}</CardTitle>
-              <div className="flex items-center gap-1.5 mt-1">
-                <Badge variant="outline" className={cn('text-[8px] uppercase', CATEGORY_COLORS[technique.category])}>
-                  {technique.category}
-                </Badge>
-                <Badge variant="outline" className={cn('text-[8px] uppercase', DIFFICULTY_COLORS[technique.difficulty])}>
-                  {technique.difficulty}
-                </Badge>
-                {isRelevant && (
-                  <Badge variant="outline" className="text-[8px] uppercase bg-pfc-violet/10 text-pfc-violet border-pfc-violet/20">
-                    relevant
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-          {expanded ? <ChevronUpIcon className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDownIcon className="h-4 w-4 text-muted-foreground shrink-0" />}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+      <div style={{ position: 'relative', width: size, height: size }}>
+        <svg width={size} height={size}>
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke={isDark ? 'rgba(79,69,57,0.3)' : 'rgba(190,183,170,0.3)'}
+            strokeWidth={3} />
+          <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke={color} strokeWidth={3} strokeLinecap="round"
+            strokeDasharray={circumference}
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset: offset }}
+            transition={{ duration: 0.8, ease: [0.32, 0.72, 0, 1] }}
+            style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }} />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '0.75rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color,
+        }}>
+          {score.toFixed(1)}
         </div>
-      </CardHeader>
+      </div>
+      <span style={{
+        fontSize: '0.5625rem', fontWeight: 500, letterSpacing: '-0.01em',
+        color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.4)',
+      }}>{label}</span>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Paper Card — compact display for search results
+   ═══════════════════════════════════════════════════════════════════ */
+
+function PaperCard({ paper, isDark, onSave }: {
+  paper: S2Paper; isDark: boolean; onSave: (paper: S2Paper) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const authors = paper.authors.slice(0, 3).map((a) => a.name).join(', ');
+  const extra = paper.authors.length > 3 ? ` +${paper.authors.length - 3}` : '';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={SPRING_SOFT}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderRadius: '0.75rem',
+        padding: '0.875rem 1rem',
+        border: `1px solid ${hovered ? (isDark ? 'rgba(79,69,57,0.3)' : 'rgba(190,183,170,0.3)') : 'transparent'}`,
+        background: hovered
+          ? (isDark ? 'rgba(55,50,45,0.35)' : 'rgba(0,0,0,0.04)')
+          : (isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)'),
+        transition: `background 0.15s ${CUP}, border 0.15s ${CUP}`,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.35, cursor: 'pointer',
+              letterSpacing: '-0.01em',
+            }}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {paper.title}
+          </div>
+          <div style={{
+            fontSize: '0.6875rem', marginTop: '0.25rem',
+            color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.4)',
+          }}>
+            {authors}{extra} · {paper.year ?? 'n.d.'} · {paper.citationCount} citations
+            {paper.venue && ` · ${paper.venue}`}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+          {paper.url && (
+            <a href={paper.url} target="_blank" rel="noopener noreferrer"
+              style={{ padding: '0.375rem', borderRadius: '0.5rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>
+              <ExternalLinkIcon style={{ height: '0.875rem', width: '0.875rem' }} />
+            </a>
+          )}
+          <button
+            onClick={() => { onSave(paper); setSaved(true); setTimeout(() => setSaved(false), 2000); }}
+            style={{
+              padding: '0.375rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer',
+              background: 'transparent',
+              color: saved ? '#34D399' : (isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)'),
+            }}
+          >
+            {saved ? <CheckIcon style={{ height: '0.875rem', width: '0.875rem' }} /> : <BookmarkPlusIcon style={{ height: '0.875rem', width: '0.875rem' }} />}
+          </button>
+        </div>
+      </div>
 
       <AnimatePresence>
-        {expanded && (
+        {expanded && paper.abstract && (
           <motion.div
-            initial={{ opacity: 0, scaleY: 0 }}
-            animate={{ opacity: 1, scaleY: 1 }}
-            exit={{ opacity: 0, scaleY: 0 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-            style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}
+            style={{ overflow: 'hidden' }}
           >
-            <CardContent className="pt-0 space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">{technique.description}</p>
-
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 font-medium mb-1">When to use</p>
-                <p className="text-xs text-foreground/80 leading-relaxed">{technique.whenToUse}</p>
+            <div style={{
+              marginTop: '0.75rem', paddingTop: '0.625rem',
+              borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.06)'}`,
+              fontSize: '0.75rem', lineHeight: 1.6,
+              color: isDark ? 'rgba(156,143,128,0.8)' : 'rgba(0,0,0,0.55)',
+            }}>
+              {paper.abstract}
+            </div>
+            {paper.tldr?.text && (
+              <div style={{
+                marginTop: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '0.5rem',
+                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                fontSize: '0.6875rem', lineHeight: 1.5,
+                color: isDark ? 'rgba(196,149,106,0.9)' : 'rgba(139,100,50,0.8)',
+              }}>
+                <strong>TL;DR:</strong> {paper.tldr.text}
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-pfc-green/60 font-medium mb-1">Strengths</p>
-                  <ul className="space-y-0.5">
-                    {technique.strengths.map((s, i) => (
-                      <li key={i} className="text-[10px] text-foreground/60 flex items-start gap-1">
-                        <span className="text-pfc-green mt-0.5">+</span> {s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-pfc-red/60 font-medium mb-1">Limitations</p>
-                  <ul className="space-y-0.5">
-                    {technique.limitations.map((l, i) => (
-                      <li key={i} className="text-[10px] text-foreground/60 flex items-start gap-1">
-                        <span className="text-pfc-red mt-0.5">-</span> {l}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {technique.relatedConcepts.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {technique.relatedConcepts.map((c) => (
-                    <Badge key={c} variant="secondary" className="text-[8px] bg-pfc-violet/5 text-pfc-violet/70">
-                      {c.replace(/_/g, ' ')}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardContent>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
-    </Card>
+    </motion.div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Scaffolding Tool Card
-// ---------------------------------------------------------------------------
+/* ═══════════════════════════════════════════════════════════════════
+   Helpers
+   ═══════════════════════════════════════════════════════════════════ */
 
-function ToolCard({ tool }: { tool: ScaffoldingTool }) {
-  const [copied, setCopied] = useState(false);
-  const confidence = usePFCStore((s) => s.confidence);
-  const entropy = usePFCStore((s) => s.entropy);
-  const activeConcepts = usePFCStore((s) => s.activeConcepts);
-  const conceptWeights = usePFCStore((s) => s.conceptWeights);
+function useInferenceConfig(): InferenceConfig | null {
+  const mode = usePFCStore((s) => s.inferenceMode);
+  const apiProvider = usePFCStore((s) => s.apiProvider);
+  const apiKey = usePFCStore((s) => s.apiKey);
+  const openaiModel = usePFCStore((s) => s.openaiModel);
+  const anthropicModel = usePFCStore((s) => s.anthropicModel);
+  const ollamaBaseUrl = usePFCStore((s) => s.ollamaBaseUrl);
+  const ollamaModel = usePFCStore((s) => s.ollamaModel);
 
-  const handleAction = () => {
-    // Generate contextual output for each tool
-    const output = generateToolOutput(tool.id, {
-      confidence,
-      entropy,
-      concepts: activeConcepts,
-      weights: conceptWeights,
+  if (mode === 'simulation') return null;
+  return { mode, apiProvider, apiKey, openaiModel, anthropicModel, ollamaBaseUrl, ollamaModel };
+}
+
+async function researchFetch<T>(
+  action: string,
+  body: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<T> {
+  const res = await fetch(`/api/research/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(err.error || `Research API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tab: Paper Search
+   ═══════════════════════════════════════════════════════════════════ */
+
+function PaperSearchTab({ isDark }: { isDark: boolean }) {
+  const [query, setQuery] = useState('');
+  const [year, setYear] = useState('');
+  const [results, setResults] = useState<S2Paper[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const addPaper = usePFCStore((s) => s.addResearchPaper);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Cleanup on unmount — cancel any in-flight fetch
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+  const search = useCallback(async () => {
+    if (!query.trim()) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true); setError('');
+    try {
+      const data = await researchFetch<{ total: number; data: S2Paper[] }>('search-papers', {
+        query: query.trim(), limit: 15, year: year || undefined,
+      }, controller.signal);
+      if (!controller.signal.aborted) { setResults(data.data); setTotal(data.total); }
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setError(e instanceof Error ? e.message : 'Search failed');
+    } finally { if (!controller.signal.aborted) setLoading(false); }
+  }, [query, year]);
+
+  const handleSave = useCallback((paper: S2Paper) => {
+    addPaper({
+      id: `s2-${paper.paperId}`,
+      title: paper.title,
+      authors: paper.authors.map((a) => a.name),
+      year: paper.year ?? new Date().getFullYear(),
+      journal: paper.venue || undefined,
+      doi: paper.externalIds?.DOI,
+      url: paper.url,
+      abstract: paper.abstract ?? undefined,
+      tags: ['semantic-scholar'],
+      savedAt: Date.now(),
     });
-    navigator.clipboard.writeText(output);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  }, [addPaper]);
 
   return (
-    <Card className="hover:border-pfc-ember/20 transition-colors">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className={cn('p-2 rounded-lg shrink-0', CATEGORY_COLORS[tool.category])}>
-            {tool.icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-medium">{tool.name}</h4>
-            <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{tool.description}</p>
-            <GlassBubbleButton
-              color="ember"
-              size="sm"
-              onClick={handleAction}
-              className="mt-2"
-            >
-              {copied ? (
-                <>
-                  <CheckIcon className="h-3 w-3 text-pfc-green" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <ClipboardCopyIcon className="h-3 w-3" />
-                  {tool.actionLabel}
-                </>
-              )}
-            </GlassBubbleButton>
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ flex: 1 }}>
+          <GlassInput value={query} onChange={setQuery} placeholder="Search papers on Semantic Scholar..." isDark={isDark} />
         </div>
-      </CardContent>
-    </Card>
+        <div style={{ width: '8rem' }}>
+          <GlassInput value={year} onChange={setYear} placeholder="Year range" isDark={isDark} />
+        </div>
+        <GlassBubbleButton color="ember" onClick={search} disabled={loading || !query.trim()}>
+          {loading ? <Loader2Icon style={{ height: '0.875rem', width: '0.875rem', animation: 'spin 1s linear infinite' }} /> : <SearchIcon style={{ height: '0.875rem', width: '0.875rem' }} />}
+          Search
+        </GlassBubbleButton>
+      </div>
+
+      {error && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(248,113,113,0.08)' : 'rgba(248,113,113,0.06)',
+          color: '#F87171', fontSize: '0.75rem',
+        }}>
+          {error}
+        </div>
+      )}
+
+      {results.length > 0 && (
+        <div style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.35)' }}>
+          {total.toLocaleString()} results found
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+        {results.map((paper) => (
+          <PaperCard key={paper.paperId} paper={paper} isDark={isDark} onSave={handleSave} />
+        ))}
+      </div>
+    </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tool output generator
-// ---------------------------------------------------------------------------
+/* ═══════════════════════════════════════════════════════════════════
+   Tab: Novelty Check
+   ═══════════════════════════════════════════════════════════════════ */
 
-function generateToolOutput(
-  toolId: string,
-  ctx: { confidence: number; entropy: number; concepts: string[]; weights: Record<string, ConceptWeight> },
-): string {
-  const conceptStr = ctx.concepts.join(', ') || 'none extracted';
-  const weightedConcepts = Object.entries(ctx.weights)
-    .sort(([, a], [, b]) => (b.weight * b.autoWeight) - (a.weight * a.autoWeight))
-    .map(([k, v]) => `${k}: ${(v.weight * v.autoWeight).toFixed(2)}`)
-    .join('\n  ');
+function NoveltyCheckTab({ isDark }: { isDark: boolean }) {
+  const inferenceConfig = useInferenceConfig();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
 
-  switch (toolId) {
-    case 'hypothesis-generator':
-      return `HYPOTHESIS GENERATION\n` +
-        `Active concepts: ${conceptStr}\n` +
-        `Confidence: ${(ctx.confidence * 100).toFixed(0)}%\n` +
-        `Entropy: ${(ctx.entropy * 100).toFixed(0)}%\n\n` +
-        `Generated Hypotheses:\n` +
-        `H1: Increasing ${ctx.concepts[0] || 'the primary variable'} exposure leads to measurable changes in ${ctx.concepts[1] || 'the outcome variable'}\n` +
-        `H2: The relationship between concepts is moderated by ${ctx.concepts[2] || 'contextual factors'}\n` +
-        `H3: Signal entropy (${(ctx.entropy * 100).toFixed(0)}%) suggests ${ctx.entropy > 0.5 ? 'multiple competing mechanisms' : 'convergent evidence'}`;
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
 
-    case 'bias-detector':
-      return `BIAS DETECTION REPORT\n` +
-        `Confidence: ${(ctx.confidence * 100).toFixed(0)}% | Entropy: ${(ctx.entropy * 100).toFixed(0)}%\n\n` +
-        `Detected patterns:\n` +
-        `${ctx.confidence > 0.7 ? 'Warning: Overconfidence risk — high confidence with limited evidence base' : 'OK: Confidence appears calibrated'}\n` +
-        `${ctx.entropy < 0.2 ? 'Warning: Low entropy may indicate premature convergence' : 'OK: Entropy suggests adequate exploration'}\n` +
-        `${ctx.concepts.length < 3 ? 'Warning: Narrow concept base — consider expanding analytical scope' : 'OK: Concept diversity is adequate'}`;
+  const runCheck = useCallback(async () => {
+    if (!title.trim() || !description.trim()) return;
+    if (!inferenceConfig) { setError('Switch to API or Local mode in Settings to use this tool'); return; }
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true); setError('');
+    try {
+      const data = await researchFetch<Record<string, unknown>>('check-novelty', {
+        title: title.trim(), description: description.trim(),
+        maxRounds: 3, inferenceConfig,
+      }, controller.signal);
+      if (!controller.signal.aborted) setResult(data);
+    } catch (e) { if ((e as Error).name !== 'AbortError') setError(e instanceof Error ? e.message : 'Novelty check failed'); }
+    finally { if (!controller.signal.aborted) setLoading(false); }
+  }, [title, description, inferenceConfig]);
 
-    case 'concept-mapper':
-      return `CONCEPT HIERARCHY EXPORT\n` +
-        `Timestamp: ${new Date().toISOString()}\n\n` +
-        `Weighted Concepts:\n  ${weightedConcepts || 'No concepts with weights'}\n\n` +
-        `Active: ${conceptStr}`;
+  const isNovel = result?.isNovel as boolean | undefined;
+  const confidence = result?.confidence as number | undefined;
+  const summary = result?.summary as string | undefined;
+  const rounds = result?.rounds as unknown[] | undefined;
+  const totalPapersReviewed = result?.totalPapersReviewed as number | undefined;
+  const closestPapers = result?.closestPapers as S2Paper[] | undefined;
 
-    case 'signal-interpreter':
-      return `SIGNAL INTERPRETATION\n` +
-        `Confidence: ${(ctx.confidence * 100).toFixed(0)}% — ${ctx.confidence > 0.7 ? 'Strong' : ctx.confidence > 0.4 ? 'Moderate' : 'Weak'}\n` +
-        `Entropy: ${(ctx.entropy * 100).toFixed(0)}% — ${ctx.entropy > 0.6 ? 'High divergence in evidence' : ctx.entropy > 0.3 ? 'Some disagreement' : 'Low divergence'}\n` +
-        `Concepts: ${ctx.concepts.length}\n\n` +
-        `Recommendation: ${ctx.entropy > 0.5 && ctx.confidence < 0.5 ? 'Consider narrowing your research question — high entropy with low confidence suggests the question is too broad' : ctx.confidence > 0.6 ? 'Evidence is converging — consider moving to validation phase' : 'Continue gathering evidence — signals suggest more data needed'}`;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {!inferenceConfig && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.06)',
+          color: '#FBBF24', fontSize: '0.75rem',
+        }}>
+          <AlertTriangleIcon style={{ height: '0.75rem', width: '0.75rem', display: 'inline', marginRight: '0.375rem' }} />
+          LLM required — switch to API or Local mode in Settings
+        </div>
+      )}
+      <GlassInput value={title} onChange={setTitle} placeholder="Idea title..." isDark={isDark} />
+      <GlassInput value={description} onChange={setDescription} placeholder="Describe your research idea..." isDark={isDark} multiline rows={4} />
+      <GlassBubbleButton color="green" onClick={runCheck} disabled={loading || !title.trim() || !description.trim() || !inferenceConfig}>
+        {loading ? <Loader2Icon style={{ height: '0.875rem', width: '0.875rem', animation: 'spin 1s linear infinite' }} /> : <ShieldCheckIcon style={{ height: '0.875rem', width: '0.875rem' }} />}
+        {loading ? 'Checking...' : 'Check Novelty'}
+      </GlassBubbleButton>
 
-    default:
-      return `${toolId.toUpperCase()} OUTPUT\n` +
-        `Concepts: ${conceptStr}\n` +
-        `Confidence: ${(ctx.confidence * 100).toFixed(0)}%\n` +
-        `Full concept weights:\n  ${weightedConcepts}`;
-  }
+      {error && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(248,113,113,0.08)' : 'rgba(248,113,113,0.06)',
+          color: '#F87171', fontSize: '0.75rem',
+        }}>{error}</div>
+      )}
+
+      {result && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={SPRING_SOFT}>
+          {/* Verdict */}
+          <div style={{
+            padding: '1rem', borderRadius: '0.75rem', marginBottom: '0.75rem',
+            background: isNovel
+              ? (isDark ? 'rgba(52,211,153,0.08)' : 'rgba(52,211,153,0.06)')
+              : (isDark ? 'rgba(248,113,113,0.08)' : 'rgba(248,113,113,0.06)'),
+            border: `1px solid ${isNovel ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                fontSize: '1.5rem', fontWeight: 800,
+                color: isNovel ? '#34D399' : '#F87171',
+              }}>
+                {isNovel ? 'Novel' : 'Not Novel'}
+              </div>
+              <div style={{
+                fontSize: '0.75rem',
+                color: isDark ? 'rgba(156,143,128,0.8)' : 'rgba(0,0,0,0.5)',
+              }}>
+                {confidence != null ? `${Math.round(confidence * 100)}%` : '—'} confidence · {rounds?.length ?? 0} search rounds · {totalPapersReviewed ?? 0} papers reviewed
+              </div>
+            </div>
+            {summary && (
+              <div style={{
+                marginTop: '0.5rem', fontSize: '0.75rem', lineHeight: 1.6,
+                color: isDark ? 'rgba(156,143,128,0.8)' : 'rgba(0,0,0,0.5)',
+              }}>
+                {summary}
+              </div>
+            )}
+          </div>
+
+          {/* Closest papers */}
+          {closestPapers && closestPapers.length > 0 && (
+            <Section title="Closest Existing Papers">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                {closestPapers.map((p) => (
+                  <div key={p.paperId} style={{
+                    padding: '0.625rem 0.875rem', borderRadius: '0.5rem',
+                    background: isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)',
+                    fontSize: '0.75rem',
+                  }}>
+                    <div style={{ fontWeight: 600 }}>{p.title}</div>
+                    <div style={{
+                      fontSize: '0.6875rem', marginTop: '0.125rem',
+                      color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.35)',
+                    }}>
+                      {p.authors?.slice(0, 3).map((a) => a.name).join(', ')} · {p.year ?? 'n.d.'} · {p.citationCount} citations
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+        </motion.div>
+      )}
+    </div>
+  );
 }
 
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
+/* ═══════════════════════════════════════════════════════════════════
+   Tab: Paper Review
+   ═══════════════════════════════════════════════════════════════════ */
 
-export default function ResearchCopilotPage() {
-  const ready = useSetupGuard();
+function PaperReviewTab({ isDark }: { isDark: boolean }) {
+  const inferenceConfig = useInferenceConfig();
+  const [title, setTitle] = useState('');
+  const [abstract, setAbstract] = useState('');
+  const [fullText, setFullText] = useState('');
+  const [useEnsemble, setUseEnsemble] = useState(false);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+  const runReview = useCallback(async () => {
+    if (!title.trim() || !abstract.trim()) return;
+    if (!inferenceConfig) { setError('Switch to API or Local mode in Settings'); return; }
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true); setError('');
+    try {
+      const action = useEnsemble ? 'ensemble-review' : 'review-paper';
+      const data = await researchFetch<Record<string, unknown>>(action, {
+        title: title.trim(), abstract: abstract.trim(),
+        fullText: fullText.trim() || undefined,
+        numReviewers: 3, inferenceConfig,
+      }, controller.signal);
+      if (!controller.signal.aborted) setResult(data);
+    } catch (e) { if ((e as Error).name !== 'AbortError') setError(e instanceof Error ? e.message : 'Review failed'); }
+    finally { if (!controller.signal.aborted) setLoading(false); }
+  }, [title, abstract, fullText, useEnsemble, inferenceConfig]);
+
+  // Extract typed fields
+  const scores = (result?.averagedScores ?? result?.scores) as Record<string, number> | undefined;
+  const decision = (result?.decision ?? result?.consensusDecision) as string | undefined;
+  const isAccept = decision === 'accept';
+  const isEnsemble = Boolean(result?.individualReviews);
+  const agreementLevel = result?.agreementLevel as number | undefined;
+  const reviewerCount = (result?.individualReviews as unknown[] | undefined)?.length;
+  const reviewSummary = (result?.metaReview ?? result?.summary) as string | undefined;
+  const strengths = result?.strengths as string[] | undefined;
+  const weaknesses = result?.weaknesses as string[] | undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {!inferenceConfig && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.06)',
+          color: '#FBBF24', fontSize: '0.75rem',
+        }}>
+          <AlertTriangleIcon style={{ height: '0.75rem', width: '0.75rem', display: 'inline', marginRight: '0.375rem' }} />
+          LLM required — switch to API or Local mode in Settings
+        </div>
+      )}
+      <GlassInput value={title} onChange={setTitle} placeholder="Paper title..." isDark={isDark} />
+      <GlassInput value={abstract} onChange={setAbstract} placeholder="Paper abstract..." isDark={isDark} multiline rows={4} />
+      <GlassInput value={fullText} onChange={setFullText} placeholder="Full text (optional, improves review quality)..." isDark={isDark} multiline rows={6} />
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <GlassBubbleButton color="violet" onClick={runReview} disabled={loading || !title.trim() || !abstract.trim() || !inferenceConfig}>
+          {loading ? <Loader2Icon style={{ height: '0.875rem', width: '0.875rem', animation: 'spin 1s linear infinite' }} /> : <FileTextIcon style={{ height: '0.875rem', width: '0.875rem' }} />}
+          {loading ? 'Reviewing...' : 'Review Paper'}
+        </GlassBubbleButton>
+        <GlassBubbleButton
+          color={useEnsemble ? 'green' : 'neutral'}
+          active={useEnsemble}
+          onClick={() => setUseEnsemble(!useEnsemble)}
+        >
+          <ZapIcon style={{ height: '0.75rem', width: '0.75rem' }} />
+          Ensemble (3 reviewers)
+        </GlassBubbleButton>
+      </div>
+
+      {error && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(248,113,113,0.08)' : 'rgba(248,113,113,0.06)',
+          color: '#F87171', fontSize: '0.75rem',
+        }}>{error}</div>
+      )}
+
+      {scores && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={SPRING_SOFT}
+          style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+          {/* Decision */}
+          <div style={{
+            padding: '0.875rem 1rem', borderRadius: '0.75rem',
+            background: isAccept
+              ? (isDark ? 'rgba(52,211,153,0.08)' : 'rgba(52,211,153,0.06)')
+              : (isDark ? 'rgba(248,113,113,0.08)' : 'rgba(248,113,113,0.06)'),
+            border: `1px solid ${isAccept ? 'rgba(52,211,153,0.2)' : 'rgba(248,113,113,0.2)'}`,
+            display: 'flex', alignItems: 'center', gap: '0.75rem',
+          }}>
+            <span style={{
+              fontSize: '1.25rem', fontWeight: 800,
+              color: isAccept ? '#34D399' : '#F87171',
+            }}>
+              {(decision ?? '').toUpperCase()}
+            </span>
+            {isEnsemble && (
+              <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.35)' }}>
+                {agreementLevel != null ? `${Math.round(agreementLevel * 100)}%` : '—'} agreement · {reviewerCount ?? 0} reviewers
+              </span>
+            )}
+          </div>
+
+          {/* Scores ring grid */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center' }}>
+            <ScoreRing score={scores.overall ?? 0} max={10} label="Overall" isDark={isDark} size={56} />
+            <ScoreRing score={scores.originality ?? 0} max={4} label="Originality" isDark={isDark} />
+            <ScoreRing score={scores.quality ?? 0} max={4} label="Quality" isDark={isDark} />
+            <ScoreRing score={scores.clarity ?? 0} max={4} label="Clarity" isDark={isDark} />
+            <ScoreRing score={scores.significance ?? 0} max={4} label="Significance" isDark={isDark} />
+            <ScoreRing score={scores.soundness ?? 0} max={4} label="Soundness" isDark={isDark} />
+            <ScoreRing score={scores.presentation ?? 0} max={4} label="Presentation" isDark={isDark} />
+            <ScoreRing score={scores.contribution ?? 0} max={4} label="Contribution" isDark={isDark} />
+            <ScoreRing score={scores.confidence ?? 0} max={5} label="Confidence" isDark={isDark} />
+          </div>
+
+          {/* Summary + feedback */}
+          {reviewSummary && (
+            <Section title={isEnsemble ? 'Meta-Review' : 'Summary'}>
+              <div style={{
+                fontSize: '0.75rem', lineHeight: 1.7,
+                color: isDark ? 'rgba(156,143,128,0.85)' : 'rgba(0,0,0,0.55)',
+              }}>
+                {reviewSummary}
+              </div>
+            </Section>
+          )}
+
+          {/* Strengths / Weaknesses */}
+          {((strengths && strengths.length > 0) || (weaknesses && weaknesses.length > 0)) && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              {strengths && strengths.length > 0 && (
+                <Section title="Strengths">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    {strengths.map((s, i) => (
+                      <div key={i} style={{
+                        fontSize: '0.6875rem', lineHeight: 1.5, display: 'flex', gap: '0.5rem',
+                        color: isDark ? 'rgba(156,143,128,0.8)' : 'rgba(0,0,0,0.5)',
+                      }}>
+                        <span style={{ color: '#34D399', fontWeight: 700, flexShrink: 0 }}>+</span>
+                        {s}
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+              {weaknesses && weaknesses.length > 0 && (
+                <Section title="Weaknesses">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                    {weaknesses.map((w, i) => (
+                      <div key={i} style={{
+                        fontSize: '0.6875rem', lineHeight: 1.5, display: 'flex', gap: '0.5rem',
+                        color: isDark ? 'rgba(156,143,128,0.8)' : 'rgba(0,0,0,0.5)',
+                      }}>
+                        <span style={{ color: '#F87171', fontWeight: 700, flexShrink: 0 }}>-</span>
+                        {w}
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tab: Citation Search
+   ═══════════════════════════════════════════════════════════════════ */
+
+function CitationSearchTab({ isDark }: { isDark: boolean }) {
+  const inferenceConfig = useInferenceConfig();
+  const [text, setText] = useState('');
+  const [context, setContext] = useState('');
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+  const runSearch = useCallback(async () => {
+    if (!text.trim()) return;
+    if (!inferenceConfig) { setError('Switch to API or Local mode in Settings'); return; }
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true); setError('');
+    try {
+      const data = await researchFetch<Record<string, unknown>>('search-citations', {
+        text: text.trim(), context: context.trim() || undefined,
+        maxRounds: 2, inferenceConfig,
+      }, controller.signal);
+      if (!controller.signal.aborted) setResult(data);
+    } catch (e) { if ((e as Error).name !== 'AbortError') setError(e instanceof Error ? e.message : 'Citation search failed'); }
+    finally { if (!controller.signal.aborted) setLoading(false); }
+  }, [text, context, inferenceConfig]);
+
+  const annotatedText = result?.annotatedText as string | undefined;
+  const bibtexEntries = result?.bibtexEntries as string[] | undefined;
+  const totalClaimsFound = result?.totalClaimsFound as number | undefined;
+  const totalPapersMatched = result?.totalPapersMatched as number | undefined;
+  const allMatches = result?.allMatches as Record<string, unknown>[] | undefined;
+
+  const copyAnnotated = useCallback(() => {
+    if (!annotatedText) return;
+    navigator.clipboard.writeText(annotatedText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [annotatedText]);
+
+  const copyBibtex = useCallback(() => {
+    if (!bibtexEntries?.length) return;
+    navigator.clipboard.writeText(bibtexEntries.join('\n\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [bibtexEntries]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {!inferenceConfig && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.06)',
+          color: '#FBBF24', fontSize: '0.75rem',
+        }}>
+          <AlertTriangleIcon style={{ height: '0.75rem', width: '0.75rem', display: 'inline', marginRight: '0.375rem' }} />
+          LLM required — switch to API or Local mode in Settings
+        </div>
+      )}
+      <GlassInput value={text} onChange={setText} placeholder="Paste your research text to find citations..." isDark={isDark} multiline rows={8} />
+      <GlassInput value={context} onChange={setContext} placeholder="Topic context (optional, e.g. 'transformer architectures')..." isDark={isDark} />
+      <GlassBubbleButton color="cyan" onClick={runSearch} disabled={loading || !text.trim() || !inferenceConfig}>
+        {loading ? <Loader2Icon style={{ height: '0.875rem', width: '0.875rem', animation: 'spin 1s linear infinite' }} /> : <BookOpenIcon style={{ height: '0.875rem', width: '0.875rem' }} />}
+        {loading ? 'Searching citations...' : 'Find Citations'}
+      </GlassBubbleButton>
+
+      {error && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(248,113,113,0.08)' : 'rgba(248,113,113,0.06)',
+          color: '#F87171', fontSize: '0.75rem',
+        }}>{error}</div>
+      )}
+
+      {result && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={SPRING_SOFT}
+          style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+          {/* Stats */}
+          <div style={{
+            display: 'flex', gap: '1.5rem', fontSize: '0.75rem',
+            color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.4)',
+          }}>
+            <span>{totalClaimsFound ?? 0} claims identified</span>
+            <span>{totalPapersMatched ?? 0} papers matched</span>
+            <span>{bibtexEntries?.length ?? 0} unique references</span>
+          </div>
+
+          {/* Copy buttons */}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <GlassBubbleButton color="ember" size="sm" onClick={copyAnnotated}>
+              <ClipboardCopyIcon style={{ height: '0.75rem', width: '0.75rem' }} />
+              Copy Annotated Text
+            </GlassBubbleButton>
+            <GlassBubbleButton color="neutral" size="sm" onClick={copyBibtex}>
+              <ClipboardCopyIcon style={{ height: '0.75rem', width: '0.75rem' }} />
+              Copy BibTeX
+            </GlassBubbleButton>
+            {copied && (
+              <span style={{ fontSize: '0.6875rem', color: '#34D399', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <CheckIcon style={{ height: '0.75rem', width: '0.75rem' }} /> Copied!
+              </span>
+            )}
+          </div>
+
+          {/* Citation matches */}
+          {allMatches && allMatches.length > 0 && (
+            <Section title="Citation Matches">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {allMatches.map((m, i) => {
+                  const paper = m.paper as Record<string, unknown> | undefined;
+                  const claim = m.claim as string | undefined;
+                  const bibtexKey = m.bibtexKey as string | undefined;
+                  const explanation = m.explanation as string | undefined;
+                  const relevanceScore = m.relevanceScore as number | undefined;
+
+                  return (
+                    <div key={i} style={{
+                      padding: '0.75rem', borderRadius: '0.625rem',
+                      background: isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)',
+                      fontSize: '0.75rem',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            fontSize: '0.6875rem', fontStyle: 'italic', marginBottom: '0.25rem',
+                            color: isDark ? 'rgba(196,149,106,0.8)' : 'rgba(139,100,50,0.7)',
+                          }}>
+                            &ldquo;{claim}&rdquo;
+                          </div>
+                          <div style={{ fontWeight: 600 }}>
+                            {(paper?.title as string) ?? 'Unknown'}{' '}
+                            <span style={{
+                              fontWeight: 400,
+                              color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                            }}>[{bibtexKey}]</span>
+                          </div>
+                          {explanation && (
+                            <div style={{
+                              fontSize: '0.6875rem', marginTop: '0.125rem',
+                              color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.35)',
+                            }}>
+                              {explanation}
+                            </div>
+                          )}
+                        </div>
+                        {relevanceScore != null && (
+                          <div style={{
+                            fontSize: '0.6875rem', fontWeight: 700, flexShrink: 0,
+                            color: relevanceScore >= 0.8 ? '#34D399' : relevanceScore >= 0.6 ? '#FBBF24' : '#FB923C',
+                          }}>
+                            {Math.round(relevanceScore * 100)}%
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tab: Idea Generator
+   ═══════════════════════════════════════════════════════════════════ */
+
+function IdeaGeneratorTab({ isDark }: { isDark: boolean }) {
+  const inferenceConfig = useInferenceConfig();
+  const [topic, setTopic] = useState('');
+  const [context, setContext] = useState('');
+  const [constraints, setConstraints] = useState('');
+  const [numIdeas, setNumIdeas] = useState(3);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [expandedIdea, setExpandedIdea] = useState<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+  const generate = useCallback(async () => {
+    if (!topic.trim()) return;
+    if (!inferenceConfig) { setError('Switch to API or Local mode in Settings'); return; }
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true); setError('');
+    try {
+      const data = await researchFetch<Record<string, unknown>>('generate-ideas', {
+        topic: topic.trim(),
+        context: context.trim() || undefined,
+        constraints: constraints.trim() || undefined,
+        numIdeas, numReflections: 2, inferenceConfig,
+      }, controller.signal);
+      if (!controller.signal.aborted) setResult(data);
+    } catch (e) { if ((e as Error).name !== 'AbortError') setError(e instanceof Error ? e.message : 'Idea generation failed'); }
+    finally { if (!controller.signal.aborted) setLoading(false); }
+  }, [topic, context, constraints, numIdeas, inferenceConfig]);
+
+  const quickIdea = useCallback(async () => {
+    if (!topic.trim()) return;
+    if (!inferenceConfig) { setError('Switch to API or Local mode in Settings'); return; }
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLoading(true); setError('');
+    try {
+      const idea = await researchFetch<Record<string, unknown>>('quick-idea', {
+        topic: topic.trim(), context: context.trim() || undefined, inferenceConfig,
+      }, controller.signal);
+      if (!controller.signal.aborted) {
+        setResult({
+          ideas: [{ idea, reflectionRounds: [], overallScore: 0, generationTimestamp: Date.now() }],
+          totalGenerated: 1, totalAfterDedup: 1, topic: topic.trim(),
+        });
+      }
+    } catch (e) { if ((e as Error).name !== 'AbortError') setError(e instanceof Error ? e.message : 'Quick idea failed'); }
+    finally { if (!controller.signal.aborted) setLoading(false); }
+  }, [topic, context, inferenceConfig]);
+
+  const ideas = result?.ideas as Record<string, unknown>[] | undefined;
+  const totalGenerated = result?.totalGenerated as number | undefined;
+  const totalAfterDedup = result?.totalAfterDedup as number | undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {!inferenceConfig && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.06)',
+          color: '#FBBF24', fontSize: '0.75rem',
+        }}>
+          <AlertTriangleIcon style={{ height: '0.75rem', width: '0.75rem', display: 'inline', marginRight: '0.375rem' }} />
+          LLM required — switch to API or Local mode in Settings
+        </div>
+      )}
+      <GlassInput value={topic} onChange={setTopic} placeholder="Research topic (e.g., 'attention mechanisms in vision transformers')..." isDark={isDark} />
+      <GlassInput value={context} onChange={setContext} placeholder="Additional context (optional)..." isDark={isDark} />
+      <GlassInput value={constraints} onChange={setConstraints} placeholder="Constraints (optional, e.g., 'must use public datasets')..." isDark={isDark} />
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <GlassBubbleButton color="yellow" onClick={generate} disabled={loading || !topic.trim() || !inferenceConfig}>
+          {loading ? <Loader2Icon style={{ height: '0.875rem', width: '0.875rem', animation: 'spin 1s linear infinite' }} /> : <LightbulbIcon style={{ height: '0.875rem', width: '0.875rem' }} />}
+          {loading ? 'Generating...' : `Generate ${numIdeas} Ideas`}
+        </GlassBubbleButton>
+        <GlassBubbleButton color="neutral" onClick={quickIdea} disabled={loading || !topic.trim() || !inferenceConfig}>
+          <ZapIcon style={{ height: '0.75rem', width: '0.75rem' }} />
+          Quick Idea
+        </GlassBubbleButton>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          {[1, 2, 3, 5].map((n) => (
+            <GlassBubbleButton key={n} size="sm" active={numIdeas === n}
+              color={numIdeas === n ? 'ember' : 'neutral'}
+              onClick={() => setNumIdeas(n)}>
+              {n}
+            </GlassBubbleButton>
+          ))}
+        </div>
+      </div>
+
+      {error && (
+        <div style={{
+          padding: '0.75rem 1rem', borderRadius: '0.75rem',
+          background: isDark ? 'rgba(248,113,113,0.08)' : 'rgba(248,113,113,0.06)',
+          color: '#F87171', fontSize: '0.75rem',
+        }}>{error}</div>
+      )}
+
+      {ideas && ideas.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={SPRING_SOFT}
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+
+          <div style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.35)' }}>
+            Generated {totalGenerated ?? 0} ideas · {totalAfterDedup ?? 0} after dedup
+          </div>
+
+          {ideas.map((gi, idx) => {
+            const idea = gi.idea as Record<string, string> | undefined;
+            const overallScore = gi.overallScore as number | undefined;
+            const reflectionRounds = gi.reflectionRounds as Record<string, unknown>[] | undefined;
+            const isExpanded = expandedIdea === idx;
+
+            if (!idea) return null;
+
+            return (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...SPRING_SOFT, delay: idx * 0.08 }}
+                style={{
+                  borderRadius: '0.75rem', padding: '1rem',
+                  background: isDark ? 'rgba(244,189,111,0.04)' : 'rgba(0,0,0,0.02)',
+                  border: `1px solid ${isDark ? 'rgba(79,69,57,0.15)' : 'rgba(190,183,170,0.2)'}`,
+                }}
+              >
+                <div
+                  style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}
+                  onClick={() => setExpandedIdea(isExpanded ? null : idx)}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <span style={{
+                        fontSize: '0.6875rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+                        color: (overallScore ?? 0) >= 0.7 ? '#34D399' : (overallScore ?? 0) >= 0.4 ? '#FBBF24' : '#F87171',
+                      }}>
+                        {Math.round((overallScore ?? 0) * 100)}%
+                      </span>
+                      <StarIcon style={{
+                        height: '0.6875rem', width: '0.6875rem',
+                        color: (overallScore ?? 0) >= 0.7 ? '#34D399' : (overallScore ?? 0) >= 0.4 ? '#FBBF24' : (isDark ? 'rgba(156,143,128,0.3)' : 'rgba(0,0,0,0.15)'),
+                      }} />
+                    </div>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 650, lineHeight: 1.35, letterSpacing: '-0.01em' }}>
+                      {idea.title}
+                    </div>
+                    <div style={{
+                      fontSize: '0.6875rem', marginTop: '0.25rem',
+                      color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                      fontFamily: 'monospace',
+                    }}>
+                      {idea.name}
+                    </div>
+                  </div>
+                  {isExpanded
+                    ? <ChevronUpIcon style={{ height: '1rem', width: '1rem', flexShrink: 0, color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.2)' }} />
+                    : <ChevronDownIcon style={{ height: '1rem', width: '1rem', flexShrink: 0, color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.2)' }} />
+                  }
+                </div>
+
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div style={{
+                        marginTop: '0.75rem', paddingTop: '0.75rem',
+                        borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.06)'}`,
+                        display: 'flex', flexDirection: 'column', gap: '0.75rem',
+                        fontSize: '0.75rem', lineHeight: 1.6,
+                        color: isDark ? 'rgba(156,143,128,0.8)' : 'rgba(0,0,0,0.55)',
+                      }}>
+                        {(['experiment', 'interestingness', 'feasibility', 'novelty'] as const).map((field) => (
+                          <div key={field}>
+                            <div style={{
+                              fontWeight: 600, fontSize: '0.6875rem', marginBottom: '0.25rem',
+                              textTransform: 'uppercase', letterSpacing: '0.05em',
+                              color: isDark ? 'rgba(196,149,106,0.7)' : 'rgba(139,100,50,0.6)',
+                            }}>
+                              {field.charAt(0).toUpperCase() + field.slice(1)}
+                            </div>
+                            {idea[field]}
+                          </div>
+                        ))}
+                        {reflectionRounds && reflectionRounds.length > 0 && (
+                          <div style={{
+                            paddingTop: '0.5rem',
+                            borderTop: `1px solid ${isDark ? 'rgba(79,69,57,0.15)' : 'rgba(0,0,0,0.04)'}`,
+                          }}>
+                            <div style={{
+                              fontWeight: 600, fontSize: '0.6875rem', marginBottom: '0.375rem',
+                              textTransform: 'uppercase', letterSpacing: '0.05em',
+                              color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                            }}>
+                              Reflection ({reflectionRounds.length} rounds)
+                            </div>
+                            {reflectionRounds.map((rr, ri) => {
+                              const critique = rr.critique as string | undefined;
+                              const improvements = rr.improvements as string[] | undefined;
+                              const roundNumber = rr.roundNumber as number | undefined;
+                              return (
+                                <div key={ri} style={{
+                                  marginBottom: '0.375rem', paddingLeft: '0.625rem',
+                                  borderLeft: `2px solid ${isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.06)'}`,
+                                  fontSize: '0.6875rem',
+                                }}>
+                                  <strong>Round {roundNumber ?? ri + 1}:</strong> {(critique ?? '').slice(0, 200)}
+                                  {improvements && improvements.length > 0 && (
+                                    <div style={{ marginTop: '0.125rem', color: isDark ? 'rgba(52,211,153,0.7)' : 'rgba(22,101,52,0.6)' }}>
+                                      Improvements: {improvements.join('; ')}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tab: Library — saved papers, search, export
+   ═══════════════════════════════════════════════════════════════════ */
+
+function LibraryTab({ isDark }: { isDark: boolean }) {
+  const papers = usePFCStore((s) => s.researchPapers);
+  const addResearchPaper = usePFCStore((s) => s.addResearchPaper);
+  const removeResearchPaper = usePFCStore((s) => s.removeResearchPaper);
+  const updateResearchPaper = usePFCStore((s) => s.updateResearchPaper);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'techniques' | 'tools' | 'studies'>('techniques');
-  const activeConcepts = usePFCStore((s) => s.activeConcepts);
-  const conceptWeights = usePFCStore((s) => s.conceptWeights);
-  const confidence = usePFCStore((s) => s.confidence);
-  const entropy = usePFCStore((s) => s.entropy);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter techniques by search and relevance to current concepts
-  const filteredTechniques = useMemo(() => {
-    const lower = searchQuery.toLowerCase();
-    return TECHNIQUES
-      .filter((t) =>
-        !lower ||
-        t.name.toLowerCase().includes(lower) ||
-        t.category.includes(lower) ||
-        t.description.toLowerCase().includes(lower) ||
-        t.relatedConcepts.some((c) => c.includes(lower))
-      )
-      .map((t) => ({
-        ...t,
-        isRelevant: t.relatedConcepts.some((rc) =>
-          activeConcepts.some((ac) => ac.toLowerCase().includes(rc) || rc.includes(ac.toLowerCase()))
-        ),
-      }))
-      .sort((a, b) => (b.isRelevant ? 1 : 0) - (a.isRelevant ? 1 : 0));
-  }, [searchQuery, activeConcepts]);
+  const handleFileImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    for (const file of Array.from(files)) {
+      const name = file.name.replace(/\.(pdf|bib|ris|txt)$/i, '').replace(/[-_]/g, ' ');
+      const paper: ResearchPaper = {
+        id: `paper-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title: name,
+        authors: [],
+        year: new Date().getFullYear(),
+        tags: ['imported'],
+        savedAt: Date.now(),
+      };
+      addResearchPaper(paper);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [addResearchPaper]);
 
-  // Generate contextual study references
-  const studyRefs = useMemo(
-    () => generateStudyReferences(activeConcepts, conceptWeights),
-    [activeConcepts, conceptWeights],
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    papers.forEach((p) => p.tags.forEach((t) => tags.add(t)));
+    return Array.from(tags).sort();
+  }, [papers]);
+
+  const filteredPapers = useMemo(() => {
+    let result = papers;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          p.authors.some((a) => a.toLowerCase().includes(q)) ||
+          p.journal?.toLowerCase().includes(q) ||
+          p.tags.some((t) => t.toLowerCase().includes(q)),
+      );
+    }
+    if (selectedTag) {
+      result = result.filter((p) => p.tags.includes(selectedTag));
+    }
+    return result;
+  }, [papers, searchQuery, selectedTag]);
+
+  const handleExport = useCallback(
+    (format: ExportFormat) => {
+      const content = exportData(format, 'papers', { papers });
+      const ext = format === 'bibtex' ? 'bib' : format;
+      downloadExport(content, `pfc-research-library.${ext}`, getMimeType(format));
+    },
+    [papers],
   );
+
+  const handleSaveNote = useCallback(
+    (id: string) => {
+      updateResearchPaper(id, { notes: noteText });
+      setEditingId(null);
+      setNoteText('');
+    },
+    [noteText, updateResearchPaper],
+  );
+
+  const tagPillStyle = (isActive: boolean): React.CSSProperties => ({
+    fontSize: '0.75rem',
+    padding: '0.125rem 0.5rem',
+    borderRadius: '9999px',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    border: isActive
+      ? `1px solid ${isDark ? 'rgba(196,149,106,0.2)' : 'rgba(196,149,106,0.15)'}`
+      : '1px solid transparent',
+    background: isActive
+      ? (isDark ? 'rgba(44,43,41,0.85)' : 'rgba(255,255,255,0.85)')
+      : (isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.03)'),
+    color: isActive
+      ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)')
+      : (isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)'),
+    boxShadow: isActive
+      ? (isDark ? '0 2px 8px -1px rgba(0,0,0,0.3), 0 1px 3px -1px rgba(0,0,0,0.2)' : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.04)')
+      : 'none',
+  });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Search + Import */}
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ flex: 1 }}>
+          <GlassInput value={searchQuery} onChange={setSearchQuery} placeholder="Search papers, authors, tags..." isDark={isDark} />
+        </div>
+        <input ref={fileInputRef} type="file" accept=".pdf,.bib,.ris,.txt" multiple onChange={handleFileImport} style={{ display: 'none' }} />
+        <GlassBubbleButton size="sm" color="green" onClick={() => fileInputRef.current?.click()}>
+          <UploadIcon style={{ height: '0.875rem', width: '0.875rem' }} />
+          Import
+        </GlassBubbleButton>
+      </div>
+
+      {/* Tag Filter */}
+      {allTags.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+          <FilterIcon style={{ height: '0.75rem', width: '0.75rem', color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.2)' }} />
+          <button onClick={() => setSelectedTag(null)} style={tagPillStyle(!selectedTag)}>All</button>
+          {allTags.map((tag) => (
+            <button key={tag} onClick={() => setSelectedTag(selectedTag === tag ? null : tag)} style={tagPillStyle(selectedTag === tag)}>
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Export row */}
+      {papers.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+          <DownloadIcon style={{ height: '0.75rem', width: '0.75rem', color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.2)' }} />
+          <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>Export:</span>
+          {(['json', 'csv', 'markdown', 'bibtex', 'ris'] as ExportFormat[]).map((fmt) => (
+            <button
+              key={fmt}
+              onClick={() => handleExport(fmt)}
+              style={{
+                fontSize: '0.6875rem', padding: '0.125rem 0.5rem', borderRadius: '9999px',
+                cursor: 'pointer', fontFamily: 'var(--font-mono)', textTransform: 'uppercase',
+                transition: 'all 0.15s ease', border: '1px solid transparent',
+                background: isDark ? 'rgba(244,189,111,0.05)' : 'rgba(0,0,0,0.03)',
+                color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+              }}
+            >
+              {fmt}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Paper count */}
+      <div style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>
+        {filteredPapers.length} papers{papers.length !== filteredPapers.length ? ` (${papers.length} total)` : ''}
+      </div>
+
+      {/* Papers list */}
+      {filteredPapers.length === 0 ? (
+        <div style={{
+          textAlign: 'center', padding: '3rem 0',
+          color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)', fontSize: '0.8125rem',
+        }}>
+          <BookOpenIcon style={{ height: '2.5rem', width: '2.5rem', margin: '0 auto 0.75rem', opacity: 0.15 }} />
+          {papers.length === 0
+            ? 'No papers saved yet. Search for papers above or import files.'
+            : 'No papers match your search.'}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {filteredPapers.map((paper) => (
+            <motion.div
+              key={paper.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={SPRING_SOFT}
+              style={{
+                borderRadius: '0.75rem', padding: '0.875rem 1rem',
+                border: `1px solid transparent`,
+                background: isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)',
+                transition: `background 0.15s ${CUP}, border 0.15s ${CUP}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark ? 'rgba(55,50,45,0.35)' : 'rgba(0,0,0,0.04)';
+                e.currentTarget.style.borderColor = isDark ? 'rgba(79,69,57,0.3)' : 'rgba(190,183,170,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)';
+                e.currentTarget.style.borderColor = 'transparent';
+              }}
+            >
+              {/* Title row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.35, letterSpacing: '-0.01em' }}>
+                    {paper.title}
+                  </div>
+                  <div style={{
+                    fontSize: '0.6875rem', marginTop: '0.25rem',
+                    color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.4)',
+                  }}>
+                    {paper.authors.join(', ')} ({paper.year})
+                    {paper.journal && ` · ${paper.journal}`}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.125rem', flexShrink: 0 }}>
+                  {paper.url && (
+                    <a href={paper.url} target="_blank" rel="noopener noreferrer"
+                      style={{ padding: '0.375rem', borderRadius: '0.5rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>
+                      <ExternalLinkIcon style={{ height: '0.875rem', width: '0.875rem' }} />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (editingId === paper.id) { setEditingId(null); }
+                      else { setEditingId(paper.id); setNoteText(paper.notes ?? ''); }
+                    }}
+                    style={{
+                      padding: '0.375rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer',
+                      background: 'transparent', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    <StickyNoteIcon style={{ height: '0.875rem', width: '0.875rem' }} />
+                  </button>
+                  <button
+                    onClick={() => removeResearchPaper(paper.id)}
+                    style={{
+                      padding: '0.375rem', borderRadius: '0.5rem', border: 'none', cursor: 'pointer',
+                      background: 'transparent', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    <Trash2Icon style={{ height: '0.875rem', width: '0.875rem' }} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Abstract */}
+              {paper.abstract && (
+                <div style={{
+                  fontSize: '0.6875rem', lineHeight: 1.5, marginTop: '0.375rem',
+                  color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                }}>
+                  {paper.abstract}
+                </div>
+              )}
+
+              {/* Tags */}
+              {paper.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginTop: '0.375rem' }}>
+                  {paper.doi && (
+                    <span style={{
+                      fontSize: '0.625rem', padding: '0.0625rem 0.375rem', borderRadius: '9999px',
+                      fontFamily: 'var(--font-mono)',
+                      background: isDark ? 'rgba(139,124,246,0.1)' : 'rgba(139,124,246,0.08)',
+                      color: isDark ? 'rgba(139,124,246,0.8)' : 'rgba(100,80,200,0.7)',
+                    }}>
+                      DOI: {paper.doi}
+                    </span>
+                  )}
+                  {paper.tags.map((tag) => (
+                    <span key={tag} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '0.1875rem',
+                      fontSize: '0.625rem', padding: '0.0625rem 0.375rem', borderRadius: '9999px',
+                      background: isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)',
+                      color: isDark ? 'rgba(52,211,153,0.8)' : 'rgba(22,101,52,0.7)',
+                    }}>
+                      <TagIcon style={{ height: '0.5rem', width: '0.5rem' }} />
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Saved note display */}
+              {paper.notes && editingId !== paper.id && (
+                <div style={{
+                  marginTop: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '0.5rem',
+                  background: isDark ? 'rgba(244,189,111,0.05)' : 'rgba(244,189,111,0.04)',
+                  border: `1px solid ${isDark ? 'rgba(244,189,111,0.1)' : 'rgba(244,189,111,0.08)'}`,
+                  fontSize: '0.6875rem', lineHeight: 1.5,
+                  color: isDark ? 'rgba(244,189,111,0.7)' : 'rgba(139,100,50,0.6)',
+                }}>
+                  {paper.notes}
+                </div>
+              )}
+
+              {/* Note editing */}
+              <AnimatePresence>
+                {editingId === paper.id && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ overflow: 'hidden', marginTop: '0.5rem' }}
+                  >
+                    <textarea
+                      value={noteText}
+                      onChange={(e) => setNoteText(e.target.value)}
+                      placeholder="Add notes..."
+                      rows={2}
+                      maxLength={5000}
+                      style={{
+                        width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.5rem',
+                        border: `1px solid ${isDark ? 'rgba(79,69,57,0.25)' : 'rgba(190,183,170,0.3)'}`,
+                        background: isDark ? 'rgba(22,21,19,0.5)' : 'rgba(255,255,255,0.5)',
+                        color: isDark ? 'rgba(237,224,212,1)' : 'rgba(60,45,30,0.85)',
+                        fontSize: '0.75rem', outline: 'none', resize: 'vertical',
+                        marginBottom: '0.375rem',
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: '0.375rem' }}>
+                      <GlassBubbleButton size="sm" color="ember" onClick={() => handleSaveNote(paper.id)}>Save Note</GlassBubbleButton>
+                      <GlassBubbleButton size="sm" color="neutral" onClick={() => setEditingId(null)}>Cancel</GlassBubbleButton>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Main Page
+   ═══════════════════════════════════════════════════════════════════ */
+
+export default function ResearchHubPage() {
+  const ready = useSetupGuard();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const [activeTab, setActiveTab] = useState<HubTab>('search');
 
   if (!ready) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
+      <div style={{
+        display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--chat-surface)',
+      }}>
         <PixelBook size={40} />
       </div>
     );
@@ -587,162 +1460,77 @@ export default function ResearchCopilotPage() {
     <PageShell
       icon={FlaskConicalIcon}
       iconColor="var(--color-pfc-ember)"
-      title="Research Copilot"
-      subtitle="Techniques, tools, and study references"
+      title="Research Hub"
+      subtitle="AI-powered paper search, review, novelty checking, citation finding, and idea generation"
     >
-      {/* Intro */}
-      <div className="flex items-start gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-pfc-ember/10 shrink-0">
-          <FlaskConicalIcon className="h-6 w-6 text-pfc-ember" />
-        </div>
-        <div>
-          <h2 className="text-base font-semibold mb-1">Your Research Toolkit</h2>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Techniques, scaffolding tools, and study references tailored to your current analytical state.
-            {activeConcepts.length > 0
-              ? ` Currently tracking ${activeConcepts.length} concepts with ${(confidence * 100).toFixed(0)}% confidence.`
-              : ' Start a chat to see personalized recommendations.'}
-          </p>
-        </div>
+      {/* ── Tab Switcher (scrollable pill row) ── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+          padding: '0.25rem',
+          borderRadius: '9999px',
+          background: isDark ? 'rgba(22,21,19,0.65)' : 'rgba(237,232,222,0.6)',
+          border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+          backdropFilter: 'blur(20px) saturate(1.5)',
+          WebkitBackdropFilter: 'blur(20px) saturate(1.5)',
+          overflowX: 'auto',
+          scrollbarWidth: 'none' as const,
+        }}
+      >
+        {HUB_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              flex: '0 0 auto',
+              padding: '0.4375rem 0.875rem',
+              borderRadius: '9999px',
+              fontSize: '0.75rem',
+              fontWeight: activeTab === tab.key ? 600 : 500,
+              cursor: 'pointer',
+              border: activeTab === tab.key
+                ? `1px solid ${isDark ? 'rgba(196,149,106,0.2)' : 'rgba(196,149,106,0.15)'}`
+                : '1px solid transparent',
+              background: activeTab === tab.key
+                ? (isDark ? 'rgba(44,43,41,0.85)' : 'rgba(255,255,255,0.85)')
+                : 'transparent',
+              color: activeTab === tab.key
+                ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)')
+                : (isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)'),
+              boxShadow: activeTab === tab.key
+                ? (isDark ? '0 2px 8px -1px rgba(0,0,0,0.3), 0 1px 3px -1px rgba(0,0,0,0.2)' : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.04)')
+                : 'none',
+              transition: 'all 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Tab switcher */}
-      <GlassSection className="">
-        <div className="flex items-center gap-1 bg-muted/30 rounded-lg p-1">
-          {(['techniques', 'tools', 'studies'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                'flex-1 px-4 py-2 rounded-md text-xs font-medium transition-all cursor-pointer',
-                activeTab === tab
-                  ? 'bg-background shadow-sm text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {tab === 'techniques' && <WrenchIcon className="h-3 w-3 inline mr-1.5" />}
-              {tab === 'tools' && <FlaskConicalIcon className="h-3 w-3 inline mr-1.5" />}
-              {tab === 'studies' && <BookOpenIcon className="h-3 w-3 inline mr-1.5" />}
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
-        </div>
-      </GlassSection>
-
-      {/* Tab content */}
+      {/* ── Tab Content ── */}
       <AnimatePresence mode="wait">
-        {activeTab === 'techniques' && (
-          <motion.div
-            key="techniques"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            {/* Search */}
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search techniques by name, category, or concept..."
-                className="pl-9 text-sm"
-              />
-            </div>
-
-            {/* Technique cards */}
-            <div className="space-y-3">
-              {filteredTechniques.map((t) => (
-                <TechniqueCard
-                  key={t.id}
-                  technique={t}
-                  isRelevant={t.isRelevant}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'tools' && (
-          <motion.div
-            key="tools"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            <p className="text-xs text-muted-foreground">
-              Scaffolding tools that generate outputs based on your current PFC state. Results are copied to clipboard.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {SCAFFOLDING_TOOLS.map((tool) => (
-                <ToolCard key={tool.id} tool={tool} />
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'studies' && (
-          <motion.div
-            key="studies"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            <p className="text-xs text-muted-foreground">
-              Study references contextual to your current research concepts. Relevance scores reflect concept hierarchy weights.
-            </p>
-            {studyRefs.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                  <BookOpenIcon className="h-8 w-8 text-muted-foreground/15 mb-3" />
-                  <p className="text-sm text-muted-foreground/50">No study references yet</p>
-                  <p className="text-[10px] text-muted-foreground/30 mt-1">Ask research questions to generate concept-based study suggestions</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {studyRefs.map((ref) => (
-                  <Card key={ref.id} className="hover:border-pfc-violet/20 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium leading-snug">{ref.title}</h4>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <Badge variant="outline" className={cn('text-[8px] uppercase', CATEGORY_COLORS[ref.domain.toLowerCase()] || 'text-muted-foreground')}>
-                              {ref.domain}
-                            </Badge>
-                            <Badge variant="secondary" className="text-[8px]">
-                              {ref.methodology}
-                            </Badge>
-                            <Badge variant="secondary" className="text-[8px] bg-pfc-violet/5 text-pfc-violet/70">
-                              {ref.keyConcept.replace(/_/g, ' ')}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <div className={cn(
-                            'text-[10px] font-mono font-bold',
-                            ref.relevance > 0.7 ? 'text-pfc-green' :
-                            ref.relevance > 0.4 ? 'text-pfc-yellow' :
-                            'text-muted-foreground/40',
-                          )}>
-                            {(ref.relevance * 100).toFixed(0)}%
-                          </div>
-                          <div className="text-[8px] text-muted-foreground/30">relevance</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+        >
+          {activeTab === 'search' && <PaperSearchTab isDark={isDark} />}
+          {activeTab === 'novelty' && <NoveltyCheckTab isDark={isDark} />}
+          {activeTab === 'review' && <PaperReviewTab isDark={isDark} />}
+          {activeTab === 'citations' && <CitationSearchTab isDark={isDark} />}
+          {activeTab === 'ideas' && <IdeaGeneratorTab isDark={isDark} />}
+          {activeTab === 'library' && <LibraryTab isDark={isDark} />}
+        </motion.div>
       </AnimatePresence>
     </PageShell>
   );

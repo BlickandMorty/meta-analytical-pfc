@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, memo } from 'react';
+import { useRef, useCallback, memo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ImagePlusIcon,
@@ -37,6 +37,68 @@ function fileTypeFromMime(mime: string): 'image' | 'csv' | 'pdf' | 'text' | 'oth
   if (mime.includes('csv') || mime.includes('tab-separated')) return 'csv';
   if (mime.startsWith('text/')) return 'text';
   return 'other';
+}
+
+/* Octa-style feature chip with hover shadow + border highlight */
+function FeatureChip({ feat, index, isDark, onClick }: {
+  feat: FeatureBtn;
+  index: number;
+  isDark: boolean;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const Icon = feat.icon;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ ...BTN_SPRING, delay: index * 0.04 }}
+      whileHover={{ scale: 1.04, y: -2 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4375rem',
+        padding: '0.4375rem 0.875rem',
+        borderRadius: 'var(--shape-full)',
+        border: `1px solid ${
+          hovered
+            ? (isDark ? 'rgba(196,149,106,0.2)' : 'rgba(196,149,106,0.25)')
+            : (isDark ? 'rgba(50,49,45,0.3)' : 'rgba(190,183,170,0.25)')
+        }`,
+        background: isDark
+          ? (hovered ? 'rgba(44,43,41,0.8)' : 'rgba(28,27,25,0.5)')
+          : (hovered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)'),
+        color: hovered
+          ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(43,42,39,0.85)')
+          : (isDark ? 'rgba(155,150,137,0.75)' : 'rgba(0,0,0,0.45)'),
+        cursor: 'pointer',
+        fontSize: 'var(--type-label-md)',
+        fontWeight: 500,
+        fontFamily: 'var(--font-sans)',
+        letterSpacing: '0.01em',
+        boxShadow: hovered
+          ? (isDark
+            ? '0 2px 12px -2px rgba(0,0,0,0.3), 0 1px 3px -1px rgba(0,0,0,0.2)'
+            : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)')
+          : 'none',
+        transition: 'all 0.2s ease',
+      }}
+    >
+      <Icon style={{
+        height: '0.8125rem',
+        width: '0.8125rem',
+        flexShrink: 0,
+        color: hovered ? '#C4956A' : 'inherit',
+        transition: 'color 0.15s',
+      }} />
+      {feat.label}
+    </motion.button>
+  );
 }
 
 export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }: FeatureButtonsProps) {
@@ -98,40 +160,19 @@ export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }:
       />
       <div style={{
         display: 'flex',
-        gap: '0.375rem',
+        gap: '0.5rem',
         justifyContent: 'center',
         flexWrap: 'wrap',
       }}>
         {FEATURES.map((feat, i) => {
-          const Icon = feat.icon;
           return (
-            <motion.button
+            <FeatureChip
               key={feat.action}
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ ...BTN_SPRING, delay: i * 0.04 }}
-              whileTap={{ scale: 0.94 }}
-              whileHover={{ scale: 1.02 }}
+              feat={feat}
+              index={i}
+              isDark={isDark}
               onClick={() => handleClick(feat.action)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.375rem',
-                padding: '0.375rem 0.75rem',
-                borderRadius: 'var(--shape-full)',
-                border: '1px solid var(--m3-outline-variant)',
-                background: 'var(--m3-surface-container-high)',
-                color: 'var(--m3-on-surface-variant)',
-                cursor: 'pointer',
-                fontSize: 'var(--type-label-lg)',
-                fontWeight: 500,
-                letterSpacing: '0.1px',
-                transition: 'background 0.15s, color 0.15s, border-color 0.15s',
-              }}
-            >
-              <Icon style={{ height: '0.8125rem', width: '0.8125rem', flexShrink: 0 }} />
-              {feat.label}
-            </motion.button>
+            />
           );
         })}
       </div>

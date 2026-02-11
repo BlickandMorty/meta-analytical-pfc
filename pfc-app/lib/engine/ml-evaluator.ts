@@ -136,6 +136,25 @@ export interface MLProjectInput {
 
 
 // ═════════════════════════════════════════════════════════════════════
+// ██ DETERMINISTIC HASH (replaces Math.random for reproducibility)
+// ═════════════════════════════════════════════════════════════════════
+
+/**
+ * Simple string hash → deterministic float in [0, 1).
+ * Same input always produces the same "random-looking" value.
+ * Uses FNV-1a for fast, well-distributed hashing.
+ */
+function hashFloat(seed: string, salt: number = 0): number {
+  let h = 2166136261 ^ salt;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  // Map to [0, 1)
+  return ((h >>> 0) % 10000) / 10000;
+}
+
+// ═════════════════════════════════════════════════════════════════════
 // ██ EVALUATION ENGINE
 // ═════════════════════════════════════════════════════════════════════
 
@@ -522,7 +541,7 @@ function evaluateDimension(
   // Clamp score
   score = Math.max(0, Math.min(1, score));
 
-  const grade = score > 0.85 ? 'A' : score > 0.7 ? 'B' : score > 0.55 ? 'C' : score > 0.4 ? 'D' : 'F';
+  const grade = score >= 0.85 ? 'A' : score >= 0.7 ? 'B' : score >= 0.55 ? 'C' : score >= 0.4 ? 'D' : 'F';
 
   return {
     dimension: dim,
@@ -544,7 +563,7 @@ function analyzePatterns(input: MLProjectInput, projectType: ProjectType): Patte
   const innovativeApproaches: string[] = [];
 
   // Anti-pattern detection
-  if (/accuracy/.test(text) && /imbalance|class.weight|smote/.test(text) === false && projectType === 'classifier') {
+  if (/\baccuracy\b/.test(text) && !/imbalance|class.weight|smote|balanced|stratif/.test(text) && projectType === 'classifier') {
     antiPatterns.push({
       name: 'Accuracy on Imbalanced Data',
       severity: 'major',
@@ -653,7 +672,8 @@ function analyzePatterns(input: MLProjectInput, projectType: ProjectType): Patte
   // Complexity and modularity scores
   const codeLength = (input.codeSnippets ?? []).join('').length;
   const complexityScore = Math.min(1, codeLength > 0 ? 0.3 + Math.min(0.7, codeLength / 5000) : 0.4);
-  const modularityScore = /class|def|function|module|import/.test(text) ? 0.6 + Math.random() * 0.3 : 0.3 + Math.random() * 0.3;
+  const h = hashFloat(input.name + input.description, 42);
+  const modularityScore = /class|def|function|module|import/.test(text) ? 0.6 + h * 0.3 : 0.3 + h * 0.3;
 
   return {
     antiPatterns,
@@ -675,10 +695,11 @@ function assessRobustness(input: MLProjectInput, projectType: ProjectType): Robu
   const hasMonitoring = /monitor|drift|alert|observ/.test(text);
   const hasEdgeCases = /edge.case|corner|boundary|null|empty|missing/.test(text);
 
-  const perturbationSensitivity = hasRobustnessTests ? 0.15 + Math.random() * 0.2 : 0.4 + Math.random() * 0.35;
-  const distributionShiftResilience = hasMonitoring ? 0.55 + Math.random() * 0.3 : 0.2 + Math.random() * 0.35;
-  const adversarialResistance = hasRobustnessTests ? 0.5 + Math.random() * 0.35 : 0.15 + Math.random() * 0.3;
-  const edgeCaseCoverage = hasEdgeCases ? 0.5 + Math.random() * 0.35 : 0.1 + Math.random() * 0.3;
+  const seed = input.name + input.description;
+  const perturbationSensitivity = hasRobustnessTests ? 0.15 + hashFloat(seed, 1) * 0.2 : 0.4 + hashFloat(seed, 1) * 0.35;
+  const distributionShiftResilience = hasMonitoring ? 0.55 + hashFloat(seed, 2) * 0.3 : 0.2 + hashFloat(seed, 2) * 0.35;
+  const adversarialResistance = hasRobustnessTests ? 0.5 + hashFloat(seed, 3) * 0.35 : 0.15 + hashFloat(seed, 3) * 0.3;
+  const edgeCaseCoverage = hasEdgeCases ? 0.5 + hashFloat(seed, 4) * 0.35 : 0.1 + hashFloat(seed, 4) * 0.3;
 
   const overallRobustness = (
     (1 - perturbationSensitivity) * 0.3 +
@@ -707,18 +728,20 @@ function assessCalibration(input: MLProjectInput, projectType: ProjectType): Cal
   const hasCalibration = /calibrat|platt|isotonic|temperature.scal/.test(text);
   const hasProbabilistic = /probability|probabilistic|predict_proba|softmax/.test(text);
 
+  const seed = `${input.name ?? ''}${input.description ?? ''}`;
+
   // ECE: lower is better
-  const ece = hasCalibration ? 0.02 + Math.random() * 0.06 : 0.08 + Math.random() * 0.15;
+  const ece = hasCalibration ? 0.02 + hashFloat(seed, 10) * 0.06 : 0.08 + hashFloat(seed, 10) * 0.15;
 
   // Brier score: lower is better
   const confidence = metrics.accuracy ?? metrics.f1 ?? 0.7;
   const brierScore = hasCalibration
-    ? 0.05 + (1 - confidence) * 0.3 + Math.random() * 0.05
-    : 0.1 + (1 - confidence) * 0.4 + Math.random() * 0.1;
+    ? 0.05 + (1 - confidence) * 0.3 + hashFloat(seed, 11) * 0.05
+    : 0.1 + (1 - confidence) * 0.4 + hashFloat(seed, 11) * 0.1;
 
   // Over/under confidence
-  const overconfidenceIndex = hasCalibration ? 0.05 + Math.random() * 0.1 : 0.15 + Math.random() * 0.25;
-  const underconfidenceIndex = hasCalibration ? 0.03 + Math.random() * 0.08 : 0.05 + Math.random() * 0.15;
+  const overconfidenceIndex = hasCalibration ? 0.05 + hashFloat(seed, 12) * 0.1 : 0.15 + hashFloat(seed, 12) * 0.25;
+  const underconfidenceIndex = hasCalibration ? 0.03 + hashFloat(seed, 13) * 0.08 : 0.05 + hashFloat(seed, 13) * 0.15;
 
   const shape: CalibrationProfile['reliabilityDiagramShape'] = hasCalibration
     ? 'well-calibrated'

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef, startTransition } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, startTransition, memo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,6 +28,7 @@ import {
   XIcon,
   LayoutGridIcon,
   MousePointerClickIcon,
+  SparklesIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -407,54 +408,6 @@ function BacklinksPanel({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Page Stats — word count, block count, updated time
-// ═══════════════════════════════════════════════════════════════════
-
-function PageStats({
-  pageId,
-  page,
-  c,
-}: {
-  pageId: string;
-  page: NotePage;
-  c: ReturnType<typeof th>;
-}) {
-  const noteBlocks = usePFCStore((s) => s.noteBlocks);
-
-  const stats = useMemo(() => {
-    const blocks = noteBlocks.filter((b: NoteBlock) => b.pageId === pageId);
-    const totalWords = blocks.reduce((acc: number, b: NoteBlock) => {
-      const words = b.content.trim().split(/\s+/).filter(Boolean).length;
-      return acc + words;
-    }, 0);
-    const blockCount = blocks.length;
-    const lastUpdate = new Date(page.updatedAt);
-    const timeStr = lastUpdate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    return { totalWords, blockCount, timeStr };
-  }, [noteBlocks, pageId, page.updatedAt]);
-
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem',
-      fontSize: '0.6875rem',
-      color: c.faint,
-      fontFamily: 'var(--font-sans)',
-      fontWeight: 500,
-      paddingTop: '1.5rem',
-    }}>
-      <span>{stats.totalWords} word{stats.totalWords !== 1 ? 's' : ''}</span>
-      <span>{stats.blockCount} block{stats.blockCount !== 1 ? 's' : ''}</span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-        <ClockIcon style={{ width: '0.625rem', height: '0.625rem' }} />
-        {stats.timeStr}
-      </span>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // Breadcrumb — shows notebook > page path
 // ═══════════════════════════════════════════════════════════════════
 
@@ -539,6 +492,60 @@ function ToolbarBtn({
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// ToolbarStats — scoped sub-component for page stats in bottom toolbar
+// Subscribes to noteBlocks internally so the main NotesPage doesn't
+// re-render on every keystroke.
+// ═══════════════════════════════════════════════════════════════════
+
+const ToolbarStats = memo(function ToolbarStats({
+  pageId,
+  page,
+  isDark,
+}: {
+  pageId: string;
+  page: NotePage;
+  isDark: boolean;
+}) {
+  const noteBlocks = usePFCStore((s) => s.noteBlocks);
+
+  const stats = useMemo(() => {
+    const blocks = noteBlocks.filter((b: NoteBlock) => b.pageId === pageId);
+    const totalWords = blocks.reduce((acc: number, b: NoteBlock) => {
+      const words = b.content.trim().split(/\s+/).filter(Boolean).length;
+      return acc + words;
+    }, 0);
+    const blockCount = blocks.length;
+    const lastUpdate = new Date(page.updatedAt);
+    const timeStr = lastUpdate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return { totalWords, blockCount, timeStr };
+  }, [noteBlocks, pageId, page.updatedAt]);
+
+  return (
+    <>
+      <span style={{
+        width: 3, height: 3, borderRadius: '50%', flexShrink: 0,
+        background: isDark ? 'rgba(155,150,137,0.25)' : 'rgba(0,0,0,0.12)',
+      }} />
+      <span style={{
+        display: 'flex', alignItems: 'center', gap: '0.5rem',
+        fontSize: '0.6875rem', fontWeight: 500, whiteSpace: 'nowrap',
+        color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(120,110,100,0.6)',
+        padding: '0 0.35rem',
+      }}>
+        <span>{stats.totalWords} word{stats.totalWords !== 1 ? 's' : ''}</span>
+        <span style={{ opacity: 0.4 }}>·</span>
+        <span>{stats.blockCount} block{stats.blockCount !== 1 ? 's' : ''}</span>
+        <span style={{ opacity: 0.4 }}>·</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <ClockIcon style={{ width: '0.625rem', height: '0.625rem' }} />
+          {stats.timeStr}
+        </span>
+      </span>
+    </>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // Notes Mode type — mutually exclusive: 'notes' (markdown) or 'canvas'
 // ═══════════════════════════════════════════════════════════════════
 
@@ -609,6 +616,9 @@ export default function NotesPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelHovered, setPanelHovered] = useState(false);
 
+  // ── Fused AI panel (controlled from toolbar) ──
+  const [aiPanelOpen, setAIPanelOpen] = useState(false);
+
   // ── Load vault index on mount ──
   useEffect(() => {
     if (ready) {
@@ -616,9 +626,11 @@ export default function NotesPage() {
     }
   }, [ready, loadVaultIndex]);
 
-  // ── Auto-create a default vault if none exist ──
+  // ── Fix 4E: Auto-create a default vault if none exist (with guard) ──
+  const creatingVaultRef = useRef(false);
   useEffect(() => {
-    if (vaultReady && vaults.length === 0) {
+    if (vaultReady && vaults.length === 0 && !creatingVaultRef.current) {
+      creatingVaultRef.current = true;
       const id = createVault('My Notes');
       switchVault(id);
     }
@@ -631,11 +643,25 @@ export default function NotesPage() {
     }
   }, [vaultReady, activeVaultId, loadNotesFromStorage]);
 
-  // ── Auto-extract concepts when active page changes ──
+  // ── Fix 3C: Auto-extract concepts when active page changes (with cancellation) ──
+  const conceptAbortRef = useRef<AbortController | null>(null);
   useEffect(() => {
     if (activePageId) {
-      extractConcepts(activePageId);
+      if (conceptAbortRef.current) {
+        conceptAbortRef.current.abort();
+      }
+      const controller = new AbortController();
+      conceptAbortRef.current = controller;
+      if (!controller.signal.aborted) {
+        extractConcepts(activePageId);
+      }
     }
+    return () => {
+      if (conceptAbortRef.current) {
+        conceptAbortRef.current.abort();
+        conceptAbortRef.current = null;
+      }
+    };
   }, [activePageId, extractConcepts]);
 
   // ── Save notes on tab close / navigation away ──
@@ -753,8 +779,6 @@ export default function NotesPage() {
           transform: 'translateZ(0)',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
-          // Add top padding so content doesn't hide behind the TopNav
-          paddingTop: '3rem',
         } as React.CSSProperties}
       >
         <AnimatePresence mode="wait">
@@ -843,7 +867,7 @@ export default function NotesPage() {
                 style={{
                   maxWidth: zenMode ? '42rem' : '52rem',
                   margin: '0 auto',
-                  padding: zenMode ? '3rem 2rem 8rem' : '1.5rem 4rem 8rem',
+                  padding: zenMode ? '1.5rem 2rem 8rem' : '1.5rem 4rem 8rem',
                   transition: 'max-width 0.3s cubic-bezier(0.32,0.72,0,1), padding 0.3s cubic-bezier(0.32,0.72,0,1)',
                 }}
               >
@@ -955,7 +979,6 @@ export default function NotesPage() {
                 <BlockEditor pageId={activePageId} readOnly={editorMode === 'read'} />
 
                 <BacklinksPanel pageId={activePageId} c={c} />
-                <PageStats pageId={activePageId} page={activePage} c={c} />
               </motion.div>
             )
           ) : (
@@ -1055,179 +1078,137 @@ export default function NotesPage() {
           )}
         </AnimatePresence>
 
-        {/* ═══ Floating toolbar — top-right (below TopNav) ═══ */}
+        {/* ═══ Floating toolbar — bottom-center glass pill ═══ */}
         {mounted && (
-          <div style={{ position: 'fixed', top: 52, right: 16, zIndex: 40, display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
-            {/* Notes home — deselect active page to return to landing */}
-            {activePage && (
-              <ToolbarBtn
-                onClick={() => setActivePage(null)}
-                title="Notes home"
-                isActive={false}
-                bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
-              >
-                <PenLineIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-              </ToolbarBtn>
-            )}
-
-            {/* Page quick-actions — only when a page is active */}
-            {activePage && (
-              <>
-                <ToolbarBtn
-                  onClick={() => togglePageFavorite(activePage.id)}
-                  title={activePage.favorite ? 'Unfavorite' : 'Favorite'}
-                  activeColor="#FBBF24"
-                  isActive={activePage.favorite}
-                  bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
-                >
-                  <StarIcon style={{ width: '0.8rem', height: '0.8rem', fill: activePage.favorite ? '#FBBF24' : 'none' }} />
-                </ToolbarBtn>
-                <ToolbarBtn
-                  onClick={() => togglePagePin(activePage.id)}
-                  title={activePage.pinned ? 'Unpin' : 'Pin'}
-                  isActive={activePage.pinned}
-                  bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
-                >
-                  <PinIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                </ToolbarBtn>
-
-                {/* Notes Mode / Canvas Mode toggle */}
-                <button
-                  onClick={() => handleSetViewMode(viewMode === 'notes' ? 'canvas' : 'notes')}
-                  title={viewMode === 'notes' ? 'Switch to Canvas mode' : 'Switch to Notes mode'}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    padding: '0.3rem 0.65rem',
-                    height: '1.75rem',
-                    borderRadius: '9999px',
-                    border: 'none',
-                    fontSize: '0.6875rem',
-                    fontWeight: 600,
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    color: viewMode === 'canvas' ? '#22D3EE' : c.accent,
-                    background: isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)',
-                    backdropFilter: 'blur(12px) saturate(1.4)',
-                    WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-                    transition: 'color 0.15s, background 0.15s',
-                  }}
-                >
-                  {viewMode === 'canvas' ? (
-                    <>
-                      <MousePointerClickIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
-                      Canvas
-                    </>
-                  ) : (
-                    <>
-                      <FileTextIcon style={{ width: '0.6875rem', height: '0.6875rem' }} />
-                      Notes
-                    </>
-                  )}
-                </button>
-
-                {viewMode === 'notes' && (
-                  <>
-                    <ToolbarBtn
-                      onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
-                      title={editorMode === 'write' ? 'Read mode' : 'Write mode'}
-                      isActive
-                      activeColor={editorMode === 'read' ? c.green : c.accent}
-                      bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
-                    >
-                      {editorMode === 'read'
-                        ? <EyeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                        : <PencilIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                      }
-                    </ToolbarBtn>
-                    <ToolbarBtn
-                      onClick={() => setZenMode((v) => !v)}
-                      title={zenMode ? 'Exit zen' : 'Zen mode'}
-                      isActive={zenMode}
-                      activeColor={c.accent}
-                      bgColor={isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)'}
-                    >
-                      {zenMode
-                        ? <MinimizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                        : <MaximizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                      }
-                    </ToolbarBtn>
-                  </>
-                )}
-              </>
-            )}
-
-            {/* Vault switcher bubble */}
-            {vaults.length > 0 && (
-              <button
-                onClick={() => setShowVaultPicker((v) => !v)}
-                title="Switch vault"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '0.4rem 0.75rem', fontSize: '0.6875rem', fontWeight: 600,
-                  fontFamily: 'inherit', color: c.accent,
-                  background: isDark ? 'rgba(35,32,28,0.55)' : 'rgba(255,252,248,0.55)',
-                  border: 'none', borderRadius: '9999px', cursor: 'pointer',
-                  backdropFilter: 'blur(12px) saturate(1.4)',
-                  WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-                  height: '1.75rem',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <FolderOpenIcon style={{ width: 11, height: 11 }} />
-                {vaults.find((v: any) => v.id === activeVaultId)?.name ?? 'Vault'}
-              </button>
-            )}
-
-            {/* Sidebar panel toggle — NavBubble-style */}
-            <button
-              onClick={() => setPanelOpen((v) => !v)}
-              onMouseEnter={() => setPanelHovered(true)}
-              onMouseLeave={() => setPanelHovered(false)}
-              title="Toggle notes panel (Cmd+\\)"
+          <div style={{ position: 'fixed', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', zIndex: 40 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={spring.gentle}
               style={{
                 display: 'flex',
+                gap: '0.25rem',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: panelBubbleExpanded ? '0.5rem' : '0rem',
-                cursor: 'pointer',
-                border: 'none',
                 borderRadius: '9999px',
-                padding: panelBubbleExpanded ? '0.4rem 0.85rem' : '0.4rem 0.55rem',
-                height: '1.75rem',
-                fontSize: '0.6875rem',
-                fontWeight: panelOpen ? 650 : 500,
-                letterSpacing: '-0.01em',
-                color: panelOpen
-                  ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.9)')
-                  : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.45)'),
-                background: panelOpen
-                  ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(255,252,248,0.55)')
-                  : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(255,252,248,0.4)'),
-                backdropFilter: 'blur(12px) saturate(1.4)',
-                WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                transition: `padding 0.3s ${CUP_EASE}, gap 0.3s ${CUP_EASE}, background 0.15s ease, color 0.15s ease`,
-                transform: 'translateZ(0)',
+                padding: '0.25rem',
+                background: isDark ? 'rgba(22,21,19,0.65)' : 'rgba(237,232,222,0.6)',
+                backdropFilter: 'blur(20px) saturate(1.5)',
+                WebkitBackdropFilter: 'blur(20px) saturate(1.5)',
+                border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+                boxShadow: isDark
+                  ? '0 2px 12px -2px rgba(0,0,0,0.3)'
+                  : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
               }}
             >
-              <LayoutGridIcon style={{
-                height: '0.75rem', width: '0.75rem', flexShrink: 0,
-                color: panelOpen ? '#C4956A' : 'inherit',
-                transition: 'color 0.15s',
-              }} />
-              <span style={{
-                display: 'inline-block',
-                maxWidth: panelBubbleExpanded ? '5rem' : '0rem',
-                opacity: panelBubbleExpanded ? 1 : 0,
-                overflow: 'hidden', whiteSpace: 'nowrap',
-                transition: `max-width 0.3s ${CUP_EASE}, opacity 0.2s ${CUP_EASE}`,
-              }}>
-                pages
-              </span>
-            </button>
+              {/* Notes home — deselect active page to return to landing */}
+              {activePage && (
+                <ToolbarBtn
+                  onClick={() => setActivePage(null)}
+                  title="Notes home"
+                  isActive={false}
+                >
+                  <PenLineIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                </ToolbarBtn>
+              )}
+
+              {/* Page quick-actions — only when a page is active */}
+              {activePage && (
+                <>
+                  <ToolbarBtn
+                    onClick={() => togglePageFavorite(activePage.id)}
+                    title={activePage.favorite ? 'Unfavorite' : 'Favorite'}
+                    activeColor="#FBBF24"
+                    isActive={activePage.favorite}
+                  >
+                    <StarIcon style={{ width: '0.8rem', height: '0.8rem', fill: activePage.favorite ? '#FBBF24' : 'none' }} />
+                  </ToolbarBtn>
+                  <ToolbarBtn
+                    onClick={() => togglePagePin(activePage.id)}
+                    title={activePage.pinned ? 'Unpin' : 'Pin'}
+                    isActive={activePage.pinned}
+                  >
+                    <PinIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                  </ToolbarBtn>
+
+                  {/* Notes Mode / Canvas Mode toggle */}
+                  <ToolbarBtn
+                    onClick={() => handleSetViewMode(viewMode === 'notes' ? 'canvas' : 'notes')}
+                    title={viewMode === 'notes' ? 'Switch to Canvas mode' : 'Switch to Notes mode'}
+                    isActive
+                    activeColor={viewMode === 'canvas' ? '#22D3EE' : c.accent}
+                  >
+                    {viewMode === 'canvas'
+                      ? <MousePointerClickIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                      : <FileTextIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                    }
+                  </ToolbarBtn>
+
+                  {viewMode === 'notes' && (
+                    <>
+                      <ToolbarBtn
+                        onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
+                        title={editorMode === 'write' ? 'Read mode' : 'Write mode'}
+                        isActive
+                        activeColor={editorMode === 'read' ? c.green : c.accent}
+                      >
+                        {editorMode === 'read'
+                          ? <EyeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                          : <PencilIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                        }
+                      </ToolbarBtn>
+                      <ToolbarBtn
+                        onClick={() => setZenMode((v) => !v)}
+                        title={zenMode ? 'Exit zen' : 'Zen mode'}
+                        isActive={zenMode}
+                        activeColor={c.accent}
+                      >
+                        {zenMode
+                          ? <MinimizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                          : <MaximizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                        }
+                      </ToolbarBtn>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Sidebar panel toggle */}
+              <ToolbarBtn
+                onClick={() => setPanelOpen((v) => !v)}
+                title="Toggle notes panel (Cmd+\\)"
+                isActive={panelOpen}
+              >
+                <LayoutGridIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+              </ToolbarBtn>
+
+              {/* Vault switcher */}
+              {vaults.length > 0 && (
+                <ToolbarBtn
+                  onClick={() => setShowVaultPicker((v) => !v)}
+                  title="Switch vault"
+                  isActive={false}
+                >
+                  <FolderOpenIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                </ToolbarBtn>
+              )}
+
+              {/* Fused AI button — integrated into toolbar */}
+              {activePageId && viewMode === 'notes' && (
+                <ToolbarBtn
+                  onClick={() => setAIPanelOpen((v) => !v)}
+                  title="AI Assistant"
+                  isActive={aiPanelOpen}
+                  activeColor="#C4956A"
+                >
+                  <SparklesIcon style={{ width: '0.8rem', height: '0.8rem' }} />
+                </ToolbarBtn>
+              )}
+
+              {/* Fused stats — only in notes mode with active page */}
+              {activePage && activePageId && viewMode === 'notes' && (
+                <ToolbarStats pageId={activePageId} page={activePage} isDark={isDark} />
+              )}
+            </motion.div>
           </div>
         )}
 
@@ -1277,9 +1258,14 @@ export default function NotesPage() {
           )}
         </AnimatePresence>
 
-        {/* ═══ Fused AI button — NoteAIChat with AI Learn built in ═══ */}
+        {/* ═══ Fused AI panel — controlled by toolbar button ═══ */}
         {activePageId && mounted && viewMode === 'notes' && (
-          <NoteAIChat pageId={activePageId} activeBlockId={editingBlockId} />
+          <NoteAIChat
+            pageId={activePageId}
+            activeBlockId={editingBlockId}
+            isOpen={aiPanelOpen}
+            onClose={() => setAIPanelOpen(false)}
+          />
         )}
 
         {/* Vault picker overlay */}

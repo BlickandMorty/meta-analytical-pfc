@@ -10,7 +10,6 @@ import {
   BarChart3Icon,
   SettingsIcon,
   BookOpenIcon,
-  LibraryIcon,
   DownloadIcon,
   PenLineIcon,
   ServerIcon,
@@ -50,7 +49,6 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: HomeIcon, group: 'core' },
   { href: '/notes', label: 'Notes', icon: PenLineIcon, group: 'core' },
-  { href: '/research-library', label: 'Library', icon: LibraryIcon, group: 'core' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full', group: 'tools' },
   { href: '/export', label: 'Export', icon: DownloadIcon, group: 'utility' },
   { href: '/settings', label: 'Settings', icon: SettingsIcon, group: 'utility' },
@@ -59,8 +57,8 @@ const NAV_ITEMS: NavItem[] = [
 
 /* ─── Analytics sub-tabs ─── */
 const ANALYTICS_TABS = [
-  { key: 'research', label: 'Research', icon: FlaskConicalIcon },
   { key: 'archive', label: 'Archive', icon: ArchiveIcon },
+  { key: 'research', label: 'Research', icon: FlaskConicalIcon },
   { key: 'steering', label: 'Steering', icon: CompassIcon },
   { key: 'pipeline', label: 'Pipeline', icon: NetworkIcon },
   { key: 'signals', label: 'Signals', icon: ActivityIcon },
@@ -92,7 +90,7 @@ const MODE_STYLES: Record<string, { label: string }> = {
 function bubbleBg(isActive: boolean, isDark: boolean, disabled?: boolean) {
   if (disabled) return 'transparent';
   if (isActive) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)';
-  return isDark ? 'rgba(35,32,28,0.45)' : 'rgba(215,200,180,0.25)';
+  return 'transparent';
 }
 
 function bubbleColor(isActive: boolean, isDark: boolean, disabled?: boolean) {
@@ -137,16 +135,14 @@ const NavBubble = memo(function NavBubble({
         cursor: disabled ? 'not-allowed' : 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: expanded ? '0.5rem 1rem' : '0.5rem 0.625rem',
-        height: '2.5rem',
-        fontSize: '0.875rem',
+        padding: expanded ? '0.375rem 0.75rem' : '0.375rem 0.5rem',
+        height: '2.125rem',
+        fontSize: '0.8125rem',
         fontWeight: isActive ? 650 : 500,
         letterSpacing: '-0.01em',
         opacity: disabled ? 0.35 : 1,
         color: bubbleColor(isActive, isDark, disabled),
         background: bubbleBg(isActive, isDark, disabled),
-        backdropFilter: disabled ? 'none' : 'blur(12px) saturate(1.4)',
-        WebkitBackdropFilter: disabled ? 'none' : 'blur(12px) saturate(1.4)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
@@ -154,8 +150,8 @@ const NavBubble = memo(function NavBubble({
       }}
     >
       <Icon style={{
-        height: '1.0625rem',
-        width: '1.0625rem',
+        height: '0.9375rem',
+        width: '0.9375rem',
         flexShrink: 0,
         color: isActive ? '#C4956A' : 'inherit',
         transition: 'color 0.15s',
@@ -230,15 +226,13 @@ const HomePFCBubble = memo(function HomePFCBubble({
         cursor: 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: showLabel ? '0.5rem 1rem' : '0.5rem 0.625rem',
-        height: '2.5rem',
-        fontSize: '0.875rem',
+        padding: showLabel ? '0.375rem 0.75rem' : '0.375rem 0.5rem',
+        height: '2.125rem',
+        fontSize: '0.8125rem',
         fontWeight: (pfcMode || isOnHome) ? 650 : 500,
         letterSpacing: '-0.01em',
         color: bubbleColor(pfcMode || isOnHome || hovered, isDark),
         background: bubbleBg(pfcMode || isOnHome, isDark),
-        backdropFilter: 'blur(12px) saturate(1.4)',
-        WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
@@ -246,8 +240,8 @@ const HomePFCBubble = memo(function HomePFCBubble({
       }}
     >
       <HomeIcon style={{
-        height: '1.0625rem',
-        width: '1.0625rem',
+        height: '0.9375rem',
+        width: '0.9375rem',
         flexShrink: 0,
         color: (pfcMode || isOnHome || hovered) ? '#C4956A' : 'inherit',
         transition: 'color 0.15s',
@@ -356,7 +350,7 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   disabledReason?: string;
 }) {
   const [hovered, setHovered] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState<string>('research');
+  const [activeSubTab, setActiveSubTab] = useState<string>('archive');
   const Icon = item.icon;
 
   // Listen for active tab broadcasts from the analytics page
@@ -394,10 +388,10 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 gap: '0.375rem',
                 border: 'none',
                 borderRadius: '9999px',
-                padding: '0.4375rem 0.75rem',
-                height: '2rem',
+                padding: '0.3125rem 0.625rem',
+                height: '1.75rem',
                 cursor: 'pointer',
-                fontSize: '0.75rem',
+                fontSize: '0.6875rem',
                 fontWeight: isTabActive ? 650 : 500,
                 letterSpacing: '-0.01em',
                 color: isTabActive
@@ -405,9 +399,7 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                   : (isDark ? 'rgba(155,150,137,0.65)' : 'rgba(80,65,45,0.55)'),
                 background: isTabActive
                   ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)')
-                  : (isDark ? 'rgba(35,32,28,0.45)' : 'rgba(215,200,180,0.25)'),
-                backdropFilter: 'blur(12px) saturate(1.4)',
-                WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                  : 'transparent',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 transition: `${T_SIZE}, ${T_COLOR}`,
@@ -415,8 +407,8 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
               }}
             >
               <TabIcon style={{
-                height: '0.8125rem',
-                width: '0.8125rem',
+                height: '0.6875rem',
+                width: '0.6875rem',
                 flexShrink: 0,
                 color: isTabActive ? '#C4956A' : 'inherit',
                 transition: 'color 0.15s',
@@ -446,16 +438,14 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         cursor: disabled ? 'not-allowed' : 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: expanded ? '0.5rem 1rem' : '0.5rem 0.625rem',
-        height: '2.5rem',
-        fontSize: '0.875rem',
+        padding: expanded ? '0.375rem 0.75rem' : '0.375rem 0.5rem',
+        height: '2.125rem',
+        fontSize: '0.8125rem',
         fontWeight: 500,
         letterSpacing: '-0.01em',
         opacity: disabled ? 0.35 : 1,
         color: bubbleColor(false, isDark, disabled),
         background: bubbleBg(false, isDark, disabled),
-        backdropFilter: disabled ? 'none' : 'blur(12px) saturate(1.4)',
-        WebkitBackdropFilter: disabled ? 'none' : 'blur(12px) saturate(1.4)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
@@ -463,8 +453,8 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
       }}
     >
       <Icon style={{
-        height: '1.0625rem',
-        width: '1.0625rem',
+        height: '0.9375rem',
+        width: '0.9375rem',
         flexShrink: 0,
         transition: 'color 0.15s',
       }} />
@@ -537,19 +527,31 @@ export function TopNav() {
         flexDirection: 'column',
         pointerEvents: 'none',
         opacity: mounted ? 1 : 0,
-        transform: mounted ? 'translateY(0) translateZ(0)' : 'translateY(-8px) translateZ(0)',
-        transition: `opacity 0.5s ${CUP}, transform 0.5s ${CUP}`,
+        transform: mounted ? 'translateY(0) translateZ(0)' : 'translateY(-12px) translateZ(0)',
+        transition: `opacity 0.4s ease-out, transform 0.4s ease-out`,
         contain: 'layout paint',
+        isolation: 'isolate',
+        padding: '0.625rem 1rem',
       }}
     >
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.375rem',
-          padding: '0.625rem 1rem',
+          gap: '0.125rem',
+          borderRadius: '9999px',
+          padding: '0.3125rem',
           pointerEvents: 'auto',
+          background: isDark
+            ? 'rgba(22,21,19,0.65)'
+            : 'rgba(237,232,222,0.6)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+          boxShadow: isDark
+            ? '0 2px 12px -2px rgba(0,0,0,0.3)'
+            : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
+          transform: 'translateZ(0)',
         }}
       >
         {/* Home / PFC Engine bubble — first item, special behavior */}

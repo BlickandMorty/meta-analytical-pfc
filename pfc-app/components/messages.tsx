@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Message } from './message';
 import type { ChatMessage } from '@/lib/engine/types';
@@ -37,7 +37,9 @@ function MessagesInner({
   const isReasoning = usePFCStore(selectIsReasoning);
   const { containerRef, isAtBottom, scrollToBottom } = useScrollToBottom<HTMLDivElement>();
   const { resolvedTheme } = useTheme();
-  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   // Merge the scroll-to-bottom ref with the externally provided ref for TOC
   const setRefs = (el: HTMLDivElement | null) => {
@@ -55,7 +57,7 @@ function MessagesInner({
           position: 'relative',
           height: '100%',
           overflowY: 'auto',
-          padding: '1.5rem 1rem',
+          padding: '1.5rem 1rem 1.5rem',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
           transform: 'translateZ(0)',

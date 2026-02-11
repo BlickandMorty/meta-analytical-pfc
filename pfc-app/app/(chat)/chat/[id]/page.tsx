@@ -24,8 +24,8 @@ export default function ChatByIdPage() {
         if (data.messages) {
           loadMessages(data.messages);
         }
-      } catch {
-        // Silently fail
+      } catch (error) {
+        console.error('[chat/[id]] Failed to load messages:', error);
       }
     }
 

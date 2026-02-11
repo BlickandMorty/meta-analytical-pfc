@@ -6,7 +6,9 @@ export function useScrollToBottom<T extends HTMLElement>() {
   const containerRef = useRef<T>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
+  const rafRef = useRef<number>(0);
 
+  // User-initiated scroll-to-bottom — uses smooth behavior
   const scrollToBottom = useCallback(() => {
     const container = containerRef.current;
     if (container) {
@@ -33,6 +35,7 @@ export function useScrollToBottom<T extends HTMLElement>() {
   }, []);
 
   // Auto-scroll when new content arrives (if autoScroll is enabled)
+  // Uses instant scroll + rAF batching for 120fps-friendly updates
   useEffect(() => {
     if (!autoScroll) return;
 
@@ -40,12 +43,12 @@ export function useScrollToBottom<T extends HTMLElement>() {
     if (!container) return;
 
     const observer = new MutationObserver(() => {
-      if (autoScroll) {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
+      if (!autoScroll) return;
+      // Batch scroll updates with rAF to avoid jank
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
     });
 
     observer.observe(container, {
@@ -54,7 +57,10 @@ export function useScrollToBottom<T extends HTMLElement>() {
       characterData: true,
     });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [autoScroll]);
 
   // Attach scroll listener

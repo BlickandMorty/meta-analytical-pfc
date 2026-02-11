@@ -229,6 +229,18 @@ export default function DocsPage() {
             adversarial review, and confidence calibration — in sequence — to produce a transparent,
             well-calibrated answer.
           </p>
+          <Heading>Chat Modes</Heading>
+          <p>
+            PFC offers three distinct chat modes that control the depth of analysis:
+          </p>
+          <Ul>
+            <Li><strong>Measurement Mode</strong> — Full pipeline with live signal controls, TDA topology, cortex archive, concept hierarchy, and all analytical stages active. Best for rigorous research and claim analysis.</Li>
+            <Li><strong>Research Mode</strong> — Truth assessments, visualizations, citations, and research tools enabled. The live pipeline controls and advanced diagnostics are streamlined away for a cleaner research experience.</Li>
+            <Li><strong>Plain Chat</strong> — All research features disabled. A clean, fast conversational interface for general questions and quick exchanges.</Li>
+          </Ul>
+          <p>
+            Switch between modes using the three-pill toggle on the landing page. Each mode coordinates the tier system, research features, and UI visibility automatically.
+          </p>
         </DocSection>
 
         {/* ── The 10-Stage Pipeline ── */}
@@ -311,19 +323,19 @@ Each dimension tracks:
         <DocSection icon={LayersIcon} iconColor="#4ADE80" title="The Stack" isDark={isDark}>
           <Heading>Frontend</Heading>
           <Ul>
-            <Li><strong>Next.js 15</strong> — App Router, server components, API routes</Li>
+            <Li><strong>Next.js 16</strong> — App Router with Turbopack, server components, API routes</Li>
             <Li><strong>TypeScript</strong> — Full type safety across the entire codebase</Li>
-            <Li><strong>Framer Motion</strong> — Physics-based animations (spring, Cupertino easing)</Li>
+            <Li><strong>Framer Motion</strong> — Physics-based spring animations, Cupertino easing, hover lift effects</Li>
             <Li><strong>Tailwind CSS v4</strong> — Utility-first styling with custom design tokens</Li>
-            <Li><strong>Canvas API</strong> — Code rain animation, concept atlas force graph</Li>
-            <Li><strong>next-themes</strong> — System-aware dark/light mode</Li>
+            <Li><strong>Canvas API</strong> — Concept atlas force graph, note canvas</Li>
+            <Li><strong>next-themes</strong> — System-aware dark/light/OLED mode</Li>
           </Ul>
 
           <Heading>State Management</Heading>
           <Ul>
-            <Li><strong>Zustand</strong> — Lightweight store for all app state (signals, concepts, pipeline, settings)</Li>
+            <Li><strong>Zustand 5</strong> — Modular slice architecture (13 composable slices) with <Code>subscribeWithSelector</Code> middleware</Li>
             <Li><strong>Steering Store</strong> — Separate Zustand store for the adaptive steering memory</Li>
-            <Li><strong>localStorage</strong> — Persistence for settings, API keys, steering memory, cortex snapshots</Li>
+            <Li><strong>localStorage</strong> — Persistence for settings, API keys, steering memory, cortex snapshots, notes</Li>
           </Ul>
 
           <Heading>Inference</Heading>
@@ -335,10 +347,20 @@ Each dimension tracks:
 
           <Heading>Design System</Heading>
           <Ul>
-            <Li><strong>Liquid Glass</strong> — Frosted glass aesthetic with backdrop blur and subtle borders</Li>
+            <Li><strong>Nav Pill System</strong> — Frosted glass pill buttons with 9999px radius, backdrop blur, warm brown (#C4956A) accents, and spring hover lift animations</Li>
             <Li><strong>OLED Dark Mode</strong> — True black background for OLED displays</Li>
-            <Li><strong>Custom Fonts</strong> — Ubuntu Bold for headings, FuntasiLear for input</Li>
-            <Li><strong>Code Rain</strong> — AI/data science code tokens falling with syntax highlighting</Li>
+            <Li><strong>Custom Fonts</strong> — Geist for UI, GeistMono for code, Minecraft for pixel displays and greetings</Li>
+            <Li><strong>Spring Animations</strong> — Consistent physics-based motion across all interactions (stiffness 400, damping 32)</Li>
+          </Ul>
+
+          <Heading>Notes System</Heading>
+          <Ul>
+            <Li><strong>Block Editor</strong> — Notion-style block-based editor with multiple block types (text, headings, code, quotes, dividers, images, callouts)</Li>
+            <Li><strong>Canvas Mode</strong> — Freeform spatial canvas with draggable blocks and edge connections</Li>
+            <Li><strong>Vault System</strong> — Organize notes into separate vaults with per-vault isolation</Li>
+            <Li><strong>Backlinks</strong> — Automatic bidirectional linking between pages via <Code>[[wikilinks]]</Code> syntax</Li>
+            <Li><strong>Journal</strong> — Auto-created daily journal entries</Li>
+            <Li><strong>Floating Stats Pill</strong> — Word count, block count, and last-edited time in a glass pill at the bottom of the page</Li>
           </Ul>
         </DocSection>
 
@@ -375,6 +397,17 @@ Each dimension tracks:
             Save and restore complete brain states — signals, concepts, controls, and pipeline settings.
             Compare different analytical configurations side by side.
           </p>
+          <Heading>Three-Mode System</Heading>
+          <p>
+            Switch between Measurement (full pipeline), Research (truth + visualization), and Plain Chat modes.
+            Each mode configures the tier system, research features, and UI visibility — adapting the entire
+            experience to your current task.
+          </p>
+          <Heading>Integrated Notes</Heading>
+          <p>
+            A full block-based note-taking system with canvas mode, vaults, backlinks, daily journals,
+            and seamless cursor flow. Notes live alongside your research for frictionless knowledge capture.
+          </p>
         </DocSection>
 
         {/* ── Getting Started ── */}
@@ -402,10 +435,12 @@ open http://localhost:3000`}</CodeBlock>
 
           <Heading>First Steps</Heading>
           <Ul>
-            <Li>The app starts in <strong>Simulation Mode</strong> — no API key needed</Li>
+            <Li>The app starts in <strong>Research Mode</strong> with Simulation inference — no API key needed</Li>
+            <Li>Choose your chat mode: <strong>Measurement</strong> (full pipeline), <strong>Research</strong> (truth + viz), or <strong>Plain Chat</strong></Li>
             <Li>Type a research question in the chat to trigger the 10-stage pipeline</Li>
             <Li>Watch the signals update in real time as each stage processes</Li>
             <Li>Navigate to <strong>Analytics</strong> to explore all signals, visualizations, and tools</Li>
+            <Li>Use <strong>Notes</strong> to capture insights with the block editor, canvas mode, and backlinks</Li>
             <Li>Go to <strong>Settings</strong> to switch to API or Local inference mode</Li>
           </Ul>
         </DocSection>
@@ -481,10 +516,13 @@ location.reload();`}</CodeBlock>
           <Heading>Project Structure</Heading>
           <CodeBlock>{`pfc-app/
 ├── app/                  # Next.js App Router pages
-│   ├── page.tsx          # Main chat page
+│   ├── (chat)/           # Chat route group
+│   │   └── layout.tsx    # Chat layout with nav clearance
+│   ├── page.tsx          # Main chat page (landing + conversation)
 │   ├── layout.tsx        # Root layout (ThemeProvider, AppShell)
 │   ├── pipeline/         # Pipeline visualization
 │   ├── analytics/        # Analytics hub (all tools)
+│   ├── notes/            # Block editor, canvas mode, vaults
 │   ├── docs/             # This documentation page
 │   ├── settings/         # Configuration
 │   ├── diagnostics/      # Signal diagnostics
@@ -495,11 +533,11 @@ location.reload();`}</CodeBlock>
 │   ├── cortex-archive/   # Brain state snapshots
 │   └── research-copilot/ # Research techniques & tools
 ├── components/           # Shared UI components
-│   ├── app-shell.tsx     # Top-level layout (sidebar trigger, theme toggle)
-│   ├── app-sidebar.tsx   # Navigation sidebar
-│   ├── chat.tsx          # Chat interface
-│   ├── messages.tsx      # Message rendering
-│   ├── page-shell.tsx    # Page wrapper with header
+│   ├── app-shell.tsx     # Top-level layout (theme toggle)
+│   ├── chat.tsx          # Chat interface with mode toggle
+│   ├── message.tsx       # Message rendering + truth assessment
+│   ├── page-shell.tsx    # Page wrapper with glass header
+│   ├── glass-bubble-button.tsx  # NavBubble-style pill button
 │   └── ui/               # shadcn/ui primitives
 ├── hooks/                # Custom React hooks
 ├── lib/
@@ -507,10 +545,12 @@ location.reload();`}</CodeBlock>
 │   │   ├── llm/          # LLM integration (API, Ollama)
 │   │   ├── steering/     # Adaptive steering system
 │   │   └── types.ts      # Engine type definitions
-│   ├── store/            # Zustand state stores
+│   ├── store/            # Zustand state stores (13 slices)
+│   │   ├── slices/       # Modular state slices
+│   │   └── use-pfc-store.ts  # Composed store
 │   └── constants.ts      # Pipeline stages, example queries
 └── public/
-    └── fonts/            # Custom font files`}</CodeBlock>
+    └── fonts/            # Custom font files (Geist, Minecraft)`}</CodeBlock>
 
           <Heading>Data Flow</Heading>
           <p>

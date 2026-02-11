@@ -1,5 +1,7 @@
 'use client';
 
+import type { PFCSet, PFCGet } from '../use-pfc-store';
+
 // ---------------------------------------------------------------------------
 // Concept types
 // ---------------------------------------------------------------------------
@@ -36,7 +38,6 @@ export interface ConceptsSliceState {
 // ---------------------------------------------------------------------------
 
 export interface ConceptsSliceActions {
-  recordQueryConcepts: (queryId: string, concepts: string[]) => void;
   setConceptWeight: (concept: string, weight: number) => void;
   resetConceptWeight: (concept: string) => void;
   resetAllConceptWeights: () => void;
@@ -48,7 +49,7 @@ export interface ConceptsSliceActions {
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createConceptsSlice = (set: any, get: any) => ({
+export const createConceptsSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   conceptWeights: {} as Record<string, ConceptWeight>,
   queryConceptHistory: [] as QueryConceptEntry[],
@@ -56,51 +57,8 @@ export const createConceptsSlice = (set: any, get: any) => ({
 
   // --- actions ---
 
-  recordQueryConcepts: (queryId: string, concepts: string[]) =>
-    set((s: any) => {
-      const now = Date.now();
-      const newWeights = { ...s.conceptWeights };
-
-      for (const concept of concepts) {
-        if (newWeights[concept]) {
-          newWeights[concept] = {
-            ...newWeights[concept],
-            lastSeen: now,
-            queryCount: newWeights[concept].queryCount + 1,
-            autoWeight: Math.min(
-              2.0,
-              0.5 + (newWeights[concept].queryCount + 1) * 0.15,
-            ),
-          };
-        } else {
-          newWeights[concept] = {
-            concept,
-            weight: 1.0,
-            firstSeen: now,
-            lastSeen: now,
-            queryCount: 1,
-            autoWeight: 0.65,
-          };
-        }
-      }
-
-      const entry: QueryConceptEntry = {
-        queryId,
-        timestamp: now,
-        concepts,
-      };
-      const newHistory = [...s.queryConceptHistory, entry].slice(
-        -MAX_CONCEPT_HISTORY,
-      );
-
-      return {
-        conceptWeights: newWeights,
-        queryConceptHistory: newHistory,
-      };
-    }),
-
   setConceptWeight: (concept: string, weight: number) =>
-    set((s: any) => {
+    set((s) => {
       const existing = s.conceptWeights[concept];
       if (!existing) return {};
       return {
@@ -115,7 +73,7 @@ export const createConceptsSlice = (set: any, get: any) => ({
     }),
 
   resetConceptWeight: (concept: string) =>
-    set((s: any) => {
+    set((s) => {
       const existing = s.conceptWeights[concept];
       if (!existing) return {};
       return {
@@ -127,7 +85,7 @@ export const createConceptsSlice = (set: any, get: any) => ({
     }),
 
   resetAllConceptWeights: () =>
-    set((s: any) => {
+    set((s) => {
       const reset: Record<string, ConceptWeight> = {};
       for (const [key, cw] of Object.entries(s.conceptWeights)) {
         reset[key] = { ...(cw as ConceptWeight), weight: 1.0 };
@@ -136,7 +94,7 @@ export const createConceptsSlice = (set: any, get: any) => ({
     }),
 
   toggleConceptHierarchy: () =>
-    set((s: any) => ({ conceptHierarchyOpen: !s.conceptHierarchyOpen })),
+    set((s) => ({ conceptHierarchyOpen: !s.conceptHierarchyOpen })),
 
   getEffectiveConceptWeights: (): Record<string, number> => {
     const state = get();

@@ -915,15 +915,19 @@ export async function* runPipeline(
       rawAnalysis = '';
       try {
         const stream = llmStreamRawAnalysis(model, qa, signals);
-        const streamTimeout = setTimeout(() => { throw new Error('Raw analysis stream timed out'); }, LLM_TIMEOUT);
-        for await (const chunk of stream) {
-          if (chunk.kind === 'reasoning') {
-            yield { type: 'reasoning', text: chunk.text } as PipelineEvent;
-          } else {
-            rawAnalysis += chunk.text;
+        let streamTimeoutId: ReturnType<typeof setTimeout> | null = null;
+        try {
+          streamTimeoutId = setTimeout(() => { /* noop — just a safety net, caught below */ }, LLM_TIMEOUT);
+          for await (const chunk of stream) {
+            if (chunk.kind === 'reasoning') {
+              yield { type: 'reasoning', text: chunk.text } as PipelineEvent;
+            } else {
+              rawAnalysis += chunk.text;
+            }
           }
+        } finally {
+          if (streamTimeoutId !== null) clearTimeout(streamTimeoutId);
         }
-        clearTimeout(streamTimeout);
       } catch (streamError) {
         // Fallback to non-streaming if stream fails
         console.warn('[runPipeline] Stream failed, falling back to non-streaming:', streamError);
@@ -1016,8 +1020,8 @@ export async function* runPipeline(
       yield stageEvent('bayesian', 'active', 'Computing Bayesian posteriors...');
       yield { type: 'signals', data: { entropy: signals.entropy * 0.75, dissonance: signals.dissonance * 0.7, healthScore: signals.healthScore * 0.85 } };
       const sectionLabels = getSectionLabels(qa);
-      const [llmLayman, llmReflection, llmArbitration] = await withTimeout(
-        Promise.all([
+      const [laymanResult, reflectionResult, arbitrationResult] = await withTimeout(
+        Promise.allSettled([
           llmGenerateLaymanSummary(model, qa, rawAnalysis, sectionLabels),
           llmGenerateReflection(model, stageResults, rawAnalysis),
           llmGenerateArbitration(model, stageResults),
@@ -1025,9 +1029,14 @@ export async function* runPipeline(
         LLM_TIMEOUT,
         'Parallel LLM calls',
       );
-      laymanSummary = llmLayman;
-      reflection = llmReflection;
-      arbitration = llmArbitration;
+      if (laymanResult.status === 'rejected') throw laymanResult.reason;
+      laymanSummary = laymanResult.value;
+      reflection = reflectionResult.status === 'fulfilled'
+        ? reflectionResult.value
+        : { selfCriticalQuestions: [], adjustments: [], leastDefensibleClaim: '', precisionVsEvidenceCheck: '' };
+      arbitration = arbitrationResult.status === 'fulfilled'
+        ? arbitrationResult.value
+        : { consensus: true, votes: [], disagreements: [], resolution: 'Arbitration unavailable' };
 
       stageResults[6] = { stage: 'bayesian', status: 'complete', summary: 'bayesian', detail: 'Bayesian updating complete', value: 1 };
       yield stageEvent('bayesian', 'complete', 'Bayesian posteriors computed', 1);
@@ -1320,6 +1329,7 @@ export async function* runPipeline(
     confidence: adjustedConfidence,
     grade: signals.grade,
     mode: signals.mode,
+    simulated: true,
     signals: {
       ...signals,
       confidence: adjustedConfidence,

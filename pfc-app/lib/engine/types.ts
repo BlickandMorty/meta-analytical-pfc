@@ -125,7 +125,7 @@ export type PipelineEvent =
   | { type: 'text-delta'; text: string }
   | { type: 'reasoning'; text: string }
   | { type: 'soar'; event: string; data: Record<string, unknown> }
-  | { type: 'complete'; dualMessage: DualMessage; truthAssessment: TruthAssessment; confidence: number; grade: string; mode: string; signals: SignalUpdate }
+  | { type: 'complete'; dualMessage: DualMessage; truthAssessment: TruthAssessment; confidence: number; grade: string; mode: string; signals: SignalUpdate; simulated?: boolean }
   | { type: 'error'; message: string };
 
 export interface SignalUpdate {

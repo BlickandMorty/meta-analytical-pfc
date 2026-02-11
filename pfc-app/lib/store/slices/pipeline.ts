@@ -9,6 +9,7 @@ import type {
 } from '@/lib/engine/types';
 import type { PipelineStage } from '@/lib/constants';
 import { STAGES, STAGE_LABELS } from '@/lib/constants';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -96,7 +97,6 @@ export interface PipelineSliceActions {
     chord: number,
     harmony: number,
   ) => void;
-  incrementSkillGaps: () => void;
   applySignalUpdate: (update: Partial<SignalUpdate>) => void;
 }
 
@@ -104,7 +104,7 @@ export interface PipelineSliceActions {
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createPipelineSlice = (set: any, get: any) => ({
+export const createPipelineSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   pipelineStages: freshPipeline(),
   activeStage: null as PipelineStage | null,
@@ -135,7 +135,7 @@ export const createPipelineSlice = (set: any, get: any) => ({
   // --- actions ---
 
   advanceStage: (stage: PipelineStage, result: Partial<StageResult>) =>
-    set((s: any) => ({
+    set((s) => ({
       activeStage: stage,
       pipelineStages: s.pipelineStages.map((sr: StageResult) =>
         sr.stage === stage
@@ -154,7 +154,7 @@ export const createPipelineSlice = (set: any, get: any) => ({
   ) => set(signals),
 
   updateTDA: (tda: Partial<TDASnapshot>) =>
-    set((s: any) => ({ tda: { ...s.tda, ...tda } })),
+    set((s) => ({ tda: { ...s.tda, ...tda } })),
 
   updateFocus: (depth: number, temp: number) =>
     set({ focusDepth: depth, temperatureScale: temp }),
@@ -166,11 +166,8 @@ export const createPipelineSlice = (set: any, get: any) => ({
       harmonyKeyDistance: harmony,
     }),
 
-  incrementSkillGaps: () =>
-    set((s: any) => ({ skillGapsDetected: s.skillGapsDetected + 1 })),
-
   applySignalUpdate: (update: Partial<SignalUpdate>) =>
-    set((s: any) => ({
+    set((s) => ({
       ...(update.confidence !== undefined && {
         confidence: update.confidence,
       }),

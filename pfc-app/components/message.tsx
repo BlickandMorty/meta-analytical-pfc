@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, memo, useMemo } from 'react';
+import { useState, useEffect, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { MessageLayman } from './message-layman';
@@ -27,15 +27,20 @@ interface MessageProps {
 const selectShowTruthBot = (s: { showTruthBot: boolean }) => s.showTruthBot;
 const selectInferenceMode = (s: { inferenceMode: string }) => s.inferenceMode;
 const selectLatestSynthesisKeyId = (s: { latestSynthesisKeyId: string | null }) => s.latestSynthesisKeyId;
-const selectSteeringExemplars = (s: { memory: { exemplars: Array<{ key: { timestamp: number; id: string } }> } }) => s.memory.exemplars;
+const selectSteeringExemplars = (s: { memory?: { exemplars?: Array<{ key: { timestamp: number; id: string } }> } }) => s.memory?.exemplars ?? [];
+
+const selectResearchChatMode = (s: { researchChatMode: boolean }) => s.researchChatMode;
 
 function MessageInner({ message }: MessageProps) {
   const showTruthBot = usePFCStore(selectShowTruthBot);
   const inferenceMode = usePFCStore(selectInferenceMode);
+  const researchChatMode = usePFCStore(selectResearchChatMode);
   const latestSynthesisKeyId = useSteeringStore(selectLatestSynthesisKeyId);
   const exemplars = useSteeringStore(selectSteeringExemplars);
   const { resolvedTheme } = useTheme();
-  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
   const isUser = message.role === 'user';
   const [deepOpen, setDeepOpen] = useState(false);
 
@@ -46,20 +51,27 @@ function MessageInner({ message }: MessageProps) {
     )?.key.id ?? latestSynthesisKeyId;
   }, [isUser, message.confidence, message.timestamp, exemplars, latestSynthesisKeyId]);
 
+  // ── Fix 1C: Defensive defaults for potentially missing fields ──
+  const safeText = message.text ?? '';
+  const safeDualMessage = message.dualMessage ?? null;
+  const safeConfidence = typeof message.confidence === 'number' && !isNaN(message.confidence) ? message.confidence : null;
+
   // Extract clean response text from the layman summary
   const cleanText = useMemo(() => {
-    if (!message.dualMessage?.laymanSummary) return message.text;
-    const ls = message.dualMessage.laymanSummary;
+    if (!safeDualMessage?.laymanSummary) return safeText;
+    const ls = safeDualMessage.laymanSummary;
     const parts: string[] = [];
     if (ls.whatIsLikelyTrue) parts.push(ls.whatIsLikelyTrue);
     if (ls.whatCouldChange) parts.push(ls.whatCouldChange);
-    return parts.length > 0 ? parts.join('\n\n') : message.text;
-  }, [message]);
+    return parts.length > 0 ? parts.join('\n\n') : safeText;
+  }, [safeDualMessage, safeText]);
 
   const isSimulation = inferenceMode === 'simulation';
 
   return (
     <motion.div
+      role="article"
+      aria-label={isUser ? 'User message' : 'Assistant response'}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={MSG_SPRING}
@@ -68,7 +80,6 @@ function MessageInner({ message }: MessageProps) {
         gap: '0.75rem',
         width: '100%',
         justifyContent: isUser ? 'flex-end' : 'flex-start',
-        transform: 'translateZ(0)',
       }}
     >
       {/* Assistant avatar */}
@@ -105,9 +116,10 @@ function MessageInner({ message }: MessageProps) {
             lineHeight: 1.65,
             margin: 0,
           }}>
-            {message.text}
+            {safeText}
           </p>
-        ) : message.dualMessage ? (
+        ) : safeDualMessage ? (
+          researchChatMode ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {/* Reasoning accordion — shows AI thinking for this message */}
             {message.reasoning?.content && (
@@ -122,7 +134,7 @@ function MessageInner({ message }: MessageProps) {
             <MarkdownContent content={cleanText} />
 
             {/* Confidence footer — M3 label style */}
-            {message.confidence !== undefined && (
+            {safeConfidence !== null && (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -132,7 +144,7 @@ function MessageInner({ message }: MessageProps) {
                 color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.3)',
                 paddingTop: '0.25rem',
               }}>
-                <span>{(message.confidence * 100).toFixed(0)}% confidence</span>
+                <span>{(safeConfidence! * 100).toFixed(0)}% confidence</span>
                 {message.evidenceGrade && (
                   <span
                     style={{
@@ -171,6 +183,7 @@ function MessageInner({ message }: MessageProps) {
 
             {/* Deep analysis toggle — M3 tonal button */}
             <button
+              aria-expanded={deepOpen}
               onClick={() => setDeepOpen(!deepOpen)}
               style={{
                 display: 'inline-flex',
@@ -215,7 +228,7 @@ function MessageInner({ message }: MessageProps) {
                     borderTop: `1px solid ${isDark ? 'rgba(50,49,45,0.2)' : 'rgba(190,183,170,0.15)'}`,
                   }}>
                     {/* Full layman breakdown */}
-                    <MessageLayman layman={message.dualMessage.laymanSummary} />
+                    <MessageLayman layman={safeDualMessage!.laymanSummary} />
 
                     {/* Research analysis with inline tags */}
                     <div style={{
@@ -232,7 +245,7 @@ function MessageInner({ message }: MessageProps) {
                       }}>
                         Research Analysis
                       </p>
-                      <MessageResearch dualMessage={message.dualMessage} />
+                      <MessageResearch dualMessage={safeDualMessage!} />
                     </div>
 
                     {/* Concept mini-map */}
@@ -252,9 +265,13 @@ function MessageInner({ message }: MessageProps) {
               )}
             </AnimatePresence>
           </div>
+          ) : (
+            /* Plain chat mode — just show the clean text, no research chrome */
+            <MarkdownContent content={cleanText} />
+          )
         ) : (
           /* Simple text message — rendered as markdown */
-          <MarkdownContent content={message.text} />
+          <MarkdownContent content={safeText} />
         )}
       </div>
 
@@ -285,5 +302,8 @@ function MessageInner({ message }: MessageProps) {
 export const Message = memo(MessageInner, (prev, next) =>
   prev.message.id === next.message.id &&
   prev.message.text === next.message.text &&
-  prev.message.confidence === next.message.confidence,
+  prev.message.confidence === next.message.confidence &&
+  prev.message.dualMessage === next.message.dualMessage &&
+  prev.message.reasoning === next.message.reasoning &&
+  prev.message.truthAssessment === next.message.truthAssessment,
 );

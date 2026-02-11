@@ -8,6 +8,7 @@ import type {
   AnthropicModel,
 } from '@/lib/engine/llm/config';
 import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ---------------------------------------------------------------------------
 // State interface
@@ -47,7 +48,7 @@ export interface InferenceSliceActions {
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createInferenceSlice = (set: any, get: any) => ({
+export const createInferenceSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   inferenceMode: 'simulation' as InferenceMode,
   apiProvider: 'openai' as ApiProvider,

@@ -68,12 +68,14 @@ export function PageShell({
           maxWidth: '56rem',
           marginLeft: 'auto',
           marginRight: 'auto',
-          padding: '3.5rem 2rem 4rem 4rem',
+          padding: '1.5rem 2rem 4rem 4rem',
           width: '100%',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
+          contain: 'layout style paint',
           transform: 'translateZ(0)',
-        }}
+        } as React.CSSProperties}
       >
         {/* ── Page header ── */}
         <motion.div

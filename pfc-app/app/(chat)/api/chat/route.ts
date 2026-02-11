@@ -20,7 +20,8 @@ import { generateUUID } from '@/lib/utils';
  */
 async function buildConversationContext(chatId: string): Promise<ConversationContext | undefined> {
   try {
-    const messages = await getMessagesByChatId(chatId);
+    // Only fetch the most recent 20 messages (desc) for context — avoids loading entire history
+    const messages = await getMessagesByChatId(chatId, { limit: 20, orderBy: 'desc' });
     if (!messages || messages.length === 0) return undefined;
 
     const userMessages = messages
@@ -52,10 +53,11 @@ async function buildConversationContext(chatId: string): Promise<ConversationCon
       }
     }
 
+    // Messages are already in desc order (most recent first) from the query
     return {
-      previousQueries: userMessages.reverse(), // most recent first
+      previousQueries: userMessages, // already most recent first
       previousEntities: [...new Set(previousEntities)].slice(0, 8),
-      rootQuestion: userMessages[userMessages.length - 1], // first user message = original question
+      rootQuestion: userMessages[userMessages.length - 1], // oldest in batch ≈ original question
     };
   } catch {
     return undefined;
@@ -83,7 +85,18 @@ export async function POST(request: NextRequest) {
     soarConfig = body.soarConfig;
 
     if (!query || typeof query !== 'string') {
-      return new Response('Missing query', { status: 400 });
+      return new Response(
+        JSON.stringify({ error: 'Missing query' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Enforce max query length to prevent abuse
+    if (query.length > 50_000) {
+      return new Response(
+        JSON.stringify({ error: 'Query too long (max 50,000 characters)' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
     }
 
     const resolvedUserId = userId || 'local-user';
@@ -133,6 +146,9 @@ export async function POST(request: NextRequest) {
   const capturedInferenceConfig = inferenceConfig;
   const capturedSoarConfig = soarConfig;
 
+  // Use request.signal to detect client disconnect
+  const clientSignal = request.signal;
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -152,6 +168,12 @@ export async function POST(request: NextRequest) {
           capturedInferenceConfig,
           capturedSoarConfig,
         )) {
+          // Stop if client disconnected
+          if (clientSignal.aborted) {
+            controller.close();
+            return;
+          }
+
           const data = JSON.stringify(event);
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
 
@@ -181,6 +203,12 @@ export async function POST(request: NextRequest) {
               }
             } catch (dbError) {
               console.error('[chat/route] DB save error:', dbError);
+              // Notify client that DB save failed (non-fatal)
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({ type: 'error', message: 'Message saved to chat but failed to persist to database' })}\n\n`
+                )
+              );
             }
           }
         }
@@ -192,11 +220,15 @@ export async function POST(request: NextRequest) {
         console.error('[chat/route] Pipeline error:', error);
         const errorMsg =
           error instanceof Error ? error.message : 'Unknown error';
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: 'error', message: errorMsg })}\n\n`
-          )
-        );
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ type: 'error', message: errorMsg })}\n\n`
+            )
+          );
+        } catch {
+          // Controller may be closed if client disconnected
+        }
         controller.close();
       }
     },

@@ -1,5 +1,7 @@
 'use client';
 
+import type { PFCSet, PFCGet } from '../use-pfc-store';
+
 // ---------------------------------------------------------------------------
 // Portal types (LobeChat-inspired)
 // ---------------------------------------------------------------------------
@@ -36,13 +38,8 @@ export interface PortalSliceState {
 // ---------------------------------------------------------------------------
 
 export interface PortalSliceActions {
-  pushPortalView: (view: PortalViewData) => void;
-  popPortalView: () => void;
-  replacePortalView: (view: PortalViewData) => void;
-  clearPortalStack: () => void;
   openArtifact: (artifact: PortalArtifact) => void;
   closePortal: () => void;
-  togglePortal: () => void;
   setPortalDisplayMode: (mode: 'code' | 'preview') => void;
   goBack: () => void;
 }
@@ -51,7 +48,7 @@ export interface PortalSliceActions {
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createPortalSlice = (set: any, get: any) => ({
+export const createPortalSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   portalStack: [] as PortalViewData[],
   showPortal: false,
@@ -59,47 +56,8 @@ export const createPortalSlice = (set: any, get: any) => ({
 
   // --- actions ---
 
-  pushPortalView: (view: PortalViewData) =>
-    set((s: any) => {
-      const stack = s.portalStack as PortalViewData[];
-      // Smart duplicate prevention: if top of stack has same type, replace
-      if (stack.length > 0 && stack[stack.length - 1].type === view.type) {
-        return {
-          portalStack: [...stack.slice(0, -1), view],
-          showPortal: true,
-        };
-      }
-      return {
-        portalStack: [...stack, view],
-        showPortal: true,
-      };
-    }),
-
-  popPortalView: () =>
-    set((s: any) => {
-      const stack = s.portalStack as PortalViewData[];
-      if (stack.length <= 1) {
-        return { portalStack: [], showPortal: false };
-      }
-      return { portalStack: stack.slice(0, -1) };
-    }),
-
-  replacePortalView: (view: PortalViewData) =>
-    set((s: any) => {
-      const stack = s.portalStack as PortalViewData[];
-      if (stack.length === 0) {
-        return { portalStack: [view], showPortal: true };
-      }
-      return {
-        portalStack: [...stack.slice(0, -1), view],
-        showPortal: true,
-      };
-    }),
-
-  clearPortalStack: () => set({ portalStack: [], showPortal: false }),
-
   openArtifact: (artifact: PortalArtifact) =>
-    set((s: any) => {
+    set((s) => {
       const view: PortalViewData = { type: 'artifact', artifact };
       const stack = s.portalStack as PortalViewData[];
       // Smart duplicate prevention: if top is already an artifact, replace
@@ -120,13 +78,11 @@ export const createPortalSlice = (set: any, get: any) => ({
 
   closePortal: () => set({ showPortal: false }),
 
-  togglePortal: () => set((s: any) => ({ showPortal: !s.showPortal })),
-
   setPortalDisplayMode: (mode: 'code' | 'preview') =>
     set({ portalDisplayMode: mode }),
 
   goBack: () =>
-    set((s: any) => {
+    set((s) => {
       const stack = s.portalStack as PortalViewData[];
       if (stack.length <= 1) {
         return { portalStack: [], showPortal: false };

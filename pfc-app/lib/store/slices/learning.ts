@@ -6,6 +6,7 @@ import type {
   LearningStep,
 } from '@/lib/notes/learning-protocol';
 import { createLearningSession } from '@/lib/notes/learning-protocol';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ── localStorage keys ──
 const STORAGE_KEY_HISTORY = 'pfc-learning-history';
@@ -13,6 +14,18 @@ const STORAGE_KEY_AUTORUN = 'pfc-learning-autorun';
 
 // ── Module-scope abort controller (not in Zustand state) ──
 let _learningAbortController: AbortController | null = null;
+
+/**
+ * Abort any active learning SSE connection.
+ * Call this from component cleanup (useEffect return) to prevent
+ * orphaned connections when navigating away.
+ */
+export function abortLearningSSE(): void {
+  if (_learningAbortController) {
+    _learningAbortController.abort();
+    _learningAbortController = null;
+  }
+}
 
 // ── History entry ──
 export interface LearningHistoryEntry {
@@ -88,7 +101,7 @@ function loadAutoRun(): boolean {
 }
 
 // ── Helper: connect to SSE endpoint ──
-function connectLearningSSE(set: any, get: any) {
+function connectLearningSSE(set: PFCSet, get: PFCGet) {
   const state = get();
   const session: LearningSession | null = state.learningSession;
   if (!session) return;
@@ -192,7 +205,7 @@ function connectLearningSSE(set: any, get: any) {
                 });
 
                 // Update session totals
-                set((s: any) => {
+                set((s) => {
                   if (!s.learningSession) return {};
                   return {
                     learningSession: {
@@ -258,7 +271,7 @@ function connectLearningSSE(set: any, get: any) {
               }
 
               case 'session-complete': {
-                set((s: any) => {
+                set((s) => {
                   if (!s.learningSession) return {};
                   return {
                     learningSession: {
@@ -282,7 +295,7 @@ function connectLearningSSE(set: any, get: any) {
                     error: event.message,
                   });
                 }
-                set((s: any) => {
+                set((s) => {
                   if (!s.learningSession) return {};
                   return {
                     learningSession: {
@@ -302,7 +315,7 @@ function connectLearningSSE(set: any, get: any) {
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         console.error('[learning] Stream error:', error);
-        set((s: any) => {
+        set((s) => {
           if (!s.learningSession) return {};
           return {
             learningSession: {
@@ -319,7 +332,7 @@ function connectLearningSSE(set: any, get: any) {
 }
 
 // ── Slice creator ──
-export const createLearningSlice = (set: any, get: any) => ({
+export const createLearningSlice = (set: PFCSet, get: PFCGet) => ({
   // ── Initial state ──
   learningSession: null as LearningSession | null,
   learningHistory: loadHistory(),
@@ -353,7 +366,7 @@ export const createLearningSlice = (set: any, get: any) => ({
       _learningAbortController = null;
     }
 
-    set((s: any) => {
+    set((s) => {
       if (!s.learningSession) return {};
       return {
         learningSession: {
@@ -365,7 +378,7 @@ export const createLearningSlice = (set: any, get: any) => ({
   },
 
   resumeLearningSession: () => {
-    set((s: any) => {
+    set((s) => {
       if (!s.learningSession) return {};
       return {
         learningSession: {
@@ -413,7 +426,7 @@ export const createLearningSlice = (set: any, get: any) => ({
   },
 
   updateLearningStep: (stepIndex: number, updates: Partial<LearningStep>) => {
-    set((s: any) => {
+    set((s) => {
       if (!s.learningSession) return {};
       const steps = [...s.learningSession.steps];
       if (stepIndex < 0 || stepIndex >= steps.length) return {};
@@ -428,7 +441,7 @@ export const createLearningSlice = (set: any, get: any) => ({
   },
 
   advanceLearningStep: () => {
-    set((s: any) => {
+    set((s) => {
       if (!s.learningSession) return {};
       const nextIndex = s.learningSession.currentStepIndex + 1;
       if (nextIndex >= s.learningSession.steps.length) return {};
@@ -442,7 +455,7 @@ export const createLearningSlice = (set: any, get: any) => ({
   },
 
   appendLearningStreamText: (text: string) => {
-    set((s: any) => ({
+    set((s) => ({
       learningStreamText: s.learningStreamText + text,
     }));
   },

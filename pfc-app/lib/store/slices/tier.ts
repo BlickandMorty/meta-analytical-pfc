@@ -2,10 +2,10 @@
 
 import type {
   SuiteTier,
-  SuiteMode,
   SuiteTierFeatures,
 } from '@/lib/research/types';
 import { getSuiteTierFeatures } from '@/lib/research/types';
+import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ---------------------------------------------------------------------------
 // State interface
@@ -13,7 +13,6 @@ import { getSuiteTierFeatures } from '@/lib/research/types';
 
 export interface TierSliceState {
   suiteTier: SuiteTier;
-  suiteMode: SuiteMode;
   measurementEnabled: boolean;
   tierFeatures: SuiteTierFeatures;
 }
@@ -24,7 +23,6 @@ export interface TierSliceState {
 
 export interface TierSliceActions {
   setSuiteTier: (tier: SuiteTier) => void;
-  setSuiteMode: (mode: SuiteMode) => void;
   setMeasurementEnabled: (enabled: boolean) => void;
 }
 
@@ -32,10 +30,9 @@ export interface TierSliceActions {
 // Slice creator
 // ---------------------------------------------------------------------------
 
-export const createTierSlice = (set: any, get: any) => ({
+export const createTierSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   suiteTier: 'programming' as SuiteTier,
-  suiteMode: 'programming' as SuiteMode,
   measurementEnabled: false,
   tierFeatures: getSuiteTierFeatures('programming'),
 
@@ -45,7 +42,6 @@ export const createTierSlice = (set: any, get: any) => ({
     const features = getSuiteTierFeatures(tier);
     set({
       suiteTier: tier,
-      suiteMode: tier,
       measurementEnabled: features.pipelineVisualizer,
       tierFeatures: features,
     });
@@ -57,12 +53,6 @@ export const createTierSlice = (set: any, get: any) => ({
         String(features.pipelineVisualizer),
       );
     }
-  },
-
-  setSuiteMode: (mode: SuiteMode) => {
-    // Legacy: delegates to setSuiteTier
-    const tier = mode as SuiteTier;
-    get().setSuiteTier(tier);
   },
 
   setMeasurementEnabled: (enabled: boolean) => {
