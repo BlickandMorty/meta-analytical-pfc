@@ -19,6 +19,11 @@ import { hydrateStore } from '@/lib/store/hydrate';
 
 import { readString } from '@/lib/storage-versioning';
 
+// Stable selector: derives a boolean "any thread streaming" from the threadIsStreaming map.
+// Avoids subscribing to the entire object (which would re-render on every thread state change).
+const selectAnyThreadStreaming = (s: { threadIsStreaming: Record<string, boolean> }) =>
+  Object.values(s.threadIsStreaming).some(Boolean);
+
 // Safe localStorage helper — never throws (delegates to versioned wrapper)
 function ls(key: string): string | null {
   return readString(key);
@@ -34,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const toggleMiniChat = usePFCStore((s) => s.toggleMiniChat);
   const isProcessing = usePFCStore((s) => s.isProcessing);
   const isStreaming = usePFCStore((s) => s.isStreaming);
-  const threadIsStreaming = usePFCStore((s) => s.threadIsStreaming);
+  const anyThreadStreaming = usePFCStore(selectAnyThreadStreaming);
   const addToast = usePFCStore((s) => s.addToast);
   const setInferenceMode = usePFCStore((s) => s.setInferenceMode);
   const setApiKey = usePFCStore((s) => s.setApiKey);
@@ -50,7 +55,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   // ── Background AI processing indicator ──
   // True when any chat stream or pipeline is active (main chat, mini-chat threads)
-  const anyThreadStreaming = Object.values(threadIsStreaming).some(Boolean);
   const aiWorking = isProcessing || isStreaming || anyThreadStreaming;
   // Track transitions from working → done to show toast when user is off-chat
   const wasWorkingRef = useRef(false);

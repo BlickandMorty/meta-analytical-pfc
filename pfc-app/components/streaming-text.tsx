@@ -3,9 +3,13 @@
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { MarkdownContent } from './markdown-content';
 
+// Stable selectors — extracted outside component to avoid re-creating on every render
+const selectStreamingText = (s: { streamingText: string }) => s.streamingText;
+const selectIsStreaming = (s: { isStreaming: boolean }) => s.isStreaming;
+
 export function StreamingText() {
-  const streamingText = usePFCStore((s) => s.streamingText);
-  const isStreaming = usePFCStore((s) => s.isStreaming);
+  const streamingText = usePFCStore(selectStreamingText);
+  const isStreaming = usePFCStore(selectIsStreaming);
 
   if (!isStreaming && !streamingText) return null;
 

@@ -1148,7 +1148,7 @@ function HistoryTabContent({ isDark, textPrimary, textSecondary, btnHover }: {
    Message Bubble with actions (Save to Notes / Save for Later)
    ═══════════════════════════════════════════════════════════════════ */
 
-function MessageBubble({ msg, isDark, textPrimary, textSecondary, btnHover, onSaveToNotes, onSaveForLater }: {
+const MessageBubble = memo(function MessageBubble({ msg, isDark, textPrimary, textSecondary, btnHover, onSaveToNotes, onSaveForLater }: {
   msg: AssistantMessage; isDark: boolean;
   textPrimary: string; textSecondary: string; btnHover: string;
   onSaveToNotes: (content: string) => string;
@@ -1204,7 +1204,7 @@ function MessageBubble({ msg, isDark, textPrimary, textSecondary, btnHover, onSa
       )}
     </div>
   );
-}
+});
 
 function ActionButton({ icon: Icon, label, isDark, textSecondary, btnHover, onClick }: {
   icon: LucideIcon; label: string; isDark: boolean; textSecondary: string; btnHover: string; onClick: () => void;
