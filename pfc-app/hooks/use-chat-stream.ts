@@ -8,6 +8,7 @@ import type { QueryFeatureVector } from '@/lib/engine/steering/types';
 import type { SignalSnapshot, QueryAnalysisSnapshot } from '@/lib/engine/steering/encoder';
 import type { TruthAssessmentInput } from '@/lib/engine/steering/feedback';
 import { StreamingHandler, detectArtifacts } from '@/libs/agent-runtime/StreamingHandler';
+import { detectNoteIntent } from '@/lib/engine/note-intent';
 
 // ── Buffer limits to prevent memory exhaustion when paused ──
 const MAX_BUFFER_SIZE = 5 * 1024 * 1024; // 5MB
@@ -41,6 +42,9 @@ export function useChatStream() {
   const abortRef = useRef<AbortController | null>(null);
   const isStreamingRef = useRef(false);
 
+  // Mutex: serializes concurrent sendQuery calls
+  const lockRef = useRef<Promise<void>>(Promise.resolve());
+
   // Pause/resume refs — buffer text events while paused
   const pausedRef = useRef(false);
   const textBufferRef = useRef('');
@@ -50,28 +54,17 @@ export function useChatStream() {
   const parseErrorCountRef = useRef(0);
 
   const sendQuery = useCallback(async (query: string, chatId?: string) => {
-    // Guard: if already streaming, abort previous and wait for cleanup
-    if (isStreamingRef.current) {
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
-      // Wait for the previous stream to clean up via Promise (avoids busy-wait CPU spin)
-      await new Promise<void>((resolve) => {
-        const maxWait = 2000;
-        const start = Date.now();
-        const check = () => {
-          if (!isStreamingRef.current || Date.now() - start >= maxWait) {
-            if (isStreamingRef.current) {
-              isStreamingRef.current = false;
-              abortRef.current = null;
-            }
-            resolve();
-          } else {
-            setTimeout(check, 50);
-          }
-        };
-        check();
-      });
+    // Serialize concurrent calls: wait for any previous sendQuery to finish
+    const previousLock = lockRef.current;
+    let releaseLock!: () => void;
+    lockRef.current = new Promise<void>((resolve) => { releaseLock = resolve; });
+    await previousLock;
+
+    // Abort any still-running stream from a previous (timed-out) call
+    if (isStreamingRef.current && abortRef.current) {
+      abortRef.current.abort();
+      isStreamingRef.current = false;
+      abortRef.current = null;
     }
 
     const store = usePFCStore.getState();
@@ -86,6 +79,9 @@ export function useChatStream() {
     textBufferRef.current = '';
     reasoningBufferRef.current = '';
     parseErrorCountRef.current = 0;
+
+    // ── Detect note-related intent before sending ──
+    const noteIntent = detectNoteIntent(query);
 
     // Optimistic: add user message immediately
     store.submitQuery(query);
@@ -150,8 +146,51 @@ export function useChatStream() {
     // ── Inference config ─────────────────────────────────────
     const inferenceConfig = store.getInferenceConfig();
 
+    // ── Pre-flight validation: catch obvious config issues early ──
+    if (inferenceConfig.mode === 'api' && !inferenceConfig.apiKey) {
+      store.addToast({
+        message: 'API key is required — set it in Settings before using API mode.',
+        type: 'error',
+      });
+      store.stopStreaming();
+      isStreamingRef.current = false;
+      abortRef.current = null;
+      return;
+    }
+    if (inferenceConfig.mode === 'local' && !store.ollamaAvailable) {
+      store.addToast({
+        message: 'Ollama is not reachable — make sure it\'s running at ' + (inferenceConfig.ollamaBaseUrl || 'http://localhost:11434'),
+        type: 'error',
+      });
+      store.stopStreaming();
+      isStreamingRef.current = false;
+      abortRef.current = null;
+      return;
+    }
+
     // ── SOAR config ────────────────────────────────────────
     const soarConfig = store.soarConfig;
+    const analyticsEngineEnabled = store.analyticsEngineEnabled;
+
+    // ── Detect file paths in query text ────────────────────
+    const filePathRegex = /(?:\/[\w./-]+\.\w{2,5}|~\/[\w./-]+\.\w{2,5})/g;
+    const supportedExts = ['png','jpg','jpeg','webp','pdf','txt','md','csv','json','docx','doc'];
+    const filePaths = (query.match(filePathRegex) || []).filter((p) => {
+      const ext = p.split('.').pop()?.toLowerCase() || '';
+      return supportedExts.includes(ext);
+    });
+
+    // ── Gather pending attachments from store ──────────────
+    const attachments = store.pendingAttachments.length > 0
+      ? store.pendingAttachments.map((a) => ({
+          id: a.id,
+          name: a.name,
+          type: a.type,
+          uri: a.uri,
+          size: a.size,
+          mimeType: a.mimeType,
+        }))
+      : undefined;
 
     try {
       const response = await fetch('/api/chat', {
@@ -165,12 +204,27 @@ export function useChatStream() {
           ...(hasSteering && { steeringBias }),
           inferenceConfig,
           ...(soarConfig?.enabled && { soarConfig }),
+          analyticsEngineEnabled,
+          chatMode: store.chatMode,
+          ...(attachments && { attachments }),
+          ...(filePaths.length > 0 && { filePaths }),
         }),
         signal: controller.signal,
       });
 
+      // Clear attachments after sending (regardless of response status)
+      if (store.pendingAttachments.length > 0) {
+        store.clearAttachments();
+      }
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        // Try to extract a meaningful error from the response body
+        let errorMsg = `HTTP ${response.status}`;
+        try {
+          const errorBody = await response.json();
+          if (errorBody?.error) errorMsg = errorBody.error;
+        } catch { /* ignore parse failure */ }
+        throw new Error(errorMsg);
       }
 
       const reader = response.body?.getReader();
@@ -312,7 +366,7 @@ export function useChatStream() {
                 if (detectedArtifacts.length > 0) {
                   const latestMsg = store.messages[store.messages.length - 1];
                   const msgId = latestMsg?.id || 'unknown';
-                  const art = detectedArtifacts[0];
+                  const art = detectedArtifacts[0]!;
                   store.openArtifact({
                     messageId: msgId,
                     identifier: art.identifier,
@@ -322,11 +376,59 @@ export function useChatStream() {
                     content: art.content,
                   });
                 }
+
+                // ── Note intent: auto-write AI output to notes ──────────
+                if (noteIntent.action && noteIntent.confidence > 0.5) {
+                  const noteStore = usePFCStore.getState();
+                  const summaryText = event.dualMessage?.laymanSummary?.whatIsLikelyTrue
+                    || event.dualMessage?.rawAnalysis
+                    || '';
+
+                  if (summaryText) {
+                    if (noteIntent.action === 'create_note_page') {
+                      // Create a new page with the topic as title
+                      const pageTitle = noteIntent.topic || 'AI Research Note';
+                      const pageId = noteStore.createPage(pageTitle);
+                      // Get the first block of the new page and write content
+                      const newBlocks = noteStore.noteBlocks.filter((b: { pageId: string }) => b.pageId === pageId);
+                      if (newBlocks.length > 0) {
+                        noteStore.updateBlockContent(newBlocks[0]!.id, summaryText);
+                      }
+                      noteStore.addToast({ message: `Created note page: "${pageTitle}"`, type: 'success' });
+                    } else if (noteIntent.action === 'write_to_notes' || noteIntent.action === 'summarize_notes' || noteIntent.action === 'expand_note') {
+                      // Write to the active page or create a new one
+                      const activePage = noteStore.activePageId;
+                      if (activePage) {
+                        // Add a new block to the active page
+                        const pageBlocks = noteStore.noteBlocks
+                          .filter((b: { pageId: string }) => b.pageId === activePage)
+                          .sort((a: { order: string }, b: { order: string }) => a.order.localeCompare(b.order));
+                        const lastBlock = pageBlocks[pageBlocks.length - 1];
+                        noteStore.createBlock(activePage, null, lastBlock?.id ?? null, summaryText);
+                        noteStore.addToast({ message: 'Added to your notes', type: 'success' });
+                      } else {
+                        // No active page — create one
+                        const title = noteIntent.topic || 'AI Summary';
+                        const pageId = noteStore.createPage(title);
+                        const newBlocks = noteStore.noteBlocks.filter((b: { pageId: string }) => b.pageId === pageId);
+                        if (newBlocks.length > 0) {
+                          noteStore.updateBlockContent(newBlocks[0]!.id, summaryText);
+                        }
+                        noteStore.addToast({ message: `Created note: "${title}"`, type: 'success' });
+                      }
+                    }
+                  }
+                }
                 break;
               }
 
               case 'error':
                 console.error('Pipeline error:', event.message);
+                // Surface the error to the user — previously only logged to console
+                store.addToast({
+                  message: event.message || 'Pipeline error — check Settings',
+                  type: 'error',
+                });
                 store.stopStreaming();
                 break;
             }
@@ -348,6 +450,7 @@ export function useChatStream() {
     } finally {
       abortRef.current = null;
       isStreamingRef.current = false;
+      releaseLock();
     }
   }, []);
 
@@ -375,15 +478,14 @@ export function useChatStream() {
     const store = usePFCStore.getState();
     store.setThinkingPaused(false);
 
-    // ── Fix 1A: Flush buffered text (already size-capped above) ──
-    if (textBufferRef.current) {
-      store.appendStreamingText(textBufferRef.current);
-      textBufferRef.current = '';
-    }
-    if (reasoningBufferRef.current) {
-      store.appendReasoningText(reasoningBufferRef.current);
-      reasoningBufferRef.current = '';
-    }
+    // ── Fix 1A: Flush buffered text atomically (capture-then-clear to avoid race with stream loop) ──
+    const textSnap = textBufferRef.current;
+    textBufferRef.current = '';
+    if (textSnap) store.appendStreamingText(textSnap);
+
+    const reasonSnap = reasoningBufferRef.current;
+    reasoningBufferRef.current = '';
+    if (reasonSnap) store.appendReasoningText(reasonSnap);
   }, []);
 
   return { sendQuery, abort, pause, resume };
