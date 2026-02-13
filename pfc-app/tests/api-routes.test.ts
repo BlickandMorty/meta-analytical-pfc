@@ -115,12 +115,13 @@ vi.mock('@/lib/engine/file-processor', () => ({
 const BASE = 'http://localhost:3000';
 
 function postRequest(path: string, body?: unknown): NextRequest {
-  const init: RequestInit = { method: 'POST' };
+  // SAFETY: Next.js RequestInit narrows signal to exclude null, but the init object never sets signal.
+  const init = { method: 'POST' } as Record<string, unknown>;
   if (body !== undefined) {
     init.body = JSON.stringify(body);
     init.headers = { 'Content-Type': 'application/json' };
   }
-  return new NextRequest(new URL(path, BASE), init);
+  return new NextRequest(new URL(path, BASE), init as never);
 }
 
 function malformedRequest(path: string): NextRequest {

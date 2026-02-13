@@ -21,9 +21,9 @@ async function collectEvents(query: string): Promise<PipelineEvent[]> {
   const events: PipelineEvent[] = [];
   const soarOff = {
     enabled: false, autoDetect: true,
-    thresholds: { minDifficulty: 0.3, maxConfidence: 0.85, minEntropy: 0.2 },
+    thresholds: { minDifficulty: 0.3, maxConfidence: 0.85, minEntropy: 0.2, confidenceFloor: 0.35, entropyCeiling: 0.7, dissonanceCeiling: 0.6, difficultyFloor: 0.5 },
     maxIterations: 3, stonesPerCurriculum: 3,
-    rewardWeights: { improvement: 0.4, contradiction: 0.3, diversity: 0.3 },
+    rewardWeights: { confidence: 0.35, entropy: 0.25, dissonance: 0.20, health: 0.15, tda: 0.05 },
     minRewardThreshold: 0.05, contradictionDetection: true,
     maxContradictionClaims: 20, apiCostCapTokens: 50000, verbose: false,
   };

@@ -197,13 +197,13 @@ describe('store integrity', () => {
     usePFCStore.getState().applySignalUpdate({
       confidence: 0.9,
       entropy: 0.2,
-      safetyState: 'amber',
+      safetyState: 'orange',
     });
     const s = usePFCStore.getState();
 
     expect(s.confidence).toBe(0.9);
     expect(s.entropy).toBe(0.2);
-    expect(s.safetyState).toBe('amber');
+    expect(s.safetyState).toBe('orange');
     assertValidState();
   });
 
