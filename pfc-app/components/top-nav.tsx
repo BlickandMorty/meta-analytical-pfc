@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, memo, useCallback } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
 import { useIsDark } from '@/hooks/use-is-dark';
@@ -13,10 +13,10 @@ import {
   BookOpenIcon,
   DownloadIcon,
   PenLineIcon,
+  LibraryIcon,
   ServerIcon,
   WifiIcon,
   ActivityIcon,
-  SparklesIcon,
   FlaskConicalIcon,
   ArchiveIcon,
   CompassIcon,
@@ -51,23 +51,19 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: HomeIcon, group: 'core' },
   { href: '/notes', label: 'Notes', icon: PenLineIcon, group: 'core' },
+  { href: '/library', label: 'Library', icon: LibraryIcon, group: 'core' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full', group: 'tools' },
   { href: '/daemon', label: 'Daemon', icon: BotIcon, group: 'tools' },
-  { href: '/export', label: 'Export', icon: DownloadIcon, group: 'utility' },
   { href: '/settings', label: 'Settings', icon: SettingsIcon, group: 'utility' },
-  { href: '/docs', label: 'Docs', icon: BookOpenIcon, group: 'utility' },
 ];
 
 /* ─── Analytics sub-tabs ─── */
 const ANALYTICS_TABS = [
   { key: 'archive', label: 'Archive', icon: ArchiveIcon },
-  { key: 'research', label: 'Research', icon: FlaskConicalIcon },
   { key: 'steering', label: 'Steering', icon: CompassIcon },
   { key: 'pipeline', label: 'Pipeline', icon: NetworkIcon },
   { key: 'signals', label: 'Signals', icon: ActivityIcon },
   { key: 'visualizer', label: 'Visualizer', icon: BarChart3Icon },
-  { key: 'evaluate', label: 'Evaluate', icon: MicroscopeIcon },
-  { key: 'concepts', label: 'Concepts', icon: BrainIcon },
 ] as const;
 
 function tierMeetsMinimum(current: string, minimum: TierGate): boolean {
@@ -77,8 +73,8 @@ function tierMeetsMinimum(current: string, minimum: TierGate): boolean {
 
 function tierGateLabel(gate: TierGate): string {
   switch (gate) {
-    case 'programming': return 'Programming Suite';
-    case 'full': return 'Full Measurement Suite';
+    case 'programming': return 'Deep Analysis';
+    case 'full': return 'Full AI & Measurement';
     default: return '';
   }
 }
@@ -133,6 +129,9 @@ const NavBubble = memo(function NavBubble({
   disabledReason?: string;
 }) {
   const [hovered, setHovered] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  // Clear pending hover timer on unmount to prevent setState on unmounted component
+  useEffect(() => () => { if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current); }, []);
   const expanded = (hovered || isActive) && !disabled;
   const Icon = item.icon;
 
@@ -150,8 +149,14 @@ const NavBubble = memo(function NavBubble({
   return (
     <button
       onClick={() => !disabled && onNavigate(item.href)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = setTimeout(() => setHovered(true), 120);
+      }}
+      onMouseLeave={() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        setHovered(false);
+      }}
       title={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
       aria-label={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
       aria-disabled={disabled}
@@ -226,7 +231,6 @@ const selectActiveStage = (s: PFCState) => s.activeStage;
 const selectMessages = (s: PFCState) => s.messages;
 const selectInferenceMode = (s: PFCState) => s.inferenceMode;
 const selectConfidence = (s: PFCState) => s.confidence;
-const selectToggleSynthesis = (s: PFCState) => s.toggleSynthesisView;
 
 const HomePFCBubble = memo(function HomePFCBubble({
   isDark,
@@ -242,23 +246,24 @@ const HomePFCBubble = memo(function HomePFCBubble({
   onNavigate: (href: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => () => { if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current); }, []);
 
   const isProcessing = usePFCStore(selectIsProcessing);
   const activeStage = usePFCStore(selectActiveStage);
   const messages = usePFCStore(selectMessages);
   const inferenceMode = usePFCStore(selectInferenceMode);
   const confidence = usePFCStore(selectConfidence);
-  const toggleSynthesis = usePFCStore(selectToggleSynthesis);
 
-  const hasMessages = messages.some((m) => m.role === 'system');
-  const modeInfo = MODE_STYLES[inferenceMode] ?? MODE_STYLES.simulation;
+  const hasMessages = messages.length > 0;
+  const modeInfo = MODE_STYLES[inferenceMode] ?? MODE_STYLES.simulation!;
 
-  // PFC mode: on chat page with messages
+  // Lab mode: on chat page with messages
   const pfcMode = isOnChat && hasMessages;
   const showLabel = hovered || pfcMode || isOnHome;
 
-  // Typewriter on hover — only for "Home" label (not PFC Engine mode)
-  const homeLabel = pfcMode ? 'PFC Engine' : 'Home';
+  // Typewriter on hover — only for "Home" label (not Lab Engine mode)
+  const homeLabel = pfcMode ? 'Lab Engine' : 'Home';
   const shouldTypewrite = hovered && !pfcMode && !isOnHome;
   const { displayText: twText, cursorVisible: twCursor } = useTypewriter(
     homeLabel,
@@ -271,8 +276,14 @@ const HomePFCBubble = memo(function HomePFCBubble({
   return (
     <button
       onClick={() => onNavigate('/')}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = setTimeout(() => setHovered(true), 120);
+      }}
+      onMouseLeave={() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        setHovered(false);
+      }}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -301,7 +312,7 @@ const HomePFCBubble = memo(function HomePFCBubble({
         transition: 'color 0.15s',
       }} />
 
-      {/* Label — "PFC Engine" when in chat, "Home" otherwise */}
+      {/* Label — "Lab Engine" when in chat, "Home" otherwise */}
       <span style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -326,7 +337,7 @@ const HomePFCBubble = memo(function HomePFCBubble({
         )}
       </span>
 
-      {/* PFC Engine badges — only in PFC mode */}
+      {/* Lab Engine badges — only in pfcMode */}
       {pfcMode && (
         <>
           <span style={{
@@ -375,30 +386,6 @@ const HomePFCBubble = memo(function HomePFCBubble({
             </span>
           )}
 
-          {hasMessages && (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); toggleSynthesis(); }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  toggleSynthesis();
-                }
-              }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                padding: '0.1875rem 0.5rem', borderRadius: '9999px',
-                background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
-                cursor: 'pointer', fontSize: '0.625rem', fontWeight: 600,
-                color: 'var(--pfc-accent)',
-              }}
-            >
-              <SparklesIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
-              Synthesize
-            </span>
-          )}
         </>
       )}
     </button>
@@ -427,6 +414,8 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   disabledReason?: string;
 }) {
   const [hovered, setHovered] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => () => { if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current); }, []);
   const [activeSubTab, setActiveSubTab] = useState<string>('archive');
   const Icon = item.icon;
 
@@ -438,6 +427,13 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
     window.addEventListener('pfc-analytics-active', handler);
     return () => window.removeEventListener('pfc-analytics-active', handler);
   }, []);
+
+  // Typewriter effect on hover — must be called unconditionally (Rules of Hooks)
+  const { displayText: twText, cursorVisible: twCursor } = useTypewriter(
+    item.label,
+    hovered && !disabled && !isActive,
+    { speed: 35, startDelay: 80, cursorLingerMs: 600 },
+  );
 
   // When active, show the sub-tabs with labels always visible
   if (isActive && !disabled) {
@@ -499,15 +495,25 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
     );
   }
 
-  // Normal collapsed state
+  // Normal collapsed state — matches NavBubble typewriter + pixel font behavior
   const expanded = hovered && !disabled;
+  const labelText = expanded ? twText : '';
+  const usePixelFont = expanded;
 
   return (
     <button
       onClick={() => !disabled && onNavigate(item.href)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = setTimeout(() => setHovered(true), 120);
+      }}
+      onMouseLeave={() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        setHovered(false);
+      }}
       title={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
+      aria-label={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
+      aria-disabled={disabled}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -518,9 +524,9 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         borderRadius: '9999px',
         padding: expanded ? '0.4375rem 0.875rem' : '0.4375rem 0.5625rem',
         height: '2.375rem',
-        fontSize: '0.8125rem',
+        fontSize: usePixelFont ? '0.625rem' : '0.8125rem',
         fontWeight: 500,
-        letterSpacing: '-0.01em',
+        letterSpacing: usePixelFont ? '0.01em' : '-0.01em',
         opacity: disabled ? 0.35 : 1,
         color: bubbleColor(false, isDark, disabled, isOled),
         background: bubbleBg(false, isDark, disabled, isOled),
@@ -537,14 +543,26 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         transition: 'color 0.15s',
       }} />
       <span style={{
-        display: 'inline-block',
+        display: 'inline-flex',
+        alignItems: 'center',
         maxWidth: expanded ? '8rem' : '0rem',
         opacity: expanded ? 1 : 0,
         overflow: 'hidden',
         whiteSpace: 'nowrap',
         transition: T_LABEL,
+        fontFamily: usePixelFont ? 'var(--font-heading)' : 'inherit',
       }}>
-        {item.label}
+        {labelText}
+        {usePixelFont && twCursor && (
+          <span style={{
+            display: 'inline-block',
+            width: '1.5px',
+            height: '0.625rem',
+            backgroundColor: 'var(--pfc-accent)',
+            marginLeft: '1px',
+            flexShrink: 0,
+          }} />
+        )}
       </span>
     </button>
   );
@@ -561,6 +579,8 @@ export function TopNav() {
 
   const chatMessages = usePFCStore((s) => s.messages);
   const clearMessages = usePFCStore((s) => s.clearMessages);
+  const chatMinimized = usePFCStore((s) => s.chatMinimized);
+  const setChatMinimized = usePFCStore((s) => s.setChatMinimized);
 
   // Derived values (after all hooks)
   const isOnNotes = pathname === '/notes';
@@ -569,12 +589,23 @@ export function TopNav() {
 
   const handleNavigate = useCallback((href: string) => {
     if (href === '/') {
-      // Already on landing with no messages → scroll to top
-      if (pathname === '/' && chatMessages.length === 0) {
+      // Already on landing with no messages and not minimized → scroll to top
+      if (pathname === '/' && chatMessages.length === 0 && !chatMinimized) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
-      // On chat or has messages → clear and go to landing
+      // If minimized, clicking Home expands chat back to full size
+      if (chatMinimized) {
+        setChatMinimized(false);
+        if (pathname !== '/') router.push('/');
+        return;
+      }
+      // Chat is active (has messages) → minimize instead of destroy
+      if (chatMessages.length > 0) {
+        setChatMinimized(true);
+        return;
+      }
+      // Fallback — clear and go to landing
       clearMessages();
       if (pathname === '/' || pathname.startsWith('/chat')) {
         router.replace('/');
@@ -583,8 +614,26 @@ export function TopNav() {
       }
       return;
     }
+    // Non-home navigation: minimize active chat so it persists as widget
+    if (chatMessages.length > 0 && !chatMinimized) {
+      setChatMinimized(true);
+    }
     router.push(href);
-  }, [router, clearMessages, pathname, chatMessages.length]);
+  }, [router, clearMessages, setChatMinimized, chatMinimized, pathname, chatMessages.length]);
+
+  // Prefetch all nav routes on mount so pages are compiled before click
+  useEffect(() => {
+    const routes = NAV_ITEMS.map((item) => item.href);
+    // Also prefetch analytics sub-pages (standalone routes)
+    const extraRoutes = [
+      '/steering-lab', '/research-copilot', '/concept-atlas',
+      '/cortex-archive', '/visualizer',
+      '/pipeline', '/diagnostics', '/library',
+    ];
+    for (const route of [...routes, ...extraRoutes]) {
+      router.prefetch(route);
+    }
+  }, [router]);
 
   // Notes page: show nav but skip analytics expansion logic
   // (notes has its own floating toolbar for notes-specific controls)
@@ -647,6 +696,8 @@ export function TopNav() {
           const meetsRequirement = tierMeetsMinimum(suiteTier, minTier);
 
           if (item.label === 'Analytics') {
+            // Completely hide Analytics when not on the full/measurement tier
+            if (!meetsRequirement) return null;
             return (
               <AnalyticsNavBubble
                 key={item.href}
@@ -655,8 +706,8 @@ export function TopNav() {
                 isDark={isDark}
                 isOled={isOled}
                 onNavigate={handleNavigate}
-                disabled={!meetsRequirement}
-                disabledReason={tierGateLabel(minTier)}
+                disabled={false}
+                disabledReason=""
               />
             );
           }
