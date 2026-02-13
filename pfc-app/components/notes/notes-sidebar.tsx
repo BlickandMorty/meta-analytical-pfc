@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import type { NotePage, NoteBook } from '@/lib/notes/types';
@@ -48,7 +48,23 @@ const SPRING = { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.5
 /*  Theme                                                               */
 /* ------------------------------------------------------------------ */
 
-function t(isDark: boolean) {
+function t(isDark: boolean, isOled = false) {
+  if (isOled) {
+    return {
+      bg:        'rgba(8,8,8,0.96)',
+      text:      'rgba(220,220,220,0.9)',
+      muted:     'rgba(130,130,130,0.5)',
+      border:    'rgba(40,40,40,0.35)',
+      hover:     'rgba(255,255,255,0.04)',
+      active:    'rgba(255,255,255,0.10)',
+      accent:    'var(--pfc-accent)',
+      icon:      'rgba(140,140,140,0.45)',
+      inputBg:   'rgba(48,48,48,0.5)',
+      danger:    '#E05252',
+      tabBg:     'rgba(30,30,30,0.3)',
+      tabActive: 'rgba(255,255,255,0.12)',
+    };
+  }
   return {
     bg:        isDark ? 'rgba(20,19,17,0.96)'       : 'rgba(218,212,200,0.96)',
     text:      isDark ? 'rgba(237,224,212,0.9)'      : 'rgba(43,42,39,0.9)',
@@ -56,9 +72,9 @@ function t(isDark: boolean) {
     border:    isDark ? 'rgba(79,69,57,0.25)'         : 'rgba(208,196,180,0.25)',
     hover:     isDark ? 'rgba(244,189,111,0.06)'      : 'rgba(0,0,0,0.04)',
     active:    isDark ? 'rgba(244,189,111,0.12)'      : 'rgba(244,189,111,0.10)',
-    accent:    '#C4956A',
+    accent:    'var(--pfc-accent)',
     icon:      isDark ? 'rgba(156,143,128,0.45)'      : 'rgba(0,0,0,0.28)',
-    inputBg:   isDark ? 'rgba(79,69,57,0.25)'         : 'rgba(208,196,180,0.18)',
+    inputBg:   isDark ? 'rgba(79,69,57,0.35)' : 'rgba(208,196,180,0.18)',
     danger:    '#E05252',
     tabBg:     isDark ? 'rgba(79,69,57,0.2)'          : 'rgba(208,196,180,0.15)',
     tabActive: isDark ? 'rgba(244,189,111,0.15)'      : 'rgba(244,189,111,0.12)',
@@ -72,11 +88,8 @@ type SidebarView = 'pages' | 'journals' | 'books' | 'graph';
 /* ------------------------------------------------------------------ */
 
 export const NotesSidebar = memo(function NotesSidebar() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
-  const c = t(isDark);
+  const { isDark, isOled } = useIsDark();
+  const c = t(isDark, isOled);
 
   const notePages          = usePFCStore((s) => s.notePages);
   const noteBooks          = usePFCStore((s) => s.noteBooks);
@@ -185,6 +198,16 @@ export const NotesSidebar = memo(function NotesSidebar() {
 
   const handleNewBook = useCallback(() => {
     createNoteBook('New Notebook');
+  }, [createNoteBook]);
+
+  const handleNewSubBook = useCallback((parentId: string) => {
+    const bookId = createNoteBook('New Notebook', [], parentId);
+    setExpandedBooks((prev) => {
+      const next = new Set(prev);
+      next.add(parentId); // expand parent to show new child
+      next.add(bookId);   // expand new child
+      return next;
+    });
   }, [createNoteBook]);
 
   const handleNewPageInBook = useCallback((bookId: string) => {
@@ -309,9 +332,9 @@ export const NotesSidebar = memo(function NotesSidebar() {
                   justifyContent: 'center',
                   gap: '4px',
                   height: 26,
-                  fontSize: '12px',
-                  fontWeight: view === tab.id ? 700 : 550,
-                  fontFamily: 'var(--font-sans)',
+                  fontSize: '0.5625rem',
+                  fontWeight: 400,
+                  fontFamily: 'var(--font-heading)',
                   borderRadius: 4,
                   border: 'none',
                   cursor: 'pointer',
@@ -384,6 +407,7 @@ export const NotesSidebar = memo(function NotesSidebar() {
                 onCommitRename={commitRename}
                 onMovePageToBook={handleMovePageToBook}
                 onNewPageInBook={handleNewPageInBook}
+                onNewSubBook={handleNewSubBook}
               />
             </motion.div>
           ) : view === 'journals' ? (
@@ -428,6 +452,7 @@ export const NotesSidebar = memo(function NotesSidebar() {
                 onNewBook={handleNewBook}
                 onMovePageToBook={handleMovePageToBook}
                 onNewPageInBook={handleNewPageInBook}
+                onNewSubBook={handleNewSubBook}
               />
             </motion.div>
           ) : (
@@ -482,6 +507,7 @@ interface PagesViewProps {
   onCommitRename: () => void;
   onMovePageToBook: (pageId: string, targetBookId: string | null) => void;
   onNewPageInBook: (bookId: string) => void;
+  onNewSubBook: (parentId: string) => void;
 }
 
 function PagesView({
@@ -489,6 +515,7 @@ function PagesView({
   expandedBooks, activePageId, renamingId, renameValue,
   onToggleBook, onSelectPage, onDelete, onToggleFavorite, onTogglePin,
   onStartRename, onRenameChange, onCommitRename, onMovePageToBook, onNewPageInBook,
+  onNewSubBook,
 }: PagesViewProps) {
   const hasAnything = pinnedPages.length > 0 || favoritePages.length > 0 || standalonePages.length > 0 || booksWithPages.length > 0;
 
@@ -544,22 +571,27 @@ function PagesView({
         </Section>
       )}
 
-      {/* Notebooks */}
+      {/* Notebooks — render only root-level books (no parentId) */}
       {booksWithPages.length > 0 && (
         <Section c={c} label="Notebooks">
-          {booksWithPages.map((book) => (
+          {booksWithPages
+            .filter((book) => !book.parentId)
+            .map((book) => (
             <FolderItem
               key={book.id} c={c} book={book}
               isExpanded={expandedBooks.has(book.id)}
               activePageId={activePageId}
               renamingId={renamingId} renameValue={renameValue}
+              depth={0}
               onToggle={onToggleBook} onSelectPage={onSelectPage}
               onDelete={onDelete} onToggleFavorite={onToggleFavorite}
               onTogglePin={onTogglePin} onStartRename={onStartRename}
               onRenameChange={onRenameChange} onCommitRename={onCommitRename}
               onMovePageToBook={onMovePageToBook}
               onNewPageInBook={onNewPageInBook}
+              onNewSubBook={onNewSubBook}
               allBooks={booksWithPages}
+              expandedBooks={expandedBooks}
             />
           ))}
         </Section>
@@ -603,12 +635,6 @@ interface JournalsViewProps {
 }
 
 function JournalsView({ c, journalPages, activePageId, onSelectPage, onDelete }: JournalsViewProps) {
-  if (journalPages.length === 0) {
-    return (
-      <EmptyState c={c} message="No journal entries yet. Start today's journal below." />
-    );
-  }
-
   // Group by month
   const grouped = useMemo(() => {
     const groups: Record<string, NotePage[]> = {};
@@ -620,6 +646,12 @@ function JournalsView({ c, journalPages, activePageId, onSelectPage, onDelete }:
     }
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
   }, [journalPages]);
+
+  if (journalPages.length === 0) {
+    return (
+      <EmptyState c={c} message="No journal entries yet. Start today's journal below." />
+    );
+  }
 
   return (
     <>
@@ -670,6 +702,7 @@ interface BooksViewProps {
   onNewBook: () => void;
   onMovePageToBook: (pageId: string, targetBookId: string | null) => void;
   onNewPageInBook: (bookId: string) => void;
+  onNewSubBook: (parentId: string) => void;
 }
 
 function BooksView({
@@ -677,6 +710,7 @@ function BooksView({
   renamingId, renameValue, onToggleBook, onSelectPage, onDelete,
   onToggleFavorite, onTogglePin, onStartRename, onRenameChange,
   onCommitRename, onNewBook, onMovePageToBook, onNewPageInBook,
+  onNewSubBook,
 }: BooksViewProps) {
   if (booksWithPages.length === 0) {
     return (
@@ -725,19 +759,24 @@ function BooksView({
           <PlusIcon style={{ width: 12, height: 12 }} />
         </button>
       </div>
-      {booksWithPages.map((book) => (
+      {booksWithPages
+        .filter((book) => !book.parentId)
+        .map((book) => (
         <FolderItem
           key={book.id} c={c} book={book}
           isExpanded={expandedBooks.has(book.id)}
           activePageId={activePageId}
           renamingId={renamingId} renameValue={renameValue}
+          depth={0}
           onToggle={onToggleBook} onSelectPage={onSelectPage}
           onDelete={onDelete} onToggleFavorite={onToggleFavorite}
           onTogglePin={onTogglePin} onStartRename={onStartRename}
           onRenameChange={onRenameChange} onCommitRename={onCommitRename}
           onMovePageToBook={onMovePageToBook}
           onNewPageInBook={onNewPageInBook}
+          onNewSubBook={onNewSubBook}
           allBooks={booksWithPages}
+          expandedBooks={expandedBooks}
         />
       ))}
     </>
@@ -809,6 +848,7 @@ interface FolderItemProps {
   activePageId: string | null;
   renamingId: string | null;
   renameValue: string;
+  depth?: number;
   onToggle: (id: string) => void;
   onSelectPage: (id: string) => void;
   onDelete: (id: string) => void;
@@ -819,14 +859,16 @@ interface FolderItemProps {
   onCommitRename: () => void;
   onMovePageToBook: (pageId: string, targetBookId: string | null) => void;
   onNewPageInBook: (bookId: string) => void;
+  onNewSubBook?: (parentId: string) => void;
   allBooks: (NoteBook & { pages: NotePage[] })[];
+  expandedBooks?: Set<string>;
 }
 
 const FolderItem = memo(function FolderItem({
-  c, book, isExpanded, activePageId, renamingId, renameValue,
+  c, book, isExpanded, activePageId, renamingId, renameValue, depth = 0,
   onToggle, onSelectPage, onDelete, onToggleFavorite, onTogglePin,
   onStartRename, onRenameChange, onCommitRename,
-  onMovePageToBook, onNewPageInBook, allBooks,
+  onMovePageToBook, onNewPageInBook, onNewSubBook, allBooks, expandedBooks,
 }: FolderItemProps) {
   const [hovered, setHovered] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -863,6 +905,7 @@ const FolderItem = memo(function FolderItem({
           alignItems: 'center',
           gap: 5,
           padding: '4px 8px 4px 12px',
+          paddingLeft: `${12 + depth * 18}px`,
           cursor: 'pointer',
           borderRadius: 5,
           margin: '0 4px',
@@ -888,8 +931,9 @@ const FolderItem = memo(function FolderItem({
         }} />
         <span style={{
           flex: 1,
-          fontSize: '14px',
-          fontWeight: 700,
+          fontFamily: 'var(--font-heading)',
+          fontSize: '0.625rem',
+          fontWeight: 400,
           color: c.text,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -898,18 +942,34 @@ const FolderItem = memo(function FolderItem({
           {book.title}
         </span>
         {hovered && !dragOver ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); onNewPageInBook(book.id); }}
-            title="New page in notebook"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 18, height: 18, borderRadius: 3, border: 'none',
-              background: 'transparent', color: c.muted, cursor: 'pointer',
-              padding: 0, flexShrink: 0,
-            }}
-          >
-            <PlusIcon style={{ width: 12, height: 12 }} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+            {onNewSubBook && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onNewSubBook(book.id); }}
+                title="New sub-notebook"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 18, height: 18, borderRadius: 3, border: 'none',
+                  background: 'transparent', color: c.muted, cursor: 'pointer',
+                  padding: 0, flexShrink: 0,
+                }}
+              >
+                <FolderIcon style={{ width: 10, height: 10 }} />
+              </button>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onNewPageInBook(book.id); }}
+              title="New page in notebook"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 18, height: 18, borderRadius: 3, border: 'none',
+                background: 'transparent', color: c.muted, cursor: 'pointer',
+                padding: 0, flexShrink: 0,
+              }}
+            >
+              <PlusIcon style={{ width: 12, height: 12 }} />
+            </button>
+          </div>
         ) : !dragOver && (
           <span style={{
             fontSize: '10px',
@@ -934,12 +994,35 @@ const FolderItem = memo(function FolderItem({
             transition={{ duration: 0.15, ease: CUPERTINO }}
             style={{ overflow: 'hidden', transformOrigin: 'top', transform: 'translateZ(0)' }}
           >
+            {/* Child notebooks (recursive nesting) */}
+            {allBooks
+              .filter((b) => b.parentId === book.id)
+              .map((childBook) => (
+                <FolderItem
+                  key={childBook.id} c={c} book={childBook}
+                  isExpanded={expandedBooks?.has(childBook.id) ?? false}
+                  activePageId={activePageId}
+                  renamingId={renamingId} renameValue={renameValue}
+                  depth={depth + 1}
+                  onToggle={onToggle} onSelectPage={onSelectPage}
+                  onDelete={onDelete} onToggleFavorite={onToggleFavorite}
+                  onTogglePin={onTogglePin} onStartRename={onStartRename}
+                  onRenameChange={onRenameChange} onCommitRename={onCommitRename}
+                  onMovePageToBook={onMovePageToBook}
+                  onNewPageInBook={onNewPageInBook}
+                  onNewSubBook={onNewSubBook}
+                  allBooks={allBooks}
+                  expandedBooks={expandedBooks}
+                />
+              ))}
+
+            {/* Child pages */}
             {book.pages.map((page) => (
               <FileItem
                 key={page.id} c={c} page={page}
                 isActive={page.id === activePageId}
                 isRenaming={page.id === renamingId}
-                renameValue={renameValue} depth={1}
+                renameValue={renameValue} depth={depth + 1}
                 onSelect={onSelectPage} onDelete={onDelete}
                 onToggleFavorite={onToggleFavorite}
                 onTogglePin={onTogglePin}
@@ -950,9 +1033,10 @@ const FolderItem = memo(function FolderItem({
                 allBooks={allBooks}
               />
             ))}
-            {book.pages.length === 0 && (
+            {book.pages.length === 0 && allBooks.filter((b) => b.parentId === book.id).length === 0 && (
               <div style={{
                 padding: '6px 12px 6px 42px',
+                paddingLeft: `${42 + depth * 18}px`,
                 fontSize: '11px',
                 color: c.muted,
                 fontStyle: 'italic',
@@ -1084,8 +1168,9 @@ const FileItem = memo(function FileItem({
       ) : (
         <span style={{
           flex: 1,
-          fontSize: '13.5px',
-          fontWeight: isActive ? 700 : 550,
+          fontFamily: 'var(--font-heading)',
+          fontSize: '0.5625rem',
+          fontWeight: 400,
           color: c.text,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -1522,9 +1607,9 @@ function BottomButton({
         justifyContent: 'center',
         gap: 5,
         height: 30,
-        fontSize: '13px',
-        fontWeight: 700,
-        fontFamily: 'var(--font-sans)',
+        fontSize: '0.5625rem',
+        fontWeight: 400,
+        fontFamily: 'var(--font-heading)',
         borderRadius: 5,
         border: 'none',
         background: hovered ? c.hover : 'transparent',

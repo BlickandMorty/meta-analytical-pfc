@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePFCStore } from '@/lib/store/use-pfc-store';
 
 /* ═══════════════════════════════════════════════════════════
    Dynamic imports — lazy-load each analytics sub-page
@@ -37,8 +36,6 @@ const M3_EASE = [0.2, 0, 0, 1] as const;
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('archive');
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
 
   // Listen for tab changes from nav bar sub-bubbles
   useEffect(() => {
@@ -52,12 +49,12 @@ export default function AnalyticsPage() {
 
   // Broadcast active tab to nav bar so it can highlight the right sub-bubble
   useEffect(() => {
-    if (!mounted) return;
+    if (typeof window === 'undefined') return;
     window.dispatchEvent(new CustomEvent('pfc-analytics-active', { detail: activeTab }));
-  }, [activeTab, mounted]);
+  }, [activeTab]);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--m3-surface)' }}>
+    <div style={{ minHeight: '100vh', paddingTop: '3rem', background: 'var(--m3-surface)' }}>
       {/* ── Tab content — nav lives in TopNav ── */}
       <AnimatePresence mode="wait">
         <motion.div

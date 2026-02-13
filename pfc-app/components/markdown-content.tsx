@@ -8,45 +8,13 @@ import type { Components } from 'react-markdown';
 /**
  * Generate a stable slug from heading text for TOC anchor linking.
  */
-export function slugify(text: string): string {
+function slugify(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .trim();
-}
-
-/**
- * Extract heading entries from markdown text for the TOC sidebar.
- */
-export interface TocEntry {
-  id: string;
-  text: string;
-  level: number;
-}
-
-export function extractHeadings(text: string): TocEntry[] {
-  const entries: TocEntry[] = [];
-  const regex = /^(#{1,4})\s+(.+)$/gm;
-  let match;
-  const seen = new Map<string, number>();
-
-  while ((match = regex.exec(text)) !== null) {
-    const rawText = match[2].replace(/\*\*/g, '').replace(/`/g, '').trim();
-    const baseSlug = slugify(rawText);
-    const count = seen.get(baseSlug) ?? 0;
-    seen.set(baseSlug, count + 1);
-    const id = count > 0 ? `${baseSlug}-${count}` : baseSlug;
-
-    entries.push({
-      id,
-      text: rawText,
-      level: match[1].length,
-    });
-  }
-
-  return entries;
 }
 
 /**

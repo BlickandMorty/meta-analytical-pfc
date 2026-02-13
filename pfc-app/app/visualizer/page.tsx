@@ -13,6 +13,8 @@ import {
   forceManyBody,
   forceCenter,
   forceCollide,
+  type SimulationNodeDatum,
+  type SimulationLinkDatum,
 } from 'd3-force';
 import {
   BarChart3Icon,
@@ -110,6 +112,10 @@ interface LineChartSeries {
   data: [number, number][]; // [x, y]
 }
 
+interface ProcessedLineSeries extends LineChartSeries {
+  rawData?: [number, number][];
+}
+
 const D3LineChart = memo(function D3LineChart({
   series,
   xLabel = 'Step',
@@ -145,7 +151,7 @@ const D3LineChart = memo(function D3LineChart({
   useResizeObserver(containerRef, resizeCb);
 
   // Apply smoothing
-  const processedSeries = useMemo(() => {
+  const processedSeries = useMemo<ProcessedLineSeries[]>(() => {
     if (!smoothEnabled) return series;
     return series.map((s) => ({
       ...s,
@@ -202,7 +208,7 @@ const D3LineChart = memo(function D3LineChart({
     return processedSeries.map((s) => ({
       ...s,
       path: lineGen(s.data) ?? '',
-      rawPath: (s as any).rawData ? (lineGen((s as any).rawData) ?? '') : undefined,
+      rawPath: s.rawData ? (lineGen(s.rawData) ?? '') : undefined,
     }));
   }, [processedSeries, xScale, yScale]);
 
@@ -641,6 +647,18 @@ const D3ScatterPlot = memo(function D3ScatterPlot({
 // AIM-inspired: D3 Force-Directed Concept Graph
 // ---------------------------------------------------------------------------
 
+interface ForceGraphNode extends SimulationNodeDatum {
+  id: string;
+  color: string;
+  x: number;
+  y: number;
+}
+
+interface ForceGraphLink extends SimulationLinkDatum<ForceGraphNode> {
+  source: string | ForceGraphNode;
+  target: string | ForceGraphNode;
+}
+
 const D3ForceGraph = memo(function D3ForceGraph({
   concepts,
   height = 320,
@@ -651,7 +669,7 @@ const D3ForceGraph = memo(function D3ForceGraph({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height });
   const [nodes, setNodes] = useState<Array<{ id: string; x: number; y: number; color: string }>>([]);
-  const [links, setLinks] = useState<Array<{ source: string; target: string }>>([]);
+  const [links, setLinks] = useState<ForceGraphLink[]>([]);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
   const COLORS = [EMBER, VIOLET, GREEN, CYAN, YELLOW, PINK, TEAL, RED];
@@ -666,14 +684,14 @@ const D3ForceGraph = memo(function D3ForceGraph({
   useEffect(() => {
     if (concepts.length === 0) return;
 
-    const simNodes = concepts.map((c, i) => ({
+    const simNodes: ForceGraphNode[] = concepts.map((c, i) => ({
       id: c,
       x: dimensions.width / 2 + (Math.random() - 0.5) * 100,
       y: dimensions.height / 2 + (Math.random() - 0.5) * 100,
       color: COLORS[i % COLORS.length],
     }));
 
-    const simLinks: Array<{ source: string; target: string }> = [];
+    const simLinks: ForceGraphLink[] = [];
     for (let i = 0; i < concepts.length; i++) {
       const next = (i + 1) % concepts.length;
       simLinks.push({ source: concepts[i], target: concepts[next] });
@@ -683,13 +701,19 @@ const D3ForceGraph = memo(function D3ForceGraph({
       }
     }
 
-    const sim = forceSimulation(simNodes as any)
-      .force('link', forceLink(simLinks as any).id((d: any) => d.id).distance(80).strength(0.3))
+    const sim = forceSimulation(simNodes)
+      .force(
+        'link',
+        forceLink<ForceGraphNode, ForceGraphLink>(simLinks)
+          .id((d) => d.id)
+          .distance(80)
+          .strength(0.3),
+      )
       .force('charge', forceManyBody().strength(-200))
       .force('center', forceCenter(dimensions.width / 2, dimensions.height / 2))
       .force('collision', forceCollide().radius(30))
       .on('tick', () => {
-        setNodes([...simNodes as any]);
+        setNodes(simNodes.map((n) => ({ id: n.id, x: n.x, y: n.y, color: n.color })));
         setLinks([...simLinks]);
       });
 
@@ -707,13 +731,14 @@ const D3ForceGraph = memo(function D3ForceGraph({
   }
 
   const nodeMap = Object.fromEntries(nodes.map((n) => [n.id, n]));
+  const getLinkNodeId = (value: string | ForceGraphNode) => (typeof value === 'string' ? value : value.id);
 
   return (
     <div ref={containerRef} className="w-full" style={{ contain: 'layout style', transform: 'translateZ(0)' }}>
       <svg width={dimensions.width} height={dimensions.height} className="select-none">
         {links.map((l, i) => {
-          const s = nodeMap[typeof l.source === 'string' ? l.source : (l.source as any).id];
-          const t = nodeMap[typeof l.target === 'string' ? l.target : (l.target as any).id];
+          const s = nodeMap[getLinkNodeId(l.source)];
+          const t = nodeMap[getLinkNodeId(l.target)];
           if (!s || !t) return null;
           const isHighlighted = hoveredNode === s.id || hoveredNode === t.id;
           return <line key={`link-${i}`} x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke={isHighlighted ? VIOLET : 'currentColor'} strokeOpacity={isHighlighted ? 0.4 : 0.08} strokeWidth={isHighlighted ? 2 : 1} />;
@@ -782,7 +807,7 @@ function InteractiveSignalRadar({
     setDragging(index);
   }, []);
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
     if (dragging === null) return;
     const pt = getSvgPoint(e.clientX, e.clientY);
     if (!pt) return;
@@ -790,7 +815,7 @@ function InteractiveSignalRadar({
     const dist = Math.sqrt(dx * dx + dy * dy);
     const value = Math.max(0, Math.min(1, (dist - 20) / (maxR - 20)));
     onSignalChange(axes[dragging].key, Math.round(value * 100) / 100);
-  }, [dragging, axes, getSvgPoint, onSignalChange, cx, cy, maxR]);
+  };
 
   return (
     <svg ref={svgRef} viewBox="-50 -30 400 360" overflow="visible"

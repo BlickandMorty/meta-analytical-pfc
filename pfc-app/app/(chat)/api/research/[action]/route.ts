@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
+import { ApiClientError, parseBodyWithLimit } from '@/lib/api-utils';
 
 // Semantic Scholar (no LLM needed)
 import {
@@ -37,6 +38,7 @@ import { checkNovelty } from '@/lib/engine/research/novelty-check';
 import { reviewPaper, ensembleReviewPaper } from '@/lib/engine/research/paper-review';
 import { searchCitations, findCitationsForClaim } from '@/lib/engine/research/citation-search';
 import { generateIdeas, generateQuickIdea, refineIdea } from '@/lib/engine/research/idea-generator';
+import type { ResearchIdea } from '@/lib/engine/research/idea-generator';
 
 // ═══════════════════════════════════════════════════════════════════
 // Helpers
@@ -61,13 +63,54 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
-function resolveModel(body: Record<string, unknown>) {
+interface ResearchRequestBody {
+  inferenceConfig?: InferenceConfig;
+  query?: string;
+  year?: string;
+  fieldsOfStudy?: string;
+  limit?: number;
+  offset?: number;
+  paperId?: string;
+  title?: string;
+  description?: string;
+  hypothesis?: string;
+  keywords?: string[];
+  maxRounds?: number;
+  papersPerRound?: number;
+  abstract?: string;
+  fullText?: string;
+  sectionSummaries?: {
+    introduction?: string;
+    methodology?: string;
+    results?: string;
+    discussion?: string;
+    conclusion?: string;
+  };
+  numReviewers?: number;
+  text?: string;
+  existingBibtex?: string;
+  context?: string;
+  papersPerQuery?: number;
+  claim?: string;
+  topic?: string;
+  constraints?: string;
+  seedIdeas?: ResearchIdea[];
+  existingIdeas?: string[];
+  checkNoveltyEnabled?: boolean;
+  deduplicateEnabled?: boolean;
+  numIdeas?: number;
+  numReflections?: number;
+  idea?: ResearchIdea;
+  numRounds?: number;
+}
+
+function resolveModel(body: ResearchRequestBody) {
   const inferenceConfig = body.inferenceConfig as InferenceConfig | undefined;
   if (!inferenceConfig) {
-    throw new Error('inferenceConfig is required for LLM-dependent research tools');
+    throw new ApiClientError('inferenceConfig is required for LLM-dependent research tools', 400);
   }
   if (inferenceConfig.mode === 'simulation') {
-    throw new Error('Research tools require a real LLM — switch to API or Local mode in Settings');
+    throw new ApiClientError('Research tools require a real LLM — switch to API or Local mode in Settings', 400);
   }
   return resolveProvider(inferenceConfig);
 }
@@ -81,8 +124,12 @@ export async function POST(
   { params }: { params: Promise<{ action: string }> },
 ) {
   try {
+    const parsedBody = await parseBodyWithLimit<ResearchRequestBody>(request, 5 * 1024 * 1024);
+    if ('error' in parsedBody) {
+      return parsedBody.error;
+    }
     const { action } = await params;
-    const body = await request.json();
+    const body = parsedBody.data;
     const s2Config = getS2Config();
 
     switch (action) {
@@ -263,6 +310,9 @@ export async function POST(
         return errorResponse(`Unknown research action: ${action}`, 404);
     }
   } catch (error) {
+    if (error instanceof ApiClientError) {
+      return errorResponse(error.message, error.status);
+    }
     console.error('[research/route] Error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Research operation failed' },

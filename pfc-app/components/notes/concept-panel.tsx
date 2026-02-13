@@ -1,24 +1,24 @@
 'use client';
 
-import { memo, useState, useCallback, useMemo, useEffect } from 'react';
+import { memo, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import type { Concept, ConceptCorrelation, NotePage } from '@/lib/notes/types';
 import {
   XIcon,
   LinkIcon,
-  SparklesIcon,
   ArrowRightIcon,
   BrainIcon,
   LayersIcon,
   GitBranchIcon,
   ZapIcon,
+  type LucideIcon,
 } from 'lucide-react';
 
 const CUPERTINO = [0.32, 0.72, 0, 1] as const;
 
-const TYPE_ICONS: Record<string, any> = {
+const TYPE_ICONS: Record<string, LucideIcon> = {
   'shared-concept': LinkIcon,
   'causal': ZapIcon,
   'hierarchical': GitBranchIcon,
@@ -27,7 +27,7 @@ const TYPE_ICONS: Record<string, any> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  'shared-concept': '#C4956A',
+  'shared-concept': 'var(--pfc-accent)',
   'causal': '#E07850',
   'hierarchical': '#8B7CF6',
   'opposing': '#EF4444',
@@ -45,10 +45,7 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
   pageBId,
   onClose,
 }: ConceptCorrelationPanelProps) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const { resolvedTheme } = useTheme();
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
 
   const notePages = usePFCStore((s) => s.notePages);
   const extractConcepts = usePFCStore((s) => s.extractConcepts);
@@ -58,18 +55,10 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
   const pageA = notePages.find((p: NotePage) => p.id === pageAId);
   const pageB = notePages.find((p: NotePage) => p.id === pageBId);
 
-  const [correlations, setCorrelations] = useState<ConceptCorrelation[]>([]);
-  const [analyzed, setAnalyzed] = useState(false);
-
   useEffect(() => {
-    // Extract concepts from both pages first
     extractConcepts(pageAId);
     extractConcepts(pageBId);
-    // Then find correlations
-    const corrs = correlatePages(pageAId, pageBId);
-    setCorrelations(corrs);
-    setAnalyzed(true);
-  }, [pageAId, pageBId, extractConcepts, correlatePages]);
+  }, [pageAId, pageBId, extractConcepts]);
 
   const conceptsA = useMemo(
     () => concepts.filter((c: Concept) => c.sourcePageId === pageAId),
@@ -79,12 +68,16 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
     () => concepts.filter((c: Concept) => c.sourcePageId === pageBId),
     [concepts, pageBId],
   );
+  const correlations = useMemo(
+    () => correlatePages(pageAId, pageBId),
+    [pageAId, pageBId, correlatePages, concepts],
+  );
 
   const glassBg = isDark ? 'rgba(25,23,20,0.96)' : 'rgba(255,255,255,0.97)';
   const border = isDark ? 'rgba(79,69,57,0.35)' : 'rgba(208,196,180,0.3)';
   const text = isDark ? 'rgba(237,224,212,0.95)' : 'rgba(43,42,39,0.9)';
   const muted = isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)';
-  const accent = '#C4956A';
+  const accent = 'var(--pfc-accent)';
 
   return (
     <motion.div
@@ -94,7 +87,7 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 60,
+        zIndex: 'var(--z-popover)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -157,7 +150,7 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
           alignItems: 'center',
           gap: 12,
           padding: '12px 20px',
-          background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(196,149,106,0.02)',
+          background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.03)' : 'rgba(var(--pfc-accent-rgb), 0.02)',
           borderBottom: `1px solid ${border}`,
           flexShrink: 0,
         }}>
@@ -165,7 +158,7 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
             flex: 1,
             padding: '8px 12px',
             borderRadius: 8,
-            background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
+            background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.06)' : 'rgba(var(--pfc-accent-rgb), 0.04)',
             border: `1px solid ${accent}20`,
           }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: text }}>
@@ -201,15 +194,7 @@ export const ConceptCorrelationPanel = memo(function ConceptCorrelationPanel({
           padding: '16px 20px',
           scrollbarWidth: 'thin',
         }}>
-          {!analyzed ? (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: 8, padding: '2rem', color: muted, fontSize: '0.8125rem',
-            }}>
-              <SparklesIcon style={{ width: 14, height: 14, animation: 'pulse 1.5s infinite' }} />
-              Analyzing connections...
-            </div>
-          ) : correlations.length === 0 ? (
+          {correlations.length === 0 ? (
             <div style={{
               textAlign: 'center', padding: '2rem', color: muted, fontSize: '0.8125rem',
               lineHeight: 1.6,

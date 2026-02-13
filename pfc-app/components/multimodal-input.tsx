@@ -1,12 +1,13 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect, type KeyboardEvent } from 'react';
-import { ArrowUpIcon, StopCircleIcon, SlidersHorizontalIcon, SearchIcon } from 'lucide-react';
+import { ArrowUpIcon, StopCircleIcon, SlidersHorizontalIcon, SearchIcon, PaperclipIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 
 // M3 emphasized easing
 const M3_EASE = [0.2, 0, 0, 1] as const;
@@ -189,11 +190,13 @@ function BrainButtonWithToggle({
   brainGlow: boolean;
   onBrainTap: () => void;
 }) {
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   const handlePress = () => {
-    // Toggle theme: brain "lights up" → dark mode, "dims" → light mode
-    setTheme(isDark ? 'light' : 'dark');
+    // Cycle: light → dark → oled → light
+    const current = theme || 'light';
+    const next = current === 'light' ? 'dark' : current === 'dark' ? 'oled' : 'light';
+    setTheme(next);
     onBrainTap();
   };
 
@@ -285,6 +288,11 @@ interface MultimodalInputProps {
   hero?: boolean;
   showControlsToggle?: boolean;
   inputStyle?: React.CSSProperties;
+  onExpandChange?: (expanded: boolean) => void;
+  /** Called when the textarea focus state changes */
+  onFocusChange?: (focused: boolean) => void;
+  /** Optional animated placeholder overlay shown when input is empty & not focused */
+  placeholderOverlay?: React.ReactNode;
 }
 
 // Stable selectors
@@ -299,38 +307,45 @@ export function MultimodalInput({
   hero,
   showControlsToggle,
   inputStyle,
+  onExpandChange,
+  onFocusChange,
+  placeholderOverlay,
 }: MultimodalInputProps) {
   const toggleLiveControls = usePFCStore(selectToggleLiveControls);
   const liveControlsOpen = usePFCStore(selectLiveControlsOpen);
-  const { resolvedTheme } = useTheme();
-  const [themeMounted, setThemeMounted] = useState(false);
+  const { isDark } = useIsDark();
+  const { theme, setTheme } = useTheme();
   const [value, setValue] = useState('');
   const [focused, setFocused] = useState(false);
   const [typingSuggestions, setTypingSuggestions] = useState<string[]>([]);
   const [brainGlow, setBrainGlow] = useState(false);
+  const [themeCycleFlash, setThemeCycleFlash] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const brainGlowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const themeCycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSubmitRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Triple-click theme cycling on search bar
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setThemeMounted(true);
     return () => {
       // Cleanup all timers on unmount
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
       if (brainGlowTimerRef.current) clearTimeout(brainGlowTimerRef.current);
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      if (themeCycleTimerRef.current) clearTimeout(themeCycleTimerRef.current);
     };
   }, []);
-  const isDark = themeMounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const trimmed = value.trim();
     if (trimmed.length < 3) {
-      setTypingSuggestions([]);
       return;
     }
 
@@ -386,6 +401,7 @@ export function MultimodalInput({
 
   const handleFocus = () => {
     setFocused(true);
+    onFocusChange?.(true);
   };
 
   const handleBlur = () => {
@@ -393,6 +409,7 @@ export function MultimodalInput({
     blurTimerRef.current = setTimeout(() => {
       blurTimerRef.current = null;
       setFocused(false);
+      onFocusChange?.(false);
     }, 200);
   };
 
@@ -405,28 +422,95 @@ export function MultimodalInput({
     }, 800);
   }, []);
 
+  // Triple-click on search bar cycles theme: light → dark → oled → light
+  const handleSearchBarClick = useCallback(() => {
+    clickCountRef.current += 1;
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+
+    if (clickCountRef.current >= 3) {
+      clickCountRef.current = 0;
+      // Cycle theme
+      const current = theme || 'light';
+      const next = current === 'light' ? 'dark' : current === 'dark' ? 'oled' : 'light';
+      setTheme(next);
+      // Visual flash feedback
+      setThemeCycleFlash(true);
+      if (themeCycleTimerRef.current) clearTimeout(themeCycleTimerRef.current);
+      themeCycleTimerRef.current = setTimeout(() => {
+        themeCycleTimerRef.current = null;
+        setThemeCycleFlash(false);
+      }, 600);
+    } else {
+      // Reset counter after 500ms if no further clicks
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+        clickTimerRef.current = null;
+      }, 500);
+    }
+  }, [theme, setTheme]);
+
   const trimmedValue = value.trim();
-  const showTyping = focused && trimmedValue.length >= 3 && typingSuggestions.length > 0 && !isProcessing;
+  const visibleTypingSuggestions = trimmedValue.length >= 3 ? typingSuggestions : [];
+  const showTyping = focused && visibleTypingSuggestions.length > 0 && !isProcessing;
+
+  // Notify parent of expansion state (for border-radius animation on wrapper)
+  useEffect(() => {
+    onExpandChange?.(showTyping);
+  }, [showTyping, onExpandChange]);
+
+  // Label for the theme cycle flash
+  const themeLabel = theme === 'oled' ? 'OLED' : theme === 'dark' ? 'Dark' : 'Light';
 
   return (
     <div className="relative">
-      {/* Input container */}
-      <motion.div
-        transition={{ duration: 0.32, ease: M3_EASE }}
+      {/* Theme cycle flash indicator */}
+      <AnimatePresence>
+        {themeCycleFlash && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.9 }}
+            animate={{ opacity: 1, y: -32, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30, mass: 0.4 }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 'var(--z-modal)',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '9999px',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              fontFamily: 'var(--font-sans)',
+              letterSpacing: '0.04em',
+              color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(43,42,39,0.8)',
+              background: isDark ? 'rgba(28,27,25,0.9)' : 'rgba(255,255,255,0.9)',
+              border: `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.3)' : 'rgba(var(--pfc-accent-rgb), 0.25)'}`,
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              pointerEvents: 'none',
+            }}
+          >
+            {themeLabel} mode
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Input container — border-radius controlled by parent wrapper in hero mode */}
+      <div
         className={cn(
-          'relative flex w-full flex-col transition-shadow duration-200',
-          hero ? 'p-3 pr-2' : 'p-3',
-          hero ? 'rounded-3xl' : 'rounded-2xl',
+          'relative flex w-full flex-col',
+          hero ? 'p-2.5 pr-2 pl-4' : 'p-3',
+          !hero && 'rounded-2xl',
           !hero && !className?.includes('glass') && 'border bg-card/80',
-          !hero && (focused
-            ? ''
-            : ''),
           className,
         )}
-        style={!hero && !className?.includes('glass') ? {
-          backdropFilter: 'blur(12px) saturate(1.3)',
-          WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
-        } : undefined}
+        style={{
+          ...(!hero && !className?.includes('glass') ? {
+            backdropFilter: 'blur(12px) saturate(1.3)',
+            WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+          } : undefined),
+        }}
       >
         {/* Text row */}
         <div className="flex w-full items-center gap-2">
@@ -445,24 +529,91 @@ export function MultimodalInput({
               <SlidersHorizontalIcon className="h-3.5 w-3.5" />
             </Button>
           )}
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onInput={handleInput}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            placeholder="Ask a research question..."
-            className={cn(
-              'flex-1 resize-none bg-transparent leading-relaxed text-foreground placeholder:text-muted-foreground/40 outline-none border-0 focus:outline-none focus:border-0 focus-visible:outline-none px-0',
-              hero ? 'text-[0.9rem] min-h-[36px] max-h-[200px] py-[6px]' : 'text-sm min-h-[24px] max-h-[200px] py-0',
+          {/* Upload file button — hero (landing) only */}
+          {hero && (
+            <button
+              type="button"
+              onClick={() => {
+                // Create hidden file input and trigger click
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.pdf,.txt,.md,.csv,.json,.doc,.docx,.png,.jpg,.jpeg,.webp';
+                input.style.display = 'none';
+                input.onchange = () => {
+                  // TODO: handle file upload — wire to store/API
+                  if (input.files?.[0]) {
+                    console.log('File selected:', input.files[0].name);
+                  }
+                  input.remove();
+                };
+                document.body.appendChild(input);
+                input.click();
+              }}
+              style={{
+                height: '2rem',
+                width: '2rem',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                border: 'none',
+                flexShrink: 0,
+                background: 'transparent',
+                color: isDark ? 'rgba(200,200,200,0.4)' : 'rgba(0,0,0,0.25)',
+                transition: 'color 0.15s, background 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = isDark ? 'rgba(230,230,230,0.7)' : 'rgba(0,0,0,0.5)';
+                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = isDark ? 'rgba(200,200,200,0.4)' : 'rgba(0,0,0,0.25)';
+                e.currentTarget.style.background = 'transparent';
+              }}
+              aria-label="Upload file"
+            >
+              <PaperclipIcon style={{ height: '1rem', width: '1rem' }} />
+            </button>
+          )}
+          <div style={{ flex: 1, position: 'relative' }}>
+            {/* Animated placeholder overlay — shown when input empty; stays during focus for backspace animation */}
+            {placeholderOverlay && !value && (
+              <div
+                onClick={() => textareaRef.current?.focus()}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  pointerEvents: 'auto',
+                  cursor: 'text',
+                  zIndex: 1,
+                }}
+              >
+                {placeholderOverlay}
+              </div>
             )}
-            rows={1}
-            maxLength={10000}
-            disabled={isProcessing}
-            style={{ boxShadow: 'none', ...inputStyle }}
-          />
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onInput={handleInput}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onClick={handleSearchBarClick}
+              placeholder={placeholderOverlay ? '' : 'Ask a research question...'}
+              className={cn(
+                'flex-1 resize-none bg-transparent leading-relaxed text-foreground placeholder:text-muted-foreground/40 outline-none border-0 focus:outline-none focus:border-0 focus-visible:outline-none px-0',
+                hero ? 'text-[0.9rem] min-h-[36px] max-h-[200px] py-[6px]' : 'text-sm min-h-[24px] max-h-[200px] py-0',
+              )}
+              rows={1}
+              maxLength={10000}
+              disabled={isProcessing}
+              style={{ boxShadow: 'none', width: '100%', ...inputStyle }}
+            />
+          </div>
 
           {/* Send / Stop / Brain button */}
           {isProcessing ? (
@@ -517,7 +668,7 @@ export function MultimodalInput({
                 paddingTop: '0.375rem',
                 marginTop: '0.5rem',
               }}>
-                {typingSuggestions.map((s, i) => (
+                {visibleTypingSuggestions.map((s, i) => (
                   <motion.button
                     key={`t-${i}-${s.slice(0, 20)}`}
                     initial={{ opacity: 0, x: -4 }}
@@ -569,7 +720,7 @@ export function MultimodalInput({
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.div>
+      </div>
     </div>
   );
 }

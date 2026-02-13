@@ -7,6 +7,14 @@ import type {
 } from '@/lib/notes/learning-protocol';
 import { createLearningSession } from '@/lib/notes/learning-protocol';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
+import type { NotePage, NoteBlock } from '@/lib/notes/types';
+import {
+  startScheduler,
+  stopScheduler,
+  loadSchedulerConfig,
+  saveSchedulerConfig,
+  type SchedulerConfig,
+} from '@/lib/notes/learning-scheduler';
 
 // ── localStorage keys ──
 const STORAGE_KEY_HISTORY = 'pfc-learning-history';
@@ -15,16 +23,40 @@ const STORAGE_KEY_AUTORUN = 'pfc-learning-autorun';
 // ── Module-scope abort controller (not in Zustand state) ──
 let _learningAbortController: AbortController | null = null;
 
-/**
- * Abort any active learning SSE connection.
- * Call this from component cleanup (useEffect return) to prevent
- * orphaned connections when navigating away.
- */
-export function abortLearningSSE(): void {
-  if (_learningAbortController) {
-    _learningAbortController.abort();
-    _learningAbortController = null;
-  }
+// ── Module-scope maps for tracking page/block refs during SSE session ──
+let _pageRefMap: Map<string, string> = new Map(); // clientPageRef → real pageId
+let _blockTrackers: Map<string, string> = new Map(); // `${ref}:${index}` → blockId
+let _seedBlockByPageRef: Map<string, string> = new Map(); // clientPageRef → initial empty block
+
+function resetLearningRuntimeState() {
+  _pageRefMap = new Map();
+  _blockTrackers = new Map();
+  _seedBlockByPageRef = new Map();
+}
+
+function isExpectedLearningInterruption(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') return true;
+  const asObject = typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : null;
+  const message = [
+    error instanceof Error ? error.message : '',
+    error instanceof Error ? error.stack ?? '' : '',
+    typeof asObject?.message === 'string' ? asObject.message : '',
+    typeof asObject?.cause === 'string' ? asObject.cause : '',
+    typeof (asObject?.cause as Record<string, unknown> | undefined)?.message === 'string'
+      ? ((asObject?.cause as Record<string, unknown>).message as string)
+      : '',
+    String(error),
+  ]
+    .join(' ')
+    .toLowerCase();
+  const name = error instanceof Error ? error.name : typeof asObject?.name === 'string' ? asObject.name : '';
+  return (
+    name === 'AbortError' ||
+    message.includes('network error') ||
+    message.includes('failed to fetch') ||
+    message.includes('the user aborted a request') ||
+    message.includes('load failed')
+  );
 }
 
 // ── History entry ──
@@ -33,6 +65,8 @@ export interface LearningHistoryEntry {
   startedAt: number;
   completedAt: number;
   totalInsights: number;
+  totalPagesCreated: number;
+  totalBlocksCreated: number;
   iteration: number;
 }
 
@@ -42,6 +76,9 @@ export interface LearningSliceState {
   learningHistory: LearningHistoryEntry[];
   learningStreamText: string;
   learningAutoRun: boolean;
+  schedulerConfig: SchedulerConfig;
+  schedulerActive: boolean;
+  lastAutoRunAt: number | null;
 }
 
 // ── Actions interface ──
@@ -60,6 +97,9 @@ export interface LearningSliceActions {
   clearLearningStreamText: () => void;
   setLearningAutoRun: (enabled: boolean) => void;
   completeLearningSession: () => void;
+  updateSchedulerConfig: (updates: Partial<SchedulerConfig>) => void;
+  initScheduler: () => void;
+  startDailyBriefSession: () => void;
 }
 
 // ── SSE event types emitted by /api/notes-learn ──
@@ -68,10 +108,12 @@ type LearningSSEEvent =
   | { type: 'step-progress'; stepIndex: number; progress: number; detail?: string }
   | { type: 'step-complete'; stepIndex: number; insights: string[]; pagesCreated: string[]; blocksCreated: string[] }
   | { type: 'insight'; text: string }
-  | { type: 'page-created'; pageTitle: string; pageId?: string }
-  | { type: 'block-created'; content: string; pageId?: string; blockId?: string }
+  | { type: 'page-created'; pageTitle: string; clientPageRef: string }
+  | { type: 'block-created'; content: string; clientPageRef: string; blockIndex: number }
   | { type: 'stream-text'; text: string }
-  | { type: 'session-complete'; totalInsights: number; totalPagesCreated: number }
+  | { type: 'iterate-result'; shouldContinue: boolean; reason: string; focusAreas: string[]; confidenceScore: number }
+  | { type: 'iteration-start'; iteration: number }
+  | { type: 'session-complete'; totalInsights: number; totalPagesCreated: number; totalBlocksCreated?: number }
   | { type: 'error'; message: string };
 
 // ── Helper: load history from localStorage ──
@@ -101,7 +143,7 @@ function loadAutoRun(): boolean {
 }
 
 // ── Helper: connect to SSE endpoint ──
-function connectLearningSSE(set: PFCSet, get: PFCGet) {
+function connectLearningSSE(set: PFCSet, get: PFCGet, sessionType: 'full-protocol' | 'daily-brief' = 'full-protocol') {
   const state = get();
   const session: LearningSession | null = state.learningSession;
   if (!session) return;
@@ -113,6 +155,9 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
 
   const controller = new AbortController();
   _learningAbortController = controller;
+
+  // Reset ref tracking maps for new connection
+  resetLearningRuntimeState();
 
   // Gather note data from the notes slice
   const notePages = state.notePages ?? [];
@@ -131,6 +176,14 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
         ollamaModel: state.ollamaModel ?? 'llama3.1',
       };
 
+  // Build recent activity for daily brief
+  let recentActivity: string | undefined;
+  if (sessionType === 'daily-brief') {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const recentPages = notePages.filter((p: NotePage) => p.updatedAt > cutoff);
+    recentActivity = recentPages.map((p: NotePage) => `- ${p.title} (updated ${new Date(p.updatedAt).toLocaleDateString()})`).join('\n');
+  }
+
   // Fire the SSE fetch
   (async () => {
     try {
@@ -141,6 +194,8 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
           notes: { pages: notePages, blocks: noteBlocks },
           session,
           inferenceConfig,
+          sessionType,
+          recentActivity,
         }),
         signal: controller.signal,
       });
@@ -168,7 +223,8 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
           const data = line.slice(6);
 
           if (data === '[DONE]') {
-            get().completeLearningSession();
+            // Session completion is handled via explicit `session-complete` events.
+            // Avoid double-finalization and duplicate history entries.
             continue;
           }
 
@@ -186,7 +242,6 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
               }
 
               case 'step-progress': {
-                // Optional progress update; store detail in step output
                 if (event.detail) {
                   get().updateLearningStep(event.stepIndex, {
                     output: event.detail,
@@ -196,33 +251,68 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
               }
 
               case 'step-complete': {
+                const currentSession = get().learningSession as LearningSession | null;
+                const existingStep = currentSession?.steps[event.stepIndex];
+                const mergedPagesCreated =
+                  existingStep && existingStep.pagesCreated.length > 0
+                    ? existingStep.pagesCreated
+                    : event.pagesCreated;
+                const mergedBlocksCreated =
+                  existingStep && existingStep.blocksCreated.length > 0
+                    ? existingStep.blocksCreated
+                    : event.blocksCreated;
+
                 get().updateLearningStep(event.stepIndex, {
                   status: 'completed',
                   completedAt: Date.now(),
                   insights: event.insights,
-                  pagesCreated: event.pagesCreated,
-                  blocksCreated: event.blocksCreated,
+                  pagesCreated: mergedPagesCreated,
+                  blocksCreated: mergedBlocksCreated,
                 });
 
                 // Update session totals
                 set((s) => {
                   if (!s.learningSession) return {};
+                  const pageDelta = Math.max(
+                    event.pagesCreated.length,
+                    existingStep?.pagesCreated.length ?? 0,
+                  );
+                  const blockDelta = Math.max(
+                    event.blocksCreated.length,
+                    existingStep?.blocksCreated.length ?? 0,
+                  );
                   return {
                     learningSession: {
                       ...s.learningSession,
                       totalInsights: s.learningSession.totalInsights + event.insights.length,
-                      totalPagesCreated: s.learningSession.totalPagesCreated + event.pagesCreated.length,
-                      totalBlocksCreated: s.learningSession.totalBlocksCreated + event.blocksCreated.length,
+                      totalPagesCreated: s.learningSession.totalPagesCreated + pageDelta,
+                      totalBlocksCreated: s.learningSession.totalBlocksCreated + blockDelta,
                     },
                   };
                 });
+
+                // Remove streaming flag from any blocks that were being streamed
+                for (const [key, blockId] of _blockTrackers) {
+                  const currentBlocks = get().noteBlocks as NoteBlock[];
+                  const block = currentBlocks.find((b: NoteBlock) => b.id === blockId);
+                  if (block?.properties?.streaming === 'true') {
+                    // Remove streaming property — notes slice owns noteBlocks
+                    // Destructure to omit 'streaming' key (can't set undefined on Record<string, string>)
+                    set((s) => ({
+                      noteBlocks: s.noteBlocks.map((b: NoteBlock) => {
+                        if (b.id !== blockId) return b;
+                        const { streaming: _, ...restProps } = b.properties;
+                        return { ...b, properties: restProps };
+                      }),
+                    }));
+                  }
+                }
 
                 get().advanceLearningStep();
                 break;
               }
 
               case 'insight': {
-                // Append insight to current step
                 const currentSession = get().learningSession as LearningSession | null;
                 if (currentSession) {
                   const idx = currentSession.currentStepIndex;
@@ -236,15 +326,67 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
                 break;
               }
 
+              // ═══ PHASE 1: Actually create notes from learning events ═══
               case 'page-created': {
-                // Client handles actual page creation — emit to the notes slice
+                // Preserve user context while background generation creates pages.
+                const previousActivePageId = get().activePageId;
+                const previousEditingBlockId = get().editingBlockId;
+
+                // Create the actual page in the notes system
+                const realPageId = get().createPage(event.pageTitle);
+                const seedBlockId = get().noteBlocks.find((b: NoteBlock) => b.pageId === realPageId)?.id;
+                if (seedBlockId) {
+                  _seedBlockByPageRef.set(event.clientPageRef, seedBlockId);
+                }
+
+                // Restore active page/editing state so generation is non-disruptive.
+                if (previousActivePageId !== null && previousActivePageId !== get().activePageId) {
+                  get().setActivePage(previousActivePageId);
+                }
+                if (previousEditingBlockId !== get().editingBlockId) {
+                  set({ editingBlockId: previousEditingBlockId });
+                }
+
+                // Store the mapping for subsequent block-created events
+                _pageRefMap.set(event.clientPageRef, realPageId);
+
+                // Tag the page as auto-generated (notes slice owns notePages)
+                set((s) => ({
+                  notePages: s.notePages.map((p: NotePage) =>
+                    p.id === realPageId
+                      ? {
+                          ...p,
+                          properties: {
+                            ...p.properties,
+                            autoGenerated: 'true',
+                            learningSessionId: session.id,
+                          },
+                        }
+                      : p,
+                  ),
+                  noteBlocks: seedBlockId
+                    ? s.noteBlocks.map((b: NoteBlock) =>
+                        b.id === seedBlockId
+                          ? {
+                              ...b,
+                              properties: {
+                                ...b.properties,
+                                autoGenerated: 'true',
+                              },
+                            }
+                          : b,
+                      )
+                    : s.noteBlocks,
+                }));
+
+                // Update step tracking
                 const cs = get().learningSession as LearningSession | null;
                 if (cs) {
                   const idx = cs.currentStepIndex;
                   const step = cs.steps[idx];
-                  if (step && event.pageId) {
+                  if (step) {
                     get().updateLearningStep(idx, {
-                      pagesCreated: [...step.pagesCreated, event.pageId],
+                      pagesCreated: [...step.pagesCreated, realPageId],
                     });
                   }
                 }
@@ -252,14 +394,57 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
               }
 
               case 'block-created': {
-                const bs = get().learningSession as LearningSession | null;
-                if (bs) {
-                  const idx = bs.currentStepIndex;
-                  const step = bs.steps[idx];
-                  if (step && event.blockId) {
-                    get().updateLearningStep(idx, {
-                      blocksCreated: [...step.blocksCreated, event.blockId],
-                    });
+                const realPageId = _pageRefMap.get(event.clientPageRef);
+                if (realPageId) {
+                  const previousEditingBlockId = get().editingBlockId;
+                  const seedBlockId = _seedBlockByPageRef.get(event.clientPageRef);
+                  let blockId: string;
+
+                  if (seedBlockId && event.blockIndex === 0) {
+                    // Reuse the page's initial empty block for first generated content
+                    // to avoid leaving a blank block at the top of auto-generated pages.
+                    get().updateBlockContent(seedBlockId, event.content);
+                    blockId = seedBlockId;
+                    _seedBlockByPageRef.delete(event.clientPageRef);
+                  } else {
+                    // Create subsequent generated blocks
+                    blockId = get().createBlock(realPageId, null, null, event.content, 'paragraph');
+                  }
+
+                  // Restore editing focus to the user-selected block (if any)
+                  if (previousEditingBlockId !== get().editingBlockId) {
+                    set({ editingBlockId: previousEditingBlockId });
+                  }
+
+                  // Tag block as auto-generated
+                  set((s) => ({
+                    noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
+                      b.id === blockId
+                        ? {
+                            ...b,
+                            properties: {
+                              ...b.properties,
+                              autoGenerated: 'true',
+                            },
+                          }
+                        : b,
+                    ),
+                  }));
+
+                  // Track the block for potential streaming
+                  const key = `${event.clientPageRef}:${event.blockIndex}`;
+                  _blockTrackers.set(key, blockId);
+
+                  // Update step tracking
+                  const bs = get().learningSession as LearningSession | null;
+                  if (bs) {
+                    const idx = bs.currentStepIndex;
+                    const step = bs.steps[idx];
+                    if (step) {
+                      get().updateLearningStep(idx, {
+                        blocksCreated: [...step.blocksCreated, blockId],
+                      });
+                    }
                   }
                 }
                 break;
@@ -270,7 +455,57 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
                 break;
               }
 
+              // ═══ PHASE 2: Recursive iteration events ═══
+              case 'iteration-start': {
+                // Reset steps for the new iteration pass
+                set((s) => {
+                  if (!s.learningSession) return {};
+                  return {
+                    learningSession: {
+                      ...s.learningSession,
+                      iteration: event.iteration,
+                      currentStepIndex: 0,
+                      steps: s.learningSession.steps.map((step: LearningStep) => ({
+                        ...step,
+                        status: 'pending' as const,
+                        startedAt: undefined,
+                        completedAt: undefined,
+                        insights: [],
+                        pagesCreated: [],
+                        blocksCreated: [],
+                        output: undefined,
+                        error: undefined,
+                      })),
+                    },
+                  };
+                });
+                get().clearLearningStreamText();
+                break;
+              }
+
+              case 'iterate-result': {
+                // Store the iterate decision for UI display
+                set((s) => {
+                  if (!s.learningSession) return {};
+                  return {
+                    learningSession: {
+                      ...s.learningSession,
+                      lastIterateDecision: {
+                        shouldContinue: event.shouldContinue,
+                        reason: event.reason,
+                        focusAreas: event.focusAreas,
+                      },
+                    },
+                  };
+                });
+                break;
+              }
+
               case 'session-complete': {
+                const currentSession = get().learningSession as LearningSession | null;
+                if (!currentSession || currentSession.status === 'completed') {
+                  break;
+                }
                 set((s) => {
                   if (!s.learningSession) return {};
                   return {
@@ -278,6 +513,7 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
                       ...s.learningSession,
                       totalInsights: event.totalInsights,
                       totalPagesCreated: event.totalPagesCreated,
+                      totalBlocksCreated: event.totalBlocksCreated ?? s.learningSession.totalBlocksCreated,
                     },
                   };
                 });
@@ -286,8 +522,11 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
               }
 
               case 'error': {
-                console.error('[learning] SSE error:', event.message);
-                // Mark current step as error
+                if (typeof event.message === 'string' && event.message.includes('Local model produced no output')) {
+                  console.warn('[learning] SSE warning:', event.message);
+                } else {
+                  console.error('[learning] SSE error:', event.message);
+                }
                 const errSession = get().learningSession as LearningSession | null;
                 if (errSession) {
                   get().updateLearningStep(errSession.currentStepIndex, {
@@ -313,7 +552,7 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
         }
       }
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
+      if (!isExpectedLearningInterruption(error)) {
         console.error('[learning] Stream error:', error);
         set((s) => {
           if (!s.learningSession) return {};
@@ -327,6 +566,13 @@ function connectLearningSSE(set: PFCSet, get: PFCGet) {
       }
     } finally {
       _learningAbortController = null;
+      resetLearningRuntimeState();
+      // Persist notes after learning session ends
+      try {
+        get().saveNotesToStorage();
+      } catch {
+        // May fail if notes slice isn't ready
+      }
     }
   })();
 }
@@ -338,6 +584,9 @@ export const createLearningSlice = (set: PFCSet, get: PFCGet) => ({
   learningHistory: loadHistory(),
   learningStreamText: '',
   learningAutoRun: loadAutoRun(),
+  schedulerConfig: loadSchedulerConfig(),
+  schedulerActive: false,
+  lastAutoRunAt: null as number | null,
 
   // ── Actions ──
 
@@ -353,14 +602,14 @@ export const createLearningSlice = (set: PFCSet, get: PFCGet) => ({
     set({
       learningSession: session,
       learningStreamText: '',
+      lastAutoRunAt: Date.now(),
     });
 
     // Connect to SSE endpoint
-    connectLearningSSE(set, get);
+    connectLearningSSE(set, get, 'full-protocol');
   },
 
   pauseLearningSession: () => {
-    // Abort the fetch
     if (_learningAbortController) {
       _learningAbortController.abort();
       _learningAbortController = null;
@@ -388,29 +637,33 @@ export const createLearningSlice = (set: PFCSet, get: PFCGet) => ({
       };
     });
 
-    // Reconnect to SSE
     connectLearningSSE(set, get);
   },
 
   stopLearningSession: () => {
-    // Abort the fetch
     if (_learningAbortController) {
       _learningAbortController.abort();
       _learningAbortController = null;
     }
+    resetLearningRuntimeState();
 
     const session = get().learningSession as LearningSession | null;
     if (session) {
-      // Add to history
+      const existingHistory = get().learningHistory;
+      const alreadyRecorded = existingHistory.some((h) => h.id === session.id);
       const entry: LearningHistoryEntry = {
         id: session.id,
         startedAt: session.startedAt,
         completedAt: Date.now(),
         totalInsights: session.totalInsights,
+        totalPagesCreated: session.totalPagesCreated,
+        totalBlocksCreated: session.totalBlocksCreated,
         iteration: session.iteration,
       };
-      const history = [...get().learningHistory, entry];
-      saveHistory(history);
+      const history = alreadyRecorded ? existingHistory : [...existingHistory, entry];
+      if (!alreadyRecorded) {
+        saveHistory(history);
+      }
 
       set({
         learningSession: null,
@@ -471,17 +724,33 @@ export const createLearningSlice = (set: PFCSet, get: PFCGet) => ({
     } catch {
       // Storage unavailable
     }
+
+    // Also update scheduler config
+    const config = get().schedulerConfig;
+    const updated = { ...config, enabled };
+    saveSchedulerConfig(updated);
+    set({ schedulerConfig: updated });
+
+    // Start/stop scheduler
+    if (enabled) {
+      startScheduler(() => get());
+      set({ schedulerActive: true });
+    } else {
+      stopScheduler();
+      set({ schedulerActive: false });
+    }
   },
 
   completeLearningSession: () => {
-    // Abort any remaining connection
     if (_learningAbortController) {
       _learningAbortController.abort();
       _learningAbortController = null;
     }
+    resetLearningRuntimeState();
 
     const session = get().learningSession as LearningSession | null;
     if (!session) return;
+    if (session.status === 'completed') return;
 
     // Mark remaining pending steps as skipped
     const steps = session.steps.map((step: LearningStep) =>
@@ -495,12 +764,13 @@ export const createLearningSlice = (set: PFCSet, get: PFCGet) => ({
       completedAt: Date.now(),
     };
 
-    // Add to history
     const entry: LearningHistoryEntry = {
       id: completedSession.id,
       startedAt: completedSession.startedAt,
       completedAt: completedSession.completedAt!,
       totalInsights: completedSession.totalInsights,
+      totalPagesCreated: completedSession.totalPagesCreated,
+      totalBlocksCreated: completedSession.totalBlocksCreated,
       iteration: completedSession.iteration,
     };
     const history = [...get().learningHistory, entry];
@@ -510,5 +780,66 @@ export const createLearningSlice = (set: PFCSet, get: PFCGet) => ({
       learningSession: completedSession,
       learningHistory: history,
     });
+
+    // Persist notes that were created during the session
+    try {
+      get().saveNotesToStorage();
+    } catch {
+      // Notes slice may not have saveNotesToStorage available yet
+    }
+  },
+
+  // ═══ PHASE 3: Scheduler integration ═══
+  updateSchedulerConfig: (updates: Partial<SchedulerConfig>) => {
+    const current = get().schedulerConfig;
+    const updated = { ...current, ...updates };
+    saveSchedulerConfig(updated);
+    set({ schedulerConfig: updated });
+
+    // Restart scheduler with new config
+    if (updated.enabled) {
+      stopScheduler();
+      startScheduler(() => get());
+      set({ schedulerActive: true });
+    } else {
+      stopScheduler();
+      set({ schedulerActive: false });
+    }
+  },
+
+  initScheduler: () => {
+    const config = loadSchedulerConfig();
+    set({ schedulerConfig: config });
+
+    if (config.enabled) {
+      startScheduler(() => get());
+      set({ schedulerActive: true });
+    }
+  },
+
+  // ═══ PHASE 4: Daily brief ═══
+  startDailyBriefSession: () => {
+    const session = createLearningSession('shallow', 1);
+    session.steps = [{
+      id: `step-${Date.now()}-daily`,
+      type: 'synthesis',
+      status: 'pending',
+      title: 'Daily Brief',
+      description: 'Generate a daily summary from your latest notes activity',
+      insights: [],
+      pagesCreated: [],
+      blocksCreated: [],
+    }];
+    session.currentStepIndex = 0;
+    session.iteration = 1;
+    session.maxIterations = 1;
+    session.status = 'running';
+
+    set({
+      learningSession: session,
+      learningStreamText: '',
+    });
+
+    connectLearningSSE(set, get, 'daily-brief');
   },
 });

@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
+import { useTypewriter } from '@/hooks/use-typewriter';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { spring, variants, ease } from '@/lib/motion/motion-config';
 import {
   PlusIcon,
@@ -29,6 +31,7 @@ import {
   LayoutGridIcon,
   MousePointerClickIcon,
   SparklesIcon,
+  WrenchIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -69,15 +72,32 @@ const CUP_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
 // Theme helper — consistent with sidebar
 // ═══════════════════════════════════════════════════════════════════
 
-function th(isDark: boolean) {
+function th(isDark: boolean, isOled = false) {
+  if (isOled) {
+    return {
+      bg:       'var(--background)',
+      text:     'rgba(220,220,220,0.95)',
+      muted:    'rgba(130,130,130,0.5)',
+      faint:    'rgba(130,130,130,0.25)',
+      border:   'rgba(40,40,40,0.35)',
+      hover:    'rgba(255,255,255,0.04)',
+      accent:   'var(--pfc-accent)',
+      green:    '#34D399',
+      journal:  'rgba(52,211,153,0.08)',
+      journalGrad: 'linear-gradient(135deg, rgba(52,211,153,0.12), rgba(52,211,153,0.04))',
+      pageGrad: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(139,124,246,0.04))',
+      toolbarBtnBg: 'rgba(255,255,255,0.06)',
+      backlinkBg: 'rgba(255,255,255,0.03)',
+    };
+  }
   return {
     bg:       isDark ? 'var(--background)' : 'var(--background)',
     text:     isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.85)',
     muted:    isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)',
     faint:    isDark ? 'rgba(156,143,128,0.25)' : 'rgba(0,0,0,0.12)',
     border:   isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.3)',
-    hover:    isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
-    accent:   '#C4956A',
+    hover:    isDark ? 'rgba(16,13,10,0.65)' : 'rgba(0,0,0,0.03)',
+    accent:   'var(--pfc-accent)',
     green:    '#34D399',
     journal:  isDark ? 'rgba(52,211,153,0.08)' : 'rgba(52,211,153,0.06)',
     journalGrad: isDark
@@ -92,43 +112,8 @@ function th(isDark: boolean) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// NoteTitleTypewriter — types the note title with code syntax preview
-// One-shot: code variation → plain title, cursor fades after
+// NoteTitleTypewriter — types the note title with cursor, then fades
 // ═══════════════════════════════════════════════════════════════════
-
-interface TitleVariation {
-  plain: string;
-  spans: { text: string; color: string }[];
-  isCode: boolean;
-}
-
-function buildVariations(title: string): TitleVariation[] {
-  return [
-    {
-      plain: `# ${title}`,
-      spans: [
-        { text: '# ', color: '#86EFAC' },
-        { text: title, color: '#86EFAC' },
-      ],
-      isCode: true,
-    },
-    {
-      plain: `const title = "${title}"`,
-      spans: [
-        { text: 'const', color: '#C4B5FD' },
-        { text: ' title ', color: '#22D3EE' },
-        { text: '= ', color: '#9CA3AF' },
-        { text: `"${title}"`, color: '#4ADE80' },
-      ],
-      isCode: true,
-    },
-    {
-      plain: title,
-      spans: [{ text: title, color: 'inherit' }],
-      isCode: false,
-    },
-  ];
-}
 
 function NoteTitleTypewriter({
   title,
@@ -139,96 +124,11 @@ function NoteTitleTypewriter({
   isDark: boolean;
   onClick: () => void;
 }) {
-  const [displayText, setDisplayText] = useState('');
-  const [cursorOn, setCursorOn] = useState(true);
-  const [variationIdx, setVariationIdx] = useState(0);
-  const [done, setDone] = useState(false);
-  const [cursorOpacity, setCursorOpacity] = useState(1);
-  const stateRef = useRef({
-    variation: 0,
-    charIdx: 0,
-    phase: 'typing' as 'typing' | 'pausing' | 'deleting' | 'done',
+  const { displayText, cursorVisible } = useTypewriter(title, true, {
+    speed: 45,
+    startDelay: 80,
+    cursorLingerMs: 600,
   });
-  const variations = useMemo(() => buildVariations(title), [title]);
-
-  useEffect(() => {
-    if (done) return;
-    const id = setInterval(() => setCursorOn((v) => !v), 530);
-    return () => clearInterval(id);
-  }, [done]);
-
-  useEffect(() => {
-    stateRef.current = { variation: 0, charIdx: 0, phase: 'typing' };
-    setDisplayText('');
-    setVariationIdx(0);
-    setDone(false);
-    setCursorOpacity(1);
-
-    let timer: ReturnType<typeof setTimeout>;
-    const totalVariations = variations.length;
-
-    function tick() {
-      const s = stateRef.current;
-      const target = variations[s.variation].plain;
-      const isLast = s.variation === totalVariations - 1;
-
-      if (s.phase === 'typing') {
-        if (s.charIdx < target.length) {
-          s.charIdx++;
-          setDisplayText(target.slice(0, s.charIdx));
-          setVariationIdx(s.variation);
-          timer = setTimeout(tick, isLast ? 45 : 30);
-        } else {
-          s.phase = 'pausing';
-          timer = setTimeout(tick, isLast ? 600 : 1200);
-        }
-      } else if (s.phase === 'pausing') {
-        if (isLast) {
-          s.phase = 'done';
-          setDone(true);
-          let fade = 1;
-          const fadeInterval = setInterval(() => {
-            fade -= 0.08;
-            if (fade <= 0) { clearInterval(fadeInterval); setCursorOpacity(0); }
-            else setCursorOpacity(fade);
-          }, 50);
-        } else {
-          s.phase = 'deleting';
-          tick();
-        }
-      } else if (s.phase === 'deleting') {
-        if (s.charIdx > 0) {
-          s.charIdx--;
-          setDisplayText(variations[s.variation].plain.slice(0, s.charIdx));
-          timer = setTimeout(tick, 15);
-        } else {
-          s.variation++;
-          s.phase = 'typing';
-          setVariationIdx(s.variation);
-          timer = setTimeout(tick, 350);
-        }
-      }
-    }
-
-    timer = setTimeout(tick, 80);
-    return () => clearTimeout(timer);
-  }, [title, variations]);
-
-  const v = variations[variationIdx];
-  const isCode = v?.isCode ?? false;
-
-  const coloredOutput = useMemo(() => {
-    if (!v) return [];
-    let remaining = displayText.length;
-    const spans: { text: string; color: string }[] = [];
-    for (const seg of v.spans) {
-      if (remaining <= 0) break;
-      const chars = Math.min(remaining, seg.text.length);
-      spans.push({ text: seg.text.slice(0, chars), color: seg.color });
-      remaining -= chars;
-    }
-    return spans;
-  }, [displayText, v]);
 
   const titleColor = isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.85)';
 
@@ -236,11 +136,11 @@ function NoteTitleTypewriter({
     <h1
       onClick={onClick}
       style={{
-        fontFamily: isCode ? 'var(--font-mono)' : 'var(--font-display)',
-        fontSize: isCode ? '2.25rem' : '3rem',
-        letterSpacing: isCode ? '0em' : '-0.035em',
+        fontFamily: 'var(--font-heading)',
+        fontSize: '2.75rem',
+        letterSpacing: '-0.01em',
         lineHeight: 1.15,
-        fontWeight: isCode ? 400 : 700,
+        fontWeight: 400,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         minHeight: '3.5rem',
@@ -248,24 +148,19 @@ function NoteTitleTypewriter({
         alignItems: 'center',
         margin: 0,
         cursor: 'text',
-        transition: 'font-size 0.3s cubic-bezier(0.32,0.72,0,1), font-weight 0.3s cubic-bezier(0.32,0.72,0,1)',
       }}
     >
-      {coloredOutput.map((span, i) => (
-        <span key={i} style={{ color: span.color === 'inherit' ? titleColor : span.color }}>
-          {span.text}
-        </span>
-      ))}
-      {cursorOpacity > 0 && (
+      <span style={{ color: titleColor }}>
+        {displayText}
+      </span>
+      {cursorVisible && (
         <span
           style={{
             display: 'inline-block',
             width: '2px',
-            height: isCode ? '2.25rem' : '2.75rem',
+            height: '2.75rem',
             marginLeft: '2px',
-            background: '#C4956A',
-            opacity: cursorOn ? cursorOpacity : 0,
-            transition: 'height 0.3s cubic-bezier(0.32,0.72,0,1)',
+            background: 'var(--pfc-accent)',
             borderRadius: '1px',
           }}
         />
@@ -290,11 +185,6 @@ function BacklinksPanel({
   const setActivePage = usePFCStore((s) => s.setActivePage);
 
   const backlinks = useMemo(() => getBacklinks(pageId), [getBacklinks, pageId]);
-  const [expanded, setExpanded] = useState(false);
-
-  if (backlinks.length === 0) return null;
-
-  // Deduplicate by source page
   const uniqueSourcePages = useMemo(() => {
     const seen = new Set<string>();
     const result: { page: NotePage; link: PageLink }[] = [];
@@ -307,6 +197,9 @@ function BacklinksPanel({
     }
     return result;
   }, [backlinks, notePages]);
+  const [expanded, setExpanded] = useState(false);
+
+  if (backlinks.length === 0) return null;
 
   return (
     <motion.div
@@ -446,6 +339,147 @@ function Breadcrumb({
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// ToolsPillTrigger — NavBubble-style button that triggers the tools pill
+// Shows WrenchIcon, expands "Utilities" label on hover, rotates on open
+// ═══════════════════════════════════════════════════════════════════
+
+const TOOLS_CUP = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const TOOLS_T_SIZE = `padding 0.3s ${TOOLS_CUP}, gap 0.3s ${TOOLS_CUP}`;
+const TOOLS_T_LABEL = `max-width 0.3s ${TOOLS_CUP}, opacity 0.2s ${TOOLS_CUP}`;
+const TOOLS_T_COLOR = 'background 0.15s ease, color 0.15s ease';
+
+function toolsTriggerBg(isOpen: boolean, isDark: boolean) {
+  if (isOpen) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)';
+  return 'transparent';
+}
+function toolsTriggerColor(isOpen: boolean, isDark: boolean) {
+  if (isOpen) return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)';
+  return isDark ? 'rgba(205,198,186,0.92)' : 'rgba(72,54,36,0.86)';
+}
+
+const ToolsPillTrigger = memo(function ToolsPillTrigger({
+  isOpen,
+  isDark,
+  onClick,
+}: {
+  isOpen: boolean;
+  isDark: boolean;
+  onClick: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const expanded = hovered || isOpen;
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title="Utilities"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: expanded ? '0.4rem' : '0rem',
+        cursor: 'pointer',
+        border: 'none',
+        borderRadius: '9999px',
+        padding: expanded ? '0.375rem 0.625rem' : '0.375rem 0.5rem',
+        height: '2.125rem',
+        fontSize: '0.8125rem',
+        fontWeight: isOpen ? 650 : 500,
+        letterSpacing: '-0.01em',
+        color: toolsTriggerColor(isOpen, isDark),
+        background: toolsTriggerBg(isOpen, isDark),
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        transition: `${TOOLS_T_SIZE}, ${TOOLS_T_COLOR}`,
+      }}
+    >
+      <WrenchIcon style={{
+        height: '0.9375rem',
+        width: '0.9375rem',
+        flexShrink: 0,
+        color: isOpen ? 'var(--pfc-accent)' : 'inherit',
+        transition: 'color 0.15s, transform 0.3s cubic-bezier(0.32,0.72,0,1)',
+        transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+      }} />
+      <span style={{
+        display: 'inline-block',
+        maxWidth: expanded ? '5rem' : '0rem',
+        opacity: expanded ? 1 : 0,
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        transition: TOOLS_T_LABEL,
+      }}>
+        Utilities
+      </span>
+    </button>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// ToolsTextBtn — text-only button for the expanded tools pill
+// No icons, just the name — clean and minimal
+// ═══════════════════════════════════════════════════════════════════
+
+function ToolsTextBtn({
+  label,
+  isDark,
+  isActive,
+  activeColor,
+  onClick,
+}: {
+  label: string;
+  isDark: boolean;
+  isActive?: boolean;
+  activeColor?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0.3rem 0.625rem',
+        borderRadius: '9999px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '0.6875rem',
+        fontWeight: isActive ? 650 : 500,
+        letterSpacing: '-0.01em',
+        whiteSpace: 'nowrap',
+        color: isActive
+          ? (activeColor ?? 'var(--pfc-accent)')
+          : (isDark ? 'rgba(205,198,186,0.75)' : 'rgba(72,54,36,0.6)'),
+        background: isActive
+          ? (isDark ? 'rgba(55,50,45,0.45)' : 'rgba(210,195,175,0.25)')
+          : 'transparent',
+        transition: 'background 0.12s ease, color 0.12s ease',
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          (e.currentTarget as HTMLElement).style.background = isDark
+            ? 'rgba(55,50,45,0.3)' : 'rgba(210,195,175,0.18)';
+          (e.currentTarget as HTMLElement).style.color = isDark
+            ? 'rgba(232,228,222,0.9)' : 'rgba(60,45,30,0.8)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          (e.currentTarget as HTMLElement).style.background = 'transparent';
+          (e.currentTarget as HTMLElement).style.color = isDark
+            ? 'rgba(205,198,186,0.75)' : 'rgba(72,54,36,0.6)';
+        }
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Toolbar Button — reusable with spring hover
 // ═══════════════════════════════════════════════════════════════════
 
@@ -477,19 +511,130 @@ function ToolbarBtn({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '1.75rem',
-        height: '1.75rem',
+        width: '2.125rem',
+        height: '2.125rem',
         borderRadius: '9999px',
-        border: 'none',
-        background: bgColor ?? 'transparent',
+        border: '1px solid var(--pfc-accent-border)',
+        background: bgColor ?? 'rgba(var(--pfc-accent-rgb), 0.06)',
         cursor: 'pointer',
-        color: isActive ? (activeColor ?? '#C4956A') : (inactiveColor ?? 'rgba(156,143,128,0.3)'),
+        color: isActive ? (activeColor ?? 'var(--pfc-accent)') : (inactiveColor ?? 'rgba(156,143,128,0.45)'),
+        fontWeight: 700,
       }}
     >
       {children}
     </motion.button>
   );
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// TabBubble — pill-shaped tab matching top-nav NavBubble pattern exactly
+// Expands label on hover/active, collapses to icon+truncated title otherwise
+// ═══════════════════════════════════════════════════════════════════
+
+const TAB_CUP = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const TAB_T_SIZE = `padding 0.3s ${TAB_CUP}, gap 0.3s ${TAB_CUP}`;
+const TAB_T_COLOR = 'background 0.15s ease, color 0.15s ease';
+
+function tabBubbleBg(isActive: boolean, isDark: boolean) {
+  if (isActive) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)';
+  return 'transparent';
+}
+function tabBubbleColor(isActive: boolean, isDark: boolean) {
+  if (isActive) return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)';
+  return isDark ? 'rgba(205,198,186,0.92)' : 'rgba(72,54,36,0.86)';
+}
+
+const TabBubble = memo(function TabBubble({
+  tabId,
+  title,
+  icon,
+  isActive,
+  isDark,
+  onClick,
+  onClose,
+}: {
+  tabId: string;
+  title: string;
+  icon?: string | null;
+  isActive: boolean;
+  isDark: boolean;
+  onClick: () => void;
+  onClose: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const expanded = hovered || isActive;
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title={title}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: expanded ? '0.4rem' : '0rem',
+        cursor: 'pointer',
+        border: 'none',
+        borderRadius: '9999px',
+        padding: expanded ? '0.375rem 0.625rem' : '0.375rem 0.5rem',
+        height: '2.125rem',
+        fontSize: '0.8125rem',
+        fontWeight: isActive ? 650 : 500,
+        letterSpacing: '-0.01em',
+        color: tabBubbleColor(isActive, isDark),
+        background: tabBubbleBg(isActive, isDark),
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        transition: `${TAB_T_SIZE}, ${TAB_T_COLOR}`,
+        position: 'relative',
+        maxWidth: expanded ? '12rem' : '2.125rem',
+      }}
+    >
+      {icon ? (
+        <span style={{ fontSize: '0.8rem', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+      ) : (
+        <FileTextIcon style={{
+          height: '0.9375rem',
+          width: '0.9375rem',
+          flexShrink: 0,
+          color: isActive ? 'var(--pfc-accent)' : 'inherit',
+          transition: 'color 0.15s',
+        }} />
+      )}
+      <span style={{
+        display: 'inline-block',
+        maxWidth: expanded ? '8rem' : '0rem',
+        opacity: expanded ? 1 : 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        transition: `max-width 0.3s ${TAB_CUP}, opacity 0.2s ${TAB_CUP}`,
+      }}>
+        {title}
+      </span>
+      {expanded && (
+        <span
+          role="button"
+          tabIndex={-1}
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 14, height: 14, borderRadius: '50%',
+            background: 'transparent', cursor: 'pointer', flexShrink: 0,
+            color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+            transition: 'background 0.1s',
+          }}
+        >
+          <XIcon style={{ width: 8, height: 8, strokeWidth: 2.5 }} />
+        </span>
+      )}
+    </button>
+  );
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // ToolbarStats — scoped sub-component for page stats in bottom toolbar
@@ -528,16 +673,16 @@ const ToolbarStats = memo(function ToolbarStats({
       }} />
       <span style={{
         display: 'flex', alignItems: 'center', gap: '0.5rem',
-        fontSize: '0.6875rem', fontWeight: 500, whiteSpace: 'nowrap',
+        fontSize: '0.75rem', fontWeight: 650, whiteSpace: 'nowrap',
         color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(120,110,100,0.6)',
-        padding: '0 0.35rem',
+        padding: '0 0.45rem',
       }}>
         <span>{stats.totalWords} word{stats.totalWords !== 1 ? 's' : ''}</span>
         <span style={{ opacity: 0.4 }}>·</span>
         <span>{stats.blockCount} block{stats.blockCount !== 1 ? 's' : ''}</span>
         <span style={{ opacity: 0.4 }}>·</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          <ClockIcon style={{ width: '0.625rem', height: '0.625rem' }} />
+          <ClockIcon style={{ width: '0.75rem', height: '0.75rem', strokeWidth: 2.4 }} />
           {stats.timeStr}
         </span>
       </span>
@@ -567,11 +712,10 @@ function saveViewMode(mode: NotesViewMode) {
 export default function NotesPage() {
   const ready = useSetupGuard();
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
-  const c = th(isDark);
+  const { isDark, isOled, mounted } = useIsDark();
+  const c = th(isDark, isOled);
+
+  const learningSession = usePFCStore((s) => s.learningSession);
 
   // ── Store selectors ──
   const activePageId     = usePFCStore((s) => s.activePageId);
@@ -584,6 +728,8 @@ export default function NotesPage() {
   const togglePageFavorite = usePFCStore((s) => s.togglePageFavorite);
   const togglePagePin    = usePFCStore((s) => s.togglePagePin);
   const setActivePage    = usePFCStore((s) => s.setActivePage);
+  const openTabIds       = usePFCStore((s) => s.openTabIds);
+  const closeTab         = usePFCStore((s) => s.closeTab);
 
   // ── Vault system ──
   const vaults = usePFCStore((s) => s.vaults);
@@ -605,8 +751,7 @@ export default function NotesPage() {
   const [editorMode, setEditorMode] = useState<'write' | 'read'>('write');
 
   // ── View mode: notes (markdown) vs canvas — mutually exclusive ──
-  const [viewMode, setViewMode] = useState<NotesViewMode>('notes');
-  useEffect(() => { setViewMode(loadViewMode()); }, []);
+  const [viewMode, setViewMode] = useState<NotesViewMode>(() => loadViewMode());
   const handleSetViewMode = useCallback((mode: NotesViewMode) => {
     setViewMode(mode);
     saveViewMode(mode);
@@ -615,9 +760,57 @@ export default function NotesPage() {
   // ── Floating sidebar panel ──
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelHovered, setPanelHovered] = useState(false);
+  const [pagesPanelPos, setPagesPanelPos] = useState<{ x: number; y: number } | null>(null);
+  const [pagesPanelSize, setPagesPanelSize] = useState({ w: 280, h: 520 });
+  const pagesPanelDragRef = useRef(false);
+  const pagesPanelDragStart = useRef({ mx: 0, my: 0, px: 0, py: 0 });
+  const pagesPanelResizeRef = useRef(false);
+  const pagesPanelResizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
+
+  const onPagesPanelDragStart = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    pagesPanelDragRef.current = true;
+    const el = (e.currentTarget as HTMLElement).closest('[data-pages-panel]') as HTMLElement;
+    const rect = el?.getBoundingClientRect();
+    pagesPanelDragStart.current = { mx: e.clientX, my: e.clientY, px: rect?.left ?? 0, py: rect?.top ?? 0 };
+    const onMove = (ev: MouseEvent) => {
+      if (!pagesPanelDragRef.current) return;
+      const dx = ev.clientX - pagesPanelDragStart.current.mx;
+      const dy = ev.clientY - pagesPanelDragStart.current.my;
+      setPagesPanelPos({
+        x: Math.max(0, Math.min(window.innerWidth - 100, pagesPanelDragStart.current.px + dx)),
+        y: Math.max(0, Math.min(window.innerHeight - 60, pagesPanelDragStart.current.py + dy)),
+      });
+    };
+    const onUp = () => { pagesPanelDragRef.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, []);
+
+  const onPagesPanelResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    pagesPanelResizeRef.current = true;
+    pagesPanelResizeStart.current = { x: e.clientX, y: e.clientY, w: pagesPanelSize.w, h: pagesPanelSize.h };
+    const onMove = (ev: MouseEvent) => {
+      if (!pagesPanelResizeRef.current) return;
+      const dx = ev.clientX - pagesPanelResizeStart.current.x;
+      const dy = ev.clientY - pagesPanelResizeStart.current.y;
+      setPagesPanelSize({
+        w: Math.max(220, Math.min(600, pagesPanelResizeStart.current.w + dx)),
+        h: Math.max(300, Math.min(800, pagesPanelResizeStart.current.h + dy)),
+      });
+    };
+    const onUp = () => { pagesPanelResizeRef.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [pagesPanelSize]);
 
   // ── Fused AI panel (controlled from toolbar) ──
   const [aiPanelOpen, setAIPanelOpen] = useState(false);
+
+  // ── Right-side tools pill (collapsed → expanded) ──
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   // ── Load vault index on mount ──
   useEffect(() => {
@@ -681,16 +874,15 @@ export default function NotesPage() {
   );
 
   // ── Title editing ──
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editingTitlePageId, setEditingTitlePageId] = useState<string | null>(null);
+  const isEditingTitle = editingTitlePageId === activePageId;
   const [titleDraft, setTitleDraft] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => setIsEditingTitle(false), [activePageId]);
 
   const handleTitleClick = useCallback(() => {
     if (!activePage) return;
     setTitleDraft(activePage.title);
-    setIsEditingTitle(true);
+    setEditingTitlePageId(activePage.id);
     requestAnimationFrame(() => titleRef.current?.select());
   }, [activePage]);
 
@@ -698,12 +890,12 @@ export default function NotesPage() {
     if (!activePage) return;
     const trimmed = titleDraft.trim();
     if (trimmed && trimmed !== activePage.title) renamePage(activePage.id, trimmed);
-    setIsEditingTitle(false);
+    setEditingTitlePageId(null);
   }, [activePage, titleDraft, renamePage]);
 
   const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') { e.preventDefault(); handleTitleCommit(); }
-    if (e.key === 'Escape') setIsEditingTitle(false);
+    if (e.key === 'Escape') setEditingTitlePageId(null);
   }, [handleTitleCommit]);
 
   const handleNewPage = useCallback(() => {
@@ -712,7 +904,10 @@ export default function NotesPage() {
     });
     requestAnimationFrame(() => {
       setTitleDraft('Untitled');
-      setIsEditingTitle(true);
+      const currentActiveId = usePFCStore.getState().activePageId;
+      if (currentActiveId) {
+        setEditingTitlePageId(currentActiveId);
+      }
       requestAnimationFrame(() => titleRef.current?.select());
     });
   }, [createPage]);
@@ -753,11 +948,45 @@ export default function NotesPage() {
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
+        paddingTop: 0,
         background: c.bg,
         overflow: 'hidden',
         contain: 'layout style',
       }}
     >
+      {/* ── Background learning indicator — thin top bar ── */}
+      <AnimatePresence>
+        {learningSession?.status === 'running' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              zIndex: 'var(--z-modal)',
+              background: isOled ? 'rgba(40,40,40,0.3)' : isDark ? 'rgba(79,69,57,0.2)' : 'rgba(0,0,0,0.04)',
+              overflow: 'hidden',
+            }}
+          >
+            <motion.div
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 2, ease: 'linear', repeat: Infinity }}
+              style={{
+                width: '40%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, var(--pfc-accent), transparent)',
+                borderRadius: 1,
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Full-page editor/canvas area ── */}
       <div
         onDragOver={(e) => {
@@ -776,9 +1005,9 @@ export default function NotesPage() {
           flex: 1,
           overflow: 'auto',
           position: 'relative',
-          transform: 'translateZ(0)',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
+          paddingBottom: '5rem', // Space for bottom tab bar
         } as React.CSSProperties}
       >
         <AnimatePresence mode="wait">
@@ -800,10 +1029,10 @@ export default function NotesPage() {
                 {/* Floating page title in canvas mode */}
                 <div style={{
                   position: 'fixed',
-                  top: 52,
+                  top: 60,
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  zIndex: 35,
+                  zIndex: 'calc(var(--z-nav) + 5)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
@@ -853,7 +1082,13 @@ export default function NotesPage() {
                 </div>
 
                 {activeVaultId && (
-                  <NoteCanvas pageId={activePageId} vaultId={activeVaultId} />
+                  <ErrorBoundary fallback={
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5, fontSize: 13 }}>
+                      Canvas failed to load. Try refreshing the page.
+                    </div>
+                  }>
+                    <NoteCanvas key={`${activeVaultId}:${activePageId}`} pageId={activePageId} vaultId={activeVaultId} />
+                  </ErrorBoundary>
                 )}
               </motion.div>
             ) : (
@@ -865,9 +1100,9 @@ export default function NotesPage() {
                 exit={{ opacity: 0 }}
                 transition={spring.standard}
                 style={{
-                  maxWidth: zenMode ? '42rem' : '52rem',
+                  maxWidth: zenMode ? '42rem' : '72rem',
                   margin: '0 auto',
-                  padding: zenMode ? '1.5rem 2rem 8rem' : '1.5rem 4rem 8rem',
+                  padding: zenMode ? '1.5rem 2rem 8rem' : '1.5rem 5rem 8rem 4rem',
                   transition: 'max-width 0.3s cubic-bezier(0.32,0.72,0,1), padding 0.3s cubic-bezier(0.32,0.72,0,1)',
                 }}
               >
@@ -878,7 +1113,7 @@ export default function NotesPage() {
                   alignItems: 'center',
                   textAlign: 'center',
                   marginBottom: '2.5rem',
-                  paddingTop: '1rem',
+                  paddingTop: '4rem',
                 }}>
                   {activePage.isJournal && (
                     <div style={{
@@ -899,10 +1134,6 @@ export default function NotesPage() {
                     gap: '0.75rem',
                     minHeight: '4rem',
                   }}>
-                    <div style={{ flexShrink: 0, width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <PixelBook size={48} />
-                    </div>
-
                     {isEditingTitle ? (
                       <input
                         ref={titleRef}
@@ -913,42 +1144,26 @@ export default function NotesPage() {
                         autoFocus
                         style={{
                           fontSize: '2.5rem',
-                          fontWeight: 700,
-                          letterSpacing: '-0.035em',
-                          lineHeight: 1.15,
+                          fontWeight: 400,
+                          letterSpacing: '-0.01em',
+                          lineHeight: 1.2,
                           color: c.text,
                           background: 'transparent',
                           border: 'none',
                           outline: 'none',
                           padding: 0,
                           caretColor: c.accent,
-                          fontFamily: 'var(--font-display)',
+                          fontFamily: 'var(--font-heading)',
                           textAlign: 'center',
                           maxWidth: '32rem',
                         }}
                       />
-                    ) : editorMode === 'read' ? (
+                    ) : (
                       <NoteTitleTypewriter
                         title={activePage.title}
                         isDark={isDark}
                         onClick={handleTitleClick}
                       />
-                    ) : (
-                      <h1
-                        onClick={handleTitleClick}
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: '2.5rem',
-                          letterSpacing: '-0.035em',
-                          lineHeight: 1.15,
-                          fontWeight: 700,
-                          margin: 0,
-                          cursor: 'text',
-                          color: c.text,
-                        }}
-                      >
-                        {activePage.title}
-                      </h1>
                     )}
                   </div>
 
@@ -963,7 +1178,7 @@ export default function NotesPage() {
                             display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
                             fontSize: '0.8125rem', fontWeight: 500,
                             color: c.muted,
-                            background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
+                            background: isOled ? 'rgba(255,255,255,0.06)' : isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
                             borderRadius: '9999px', padding: '0.25rem 0.75rem',
                             cursor: 'pointer',
                           }}
@@ -976,7 +1191,13 @@ export default function NotesPage() {
                   )}
                 </div>
 
-                <BlockEditor pageId={activePageId} readOnly={editorMode === 'read'} />
+                <ErrorBoundary fallback={
+                  <div style={{ padding: 24, opacity: 0.5, fontSize: 13, textAlign: 'center' }}>
+                    Editor failed to load. Try refreshing the page.
+                  </div>
+                }>
+                  <BlockEditor pageId={activePageId} readOnly={editorMode === 'read'} />
+                </ErrorBoundary>
 
                 <BacklinksPanel pageId={activePageId} c={c} />
               </motion.div>
@@ -1021,7 +1242,7 @@ export default function NotesPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
+                    background: isOled ? 'rgba(255,255,255,0.04)' : isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
                   }}
                 >
                   <PenLineIcon style={{ width: '1.5rem', height: '1.5rem', color: c.faint }} />
@@ -1063,7 +1284,7 @@ export default function NotesPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.375rem',
                       padding: '0.625rem 1.25rem', borderRadius: '9999px', border: 'none',
-                      background: isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.1)',
+                      background: isOled ? 'rgba(255,255,255,0.10)' : isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.1)',
                       color: c.accent, fontSize: '0.9375rem', fontWeight: 600, cursor: 'pointer',
                     }}
                   >
@@ -1077,169 +1298,313 @@ export default function NotesPage() {
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
 
-        {/* ═══ Floating toolbar — bottom-center glass pill ═══ */}
+      {/* ═══════ VIEWPORT-FIXED UI CHROME ═══════
+          These elements live OUTSIDE the scrollable container so they
+          stay pinned to the viewport, not the page content.          */}
+
+        {/* ═══ Bottom Pill Tab Bar — always visible, Chrome/Obsidian-style ═══ */}
         {mounted && (
-          <div style={{ position: 'fixed', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', zIndex: 40 }}>
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={spring.gentle}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={spring.gentle}
+            style={{
+              position: 'fixed',
+              bottom: '0.625rem',
+              left: 0,
+              right: 0,
+              zIndex: 'calc(var(--z-nav) + 10)',
+              display: 'flex',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <div
               style={{
                 display: 'flex',
-                gap: '0.25rem',
                 alignItems: 'center',
+                gap: '0.125rem',
                 borderRadius: '9999px',
-                padding: '0.25rem',
-                background: isDark ? 'rgba(22,21,19,0.65)' : 'rgba(237,232,222,0.6)',
-                backdropFilter: 'blur(20px) saturate(1.5)',
-                WebkitBackdropFilter: 'blur(20px) saturate(1.5)',
+                padding: '0.3125rem',
+                pointerEvents: 'auto',
+                width: 'fit-content',
+                maxWidth: 'calc(100vw - 6rem)',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                background: isDark
+                  ? 'rgba(22,21,19,0.65)'
+                  : 'rgba(237,232,222,0.6)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
                 border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
                 boxShadow: isDark
                   ? '0 2px 12px -2px rgba(0,0,0,0.3)'
                   : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
               }}
             >
-              {/* Notes home — deselect active page to return to landing */}
-              {activePage && (
-                <ToolbarBtn
-                  onClick={() => setActivePage(null)}
-                  title="Notes home"
-                  isActive={false}
-                >
-                  <PenLineIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                </ToolbarBtn>
-              )}
+              {/* Tab bubbles — grow from center as tabs are added */}
+              {openTabIds.map((tabId) => {
+                const tabPage = notePages.find((p: NotePage) => p.id === tabId);
+                if (!tabPage) return null;
+                const isActive = tabId === activePageId;
+                return (
+                  <TabBubble
+                    key={tabId}
+                    tabId={tabId}
+                    title={tabPage.title || 'Untitled'}
+                    icon={tabPage.icon}
+                    isActive={isActive}
+                    isDark={isDark}
+                    onClick={() => setActivePage(tabId)}
+                    onClose={() => closeTab(tabId)}
+                  />
+                );
+              })}
 
-              {/* Page quick-actions — only when a page is active */}
-              {activePage && (
-                <>
-                  <ToolbarBtn
-                    onClick={() => togglePageFavorite(activePage.id)}
-                    title={activePage.favorite ? 'Unfavorite' : 'Favorite'}
-                    activeColor="#FBBF24"
-                    isActive={activePage.favorite}
-                  >
-                    <StarIcon style={{ width: '0.8rem', height: '0.8rem', fill: activePage.favorite ? '#FBBF24' : 'none' }} />
-                  </ToolbarBtn>
-                  <ToolbarBtn
-                    onClick={() => togglePagePin(activePage.id)}
-                    title={activePage.pinned ? 'Unpin' : 'Pin'}
-                    isActive={activePage.pinned}
-                  >
-                    <PinIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                  </ToolbarBtn>
-
-                  {/* Notes Mode / Canvas Mode toggle */}
-                  <ToolbarBtn
-                    onClick={() => handleSetViewMode(viewMode === 'notes' ? 'canvas' : 'notes')}
-                    title={viewMode === 'notes' ? 'Switch to Canvas mode' : 'Switch to Notes mode'}
-                    isActive
-                    activeColor={viewMode === 'canvas' ? '#22D3EE' : c.accent}
-                  >
-                    {viewMode === 'canvas'
-                      ? <MousePointerClickIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                      : <FileTextIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                    }
-                  </ToolbarBtn>
-
-                  {viewMode === 'notes' && (
-                    <>
-                      <ToolbarBtn
-                        onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
-                        title={editorMode === 'write' ? 'Read mode' : 'Write mode'}
-                        isActive
-                        activeColor={editorMode === 'read' ? c.green : c.accent}
-                      >
-                        {editorMode === 'read'
-                          ? <EyeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                          : <PencilIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                        }
-                      </ToolbarBtn>
-                      <ToolbarBtn
-                        onClick={() => setZenMode((v) => !v)}
-                        title={zenMode ? 'Exit zen' : 'Zen mode'}
-                        isActive={zenMode}
-                        activeColor={c.accent}
-                      >
-                        {zenMode
-                          ? <MinimizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                          : <MaximizeIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                        }
-                      </ToolbarBtn>
-                    </>
-                  )}
-                </>
-              )}
-
-              {/* Sidebar panel toggle */}
-              <ToolbarBtn
-                onClick={() => setPanelOpen((v) => !v)}
-                title="Toggle notes panel (Cmd+\\)"
-                isActive={panelOpen}
+              {/* New tab button — always inside the pill */}
+              <motion.button
+                onClick={handleNewPage}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                transition={spring.snappy}
+                title="New page"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '2.125rem',
+                  height: '2.125rem',
+                  borderRadius: '50%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: 'transparent',
+                  color: isOled ? 'rgba(130,130,130,0.5)' : isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)',
+                  flexShrink: 0,
+                  transition: 'color 0.15s ease, background 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.color = 'var(--pfc-accent)';
+                  (e.currentTarget as HTMLElement).style.background = isOled
+                    ? 'rgba(255,255,255,0.06)' : isDark
+                      ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.color = isOled
+                    ? 'rgba(130,130,130,0.5)' : isDark
+                      ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)';
+                  (e.currentTarget as HTMLElement).style.background = 'transparent';
+                }}
               >
-                <LayoutGridIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-              </ToolbarBtn>
+                <PlusIcon style={{ width: '0.875rem', height: '0.875rem', strokeWidth: 2.5 }} />
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
 
-              {/* Vault switcher */}
-              {vaults.length > 0 && (
-                <ToolbarBtn
-                  onClick={() => setShowVaultPicker((v) => !v)}
-                  title="Switch vault"
-                  isActive={false}
-                >
-                  <FolderOpenIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                </ToolbarBtn>
-              )}
+        {/* ═══ Right-side Tools Pill — collapsible, expands vertically ═══ */}
+        {mounted && (
+          <div style={{
+            position: 'fixed',
+            right: '0.625rem',
+            top: '0.625rem',
+            zIndex: 'calc(var(--z-nav) + 10)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}>
+            <motion.div
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={spring.gentle}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                gap: '0.125rem',
+                borderRadius: toolsOpen ? '1rem' : '9999px',
+                padding: '0.3125rem',
+                background: isDark
+                  ? 'rgba(22,21,19,0.65)'
+                  : 'rgba(237,232,222,0.6)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+                boxShadow: isDark
+                  ? '0 2px 12px -2px rgba(0,0,0,0.3)'
+                  : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
+                overflow: 'hidden',
+                transition: 'border-radius 0.25s cubic-bezier(0.32,0.72,0,1)',
+                minWidth: toolsOpen ? '5.5rem' : undefined,
+              }}
+            >
+              {/* Trigger button — always visible */}
+              <ToolsPillTrigger
+                isOpen={toolsOpen}
+                isDark={isDark}
+                onClick={() => setToolsOpen((v) => !v)}
+              />
 
-              {/* Fused AI button — integrated into toolbar */}
-              {activePageId && viewMode === 'notes' && (
-                <ToolbarBtn
-                  onClick={() => setAIPanelOpen((v) => !v)}
-                  title="AI Assistant"
-                  isActive={aiPanelOpen}
-                  activeColor="#C4956A"
-                >
-                  <SparklesIcon style={{ width: '0.8rem', height: '0.8rem' }} />
-                </ToolbarBtn>
-              )}
+              {/* Expanded tools — text-only labels, no icons */}
+              <AnimatePresence>
+                {toolsOpen && (
+                  <motion.div
+                    key="tools-expanded"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'stretch',
+                      gap: '1px',
+                      overflow: 'hidden',
+                      padding: '0.25rem 0',
+                    }}
+                  >
+                    {activePage && (
+                      <ToolsTextBtn
+                        label="Home"
+                        isDark={isDark}
+                        onClick={() => setActivePage(null)}
+                      />
+                    )}
+                    {activePage && (
+                      <>
+                        <ToolsTextBtn
+                          label={activePage.favorite ? 'Unfavorite' : 'Favorite'}
+                          isDark={isDark}
+                          isActive={activePage.favorite}
+                          activeColor="#FBBF24"
+                          onClick={() => togglePageFavorite(activePage.id)}
+                        />
+                        <ToolsTextBtn
+                          label={activePage.pinned ? 'Unpin' : 'Pin'}
+                          isDark={isDark}
+                          isActive={activePage.pinned}
+                          onClick={() => togglePagePin(activePage.id)}
+                        />
+                        <ToolsTextBtn
+                          label={viewMode === 'notes' ? 'Canvas' : 'Notes'}
+                          isDark={isDark}
+                          isActive
+                          activeColor={viewMode === 'canvas' ? '#22D3EE' : undefined}
+                          onClick={() => handleSetViewMode(viewMode === 'notes' ? 'canvas' : 'notes')}
+                        />
+                        {viewMode === 'notes' && (
+                          <>
+                            <ToolsTextBtn
+                              label={editorMode === 'write' ? 'Read' : 'Write'}
+                              isDark={isDark}
+                              isActive
+                              activeColor={editorMode === 'read' ? c.green : undefined}
+                              onClick={() => setEditorMode((m) => m === 'write' ? 'read' : 'write')}
+                            />
+                            <ToolsTextBtn
+                              label={zenMode ? 'Exit Zen' : 'Zen'}
+                              isDark={isDark}
+                              isActive={zenMode}
+                              onClick={() => setZenMode((v) => !v)}
+                            />
+                          </>
+                        )}
+                      </>
+                    )}
 
-              {/* Fused stats — only in notes mode with active page */}
-              {activePage && activePageId && viewMode === 'notes' && (
-                <ToolbarStats pageId={activePageId} page={activePage} isDark={isDark} />
-              )}
+                    {/* Separator line */}
+                    <span style={{
+                      height: 1, flexShrink: 0, margin: '3px 0.5rem',
+                      background: isDark ? 'rgba(155,150,137,0.12)' : 'rgba(0,0,0,0.06)',
+                    }} />
+
+                    <ToolsTextBtn
+                      label="Pages"
+                      isDark={isDark}
+                      isActive={panelOpen}
+                      onClick={() => setPanelOpen((v) => !v)}
+                    />
+                    {vaults.length > 0 && (
+                      <ToolsTextBtn
+                        label="Vaults"
+                        isDark={isDark}
+                        onClick={() => setShowVaultPicker((v) => !v)}
+                      />
+                    )}
+                    {activePageId && viewMode === 'notes' && (
+                      <ToolsTextBtn
+                        label="AI"
+                        isDark={isDark}
+                        isActive={aiPanelOpen}
+                        onClick={() => setAIPanelOpen((v) => !v)}
+                      />
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </div>
         )}
 
-        {/* ═══ Floating Notes Panel — overlays from top-right ═══ */}
+        {/* ═══ Floating Notes Panel — chat-box styled, draggable, resizable ═══ */}
         <AnimatePresence>
           {panelOpen && mounted && (
             <motion.div
               key="notes-panel"
-              initial={{ opacity: 0, scale: 0.92, y: -8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: -8 }}
-              transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+              data-pages-panel
+              initial={{ opacity: 0, scale: 0.88, y: -12, x: -12 }}
+              animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+              exit={{ opacity: 0, scale: 0.88, y: -12, x: -12 }}
+              transition={{
+                duration: 0.32,
+                ease: [0.32, 0.72, 0, 1],
+                opacity: { duration: 0.22 },
+              }}
               style={{
                 position: 'fixed',
-                top: 88,
-                right: 16,
-                width: 300,
-                maxHeight: 'calc(100vh - 110px)',
+                ...(pagesPanelPos
+                  ? { top: pagesPanelPos.y, left: pagesPanelPos.x, right: 'auto' }
+                  : { top: 72, left: 16 }),
+                width: pagesPanelSize.w,
+                height: pagesPanelSize.h,
+                maxHeight: 'calc(100vh - 96px)',
                 display: 'flex',
                 flexDirection: 'column',
-                background: isDark ? 'rgba(20,19,17,0.96)' : 'rgba(248,244,238,0.96)',
-                border: `1px solid ${isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.3)'}`,
+                background: isDark
+                  ? 'rgba(24,22,20,0.88)'
+                  : 'rgba(248,244,236,0.88)',
+                border: `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)'}`,
                 borderRadius: '1rem',
-                backdropFilter: 'blur(12px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+                backdropFilter: 'blur(16px) saturate(1.2)',
+                WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+                boxShadow: isDark
+                  ? '0 8px 24px -12px rgba(0,0,0,0.5)'
+                  : '0 8px 24px -12px rgba(20,16,12,0.15)',
                 overflow: 'hidden',
-                zIndex: 39,
+                zIndex: 'var(--z-sidebar)',
               }}
             >
-              {/* Close button */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.375rem 0.5rem 0', flexShrink: 0 }}>
+              {/* Draggable header */}
+              <div
+                onMouseDown={onPagesPanelDragStart}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '0.5rem 0.6rem 0.35rem 0.75rem',
+                  borderBottom: `1px solid ${isOled ? 'rgba(40,40,40,0.2)' : isDark ? 'rgba(79,69,57,0.15)' : 'rgba(208,196,180,0.2)'}`,
+                  flexShrink: 0,
+                  cursor: 'grab',
+                }}
+              >
+                <span style={{
+                  fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.03em',
+                  textTransform: 'uppercase',
+                  color: isDark ? 'rgba(156,143,128,0.45)' : 'rgba(0,0,0,0.28)',
+                }}>
+                  Pages
+                </span>
                 <motion.button
                   onClick={() => setPanelOpen(false)}
                   whileTap={{ scale: 0.92 }}
@@ -1253,7 +1618,29 @@ export default function NotesPage() {
                   <XIcon style={{ width: 12, height: 12 }} />
                 </motion.button>
               </div>
-              <NotesSidebar />
+              {/* Sidebar content */}
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                <NotesSidebar />
+              </div>
+              {/* Resize handle — bottom-right corner */}
+              <div
+                onMouseDown={onPagesPanelResizeStart}
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 18,
+                  height: 18,
+                  cursor: 'nwse-resize',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" style={{ opacity: 0.25 }}>
+                  <path d="M9 1L1 9M9 5L5 9M9 9L9 9" stroke={isDark ? '#fff' : '#000'} strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1283,7 +1670,6 @@ export default function NotesPage() {
             />
           )}
         </AnimatePresence>
-      </div>
     </div>
   );
 }
@@ -1345,9 +1731,20 @@ function RecentPagesGrid({
           <motion.button
             key={page.id}
             onClick={() => setActivePage(page.id)}
-            whileHover={{ scale: 1.03, y: -2 }}
             whileTap={{ scale: 0.97 }}
             transition={spring.snappy}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow =
+                isDark
+                  ? '0 0 0 1px rgba(var(--pfc-accent-rgb), 0.22), 0 0 12px rgba(var(--pfc-accent-rgb), 0.08)'
+                  : '0 0 0 1px rgba(var(--pfc-accent-rgb), 0.18), 0 0 10px rgba(var(--pfc-accent-rgb), 0.06)';
+              (e.currentTarget as HTMLElement).style.borderColor =
+                isDark ? 'rgba(var(--pfc-accent-rgb), 0.28)' : 'rgba(var(--pfc-accent-rgb), 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+              (e.currentTarget as HTMLElement).style.borderColor = '';
+            }}
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -1360,6 +1757,7 @@ function RecentPagesGrid({
               cursor: 'pointer',
               textAlign: 'left',
               minHeight: '3.5rem',
+              transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
             }}
           >
             <div style={{

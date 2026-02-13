@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server';
 import { generateText } from 'ai';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
-import type { NotePage, NoteBlock } from '@/lib/notes/types';
 import type { LearningSession, LearningStepType } from '@/lib/notes/learning-protocol';
 import {
   buildInventoryPrompt,
@@ -12,7 +11,76 @@ import {
   buildSynthesisPrompt,
   buildQuestionsPrompt,
   buildIterationCheckPrompt,
+  buildDailyBriefPrompt,
 } from '@/lib/notes/learning-prompts';
+import {
+  createSSEWriter,
+  isAbortLikeError,
+  parseBodyWithLimit,
+} from '@/lib/api-utils';
+
+interface NotesLearnPageInput {
+  id: string;
+  title: string;
+}
+
+interface NotesLearnBlockInput {
+  id: string;
+  pageId: string;
+  order: string;
+  indent: number;
+  content: string;
+}
+
+interface NotesLearnInput {
+  pages: NotesLearnPageInput[];
+  blocks: NotesLearnBlockInput[];
+}
+
+interface NotesLearnRequestBody {
+  notes?: { pages?: unknown; blocks?: unknown };
+  session?: LearningSession;
+  inferenceConfig?: InferenceConfig;
+  sessionType?: 'full-protocol' | 'daily-brief';
+  recentActivity?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizePages(raw: unknown): NotesLearnPageInput[] | null {
+  if (!Array.isArray(raw)) return null;
+  const pages: NotesLearnPageInput[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) return null;
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const title = typeof item.title === 'string' ? item.title.trim() : '';
+    if (!id || !title) return null;
+    pages.push({ id, title });
+  }
+  return pages;
+}
+
+function normalizeBlocks(raw: unknown, pageIds: Set<string>): NotesLearnBlockInput[] | null {
+  if (!Array.isArray(raw)) return null;
+  const blocks: NotesLearnBlockInput[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) return null;
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const pageId = typeof item.pageId === 'string' ? item.pageId.trim() : '';
+    const order = typeof item.order === 'string' ? item.order : '';
+    const content = typeof item.content === 'string' ? item.content : '';
+    const indent =
+      typeof item.indent === 'number' && Number.isFinite(item.indent)
+        ? Math.max(0, Math.floor(item.indent))
+        : 0;
+    if (!id || !pageId || !order) return null;
+    if (!pageIds.has(pageId)) continue;
+    blocks.push({ id, pageId, order, indent, content });
+  }
+  return blocks;
+}
 
 // ── SSE helper ──
 function sseEvent(data: Record<string, unknown>): string {
@@ -38,8 +106,22 @@ function getTemperature(stepType: LearningStepType): number {
   }
 }
 
+function getStepMaxTokens(
+  stepType: LearningStepType | 'daily-brief',
+  mode: InferenceConfig['mode'] | undefined,
+): number {
+  const isLocal = mode === 'local';
+  if (stepType === 'daily-brief') {
+    return isLocal ? 1000 : 2048;
+  }
+  if (isLocal) {
+    return stepType === 'deep-dive' || stepType === 'synthesis' ? 1200 : 700;
+  }
+  return stepType === 'deep-dive' || stepType === 'synthesis' ? 4096 : 2048;
+}
+
 // ── Build note content string ──
-function buildNoteContent(pages: NotePage[], blocks: NoteBlock[]): string {
+function buildNoteContent(pages: NotesLearnPageInput[], blocks: NotesLearnBlockInput[]): string {
   const sections: string[] = [];
 
   for (const page of pages) {
@@ -101,59 +183,120 @@ function buildPromptForStep(
 }
 
 // ── Parse step response into structured data ──
+// Each page carries a clientPageRef so the client can map to real page IDs
 function parseStepResponse(
   stepType: LearningStepType,
   text: string,
+  stepIndex: number,
 ): {
   insights: string[];
-  pagesCreated: { title: string }[];
-  blocksCreated: { content: string; pageTitle?: string }[];
+  pagesCreated: { title: string; clientPageRef: string; blocks: string[] }[];
 } {
   const insights: string[] = [];
-  const pagesCreated: { title: string }[] = [];
-  const blocksCreated: { content: string; pageTitle?: string }[] = [];
+  const pagesCreated: { title: string; clientPageRef: string; blocks: string[] }[] = [];
+  const fromRecord = (value: unknown, key: string): string | null => {
+    if (!value || typeof value !== 'object') return null;
+    const maybe = (value as Record<string, unknown>)[key];
+    return typeof maybe === 'string' ? maybe : null;
+  };
+  const normalizeListItem = (value: unknown, key: string): string => {
+    if (typeof value === 'string') return value;
+    const fromObj = fromRecord(value, key);
+    return fromObj ?? String(value);
+  };
+
+  // Strip <thinking> tags from LLM response before parsing
+  const cleanText = text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
 
   // Try to parse as JSON first
   try {
-    const parsed = JSON.parse(text);
+    const parsed = JSON.parse(cleanText);
 
     if (Array.isArray(parsed.insights)) {
       insights.push(...parsed.insights);
     }
-    if (Array.isArray(parsed.pages)) {
-      for (const page of parsed.pages) {
-        if (typeof page === 'string') {
-          pagesCreated.push({ title: page });
-        } else if (page.title) {
-          pagesCreated.push({ title: page.title });
-          if (Array.isArray(page.blocks)) {
-            for (const block of page.blocks) {
-              blocksCreated.push({
-                content: typeof block === 'string' ? block : block.content ?? '',
-                pageTitle: page.title,
-              });
+
+    // deep-dive step: generatedContent array with page+blocks
+    if (Array.isArray(parsed.generatedContent)) {
+      for (let i = 0; i < parsed.generatedContent.length; i++) {
+        const entry = parsed.generatedContent[i];
+        if (entry && entry.pageTitle) {
+          const blocks: string[] = [];
+          if (Array.isArray(entry.blocks)) {
+            for (const block of entry.blocks) {
+              blocks.push(typeof block === 'string' ? block : block.content ?? '');
             }
           }
+          pagesCreated.push({
+            title: entry.pageTitle,
+            clientPageRef: `ref-${stepIndex}-${i}`,
+            blocks,
+          });
         }
       }
     }
+
+    // synthesis step: synthPages array
+    if (Array.isArray(parsed.synthPages)) {
+      for (let i = 0; i < parsed.synthPages.length; i++) {
+        const entry = parsed.synthPages[i];
+        if (entry && entry.title) {
+          const blocks: string[] = [];
+          if (Array.isArray(entry.blocks)) {
+            for (const block of entry.blocks) {
+              blocks.push(typeof block === 'string' ? block : block.content ?? '');
+            }
+          }
+          pagesCreated.push({
+            title: entry.title,
+            clientPageRef: `ref-${stepIndex}-${i}`,
+            blocks,
+          });
+        }
+      }
+    }
+
+    // Legacy: pages array (generic)
+    if (Array.isArray(parsed.pages)) {
+      for (let i = 0; i < parsed.pages.length; i++) {
+        const page = parsed.pages[i];
+        if (typeof page === 'string') {
+          pagesCreated.push({ title: page, clientPageRef: `ref-${stepIndex}-p${i}`, blocks: [] });
+        } else if (page?.title) {
+          const blocks: string[] = [];
+          if (Array.isArray(page.blocks)) {
+            for (const block of page.blocks) {
+              blocks.push(typeof block === 'string' ? block : block.content ?? '');
+            }
+          }
+          pagesCreated.push({ title: page.title, clientPageRef: `ref-${stepIndex}-p${i}`, blocks });
+        }
+      }
+    }
+
     if (Array.isArray(parsed.gaps)) {
-      insights.push(...parsed.gaps.map((g: any) => typeof g === 'string' ? g : g.description ?? String(g)));
+      insights.push(...parsed.gaps.map((g: unknown) => normalizeListItem(g, 'reason')));
     }
     if (Array.isArray(parsed.connections)) {
-      insights.push(...parsed.connections.map((c: any) => typeof c === 'string' ? c : c.description ?? String(c)));
+      insights.push(...parsed.connections.map((c: unknown) => normalizeListItem(c, 'relationship')));
     }
     if (Array.isArray(parsed.questions)) {
-      insights.push(...parsed.questions.map((q: any) => typeof q === 'string' ? q : q.text ?? String(q)));
+      insights.push(...parsed.questions.map((q: unknown) => normalizeListItem(q, 'question')));
     }
     if (typeof parsed.shouldContinue === 'boolean') {
       insights.push(parsed.shouldContinue ? 'Recommends another iteration' : 'Coverage is sufficient');
     }
+    if (Array.isArray(parsed.topics)) {
+      insights.push(...parsed.topics.map((t: unknown) => normalizeListItem(t, 'name')));
+    }
+    if (Array.isArray(parsed.orphanTopics)) {
+      insights.push(...parsed.orphanTopics.map((t: unknown) => typeof t === 'string' ? `Orphan: ${t}` : String(t)));
+    }
 
-    return { insights, pagesCreated, blocksCreated };
+    return { insights, pagesCreated };
   } catch {
     // Not JSON — extract insights from plain text using line-based heuristics
-    const lines = text.split('\n').filter((l) => l.trim());
+    const lines = cleanText.split('\n').filter((l) => l.trim());
     for (const line of lines) {
       const trimmed = line.replace(/^[-*\d.)\s]+/, '').trim();
       if (trimmed.length > 10 && trimmed.length < 500) {
@@ -164,8 +307,37 @@ function parseStepResponse(
     // Cap at reasonable number
     return {
       insights: insights.slice(0, 20),
-      pagesCreated,
-      blocksCreated,
+      pagesCreated: [],
+    };
+  }
+}
+
+// ── Parse iterate step response for recursive decision ──
+function parseIterateResponse(text: string): {
+  shouldContinue: boolean;
+  reason: string;
+  focusAreas: string[];
+  confidenceScore: number;
+} {
+  const cleanText = text.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+  try {
+    const parsed = JSON.parse(cleanText);
+    return {
+      shouldContinue: parsed.shouldContinue ?? false,
+      reason: parsed.reason ?? '',
+      focusAreas: parsed.focusAreas ?? [],
+      confidenceScore: parsed.confidenceScore ?? 0.5,
+    };
+  } catch {
+    // Fallback heuristics
+    const lower = text.toLowerCase();
+    const shouldContinue = lower.includes('"shouldcontinue": true')
+      || lower.includes('"shouldcontinue":true');
+    return {
+      shouldContinue,
+      reason: 'Could not parse iterate response',
+      focusAreas: [],
+      confidenceScore: 0.5,
     };
   }
 }
@@ -249,19 +421,72 @@ function generateSimulatedResponse(stepType: LearningStepType, noteContent: stri
 
 // ── POST handler ──
 export async function POST(request: NextRequest) {
-  let notes: { pages: NotePage[]; blocks: NoteBlock[] };
+  let notes: NotesLearnInput;
   let session: LearningSession;
-  let inferenceConfig: InferenceConfig;
+  let inferenceConfig: InferenceConfig | undefined;
+  let sessionType: 'full-protocol' | 'daily-brief' = 'full-protocol';
+  let recentActivity = '';
 
   try {
-    const body = await request.json();
-    notes = body.notes;
-    session = body.session;
-    inferenceConfig = body.inferenceConfig;
+    const parsedBody = await parseBodyWithLimit<NotesLearnRequestBody>(request, 10 * 1024 * 1024);
+    if ('error' in parsedBody) {
+      return parsedBody.error;
+    }
+    const body = parsedBody.data;
 
-    if (!notes || !session) {
+    const bodyNotes = body.notes;
+    const bodySession = body.session;
+    if (!bodyNotes || !bodySession || !isRecord(bodySession)) {
       return new Response('Missing notes or session', { status: 400 });
     }
+
+    const normalizedPages = normalizePages(bodyNotes.pages);
+    if (!normalizedPages) {
+      return new Response('Invalid notes payload: pages must be an array of {id, title}', { status: 400 });
+    }
+    const normalizedBlocks = normalizeBlocks(
+      bodyNotes.blocks,
+      new Set(normalizedPages.map((p) => p.id)),
+    );
+    if (!normalizedBlocks) {
+      return new Response('Invalid notes payload: blocks must be an array of {id, pageId, order}', { status: 400 });
+    }
+
+    if (!Array.isArray(bodySession.steps) || bodySession.steps.length === 0) {
+      return new Response('Invalid session payload: steps must be a non-empty array', { status: 400 });
+    }
+    if (bodySession.depth !== 'shallow' && bodySession.depth !== 'moderate' && bodySession.depth !== 'deep') {
+      return new Response('Invalid session payload: depth must be shallow, moderate, or deep', { status: 400 });
+    }
+    if (typeof bodySession.iteration !== 'number' || typeof bodySession.maxIterations !== 'number') {
+      return new Response('Invalid session payload: iteration and maxIterations are required', { status: 400 });
+    }
+    const allowedStepTypes = new Set<LearningStepType>([
+      'inventory',
+      'gap-analysis',
+      'deep-dive',
+      'cross-reference',
+      'synthesis',
+      'questions',
+      'iterate',
+    ]);
+    for (const step of bodySession.steps) {
+      if (!isRecord(step) || typeof step.type !== 'string' || !allowedStepTypes.has(step.type as LearningStepType)) {
+        return new Response('Invalid session payload: steps contain unsupported type', { status: 400 });
+      }
+    }
+    if (!Number.isFinite(bodySession.iteration) || !Number.isFinite(bodySession.maxIterations) || bodySession.iteration < 1 || bodySession.maxIterations < 1) {
+      return new Response('Invalid session payload: iteration values must be >= 1', { status: 400 });
+    }
+    if (bodySession.iteration > bodySession.maxIterations) {
+      return new Response('Invalid session payload: iteration cannot exceed maxIterations', { status: 400 });
+    }
+
+    notes = { pages: normalizedPages, blocks: normalizedBlocks };
+    session = bodySession;
+    inferenceConfig = body.inferenceConfig;
+    sessionType = body.sessionType === 'daily-brief' ? 'daily-brief' : 'full-protocol';
+    recentActivity = typeof body.recentActivity === 'string' ? body.recentActivity : '';
   } catch (error) {
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Invalid request body' }),
@@ -274,6 +499,9 @@ export async function POST(request: NextRequest) {
   let model: Awaited<ReturnType<typeof resolveProvider>> | null = null;
   if (!isSimulation) {
     try {
+      if (!inferenceConfig) {
+        throw new Error('Missing inference configuration');
+      }
       model = resolveProvider(inferenceConfig);
     } catch (error) {
       return new Response(
@@ -290,16 +518,140 @@ export async function POST(request: NextRequest) {
   const capturedSession = session;
   const capturedModel = model;
   const capturedNoteContent = noteContent;
+  const capturedSessionType = sessionType;
+  const capturedRecentActivity = recentActivity;
+  const capturedInferenceMode = inferenceConfig?.mode;
+
+  // Use request.signal to detect client disconnect
+  const clientSignal = request.signal;
 
   const stream = new ReadableStream({
     async start(controller) {
+      const writer = createSSEWriter(controller, encoder);
       const emit = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(sseEvent(data)));
+        if (!writer.raw(sseEvent(data))) {
+          throw new Error('STREAM_CLOSED');
+        }
       };
 
       let totalInsights = 0;
       let totalPagesCreated = 0;
       let totalBlocksCreated = 0;
+
+      // ═══ DAILY BRIEF: shortcut path — skip the 7-step protocol ═══
+      if (capturedSessionType === 'daily-brief') {
+        try {
+          const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+          let responseText: string;
+
+          emit({ type: 'step-start', stepIndex: 0, stepType: 'daily-brief' });
+
+          if (isSimulation || !capturedModel) {
+            // Simulated daily brief
+            responseText = JSON.stringify({
+              title: `Daily Brief — ${today}`,
+              sections: [
+                {
+                  heading: '🔑 Key Themes',
+                  blocks: [
+                    '- You\'ve been actively working on your notes, with focus on core concepts and connections between ideas.',
+                  ],
+                },
+                {
+                  heading: '📈 Progress Summary',
+                  blocks: [
+                    `- Your knowledge base has ${notes.pages.length} pages covering a range of topics.`,
+                  ],
+                },
+                {
+                  heading: '❓ Open Questions',
+                  blocks: [
+                    '- How do the main themes in your notes connect to each other?',
+                    '- Are there gaps in coverage that deserve deeper exploration?',
+                  ],
+                },
+                {
+                  heading: '🎯 Recommended Deep Dives',
+                  blocks: [
+                    '- Consider exploring connections between your most recently edited pages.',
+                  ],
+                },
+              ],
+            });
+            await new Promise((r) => setTimeout(r, 600));
+          } else {
+            // Real LLM daily brief
+            const prompt = buildDailyBriefPrompt(capturedNoteContent, capturedRecentActivity, today);
+            const result = await generateText({
+              model: capturedModel,
+              system: prompt.system,
+              prompt: prompt.user,
+              maxOutputTokens: getStepMaxTokens('daily-brief', capturedInferenceMode),
+              temperature: 0.5,
+            });
+            responseText = result.text;
+          }
+
+          // Stream the text
+          const chunkSize = 80;
+          for (let i = 0; i < responseText.length; i += chunkSize) {
+            if (clientSignal.aborted || writer.isClosed()) { writer.close(); return; }
+            emit({ type: 'stream-text', text: responseText.slice(i, i + chunkSize) });
+          }
+
+          // Parse the daily brief response
+          const cleanText = responseText.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+          try {
+            const parsed = JSON.parse(cleanText);
+            const briefTitle = parsed.title || `Daily Brief — ${today}`;
+
+            // Emit page + blocks
+            const ref = 'ref-brief-0';
+            emit({ type: 'page-created', pageTitle: briefTitle, clientPageRef: ref });
+
+            const allBlocks: string[] = [];
+            if (Array.isArray(parsed.sections)) {
+              for (const section of parsed.sections) {
+                if (section.heading) allBlocks.push(`## ${section.heading}`);
+                if (Array.isArray(section.blocks)) {
+                  allBlocks.push(...section.blocks);
+                }
+              }
+            }
+
+            for (let bi = 0; bi < allBlocks.length; bi++) {
+              emit({ type: 'block-created', content: allBlocks[bi], clientPageRef: ref, blockIndex: bi });
+            }
+
+            totalPagesCreated = 1;
+            totalBlocksCreated = allBlocks.length;
+            totalInsights = 1;
+          } catch {
+            // Fallback — emit raw text as a single block
+            const ref = 'ref-brief-0';
+            emit({ type: 'page-created', pageTitle: `Daily Brief — ${today}`, clientPageRef: ref });
+            emit({ type: 'block-created', content: cleanText, clientPageRef: ref, blockIndex: 0 });
+            totalPagesCreated = 1;
+            totalBlocksCreated = 1;
+          }
+
+          emit({ type: 'step-complete', stepIndex: 0, insights: ['Daily brief generated'], pagesCreated: ['Daily Brief'], blocksCreated: [] });
+          emit({ type: 'session-complete', totalInsights, totalPagesCreated, totalBlocksCreated });
+        } catch (error) {
+          if (clientSignal.aborted || writer.isClosed() || isAbortLikeError(error)) {
+            writer.close(); return;
+          }
+          const message = error instanceof Error ? error.message : 'Daily brief error';
+          console.error('[notes-learn] Daily brief error:', message);
+          emit({ type: 'error', message });
+        } finally {
+          writer.done();
+          writer.close();
+        }
+        return;
+      }
+
+      // ═══ FULL PROTOCOL: 7-step recursive learning ═══
       const previousStepOutputs: Record<string, string> = {};
 
       // Filter steps to target pages if specified
@@ -314,119 +666,172 @@ export async function POST(request: NextRequest) {
         ? buildNoteContent(targetPages, targetBlocks)
         : capturedNoteContent;
 
+      // Track generated content across iterations so subsequent passes see new material
+      let generatedContentAccumulator = '';
+
       try {
-        for (let stepIndex = 0; stepIndex < capturedSession.steps.length; stepIndex++) {
-          const step = capturedSession.steps[stepIndex];
+        // ── Outer recursive iteration loop ──
+        let currentIteration = capturedSession.iteration;
+        const maxIterations = capturedSession.maxIterations;
+        let shouldBreak = false;
 
-          // Emit step-start
-          emit({ type: 'step-start', stepIndex, stepType: step.type });
+        while (currentIteration <= maxIterations && !shouldBreak) {
+          // Emit iteration start (only meaningful for iterations > 1)
+          if (currentIteration > 1) {
+            emit({ type: 'iteration-start', iteration: currentIteration });
+          }
 
-          try {
-            let responseText: string;
+          // For subsequent iterations, append generated content to note context
+          const iterationNoteContent = currentIteration > 1
+            ? `${effectiveNoteContent}\n\n--- Generated in previous pass ---\n\n${generatedContentAccumulator}`
+            : effectiveNoteContent;
 
-            if (isSimulation || !capturedModel) {
-              // ── Simulation mode: template responses (no LLM configured) ──
-              responseText = generateSimulatedResponse(step.type, effectiveNoteContent);
-              // Brief delay for progressive display
-              await new Promise((r) => setTimeout(r, 400));
-            } else {
-              // ── LLM mode: call the real provider ──
-              // Build the prompt for this step
-              const prompt = buildPromptForStep(
-                step.type,
-                effectiveNoteContent,
-                capturedSession,
-                previousStepOutputs,
-              );
+          // Reset previous step outputs for each iteration
+          if (currentIteration > 1) {
+            Object.keys(previousStepOutputs).forEach((k) => delete previousStepOutputs[k]);
+          }
 
-              const temperature = getTemperature(step.type);
+          for (let stepIndex = 0; stepIndex < capturedSession.steps.length; stepIndex++) {
+            // Stop if client disconnected
+            if (clientSignal.aborted || writer.isClosed()) {
+              writer.close();
+              return;
+            }
 
-              const result = await generateText({
-                model: capturedModel,
-                system: prompt.system,
-                prompt: prompt.user,
-                maxOutputTokens: step.type === 'deep-dive' || step.type === 'synthesis' ? 4096 : 2048,
-                temperature,
+            const step = capturedSession.steps[stepIndex];
+
+            // Emit step-start
+            emit({ type: 'step-start', stepIndex, stepType: step.type });
+
+            try {
+              let responseText: string;
+
+              if (isSimulation || !capturedModel) {
+                // ── Simulation mode ──
+                responseText = generateSimulatedResponse(step.type, iterationNoteContent);
+                await new Promise((r) => setTimeout(r, 400));
+              } else {
+                // ── LLM mode ──
+                const prompt = buildPromptForStep(
+                  step.type,
+                  iterationNoteContent,
+                  capturedSession,
+                  previousStepOutputs,
+                );
+
+                const temperature = getTemperature(step.type);
+
+                const result = await generateText({
+                  model: capturedModel,
+                  system: prompt.system,
+                  prompt: prompt.user,
+                  maxOutputTokens: getStepMaxTokens(step.type, capturedInferenceMode),
+                  temperature,
+                });
+
+                responseText = result.text;
+              }
+
+              // Emit stream-text chunks for progressive display
+              const chunkSize = 80;
+              for (let i = 0; i < responseText.length; i += chunkSize) {
+                if (clientSignal.aborted || writer.isClosed()) {
+                  writer.close();
+                  return;
+                }
+                const chunk = responseText.slice(i, i + chunkSize);
+                emit({ type: 'stream-text', text: chunk });
+              }
+
+              // Store output for subsequent steps
+              previousStepOutputs[step.type] = responseText;
+
+              // Parse the response
+              const parsed = parseStepResponse(step.type, responseText, stepIndex);
+
+              // Emit insights
+              for (const insight of parsed.insights) {
+                emit({ type: 'insight', text: insight });
+              }
+
+              // ── Emit page-created + block-created per entry for note creation steps ──
+              if (step.type === 'deep-dive' || step.type === 'synthesis') {
+                for (const page of parsed.pagesCreated) {
+                  // Emit page creation — client will call createPage()
+                  emit({
+                    type: 'page-created',
+                    pageTitle: page.title,
+                    clientPageRef: page.clientPageRef,
+                  });
+
+                  // Emit each block for this page — client will call createBlock()
+                  for (let bi = 0; bi < page.blocks.length; bi++) {
+                    emit({
+                      type: 'block-created',
+                      content: page.blocks[bi],
+                      clientPageRef: page.clientPageRef,
+                      blockIndex: bi,
+                    });
+                  }
+
+                  // Accumulate for next iteration's context
+                  generatedContentAccumulator += `\n\n## ${page.title}\n${page.blocks.join('\n\n')}`;
+                }
+              }
+
+              // Count totals
+              totalInsights += parsed.insights.length;
+              totalPagesCreated += parsed.pagesCreated.length;
+              const blockCount = parsed.pagesCreated.reduce((sum, p) => sum + p.blocks.length, 0);
+              totalBlocksCreated += blockCount;
+
+              // Emit step-complete
+              emit({
+                type: 'step-complete',
+                stepIndex,
+                insights: parsed.insights,
+                pagesCreated: parsed.pagesCreated.map((p) => p.title),
+                blocksCreated: parsed.pagesCreated.flatMap((p) => p.blocks.map((b) => b.slice(0, 100))),
               });
 
-              responseText = result.text;
-            }
+              // ── Iterate step: decide whether to continue recursively ──
+              if (step.type === 'iterate') {
+                const iterateResult = parseIterateResponse(responseText);
 
-            // Emit the response text as stream chunks
-            // Break into chunks for progressive display
-            const chunkSize = 80;
-            for (let i = 0; i < responseText.length; i += chunkSize) {
-              const chunk = responseText.slice(i, i + chunkSize);
-              emit({ type: 'stream-text', text: chunk });
-            }
-
-            // Store output for subsequent steps
-            previousStepOutputs[step.type] = responseText;
-
-            // Parse the response
-            const parsed = parseStepResponse(step.type, responseText);
-
-            // Emit insights
-            for (const insight of parsed.insights) {
-              emit({ type: 'insight', text: insight });
-            }
-
-            // Emit page-created and block-created events for deep-dive and synthesis
-            if (step.type === 'deep-dive' || step.type === 'synthesis') {
-              for (const page of parsed.pagesCreated) {
-                emit({ type: 'page-created', pageTitle: page.title });
-              }
-              for (const block of parsed.blocksCreated) {
                 emit({
-                  type: 'block-created',
-                  content: block.content,
-                  pageTitle: block.pageTitle,
+                  type: 'iterate-result',
+                  shouldContinue: iterateResult.shouldContinue,
+                  reason: iterateResult.reason,
+                  focusAreas: iterateResult.focusAreas,
+                  confidenceScore: iterateResult.confidenceScore,
                 });
+
+                if (!iterateResult.shouldContinue || currentIteration >= maxIterations) {
+                  shouldBreak = true;
+                  break;
+                }
+                // Continue to next iteration — steps will restart
               }
-            }
-
-            totalInsights += parsed.insights.length;
-            totalPagesCreated += parsed.pagesCreated.length;
-            totalBlocksCreated += parsed.blocksCreated.length;
-
-            // Emit step-complete
-            emit({
-              type: 'step-complete',
-              stepIndex,
-              insights: parsed.insights,
-              pagesCreated: parsed.pagesCreated.map((p) => p.title),
-              blocksCreated: parsed.blocksCreated.map((b) => b.content.slice(0, 100)),
-            });
-
-            // For the iterate step, check whether to continue
-            if (step.type === 'iterate') {
-              const shouldContinue = responseText.toLowerCase().includes('continue')
-                || responseText.toLowerCase().includes('another pass')
-                || responseText.toLowerCase().includes('another iteration');
-
-              if (!shouldContinue || capturedSession.iteration >= capturedSession.maxIterations) {
-                // Stop iterating
-                break;
+            } catch (stepError) {
+              if (clientSignal.aborted || writer.isClosed() || isAbortLikeError(stepError)) {
+                writer.close();
+                return;
               }
-              // If continuing, the client would need to re-start with incremented iteration
-              // For now, we complete this pass
+              const message = stepError instanceof Error ? stepError.message : 'Unknown step error';
+              console.error(`[notes-learn] Step ${step.type} error:`, message);
+
+              emit({
+                type: 'step-complete',
+                stepIndex,
+                insights: [],
+                pagesCreated: [],
+                blocksCreated: [],
+                error: message,
+              });
             }
-          } catch (stepError) {
-            // One step failure should not kill the whole session
-            const message = stepError instanceof Error ? stepError.message : 'Unknown step error';
-            console.error(`[notes-learn] Step ${step.type} error:`, message);
-
-            emit({
-              type: 'step-complete',
-              stepIndex,
-              insights: [],
-              pagesCreated: [],
-              blocksCreated: [],
-              error: message,
-            });
-
-            // Continue to next step
           }
+
+          currentIteration++;
         }
 
         // Emit session-complete
@@ -434,15 +839,19 @@ export async function POST(request: NextRequest) {
           type: 'session-complete',
           totalInsights,
           totalPagesCreated,
+          totalBlocksCreated,
         });
       } catch (error) {
+        if (clientSignal.aborted || writer.isClosed() || isAbortLikeError(error)) {
+          writer.close();
+          return;
+        }
         const message = error instanceof Error ? error.message : 'Unknown error';
         console.error('[notes-learn] Session error:', message);
         emit({ type: 'error', message });
       } finally {
-        // Signal end of stream
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
+        writer.done();
+        writer.close();
       }
     },
   });

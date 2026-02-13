@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useTheme } from 'next-themes';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpenIcon,
@@ -19,6 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { useIsDark } from '@/hooks/use-is-dark';
 
 /* ═══════════════════════════════════════════════════════════
    Collapsible Section
@@ -83,8 +83,9 @@ function DocSection({
           style={{
             flex: 1,
             fontSize: '1.0625rem',
-            fontWeight: 650,
-            letterSpacing: '-0.02em',
+            fontWeight: 400,
+            letterSpacing: '-0.01em',
+            fontFamily: 'var(--font-heading)',
           }}
         >
           {title}
@@ -193,10 +194,7 @@ function CodeBlock({ children }: { children: string }) {
    ═══════════════════════════════════════════════════════════ */
 
 export default function DocsPage() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
 
   return (
     <PageShell
@@ -205,7 +203,7 @@ export default function DocsPage() {
       title="Documentation"
       subtitle="Everything you need to know about PFC"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} className="docs-content">
 
         {/* ── About PFC ── */}
         <DocSection icon={BrainCircuitIcon} iconColor="#8B7CF6" title="About PFC" defaultOpen isDark={isDark}>

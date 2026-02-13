@@ -82,7 +82,7 @@ function formatStageResults(stageResults: StageResult[]): string {
 // ██ PROMPT BUILDERS
 // ═══════════════════════════════════════════════════════════════════
 
-export interface PromptPair {
+interface PromptPair {
   system: string;
   user: string;
 }

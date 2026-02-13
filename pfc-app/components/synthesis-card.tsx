@@ -8,7 +8,7 @@ import { SparklesIcon, XIcon, BookOpenIcon, FlaskConicalIcon, LightbulbIcon } fr
 import { PixelBook } from '@/components/pixel-book';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Markdown } from '@/components/markdown';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 
 const CUP_EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -21,8 +21,7 @@ const TABS = [
 function SynthesisCardBase() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('plain');
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'oled';
+  const { isDark } = useIsDark();
 
   const {
     synthesisReport, showSynthesis, toggleSynthesisView, setSynthesisReport,
@@ -77,6 +76,7 @@ function SynthesisCardBase() {
       setSynthesisReport(report);
     } catch (err) {
       console.error('Synthesis generation failed:', err);
+      usePFCStore.getState().addToast({ message: 'Synthesis generation failed', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -129,7 +129,7 @@ function SynthesisCardBase() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <SparklesIcon style={{ height: '0.875rem', width: '0.875rem', color: '#C4956A', flexShrink: 0 }} />
+                <SparklesIcon style={{ height: '0.875rem', width: '0.875rem', color: 'var(--pfc-accent)', flexShrink: 0 }} />
                 <span
                   style={{
                     fontSize: '0.8125rem',
@@ -231,7 +231,7 @@ function SynthesisCardBase() {
                     {loading ? (
                       <PixelBook size={14} />
                     ) : (
-                      <SparklesIcon style={{ height: '0.75rem', width: '0.75rem', color: '#C4956A' }} />
+                      <SparklesIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--pfc-accent)' }} />
                     )}
                     {loading ? 'Generating...' : 'Generate'}
                   </motion.button>
@@ -288,7 +288,7 @@ function SynthesisCardBase() {
                               height: '0.6875rem',
                               width: '0.6875rem',
                               flexShrink: 0,
-                              color: isActive ? '#C4956A' : 'inherit',
+                              color: isActive ? 'var(--pfc-accent)' : 'inherit',
                               transition: 'color 0.15s',
                             }}
                           />
@@ -344,7 +344,7 @@ function SynthesisCardBase() {
                                   fontFamily: 'var(--font-mono)',
                                   fontSize: '0.625rem',
                                   fontWeight: 700,
-                                  color: '#C4956A',
+                                  color: 'var(--pfc-accent)',
                                   marginTop: '0.125rem',
                                   minWidth: '1rem',
                                   textAlign: 'right',

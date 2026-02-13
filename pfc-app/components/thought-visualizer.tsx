@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useEffect, useRef, useCallback } from 'react';
-import { usePFCStore } from '@/lib/store/use-pfc-store';
+import { usePFCStore, type PFCState } from '@/lib/store/use-pfc-store';
 
 // ═══════════════════════════════════════════════════════════════════
 // Thought Visualizer — Canvas-Based Neural Tree
@@ -22,7 +22,7 @@ type ThoughtType = 'query' | 'reasoning' | 'evidence' | 'conclusion' | 'uncertai
 
 const TYPE_COLORS: Record<ThoughtType, string> = {
   query: '#E07850',
-  reasoning: '#C4956A',
+  reasoning: 'var(--pfc-accent)',
   evidence: '#34D399',
   conclusion: '#22D3EE',
   uncertainty: '#FBBF24',
@@ -123,7 +123,10 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
   const frameSkipRef = useRef(false);
   const scrollYRef = useRef(0);
   const isDarkRef = useRef(isDark);
-  isDarkRef.current = isDark;
+
+  useEffect(() => {
+    isDarkRef.current = isDark;
+  }, [isDark]);
 
   // ── Build tree from reasoning text ────────────────────────
 
@@ -213,8 +216,8 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
   // ── Build from pipeline stages (fallback) ─────────────────
 
   const buildFromPipeline = useCallback((
-    messages: { role: string; text: string }[],
-    stages: { stage: string; status: string; summary: string; detail?: string }[],
+    messages: PFCState['messages'],
+    stages: PFCState['pipelineStages'],
   ) => {
     const nodes = nodesRef.current;
     if (nodes.length > 0) return; // Already have nodes
@@ -286,9 +289,9 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
 
       // Pipeline fallback — only when not reasoning and stages complete
       if (!isReasoning && reasoningText.length === 0) {
-        const completed = pipelineStages.filter((s: any) => s.status === 'complete').length;
+        const completed = pipelineStages.filter((s) => s.status === 'complete').length;
         if (completed > prevStageCount) {
-          buildFromPipeline(messages as any, pipelineStages);
+          buildFromPipeline(messages, pipelineStages);
           prevStageCount = completed;
         }
       }
@@ -300,7 +303,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
   // ── Reset on new query ────────────────────────────────────
 
   useEffect(() => {
-    const unsub = usePFCStore.subscribe((state, prevState: any) => {
+    const unsub = usePFCStore.subscribe((state: PFCState, prevState: PFCState) => {
       if (state.isProcessing && !prevState.isProcessing) {
         nodesRef.current = [];
         pulsesRef.current = [];
@@ -340,6 +343,10 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
 
     resize();
     window.addEventListener('resize', resize);
+
+    // Resolve CSS variable for canvas use (canvas 2D API can't resolve CSS custom properties)
+    const accentColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--pfc-accent').trim() || '#C15F3C';
 
     // Tab visibility
     let tabHidden = document.hidden;
@@ -546,7 +553,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
         const pulse = 0.4 + 0.6 * Math.abs(Math.sin(now * 0.003));
         ctx.beginPath();
         ctx.arc(lx + 15, ly, 3, 0, Math.PI * 2);
-        ctx.fillStyle = '#C4956A';
+        ctx.fillStyle = accentColor;
         ctx.globalAlpha = pulse;
         ctx.fill();
         ctx.globalAlpha = 1;

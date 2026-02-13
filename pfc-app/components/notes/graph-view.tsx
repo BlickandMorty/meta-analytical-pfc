@@ -45,9 +45,9 @@ interface GraphSimLink extends SimulationLinkDatum<GraphSimNode> {
 
 // ── Color constants ──
 
-const COLOR_ACTIVE = '#C4956A';
+const COLOR_ACTIVE = 'var(--pfc-accent)';
 const COLOR_JOURNAL = '#34D399';
-const COLOR_REGULAR = 'rgba(196,149,106,0.6)';
+const COLOR_REGULAR = 'rgba(var(--pfc-accent-rgb), 0.6)';
 const NODE_RADIUS = 8;
 const ACTIVE_RADIUS = 12;
 const LABEL_FONT = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -149,7 +149,7 @@ export const GraphView = memo(function GraphView() {
 
       // ── Draw edges ──
       const edgeColor = isDark
-        ? 'rgba(196,149,106,0.15)'
+        ? 'rgba(var(--pfc-accent-rgb), 0.15)'
         : 'rgba(120,100,80,0.15)';
 
       ctx.strokeStyle = edgeColor;
@@ -298,31 +298,30 @@ export const GraphView = memo(function GraphView() {
     // ── d3 drag ──
     let draggedNode: GraphSimNode | null = null;
 
-    const dragBehavior = drag<HTMLCanvasElement, unknown>()
-      .subject((event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
+    const dragBehavior = drag<HTMLCanvasElement, unknown, GraphSimNode | undefined>()
+      .subject((event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode | undefined>) => {
         const [cx, cy] = pointer(event, canvas);
         const found = hitTest(cx, cy, nodes);
-        if (found) {
-          found.x = found.x ?? 0;
-          found.y = found.y ?? 0;
-          return found;
-        }
-        return undefined as unknown as GraphSimNode;
+        if (!found) return undefined;
+        found.x = found.x ?? 0;
+        found.y = found.y ?? 0;
+        return found;
       })
-      .on('start', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
-        if (!event.subject) return;
+      .on('start', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode | undefined>) => {
+        const subject = event.subject;
+        if (!subject) return;
         if (!event.active) simulation.alphaTarget(0.3).restart();
-        draggedNode = event.subject;
+        draggedNode = subject;
         draggedNode.fx = draggedNode.x;
         draggedNode.fy = draggedNode.y;
       })
-      .on('drag', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
+      .on('drag', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode | undefined>) => {
         if (!draggedNode) return;
         const t = transformRef.current;
         draggedNode.fx = (event.sourceEvent.offsetX - t.x) / t.k;
         draggedNode.fy = (event.sourceEvent.offsetY - t.y) / t.k;
       })
-      .on('end', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode>) => {
+      .on('end', (event: D3DragEvent<HTMLCanvasElement, unknown, GraphSimNode | undefined>) => {
         if (!event.active) simulation.alphaTarget(0);
         if (draggedNode) {
           draggedNode.fx = null;
@@ -331,7 +330,7 @@ export const GraphView = memo(function GraphView() {
         }
       });
 
-    canvasSelection.call(dragBehavior as any);
+    canvasSelection.call(dragBehavior);
 
     // ── Click handler ──
     const handleClick = (event: MouseEvent) => {
@@ -459,7 +458,7 @@ export const GraphView = memo(function GraphView() {
                   '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 pointerEvents: 'none',
                 whiteSpace: 'nowrap',
-                zIndex: 10,
+                zIndex: 'var(--z-dropdown)',
                 backdropFilter: 'blur(8px)',
                 WebkitBackdropFilter: 'blur(8px)',
                 boxShadow: isDark
@@ -495,5 +494,3 @@ export const GraphView = memo(function GraphView() {
     </div>
   );
 });
-
-export default GraphView;

@@ -32,20 +32,20 @@ import {
 // Types
 // ═══════════════════════════════════════════════════════════════════
 
-export interface CitationSearchInput {
+interface CitationSearchInput {
   text: string;                     // The research text to annotate
   existingBibtex?: string;          // Already-known BibTeX entries (avoid duplicates)
   context?: string;                 // Optional context about the paper topic
 }
 
-export interface IdentifiedClaim {
+interface IdentifiedClaim {
   claim: string;                    // The exact claim text
   searchQuery: string;              // Query to search for supporting papers
   location: string;                 // Approximate location in text (e.g. "paragraph 3")
   importance: 'critical' | 'important' | 'nice-to-have';
 }
 
-export interface CitationMatch {
+interface CitationMatch {
   claim: string;
   paper: S2Paper;
   bibtexKey: string;
@@ -54,14 +54,14 @@ export interface CitationMatch {
   explanation: string;              // Why this paper supports the claim
 }
 
-export interface CitationSearchRound {
+interface CitationSearchRound {
   roundNumber: number;
   claimsIdentified: IdentifiedClaim[];
   matchesFound: CitationMatch[];
   newPapersFound: number;
 }
 
-export interface CitationSearchResult {
+interface CitationSearchResult {
   rounds: CitationSearchRound[];
   allMatches: CitationMatch[];
   bibtexEntries: string[];          // All unique BibTeX entries
@@ -403,7 +403,7 @@ export async function findCitationsForClaim(
 /**
  * Convert all citation matches to the app's ResearchPaper format.
  */
-export function citationMatchesToResearchPapers(
+function citationMatchesToResearchPapers(
   matches: CitationMatch[],
 ): import('@/lib/research/types').ResearchPaper[] {
   const seen = new Set<string>();

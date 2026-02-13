@@ -24,7 +24,7 @@ const MS_PER_DAY = 86400000;
 // Mirrors ImmuneMemory.get_decayed_history():
 //   weight = decay_rate ^ (days_since_creation)
 
-export function computeDecayWeight(
+function computeDecayWeight(
   timestamp: number,
   now: number,
   decayRate: number,
@@ -86,7 +86,7 @@ export function refreshDecayWeights(
 // ── Prune low-weight exemplars ───────────────────────────────────
 // Removes exemplars with the lowest decay weight, keeping maxCount
 
-export function pruneExemplars(
+function pruneExemplars(
   memory: SteeringMemory,
   maxCount: number,
 ): SteeringMemory {
@@ -129,14 +129,6 @@ export function getNegativeExemplars(
 
 // ── Get weighted vectors ─────────────────────────────────────────
 // Returns synthesis key vectors weighted by their decay
-
-export function getWeightedVectors(exemplars: SteeringExemplar[], decayRate = 0.95): number[][] {
-  const now = Date.now();
-  return exemplars.map(ex => {
-    const w = computeDecayWeight(ex.key.timestamp, now, decayRate);
-    return ex.key.vector.map(v => v * w);
-  });
-}
 
 // ── Update user rating on an existing exemplar ───────────────────
 

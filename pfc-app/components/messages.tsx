@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useEffect } from 'react';
+import { memo } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Message } from './message';
 import type { ChatMessage } from '@/lib/engine/types';
@@ -11,7 +11,8 @@ import { ArrowDownIcon } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PixelSun } from './pixel-sun';
 import { PixelBook } from './pixel-book';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
+import { useComposedRefs } from '@radix-ui/react-compose-refs';
 
 /* Harmonoid-inspired spring config */
 const HARMONOID_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 };
@@ -36,18 +37,10 @@ function MessagesInner({
   const reasoningDuration = usePFCStore(selectReasoningDuration);
   const isReasoning = usePFCStore(selectIsReasoning);
   const { containerRef, isAtBottom, scrollToBottom } = useScrollToBottom<HTMLDivElement>();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
 
   // Merge the scroll-to-bottom ref with the externally provided ref for TOC
-  const setRefs = (el: HTMLDivElement | null) => {
-    (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-    if (scrollContainerRef) {
-      (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-    }
-  };
+  const setRefs = useComposedRefs(containerRef, scrollContainerRef);
 
   return (
     <div style={{ position: 'relative', flex: 1, overflow: 'hidden' }}>
@@ -57,7 +50,7 @@ function MessagesInner({
           position: 'relative',
           height: '100%',
           overflowY: 'auto',
-          padding: '1.5rem 1rem 1.5rem',
+          padding: '3.5rem 1rem 1.5rem',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
           transform: 'translateZ(0)',

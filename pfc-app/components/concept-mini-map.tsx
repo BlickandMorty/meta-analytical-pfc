@@ -30,6 +30,8 @@ function MiniConceptCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const timeRef = useRef(0);
+  // Cached canvas dimensions from ResizeObserver — avoids getBoundingClientRect per frame
+  const sizeRef = useRef({ w: 0, h: 0 });
   const nodesRef = useRef<Array<{
     id: string;
     x: number;
@@ -86,13 +88,18 @@ function MiniConceptCanvas({
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    const W = sizeRef.current.w;
+    const H = sizeRef.current.h;
+    if (W === 0 || H === 0) { animRef.current = requestAnimationFrame(draw); return; }
 
-    const W = rect.width;
-    const H = rect.height;
+    // Only resize canvas buffer when cached dimensions differ
+    const targetW = Math.round(W * dpr);
+    const targetH = Math.round(H * dpr);
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const cx = W / 2;
     const cy = H / 2;
 
@@ -179,6 +186,20 @@ function MiniConceptCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
 
+    // Cache canvas dimensions via ResizeObserver — avoids getBoundingClientRect per frame
+    const resizeObs = canvas
+      ? new ResizeObserver(([entry]) => {
+          const { width, height } = entry.contentRect;
+          sizeRef.current = { w: width, h: height };
+        })
+      : null;
+    if (canvas) {
+      // Seed initial size
+      const rect = canvas.getBoundingClientRect();
+      sizeRef.current = { w: rect.width, h: rect.height };
+      resizeObs?.observe(canvas);
+    }
+
     function handleVisibility() {
       pausedRef.current = document.hidden;
       if (!document.hidden && intersectingRef.current) {
@@ -206,6 +227,7 @@ function MiniConceptCanvas({
       cancelAnimationFrame(animRef.current);
       document.removeEventListener('visibilitychange', handleVisibility);
       observer?.disconnect();
+      resizeObs?.disconnect();
     };
   }, [draw]);
 

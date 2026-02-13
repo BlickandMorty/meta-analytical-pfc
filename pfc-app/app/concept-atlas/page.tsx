@@ -143,9 +143,12 @@ function ConceptCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const graphRef = useRef<{ nodes: GraphNode[]; edges: GraphEdge[] }>({ nodes: [], edges: [] });
   const animRef = useRef<number>(0);
+  const drawRef = useRef<() => void>(() => {});
   const timeRef = useRef(0);
   const frameSkipRef = useRef(false);
   const tabHiddenRef = useRef(document.hidden);
+  // Cached canvas dimensions from ResizeObserver — avoids getBoundingClientRect per frame
+  const atlasSizeRef = useRef({ w: 0, h: 0 });
 
   const graphKey = concepts.join('|');
   useEffect(() => {
@@ -156,24 +159,32 @@ function ConceptCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const queueNextFrame = () => {
+      animRef.current = requestAnimationFrame(() => drawRef.current());
+    };
+
     // Skip when tab hidden
-    if (tabHiddenRef.current) { animRef.current = requestAnimationFrame(draw); return; }
+    if (tabHiddenRef.current) { queueNextFrame(); return; }
 
     // 30fps throttle
     frameSkipRef.current = !frameSkipRef.current;
-    if (frameSkipRef.current) { animRef.current = requestAnimationFrame(draw); return; }
+    if (frameSkipRef.current) { queueNextFrame(); return; }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    const W = atlasSizeRef.current.w;
+    const H = atlasSizeRef.current.h;
+    if (W === 0 || H === 0) { queueNextFrame(); return; }
 
-    const W = rect.width;
-    const H = rect.height;
+    const targetW = Math.round(W * dpr);
+    const targetH = Math.round(H * dpr);
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const cx = W / 2;
     const cy = H / 2;
 
@@ -391,18 +402,38 @@ function ConceptCanvas({
       ctx.setLineDash([]);
     }
 
-    animRef.current = requestAnimationFrame(draw);
+    queueNextFrame();
   }, [isProcessing, harmonyKeyDistance]);
 
   useEffect(() => {
+    drawRef.current = draw;
+  }, [draw]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+
+    // Cache canvas dimensions via ResizeObserver — avoids getBoundingClientRect per frame
+    const resizeObs = canvas
+      ? new ResizeObserver(([entry]) => {
+          const { width, height } = entry.contentRect;
+          atlasSizeRef.current = { w: width, h: height };
+        })
+      : null;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      atlasSizeRef.current = { w: rect.width, h: rect.height };
+      resizeObs?.observe(canvas);
+    }
+
     const onVis = () => { tabHiddenRef.current = document.hidden; };
     document.addEventListener('visibilitychange', onVis);
-    animRef.current = requestAnimationFrame(draw);
+    animRef.current = requestAnimationFrame(() => drawRef.current());
     return () => {
       document.removeEventListener('visibilitychange', onVis);
       cancelAnimationFrame(animRef.current);
+      resizeObs?.disconnect();
     };
-  }, [draw]);
+  }, []);
 
   return (
     <canvas

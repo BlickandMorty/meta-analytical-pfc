@@ -208,12 +208,12 @@ export function encodeSynthesisKey(
 
 // ── Vector math utilities ────────────────────────────────────────
 
-export function clamp01(v: number): number {
+function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
 }
 
 /** L2 norm of a vector */
-export function vectorNorm(v: number[]): number {
+function vectorNorm(v: number[]): number {
   let sum = 0;
   for (let i = 0; i < v.length; i++) sum += v[i] * v[i];
   return Math.sqrt(sum);
@@ -265,7 +265,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 /** Dot product */
-export function vectorDot(a: number[], b: number[]): number {
+function vectorDot(a: number[], b: number[]): number {
   let sum = 0;
   for (let i = 0; i < a.length; i++) sum += a[i] * (b[i] ?? 0);
   return sum;

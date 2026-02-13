@@ -15,7 +15,7 @@ import type { PFCSet, PFCGet } from '../use-pfc-store';
 // Helpers
 // ---------------------------------------------------------------------------
 
-export function freshPipeline(): StageResult[] {
+function freshPipeline(): StageResult[] {
   return STAGES.map((s) => ({
     stage: s,
     status: 'idle' as StageStatus,
@@ -36,7 +36,7 @@ export interface SignalHistoryEntry {
   riskScore: number;
 }
 
-export const MAX_SIGNAL_HISTORY = 50;
+const MAX_SIGNAL_HISTORY = 50;
 
 // ---------------------------------------------------------------------------
 // State interface

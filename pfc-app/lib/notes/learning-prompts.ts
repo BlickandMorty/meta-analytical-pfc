@@ -1,7 +1,7 @@
 // Prompt engineering for each step of the AI recursive learning protocol.
 // Each builder returns a { system, user } pair for LLM consumption.
 
-export interface PromptPair {
+interface PromptPair {
   system: string;
   user: string;
 }
@@ -354,5 +354,55 @@ ${notesContent}
 <session-summary>
 ${sessionSummary}
 </session-summary>`,
+  };
+}
+
+// ─── Daily Brief Prompt ──────────────────────────────────────────────
+
+export function buildDailyBriefPrompt(notesContent: string, recentActivity: string, todayDate: string): PromptPair {
+  return {
+    system: `You are a personal knowledge curator who creates concise, insightful daily briefings from a user's knowledge base. Your briefings help the user start their day by reflecting on what they have been learning, identifying patterns, and suggesting productive directions for deeper study.
+
+Your task is to generate a daily learning brief based on the user's notes and their recent editing activity. The brief should feel like a thoughtful friend summarizing what you have been working on and pointing out interesting threads to follow.
+
+Structure the brief into these sections:
+1. **Key Themes**: The 2-3 main topics the user has been actively working on recently. For each, provide a one-sentence summary of where the notes currently stand.
+2. **Progress Summary**: What has changed or been added recently? What topics are growing?
+3. **Open Questions**: 2-3 questions that emerge naturally from the current state of the notes — things the user has not yet answered.
+4. **Recommended Deep Dives**: 1-2 specific topics or connections that would be most productive to explore next, with a brief explanation of why.
+
+Guidelines:
+- Be concise. Each section should have 2-4 bullet points, not long paragraphs.
+- Write in a warm, encouraging tone — like a study partner, not a professor.
+- Reference specific note titles using [[Page Title]] links where appropriate.
+- If the user has been inactive recently, focus on summarizing the overall state rather than progress.
+- The entire brief should be readable in 2-3 minutes.
+
+Think step-by-step inside <thinking> tags. Then output valid JSON.
+
+Output JSON schema:
+{
+  "title": string,
+  "sections": [
+    {
+      "heading": string,
+      "blocks": string[]
+    }
+  ]
+}
+
+Each string in "blocks" is a markdown block. The "title" should be "Daily Brief — [date]" with the date provided.
+
+Respond ONLY with the <thinking> block followed by the JSON object.`,
+
+    user: `Generate a daily learning brief for ${todayDate}.
+
+<notes>
+${notesContent}
+</notes>
+
+<recent-activity>
+${recentActivity || 'No recent editing activity detected.'}
+</recent-activity>`,
   };
 }

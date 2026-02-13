@@ -46,19 +46,32 @@ export interface LearningSession {
   // Config
   targetPageIds?: string[]; // If set, only analyze these pages
   depth: 'shallow' | 'moderate' | 'deep';  // How thorough
+  // Recursive iteration tracking
+  lastIterateDecision?: {
+    shouldContinue: boolean;
+    reason: string;
+    focusAreas: string[];
+  };
+  iterationHistory?: Array<{
+    iteration: number;
+    insights: number;
+    pagesCreated: number;
+    blocksCreated: number;
+    completedAt: number;
+  }>;
 }
 
 // Generate unique IDs
-export function generateSessionId(): string {
+function generateSessionId(): string {
   return `learn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function generateStepId(): string {
+function generateStepId(): string {
   return `step-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 // The 7-step protocol definition
-export const PROTOCOL_STEPS: { type: LearningStepType; title: string; description: string }[] = [
+const PROTOCOL_STEPS: { type: LearningStepType; title: string; description: string }[] = [
   {
     type: 'inventory',
     title: 'Knowledge Inventory',

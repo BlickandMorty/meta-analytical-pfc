@@ -3,7 +3,8 @@
 import { useState, useEffect, memo, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
+import { useTypewriter } from '@/hooks/use-typewriter';
 import { usePFCStore, type PFCState } from '@/lib/store/use-pfc-store';
 import {
   HomeIcon,
@@ -22,6 +23,7 @@ import {
   NetworkIcon,
   MicroscopeIcon,
   BrainIcon,
+  BotIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { SteeringIndicator } from './steering-indicator';
@@ -50,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: HomeIcon, group: 'core' },
   { href: '/notes', label: 'Notes', icon: PenLineIcon, group: 'core' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3Icon, minTier: 'full', group: 'tools' },
+  { href: '/daemon', label: 'Daemon', icon: BotIcon, group: 'tools' },
   { href: '/export', label: 'Export', icon: DownloadIcon, group: 'utility' },
   { href: '/settings', label: 'Settings', icon: SettingsIcon, group: 'utility' },
   { href: '/docs', label: 'Docs', icon: BookOpenIcon, group: 'utility' },
@@ -87,16 +90,26 @@ const MODE_STYLES: Record<string, { label: string }> = {
 };
 
 /* ─── Theming helpers ─── */
-function bubbleBg(isActive: boolean, isDark: boolean, disabled?: boolean) {
+function bubbleBg(isActive: boolean, isDark: boolean, disabled?: boolean, isOled?: boolean) {
   if (disabled) return 'transparent';
-  if (isActive) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)';
+  if (isActive) {
+    if (isOled) return 'rgba(20,20,20,0.7)';
+    return isDark ? 'rgba(16,13,10,0.75)' : 'rgba(210,195,175,0.35)';
+  }
   return 'transparent';
 }
 
-function bubbleColor(isActive: boolean, isDark: boolean, disabled?: boolean) {
-  if (disabled) return isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)';
-  if (isActive) return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)';
-  return isDark ? 'rgba(155,150,137,0.7)' : 'rgba(80,65,45,0.55)';
+function bubbleColor(isActive: boolean, isDark: boolean, disabled?: boolean, isOled?: boolean) {
+  if (disabled) {
+    if (isOled) return 'rgba(120,120,120,0.55)';
+    return isDark ? 'rgba(170,164,152,0.55)' : 'rgba(60,45,30,0.45)';
+  }
+  if (isActive) {
+    if (isOled) return 'rgba(220,220,220,0.95)';
+    return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)';
+  }
+  if (isOled) return 'rgba(180,180,180,0.92)';
+  return isDark ? 'rgba(205,198,186,0.92)' : 'rgba(72,54,36,0.86)';
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -106,6 +119,7 @@ const NavBubble = memo(function NavBubble({
   item,
   isActive,
   isDark,
+  isOled,
   onNavigate,
   disabled,
   disabledReason,
@@ -113,6 +127,7 @@ const NavBubble = memo(function NavBubble({
   item: NavItem;
   isActive: boolean;
   isDark: boolean;
+  isOled?: boolean;
   onNavigate: (href: string) => void;
   disabled?: boolean;
   disabledReason?: string;
@@ -121,12 +136,25 @@ const NavBubble = memo(function NavBubble({
   const expanded = (hovered || isActive) && !disabled;
   const Icon = item.icon;
 
+  // Typewriter effect on hover — types out label with RetroGaming font + cursor
+  const { displayText: twText, cursorVisible: twCursor } = useTypewriter(
+    item.label,
+    hovered && !isActive && !disabled,
+    { speed: 35, startDelay: 80, cursorLingerMs: 600 },
+  );
+
+  // Show typewriter text when hovering (not active), else show full label when active
+  const labelText = hovered && !isActive && !disabled ? twText : (expanded ? item.label : '');
+  const usePixelFont = hovered && !isActive && !disabled;
+
   return (
     <button
       onClick={() => !disabled && onNavigate(item.href)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       title={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
+      aria-label={disabled ? `${item.label} — enable ${disabledReason} in Settings` : item.label}
+      aria-disabled={disabled}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -135,14 +163,14 @@ const NavBubble = memo(function NavBubble({
         cursor: disabled ? 'not-allowed' : 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: expanded ? '0.375rem 0.75rem' : '0.375rem 0.5rem',
-        height: '2.125rem',
-        fontSize: '0.8125rem',
+        padding: expanded ? '0.4375rem 0.875rem' : '0.4375rem 0.5625rem',
+        height: '2.375rem',
+        fontSize: usePixelFont ? '0.625rem' : '0.8125rem',
         fontWeight: isActive ? 650 : 500,
-        letterSpacing: '-0.01em',
+        letterSpacing: usePixelFont ? '0.01em' : '-0.01em',
         opacity: disabled ? 0.35 : 1,
-        color: bubbleColor(isActive, isDark, disabled),
-        background: bubbleBg(isActive, isDark, disabled),
+        color: bubbleColor(isActive, isDark, disabled, isOled),
+        background: bubbleBg(isActive, isDark, disabled, isOled),
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
@@ -150,21 +178,34 @@ const NavBubble = memo(function NavBubble({
       }}
     >
       <Icon style={{
-        height: '0.9375rem',
-        width: '0.9375rem',
+        height: '1.0625rem',
+        width: '1.0625rem',
         flexShrink: 0,
-        color: isActive ? '#C4956A' : 'inherit',
+        color: isActive ? 'var(--pfc-accent)' : 'inherit',
         transition: 'color 0.15s',
       }} />
       <span style={{
-        display: 'inline-block',
+        display: 'inline-flex',
+        alignItems: 'center',
         maxWidth: expanded ? '8rem' : '0rem',
         opacity: expanded ? 1 : 0,
         overflow: 'hidden',
         whiteSpace: 'nowrap',
         transition: T_LABEL,
+        fontFamily: (usePixelFont || isActive) ? 'var(--font-heading)' : 'inherit',
+        fontSize: isActive ? '0.625rem' : undefined,
       }}>
-        {item.label}
+        {labelText}
+        {usePixelFont && twCursor && (
+          <span style={{
+            display: 'inline-block',
+            width: '1.5px',
+            height: '0.625rem',
+            backgroundColor: 'var(--pfc-accent)',
+            marginLeft: '1px',
+            flexShrink: 0,
+          }} />
+        )}
       </span>
     </button>
   );
@@ -189,11 +230,13 @@ const selectToggleSynthesis = (s: PFCState) => s.toggleSynthesisView;
 
 const HomePFCBubble = memo(function HomePFCBubble({
   isDark,
+  isOled,
   isOnChat,
   isOnHome,
   onNavigate,
 }: {
   isDark: boolean;
+  isOled?: boolean;
   isOnChat: boolean;
   isOnHome: boolean;
   onNavigate: (href: string) => void;
@@ -214,6 +257,17 @@ const HomePFCBubble = memo(function HomePFCBubble({
   const pfcMode = isOnChat && hasMessages;
   const showLabel = hovered || pfcMode || isOnHome;
 
+  // Typewriter on hover — only for "Home" label (not PFC Engine mode)
+  const homeLabel = pfcMode ? 'PFC Engine' : 'Home';
+  const shouldTypewrite = hovered && !pfcMode && !isOnHome;
+  const { displayText: twText, cursorVisible: twCursor } = useTypewriter(
+    homeLabel,
+    shouldTypewrite,
+    { speed: 35, startDelay: 80, cursorLingerMs: 600 },
+  );
+  const labelText = shouldTypewrite ? twText : (showLabel ? homeLabel : '');
+  const usePixelFont = shouldTypewrite;
+
   return (
     <button
       onClick={() => onNavigate('/')}
@@ -226,13 +280,13 @@ const HomePFCBubble = memo(function HomePFCBubble({
         cursor: 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: showLabel ? '0.375rem 0.75rem' : '0.375rem 0.5rem',
-        height: '2.125rem',
-        fontSize: '0.8125rem',
+        padding: showLabel ? '0.4375rem 0.875rem' : '0.4375rem 0.5625rem',
+        height: '2.375rem',
+        fontSize: usePixelFont ? '0.625rem' : '0.8125rem',
         fontWeight: (pfcMode || isOnHome) ? 650 : 500,
-        letterSpacing: '-0.01em',
-        color: bubbleColor(pfcMode || isOnHome || hovered, isDark),
-        background: bubbleBg(pfcMode || isOnHome, isDark),
+        letterSpacing: usePixelFont ? '0.01em' : '-0.01em',
+        color: bubbleColor(pfcMode || isOnHome || hovered, isDark, false, isOled),
+        background: bubbleBg(pfcMode || isOnHome, isDark, false, isOled),
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
@@ -240,23 +294,36 @@ const HomePFCBubble = memo(function HomePFCBubble({
       }}
     >
       <HomeIcon style={{
-        height: '0.9375rem',
-        width: '0.9375rem',
+        height: '1.0625rem',
+        width: '1.0625rem',
         flexShrink: 0,
-        color: (pfcMode || isOnHome || hovered) ? '#C4956A' : 'inherit',
+        color: (pfcMode || isOnHome || hovered) ? 'var(--pfc-accent)' : 'inherit',
         transition: 'color 0.15s',
       }} />
 
       {/* Label — "PFC Engine" when in chat, "Home" otherwise */}
       <span style={{
-        display: 'inline-block',
+        display: 'inline-flex',
+        alignItems: 'center',
         maxWidth: showLabel ? '8rem' : '0rem',
         opacity: showLabel ? 1 : 0,
         overflow: 'hidden',
         whiteSpace: 'nowrap',
         transition: T_LABEL,
+        fontFamily: (usePixelFont || pfcMode || isOnHome) ? 'var(--font-heading)' : 'inherit',
+        fontSize: (pfcMode || isOnHome) ? '0.625rem' : undefined,
       }}>
-        {pfcMode ? 'PFC Engine' : 'Home'}
+        {labelText}
+        {usePixelFont && twCursor && (
+          <span style={{
+            display: 'inline-block',
+            width: '1.5px',
+            height: '0.625rem',
+            backgroundColor: 'var(--pfc-accent)',
+            marginLeft: '1px',
+            flexShrink: 0,
+          }} />
+        )}
       </span>
 
       {/* PFC Engine badges — only in PFC mode */}
@@ -264,15 +331,15 @@ const HomePFCBubble = memo(function HomePFCBubble({
         <>
           <span style={{
             width: 3, height: 3, borderRadius: '50%', flexShrink: 0,
-            background: isDark ? 'rgba(155,150,137,0.25)' : 'rgba(0,0,0,0.15)',
+            background: isOled ? 'rgba(140,140,140,0.25)' : isDark ? 'rgba(155,150,137,0.25)' : 'rgba(0,0,0,0.15)',
           }} />
 
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
             padding: '0.125rem 0.375rem', borderRadius: '9999px',
-            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+            background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
             fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
-            color: isDark ? 'rgba(196,149,106,0.7)' : 'rgba(196,149,106,0.8)',
+            color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.7)' : 'rgba(var(--pfc-accent-rgb), 0.8)',
           }}>
             {inferenceMode === 'simulation'
               ? <ServerIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
@@ -284,7 +351,7 @@ const HomePFCBubble = memo(function HomePFCBubble({
           {confidence > 0 && (
             <span style={{
               fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
-              color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+              color: isOled ? 'rgba(140,140,140,0.5)' : isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
             }}>
               {(confidence * 100).toFixed(0)}%
             </span>
@@ -298,9 +365,9 @@ const HomePFCBubble = memo(function HomePFCBubble({
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
                 padding: '0.125rem 0.375rem', borderRadius: '9999px',
-                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
                 fontSize: '0.5625rem', fontFamily: 'var(--font-mono)',
-                color: '#C4956A',
+                color: 'var(--pfc-accent)',
               }}
             >
               <ActivityIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
@@ -311,13 +378,21 @@ const HomePFCBubble = memo(function HomePFCBubble({
           {hasMessages && (
             <span
               role="button"
+              tabIndex={0}
               onClick={(e) => { e.stopPropagation(); toggleSynthesis(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleSynthesis();
+                }
+              }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
                 padding: '0.1875rem 0.5rem', borderRadius: '9999px',
-                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
                 cursor: 'pointer', fontSize: '0.625rem', fontWeight: 600,
-                color: '#C4956A',
+                color: 'var(--pfc-accent)',
               }}
             >
               <SparklesIcon style={{ height: '0.5625rem', width: '0.5625rem' }} />
@@ -338,6 +413,7 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   item,
   isActive,
   isDark,
+  isOled,
   onNavigate,
   disabled,
   disabledReason,
@@ -345,6 +421,7 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
   item: NavItem;
   isActive: boolean;
   isDark: boolean;
+  isOled?: boolean;
   onNavigate: (href: string) => void;
   disabled?: boolean;
   disabledReason?: string;
@@ -391,14 +468,15 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 padding: '0.3125rem 0.625rem',
                 height: '1.75rem',
                 cursor: 'pointer',
-                fontSize: '0.6875rem',
-                fontWeight: isTabActive ? 650 : 500,
-                letterSpacing: '-0.01em',
+                fontFamily: isTabActive ? 'var(--font-heading)' : 'inherit',
+                fontSize: isTabActive ? '0.5625rem' : '0.6875rem',
+                fontWeight: isTabActive ? 400 : 500,
+                letterSpacing: isTabActive ? '0.01em' : '-0.01em',
                 color: isTabActive
-                  ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)')
-                  : (isDark ? 'rgba(155,150,137,0.65)' : 'rgba(80,65,45,0.55)'),
+                  ? (isOled ? 'rgba(220,220,220,0.95)' : isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)')
+                  : (isOled ? 'rgba(140,140,140,0.65)' : isDark ? 'rgba(155,150,137,0.65)' : 'rgba(80,65,45,0.55)'),
                 background: isTabActive
-                  ? (isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)')
+                  ? (isOled ? 'rgba(35,35,35,0.55)' : isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)')
                   : 'transparent',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -410,7 +488,7 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
                 height: '0.6875rem',
                 width: '0.6875rem',
                 flexShrink: 0,
-                color: isTabActive ? '#C4956A' : 'inherit',
+                color: isTabActive ? 'var(--pfc-accent)' : 'inherit',
                 transition: 'color 0.15s',
               }} />
               {tab.label}
@@ -438,14 +516,14 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
         cursor: disabled ? 'not-allowed' : 'pointer',
         border: 'none',
         borderRadius: '9999px',
-        padding: expanded ? '0.375rem 0.75rem' : '0.375rem 0.5rem',
-        height: '2.125rem',
+        padding: expanded ? '0.4375rem 0.875rem' : '0.4375rem 0.5625rem',
+        height: '2.375rem',
         fontSize: '0.8125rem',
         fontWeight: 500,
         letterSpacing: '-0.01em',
         opacity: disabled ? 0.35 : 1,
-        color: bubbleColor(false, isDark, disabled),
-        background: bubbleBg(false, isDark, disabled),
+        color: bubbleColor(false, isDark, disabled, isOled),
+        background: bubbleBg(false, isDark, disabled, isOled),
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         transition: `${T_SIZE}, ${T_COLOR}`,
@@ -453,8 +531,8 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
       }}
     >
       <Icon style={{
-        height: '0.9375rem',
-        width: '0.9375rem',
+        height: '1.0625rem',
+        width: '1.0625rem',
         flexShrink: 0,
         transition: 'color 0.15s',
       }} />
@@ -478,12 +556,8 @@ const AnalyticsNavBubble = memo(function AnalyticsNavBubble({
 export function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const { isDark, isOled, mounted } = useIsDark();
   const suiteTier = usePFCStore((s) => s.suiteTier);
-
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
 
   const chatMessages = usePFCStore((s) => s.messages);
   const clearMessages = usePFCStore((s) => s.clearMessages);
@@ -517,14 +591,15 @@ export function TopNav() {
 
   return (
     <nav
+      aria-label="Main navigation"
       style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 30,
+        zIndex: 'var(--z-nav)',
         display: 'flex',
-        flexDirection: 'column',
+        justifyContent: 'center',
         pointerEvents: 'none',
         opacity: mounted ? 1 : 0,
         transform: mounted ? 'translateY(0) translateZ(0)' : 'translateY(-12px) translateZ(0)',
@@ -538,16 +613,19 @@ export function TopNav() {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '0.125rem',
+          gap: '0.1875rem',
           borderRadius: '9999px',
-          padding: '0.3125rem',
+          padding: '0.375rem',
           pointerEvents: 'auto',
-          background: isDark
-            ? 'rgba(22,21,19,0.65)'
-            : 'rgba(237,232,222,0.6)',
+          width: 'fit-content',
+          background: isOled
+            ? 'rgba(8,8,8,0.85)'
+            : isDark
+              ? 'rgba(14,12,10,0.8)'
+              : 'rgba(237,232,222,0.6)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
-          border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+          border: `1px solid ${isOled ? 'rgba(30,30,30,0.4)' : isDark ? 'rgba(30,25,20,0.35)' : 'rgba(190,183,170,0.3)'}`,
           boxShadow: isDark
             ? '0 2px 12px -2px rgba(0,0,0,0.3)'
             : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
@@ -557,6 +635,7 @@ export function TopNav() {
         {/* Home / PFC Engine bubble — first item, special behavior */}
         <HomePFCBubble
           isDark={isDark}
+          isOled={isOled}
           isOnChat={isOnChat}
           isOnHome={pathname === '/'}
           onNavigate={handleNavigate}
@@ -574,6 +653,7 @@ export function TopNav() {
                 item={item}
                 isActive={isOnAnalytics}
                 isDark={isDark}
+                isOled={isOled}
                 onNavigate={handleNavigate}
                 disabled={!meetsRequirement}
                 disabledReason={tierGateLabel(minTier)}
@@ -591,6 +671,7 @@ export function TopNav() {
                   : pathname === item.href
               }
               isDark={isDark}
+              isOled={isOled}
               onNavigate={handleNavigate}
               disabled={!meetsRequirement}
               disabledReason={tierGateLabel(minTier)}

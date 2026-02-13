@@ -23,7 +23,7 @@ import {
   SendIcon,
 } from 'lucide-react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { useRouter } from 'next/navigation';
 
 // ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ import { useRouter } from 'next/navigation';
 
 const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
 
-const PFC_VIOLET = '#C4956A';
+const PFC_VIOLET = 'var(--pfc-accent)';
 const PFC_GREEN = '#34D399';
 const PFC_EMBER = '#E07850';
 
@@ -47,34 +47,29 @@ export const PortalSidebar = memo(function PortalSidebar() {
   const closePortal = usePFCStore((s) => s.closePortal);
   const goBack = usePFCStore((s) => s.goBack);
   const setPortalDisplayMode = usePFCStore((s) => s.setPortalDisplayMode);
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const { isDark, isOled } = useIsDark();
 
   // Local edit mode (extends store's 'code' | 'preview' with 'edit')
-  const [localMode, setLocalMode] = useState<'preview' | 'code' | 'edit'>('preview');
-
-  useEffect(() => setMounted(true), []);
-
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const [isEditMode, setIsEditMode] = useState(false);
+  const localMode: 'preview' | 'code' | 'edit' = isEditMode ? 'edit' : displayMode;
 
   const currentView = useMemo(
     () => portalStack[portalStack.length - 1],
     [portalStack],
   );
   const canGoBack = portalStack.length > 1;
-
-  // Sync local mode with store display mode when store changes
-  useEffect(() => {
-    if (displayMode === 'code' || displayMode === 'preview') {
-      setLocalMode(displayMode);
-    }
-  }, [displayMode]);
+  const handleClosePortal = useCallback(() => {
+    setIsEditMode(false);
+    closePortal();
+  }, [closePortal]);
 
   // Handle mode switching — sync back to store for code/preview
   const handleModeChange = useCallback(
     (mode: 'preview' | 'code' | 'edit') => {
-      setLocalMode(mode);
-      if (mode === 'code' || mode === 'preview') {
+      if (mode === 'edit') {
+        setIsEditMode(true);
+      } else {
+        setIsEditMode(false);
         setPortalDisplayMode(mode);
       }
     },
@@ -89,19 +84,19 @@ export const PortalSidebar = memo(function PortalSidebar() {
       // Escape closes portal
       if (e.key === 'Escape') {
         e.preventDefault();
-        closePortal();
+        handleClosePortal();
         return;
       }
       // Cmd/Ctrl+E toggles edit mode
       if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
         e.preventDefault();
-        setLocalMode((prev) => (prev === 'edit' ? 'preview' : 'edit'));
+        setIsEditMode((prev) => !prev);
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showPortal, closePortal]);
+  }, [showPortal, handleClosePortal]);
 
   if (!showPortal || !currentView) return null;
 
@@ -109,21 +104,31 @@ export const PortalSidebar = memo(function PortalSidebar() {
   const isArtifact = currentView.type === 'artifact' && !!artifact;
 
   // Glass panel styles
-  const panelBg = isDark
-    ? 'rgba(28,27,25,0.92)'
-    : 'rgba(245,240,232,0.90)';
-  const borderColor = isDark
-    ? 'rgba(79,69,57,0.3)'
-    : 'rgba(0,0,0,0.06)';
-  const headerBg = isDark
-    ? 'rgba(244,189,111,0.02)'
-    : 'rgba(0,0,0,0.02)';
-  const mutedText = isDark
-    ? 'rgba(156,143,128,0.5)'
-    : 'rgba(0,0,0,0.4)';
-  const fgText = isDark
-    ? 'rgba(237,224,212,0.9)'
-    : 'rgba(0,0,0,0.85)';
+  const panelBg = isOled
+    ? 'rgba(8,8,8,0.95)'
+    : isDark
+      ? 'rgba(28,27,25,0.92)'
+      : 'rgba(245,240,232,0.90)';
+  const borderColor = isOled
+    ? 'rgba(40,40,40,0.35)'
+    : isDark
+      ? 'rgba(79,69,57,0.3)'
+      : 'rgba(0,0,0,0.06)';
+  const headerBg = isOled
+    ? 'rgba(20,20,20,0.4)'
+    : isDark
+      ? 'rgba(244,189,111,0.02)'
+      : 'rgba(0,0,0,0.02)';
+  const mutedText = isOled
+    ? 'rgba(130,130,130,0.5)'
+    : isDark
+      ? 'rgba(156,143,128,0.5)'
+      : 'rgba(0,0,0,0.4)';
+  const fgText = isOled
+    ? 'rgba(220,220,220,0.9)'
+    : isDark
+      ? 'rgba(237,224,212,0.9)'
+      : 'rgba(0,0,0,0.85)';
 
   return (
     <AnimatePresence>
@@ -136,11 +141,11 @@ export const PortalSidebar = memo(function PortalSidebar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25, ease: CUPERTINO }}
-            onClick={closePortal}
+            onClick={handleClosePortal}
             style={{
               position: 'fixed',
               inset: 0,
-              zIndex: 49,
+              zIndex: 'var(--z-modal-backdrop)',
               background: 'rgba(0, 0, 0, 0.4)',
               backdropFilter: 'blur(4px)',
               WebkitBackdropFilter: 'blur(4px)',
@@ -164,7 +169,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
               width: '50%',
               maxWidth: '720px',
               minWidth: '380px',
-              zIndex: 50,
+              zIndex: 'var(--z-modal)',
               display: 'flex',
               flexDirection: 'column',
               background: panelBg,
@@ -206,9 +211,11 @@ export const PortalSidebar = memo(function PortalSidebar() {
                     transition: 'background 0.15s ease',
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = isDark
-                      ? 'rgba(244,189,111,0.06)'
-                      : 'rgba(0,0,0,0.06)')
+                    (e.currentTarget.style.background = isOled
+                      ? 'rgba(255,255,255,0.04)'
+                      : isDark
+                        ? 'rgba(244,189,111,0.06)'
+                        : 'rgba(0,0,0,0.06)')
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = 'transparent')
@@ -268,9 +275,11 @@ export const PortalSidebar = memo(function PortalSidebar() {
                     alignItems: 'center',
                     borderRadius: '9999px',
                     padding: '2px',
-                    background: isDark
-                      ? 'rgba(244,189,111,0.03)'
-                      : 'rgba(0,0,0,0.04)',
+                    background: isOled
+                      ? 'rgba(30,30,30,0.4)'
+                      : isDark
+                        ? 'rgba(244,189,111,0.03)'
+                        : 'rgba(0,0,0,0.04)',
                     flexShrink: 0,
                   }}
                 >
@@ -280,6 +289,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
                     icon={<EyeIcon size={14} />}
                     label="Preview"
                     isDark={isDark}
+                    isOled={isOled}
                   />
                   <ModeButton
                     active={localMode === 'code'}
@@ -287,6 +297,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
                     icon={<CodeIcon size={14} />}
                     label="Code"
                     isDark={isDark}
+                    isOled={isOled}
                   />
                   <ModeButton
                     active={localMode === 'edit'}
@@ -294,13 +305,14 @@ export const PortalSidebar = memo(function PortalSidebar() {
                     icon={<PencilIcon size={14} />}
                     label="Edit"
                     isDark={isDark}
+                    isOled={isOled}
                   />
                 </div>
               )}
 
               {/* Close button */}
               <button
-                onClick={closePortal}
+                onClick={handleClosePortal}
                 style={{
                   padding: '6px',
                   borderRadius: '9999px',
@@ -331,6 +343,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {isArtifact && artifact && (
                 <ArtifactEditor
+                  key={artifact.identifier}
                   artifact={artifact}
                   mode={localMode}
                   isDark={isDark}
@@ -374,6 +387,7 @@ interface ModeButtonProps {
   icon: React.ReactNode;
   label: string;
   isDark: boolean;
+  isOled?: boolean;
 }
 
 const ModeButton = memo<ModeButtonProps>(function ModeButton({
@@ -382,7 +396,10 @@ const ModeButton = memo<ModeButtonProps>(function ModeButton({
   icon,
   label,
   isDark,
+  isOled,
 }) {
+  const inactiveColor = isOled ? 'rgba(130,130,130,0.7)' : isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.35)';
+  const hoverColor = isOled ? 'rgba(200,200,200,0.8)' : isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.6)';
   return (
     <button
       onClick={onClick}
@@ -399,25 +416,13 @@ const ModeButton = memo<ModeButtonProps>(function ModeButton({
         fontWeight: 500,
         transition: 'all 0.15s ease',
         background: active ? `${PFC_VIOLET}20` : 'transparent',
-        color: active
-          ? PFC_VIOLET
-          : isDark
-            ? 'rgba(156,143,128,0.7)'
-            : 'rgba(0,0,0,0.35)',
+        color: active ? PFC_VIOLET : inactiveColor,
       }}
       onMouseEnter={(e) => {
-        if (!active) {
-          e.currentTarget.style.color = isDark
-            ? 'rgba(237,224,212,0.8)'
-            : 'rgba(0,0,0,0.6)';
-        }
+        if (!active) e.currentTarget.style.color = hoverColor;
       }}
       onMouseLeave={(e) => {
-        if (!active) {
-          e.currentTarget.style.color = isDark
-            ? 'rgba(156,143,128,0.7)'
-            : 'rgba(0,0,0,0.35)';
-        }
+        if (!active) e.currentTarget.style.color = inactiveColor;
       }}
     >
       {icon}
@@ -464,43 +469,27 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
   const [editedContent, setEditedContent] = useState(artifact.content);
   const [hasEdited, setHasEdited] = useState(false);
 
-  // Track previous artifact content for streaming detection
-  const prevContentRef = useRef(artifact.content);
-
   // Auto-scroll ref for preview/code modes
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Copy state
   const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Send-to-notes dropdown state
   const [notesOpen, setNotesOpen] = useState(false);
   const notesDropdownRef = useRef<HTMLDivElement>(null);
 
-  // When artifact content changes (streaming), update if user hasn't edited
+  // Auto-scroll in preview/code modes during streaming
   useEffect(() => {
-    const contentChanged = artifact.content !== prevContentRef.current;
-    prevContentRef.current = artifact.content;
-
-    if (contentChanged && !hasEdited) {
-      setEditedContent(artifact.content);
-    }
-
-    // Auto-scroll in preview/code modes during streaming
-    if (contentChanged && mode !== 'edit' && scrollRef.current) {
+    if (mode !== 'edit' && scrollRef.current) {
       requestAnimationFrame(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
       });
     }
-  }, [artifact.content, hasEdited, mode]);
-
-  // Reset edit state when switching artifacts
-  useEffect(() => {
-    setEditedContent(artifact.content);
-    setHasEdited(false);
-  }, [artifact.identifier]);
+  }, [artifact.content, mode]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -517,13 +506,21 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
     return () => document.removeEventListener('mousedown', handler);
   }, [notesOpen]);
 
+  // Cleanup copy timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
   // The content to use for copy / send operations
   const activeContent = hasEdited ? editedContent : artifact.content;
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(activeContent);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
   }, [activeContent]);
 
   const handleEdit = useCallback(
@@ -699,7 +696,7 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
               </div>
             )}
             <textarea
-              value={editedContent}
+              value={hasEdited ? editedContent : artifact.content}
               onChange={handleEdit}
               spellCheck={false}
               style={{
@@ -802,7 +799,7 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
                       ? '0 4px 16px rgba(0,0,0,0.2)'
                       : '0 4px 16px rgba(0,0,0,0.06)',
                     overflow: 'hidden',
-                    zIndex: 60,
+                    zIndex: 'var(--z-popover)',
                     transform: 'translateZ(0)',
                   }}
                 >

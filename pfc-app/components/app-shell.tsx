@@ -1,13 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { TopNav } from './top-nav';
+import { StarField } from './star-field';
 import type { InferenceMode, ApiProvider } from '@/lib/engine/llm/config';
-import type { SuiteTier, ResearchPaper, ResearchBook } from '@/lib/research/types';
+import type { SuiteTier, ResearchPaper } from '@/lib/research/types';
 import { detectDevice, cacheDeviceProfile } from '@/lib/device-detection';
+import { ToastContainer } from './toast-container';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { isDark, isOled } = useIsDark();
+  const pathname = usePathname();
+  const showStars = pathname === '/' || (isOled && pathname === '/docs');
+  const starTheme = isOled ? 'oled' as const : isDark ? 'dark' as const : 'light' as const;
   const setInferenceMode = usePFCStore((s) => s.setInferenceMode);
   const setApiKey = usePFCStore((s) => s.setApiKey);
   const setApiProvider = usePFCStore((s) => s.setApiProvider);
@@ -15,14 +23,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const setOllamaModel = usePFCStore((s) => s.setOllamaModel);
   const setSuiteTier = usePFCStore((s) => s.setSuiteTier);
   const setMeasurementEnabled = usePFCStore((s) => s.setMeasurementEnabled);
+  const initScheduler = usePFCStore((s) => s.initScheduler);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
+    initScheduler();
+    return () => {
+      import('@/lib/notes/learning-scheduler').then(({ stopScheduler }) => stopScheduler());
+    };
+  }, [initScheduler]);
+
+  useEffect(() => {
     // --- Inference settings ---
-    const storedMode = localStorage.getItem('pfc-inference-mode') as InferenceMode | null;
-    if (storedMode) setInferenceMode(storedMode);
+    const storedMode = localStorage.getItem('pfc-inference-mode');
+    if (storedMode && ['simulation', 'api', 'local'].includes(storedMode)) {
+      setInferenceMode(storedMode as InferenceMode);
+    }
     const storedKey = localStorage.getItem('pfc-api-key');
     if (storedKey) setApiKey(storedKey);
     const storedProvider = localStorage.getItem('pfc-api-provider') as ApiProvider | null;
@@ -69,15 +87,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     } catch { /* ignore corrupt data */ }
 
-    // --- Load research books ---
-    try {
-      const storedBooks = localStorage.getItem('pfc-research-books');
-      if (storedBooks) {
-        const books = JSON.parse(storedBooks) as ResearchBook[];
-        usePFCStore.setState({ researchBooks: books });
-      }
-    } catch { /* ignore corrupt data */ }
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -85,34 +94,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="relative h-screen overflow-hidden bg-background">
+      {showStars && <StarField theme={starTheme} />}
       <TopNav />
       {children}
 
-      {/* Grain texture overlay — SVG feTurbulence noise */}
-      <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
-        <filter id="grain-noise">
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.65"
-            numOctaves="3"
-            stitchTiles="stitch"
-          />
-        </filter>
-      </svg>
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 9999,
-          pointerEvents: 'none',
-          opacity: 0.035,
-          filter: 'url(#grain-noise)',
-          mixBlendMode: 'overlay',
-          contain: 'layout paint',
-          transform: 'translateZ(0)',
-        }}
-      />
+      <ToastContainer />
     </div>
   );
 }

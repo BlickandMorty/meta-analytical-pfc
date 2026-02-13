@@ -150,7 +150,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark, onStop,
           color: inferenceMode === 'local'
             ? 'var(--color-pfc-green)'
             : inferenceMode === 'api'
-              ? '#C4956A'
+              ? 'var(--pfc-accent)'
               : (isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)'),
         }}
         title={features.modeHint}
@@ -251,7 +251,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark, onStop,
                     flexDirection: 'column',
                     gap: '0.25rem',
                     minWidth: '12rem',
-                    zIndex: 50,
+                    zIndex: 'var(--z-modal)',
                   }}
                 >
                   <p
@@ -294,7 +294,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark, onStop,
                           e.currentTarget.style.background = 'transparent';
                         }}
                       >
-                        <Icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0, color: '#C4956A' }} />
+                        <Icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0, color: 'var(--pfc-accent)' }} />
                         <div>
                           <p style={{ fontSize: '0.6875rem', fontWeight: 600 }}>{opt.label}</p>
                           <p style={{ fontSize: '0.5625rem', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)' }}>
@@ -360,7 +360,7 @@ export const ThinkingControls = memo(function ThinkingControls({ isDark, onStop,
                     flexDirection: 'column',
                     gap: '0.25rem',
                     minWidth: '13rem',
-                    zIndex: 50,
+                    zIndex: 'var(--z-modal)',
                   }}
                 >
                   <p

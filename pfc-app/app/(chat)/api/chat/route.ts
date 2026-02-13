@@ -13,6 +13,21 @@ import {
   getMessagesByChatId,
 } from '@/lib/db/queries';
 import { generateUUID } from '@/lib/utils';
+import {
+  createSSEWriter,
+  isAbortLikeError,
+  parseBodyWithLimit,
+} from '@/lib/api-utils';
+
+interface ChatRequestBody {
+  query?: unknown;
+  userId?: unknown;
+  chatId?: unknown;
+  controls?: unknown;
+  steeringBias?: unknown;
+  inferenceConfig?: unknown;
+  soarConfig?: unknown;
+}
 
 /**
  * Build conversation context from prior messages so the pipeline can detect
@@ -65,9 +80,9 @@ async function buildConversationContext(chatId: string): Promise<ConversationCon
 }
 
 export async function POST(request: NextRequest) {
-  let resolvedChatId: string;
-  let query: string;
-  let existingChat: Awaited<ReturnType<typeof getChatById>>;
+  let resolvedChatId = '';
+  let query = '';
+  let existingChat: Awaited<ReturnType<typeof getChatById>> | null = null;
   let controls: PipelineControls | undefined;
   let steeringBias: SteeringBias | undefined;
   let inferenceConfig: InferenceConfig | undefined;
@@ -75,16 +90,21 @@ export async function POST(request: NextRequest) {
   let conversationContext: ConversationContext | undefined;
 
   try {
-    const body = await request.json();
-    query = body.query;
-    const userId = body.userId;
-    const chatId = body.chatId;
-    controls = body.controls;
-    steeringBias = body.steeringBias;
-    inferenceConfig = body.inferenceConfig;
-    soarConfig = body.soarConfig;
+    const parsedBody = await parseBodyWithLimit<ChatRequestBody>(request, 10 * 1024 * 1024);
+    if ('error' in parsedBody) {
+      return parsedBody.error;
+    }
+    const body = parsedBody.data;
 
-    if (!query || typeof query !== 'string') {
+    query = typeof body.query === 'string' ? body.query : '';
+    const userId = typeof body.userId === 'string' ? body.userId : undefined;
+    const chatId = typeof body.chatId === 'string' ? body.chatId : undefined;
+    controls = body.controls as PipelineControls | undefined;
+    steeringBias = body.steeringBias as SteeringBias | undefined;
+    inferenceConfig = body.inferenceConfig as InferenceConfig | undefined;
+    soarConfig = body.soarConfig as SOARConfig | undefined;
+
+    if (!query) {
       return new Response(
         JSON.stringify({ error: 'Missing query' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
@@ -141,6 +161,7 @@ export async function POST(request: NextRequest) {
   const capturedQuery = query;
   const capturedChatId = resolvedChatId;
   const capturedExistingChat = existingChat;
+  const capturedControls = controls;
   const capturedContext = conversationContext;
   const capturedSteeringBias = steeringBias;
   const capturedInferenceConfig = inferenceConfig;
@@ -151,31 +172,34 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      const writer = createSSEWriter(controller, encoder);
+
       try {
         // Send chatId first so client knows which chat this belongs to
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: 'chat-id', chatId: capturedChatId })}\n\n`
-          )
-        );
+        if (!writer.event({ type: 'chat-id', chatId: capturedChatId })) {
+          writer.close();
+          return;
+        }
 
         // Run the pipeline and stream events (with conversation context)
         for await (const event of runPipeline(
           capturedQuery,
-          controls,
+          capturedControls,
           capturedContext,
           capturedSteeringBias,
           capturedInferenceConfig,
           capturedSoarConfig,
         )) {
           // Stop if client disconnected
-          if (clientSignal.aborted) {
-            controller.close();
+          if (clientSignal.aborted || writer.isClosed()) {
+            writer.close();
             return;
           }
 
-          const data = JSON.stringify(event);
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          if (!writer.event(event)) {
+            writer.close();
+            return;
+          }
 
           // When complete, save the system message to DB
           if (event.type === 'complete') {
@@ -204,32 +228,26 @@ export async function POST(request: NextRequest) {
             } catch (dbError) {
               console.error('[chat/route] DB save error:', dbError);
               // Notify client that DB save failed (non-fatal)
-              controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({ type: 'error', message: 'Message saved to chat but failed to persist to database' })}\n\n`
-                )
-              );
+              writer.event({
+                type: 'error',
+                message: 'Message saved to chat but failed to persist to database',
+              });
             }
           }
         }
 
         // Signal end of stream
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
+        writer.done();
+        writer.close();
       } catch (error) {
-        console.error('[chat/route] Pipeline error:', error);
-        const errorMsg =
-          error instanceof Error ? error.message : 'Unknown error';
-        try {
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: 'error', message: errorMsg })}\n\n`
-            )
-          );
-        } catch {
-          // Controller may be closed if client disconnected
+        if (clientSignal.aborted || writer.isClosed() || isAbortLikeError(error)) {
+          writer.close();
+          return;
         }
-        controller.close();
+        console.error('[chat/route] Pipeline error:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        writer.event({ type: 'error', message: errorMsg });
+        writer.close();
       }
     },
   });

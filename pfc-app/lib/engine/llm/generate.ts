@@ -36,8 +36,8 @@ import {
 
 // ── Streaming chunk type for reasoning/text separation ────────
 
-export type StreamChunkKind = 'reasoning' | 'text';
-export interface LLMStreamChunk {
+type StreamChunkKind = 'reasoning' | 'text';
+interface LLMStreamChunk {
   kind: StreamChunkKind;
   text: string;
 }

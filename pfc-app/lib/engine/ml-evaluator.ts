@@ -60,7 +60,7 @@ export interface PatternAnalysis {
   modularityScore: number;   // how well-structured the codebase is 0-1
 }
 
-export interface AntiPattern {
+interface AntiPattern {
   name: string;
   severity: 'critical' | 'major' | 'minor';
   location: string;          // description of where found
@@ -68,7 +68,7 @@ export interface AntiPattern {
   fix: string;               // recommended fix
 }
 
-export interface BestPractice {
+interface BestPractice {
   name: string;
   category: 'architecture' | 'data' | 'training' | 'evaluation' | 'deployment';
   implemented: boolean;

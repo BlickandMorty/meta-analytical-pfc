@@ -3,10 +3,7 @@
 import type { PipelineControls } from '@/lib/engine/types';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
 
-// Re-export so existing imports from this file still work
-export type { PipelineControls } from '@/lib/engine/types';
-
-export const defaultControls: PipelineControls = {
+const defaultControls: PipelineControls = {
   focusDepthOverride: null,
   temperatureOverride: null,
   complexityBias: 0,

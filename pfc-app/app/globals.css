@@ -57,6 +57,90 @@
   font-display: swap;
 }
 
+/* ── Dotemp 8bit — legacy pixel display font ── */
+@font-face {
+  font-family: 'Dotemp8bit';
+  src: url('/fonts/Dotemp-8bit.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── SN Pro — primary UI / body font ── */
+@font-face {
+  font-family: 'SNPro';
+  src: url('/fonts/sn-pro/SNPro-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SNPro';
+  src: url('/fonts/sn-pro/SNPro-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SNPro';
+  src: url('/fonts/sn-pro/SNPro-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SNPro';
+  src: url('/fonts/sn-pro/SNPro-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Source Serif 4 — greeting hero display font (18pt, SemiBold Italic) ── */
+@font-face {
+  font-family: 'SourceSerif4';
+  src: url('/fonts/SourceSerif4-SemiBoldItalic.ttf') format('truetype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ── Frantically — landing greeting display font ── */
+@font-face {
+  font-family: 'Frantically';
+  src: url('/fonts/Frantically-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── RetroGaming — legacy pixel display font ── */
+@font-face {
+  font-family: 'RetroGaming';
+  src: url('/fonts/RetroGaming.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── GlastonePixel — legacy pixel display font ── */
+@font-face {
+  font-family: 'GlastonePixel';
+  src: url('/fonts/GlastonePixel-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── PressStart2P — retro pixel font for syntax typing animation ── */
+@font-face {
+  font-family: 'PressStart2P';
+  src: url('/fonts/PressStart2P.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Legacy display fonts ── */
 @font-face {
   font-family: 'Ubuntu';
@@ -93,7 +177,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* PFC brand — Claude-inspired warm palette */
+  /* PFC brand — warm palette */
   --color-pfc-ember: #C4956A;
   --color-pfc-violet: #9B7DB8;
   --color-pfc-green: #34D399;
@@ -101,8 +185,12 @@
   --color-pfc-red: #C75E5E;
   --color-pfc-cyan: #6B8EBF;
 
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  /* Ashy red — font accent across all themes */
+  --color-pfc-ashy-red: #B85C5C;
+
+  --font-sans: 'SNPro', 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'SNPro', 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'RetroGaming', 'SNPro', 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
   --font-mono: 'GeistMono', "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   --radius-lg: var(--radius);
@@ -117,6 +205,41 @@
    Material 3 + Harmonoid — Motion & Duration Tokens
    ───────────────────────────────────────────────────────── */
 :root {
+  /* Z-index scale — standardized stacking hierarchy */
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-sidebar: 39;
+  --z-modal-backdrop: 45;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-toast: 70;
+  --z-tooltip: 80;
+  --z-vault-picker: 90;
+  --z-grain: 25;
+
+  /* PFC accent colors — shared across all components */
+  --pfc-accent: #C4956A;
+  --pfc-accent-rgb: 196, 149, 106;
+  --pfc-accent-light: rgba(244, 189, 111, 0.08);
+  --pfc-accent-light-hover: rgba(244, 189, 111, 0.14);
+  --pfc-accent-border: rgba(196, 149, 106, 0.15);
+
+  /* Semantic font accent — ashy red on dark+light, blue on OLED */
+  --pfc-font-accent: #B85C5C;
+
+  /* Secondary UI accent — white on dark, brown on light */
+  --pfc-ui-accent: #A07850;
+
+  /* Surface colors — dark/light variants */
+  --pfc-surface-dark: rgba(22, 21, 19, 0.65);
+  --pfc-surface-light: rgba(237, 232, 222, 0.6);
+  --pfc-border-dark: rgba(50, 49, 45, 0.25);
+  --pfc-border-light: rgba(190, 183, 170, 0.3);
+  --pfc-text-muted-dark: rgba(155, 150, 137, 0.8);
+  --pfc-text-muted-light: rgba(0, 0, 0, 0.45);
+
   /* M3 Emphasized easing — equivalent to Cupertino */
   --m3-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
   --m3-ease-emphasized-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
@@ -261,45 +384,51 @@
   --m3-outline: #827568;
   --m3-outline-variant: #D5C4B4;
 
+  /* Light theme semantic accents */
+  --pfc-font-accent: #B85C5C;
+  /* Secondary UI accent — dark navy blue (like Craft's dark buttons on light bg) */
+  --pfc-ui-accent: #1B2838;
 }
 
 /* ─────────────────────────────────────────────────────────
-   Dark theme — warm dark (not OLED) with elevated surfaces
+   Dark theme — warm mocha palette inspired by Claude
+   Background: very dark warm gray, accents: mocha/brown,
+   secondary UI accent: white (buttons like "New Chat")
    ───────────────────────────────────────────────────────── */
 .dark {
-  --background: #0E0D0B;
+  --background: #1A1816;
   --foreground: #E8E4DE;
-  --card: rgba(24, 23, 21, 0.85);
+  --card: rgba(30, 28, 26, 0.88);
   --card-foreground: #E8E4DE;
-  --popover: rgba(24, 23, 21, 0.95);
+  --popover: rgba(30, 28, 26, 0.96);
   --popover-foreground: #E8E4DE;
   --primary: #C4956A;
-  --primary-foreground: #0E0D0B;
-  --secondary: #191816;
+  --primary-foreground: #1A1816;
+  --secondary: #221F1D;
   --secondary-foreground: #E8E4DE;
-  --muted: #191816;
+  --muted: #221F1D;
   --muted-foreground: #9B9689;
   --accent: #C4956A;
-  --accent-foreground: #0E0D0B;
+  --accent-foreground: #1A1816;
   --destructive: #C75E5E;
   --destructive-foreground: #E8E4DE;
-  --border: rgba(50, 49, 45, 0.5);
-  --input: rgba(45, 44, 40, 0.5);
+  --border: rgba(60, 55, 48, 0.45);
+  --input: rgba(55, 50, 44, 0.45);
   --ring: #C4956A;
 
-  /* Chat surface — unified with background, no two-tone */
-  --chat-surface: #0E0D0B;
+  /* Chat surface — unified with background */
+  --chat-surface: #1A1816;
 
-  /* M3 Surface container hierarchy — warm dark tones */
-  --m3-surface: #0E0D0B;
-  --m3-surface-dim: #0A0908;
-  --m3-surface-bright: #3B3936;
-  --m3-surface-container-lowest: #080807;
-  --m3-surface-container: #181716;
-  --m3-surface-container-high: #222120;
-  --m3-surface-container-highest: #2C2B29;
+  /* M3 Surface container hierarchy — warm dark tones, bumped up */
+  --m3-surface: #1A1816;
+  --m3-surface-dim: #12100E;
+  --m3-surface-bright: #433F3A;
+  --m3-surface-container-lowest: #100E0D;
+  --m3-surface-container: #211F1D;
+  --m3-surface-container-high: #2A2826;
+  --m3-surface-container-highest: #343130;
 
-  /* M3 Color roles — warm brown primary (dark variant) */
+  /* M3 Color roles — mocha primary */
   --m3-primary: #E0B896;
   --m3-on-primary: #442A14;
   --m3-primary-container: #5E4028;
@@ -315,16 +444,22 @@
   --m3-outline: #9F8D7F;
   --m3-outline-variant: #504538;
 
-  /* Sidebar — lighter gray for contrast against OLED bg */
-  --sidebar: rgba(28, 27, 25, 0.9);
+  /* Sidebar — slightly lighter warm gray for contrast */
+  --sidebar: rgba(36, 33, 30, 0.92);
   --sidebar-foreground: #E8E4DE;
-  --sidebar-border: rgba(50, 49, 45, 0.3);
-  --sidebar-accent: rgba(38, 37, 34, 0.6);
+  --sidebar-border: rgba(60, 55, 48, 0.3);
+  --sidebar-accent: rgba(44, 40, 36, 0.65);
   --sidebar-accent-foreground: #E8E4DE;
   --sidebar-ring: #C4956A;
 
-  /* No glass morphism shadows in dark — flat */
-  --liquid-glass-background: rgba(28, 27, 25, 0.75);
+  /* Theme-specific overrides */
+  --pfc-accent: #C4956A;
+  --pfc-accent-rgb: 196, 149, 106;
+  --pfc-font-accent: #B85C5C;
+  --pfc-ui-accent: #FFFFFF;
+
+  /* Flat shadows (none) */
+  --liquid-glass-background: rgba(34, 31, 28, 0.78);
   --shadow-base: none;
   --shadow-border: none;
   --shadow-xs: none;
@@ -332,37 +467,42 @@
   --shadow-l: none;
   --shadow-tactile: none;
 
-  /* Glass tokens (dark) — subtle, no heavy blur */
+  /* Glass tokens — warm dark */
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: rgba(50, 49, 45, 0.3);
-  --glass-hover: rgba(38, 37, 34, 0.6);
+  --glass-border: rgba(60, 55, 48, 0.28);
+  --glass-hover: rgba(44, 40, 36, 0.55);
   --glass-blur: 20px;
   --glass-blur-heavy: 14px;
+
+  /* Surface helpers — darker variants for dark mode */
+  --pfc-surface-dark: rgba(26, 24, 22, 0.65);
+  --pfc-border-dark: rgba(60, 55, 48, 0.25);
 }
 
 /* ─────────────────────────────────────────────────────────
-   OLED theme — true black with dark gray surfaces
+   OLED theme — true black, white accents, VS Code blue
+   font accent. No brown — clean monochrome.
    ───────────────────────────────────────────────────────── */
 .oled {
   --background: #000000;
-  --foreground: #E8E4DE;
-  --card: rgba(22, 22, 22, 0.90);
-  --card-foreground: #E8E4DE;
-  --popover: rgba(18, 18, 18, 0.96);
-  --popover-foreground: #E8E4DE;
-  --primary: #C4956A;
+  --foreground: #E0DDD8;
+  --card: rgba(18, 18, 18, 0.92);
+  --card-foreground: #E0DDD8;
+  --popover: rgba(14, 14, 14, 0.97);
+  --popover-foreground: #E0DDD8;
+  --primary: #FFFFFF;
   --primary-foreground: #000000;
-  --secondary: #161616;
-  --secondary-foreground: #E8E4DE;
-  --muted: #161616;
-  --muted-foreground: #9B9689;
-  --accent: #C4956A;
+  --secondary: #141414;
+  --secondary-foreground: #E0DDD8;
+  --muted: #141414;
+  --muted-foreground: #8A8A8A;
+  --accent: #FFFFFF;
   --accent-foreground: #000000;
   --destructive: #C75E5E;
-  --destructive-foreground: #E8E4DE;
-  --border: rgba(40, 40, 40, 0.6);
-  --input: rgba(35, 35, 35, 0.6);
-  --ring: #C4956A;
+  --destructive-foreground: #E0DDD8;
+  --border: rgba(48, 48, 48, 0.55);
+  --input: rgba(40, 40, 40, 0.55);
+  --ring: #FFFFFF;
 
   /* Chat surface — true black */
   --chat-surface: #000000;
@@ -376,32 +516,41 @@
   --m3-surface-container-high: #1E1E1E;
   --m3-surface-container-highest: #282828;
 
-  /* M3 Color roles — same as dark */
-  --m3-primary: #E0B896;
-  --m3-on-primary: #442A14;
-  --m3-primary-container: #5E4028;
-  --m3-on-primary-container: #F0DCC8;
-  --m3-secondary: #DDC1A8;
-  --m3-on-secondary: #3E2D1C;
-  --m3-secondary-container: #574434;
-  --m3-on-secondary-container: #FAE1C8;
+  /* M3 Color roles — neutral, no warm tint */
+  --m3-primary: #FFFFFF;
+  --m3-on-primary: #000000;
+  --m3-primary-container: #303030;
+  --m3-on-primary-container: #E0DDD8;
+  --m3-secondary: #C0C0C0;
+  --m3-on-secondary: #1A1A1A;
+  --m3-secondary-container: #2A2A2A;
+  --m3-on-secondary-container: #E0DDD8;
   --m3-tertiary: #B6CFB6;
   --m3-on-tertiary: #223625;
   --m3-tertiary-container: #384E3A;
   --m3-on-tertiary-container: #D2EBD1;
-  --m3-outline: #9F8D7F;
-  --m3-outline-variant: #504538;
+  --m3-outline: #6A6A6A;
+  --m3-outline-variant: #404040;
 
   /* Sidebar — dark gray for contrast against pure black */
-  --sidebar: rgba(20, 20, 20, 0.95);
-  --sidebar-foreground: #E8E4DE;
-  --sidebar-border: rgba(40, 40, 40, 0.4);
-  --sidebar-accent: rgba(30, 30, 30, 0.7);
-  --sidebar-accent-foreground: #E8E4DE;
-  --sidebar-ring: #C4956A;
+  --sidebar: rgba(16, 16, 16, 0.96);
+  --sidebar-foreground: #E0DDD8;
+  --sidebar-border: rgba(48, 48, 48, 0.4);
+  --sidebar-accent: rgba(26, 26, 26, 0.7);
+  --sidebar-accent-foreground: #E0DDD8;
+  --sidebar-ring: #FFFFFF;
 
-  /* Glass tokens — dark gray, no warm tint */
-  --liquid-glass-background: rgba(20, 20, 20, 0.80);
+  /* Theme-specific overrides — white accent, no brown */
+  --pfc-accent: #FFFFFF;
+  --pfc-accent-rgb: 255, 255, 255;
+  --pfc-accent-light: rgba(255, 255, 255, 0.06);
+  --pfc-accent-light-hover: rgba(255, 255, 255, 0.12);
+  --pfc-accent-border: rgba(255, 255, 255, 0.12);
+  --pfc-font-accent: #2B8FD4;
+  --pfc-ui-accent: #FFFFFF;
+
+  /* Glass tokens — pure dark gray, no warm tint */
+  --liquid-glass-background: rgba(16, 16, 16, 0.82);
   --shadow-base: none;
   --shadow-border: none;
   --shadow-xs: none;
@@ -410,10 +559,14 @@
   --shadow-tactile: none;
 
   --glass-bg: var(--liquid-glass-background);
-  --glass-border: rgba(40, 40, 40, 0.35);
-  --glass-hover: rgba(30, 30, 30, 0.7);
+  --glass-border: rgba(48, 48, 48, 0.32);
+  --glass-hover: rgba(28, 28, 28, 0.7);
   --glass-blur: 20px;
   --glass-blur-heavy: 14px;
+
+  /* Surface helpers for OLED */
+  --pfc-surface-dark: rgba(10, 10, 10, 0.65);
+  --pfc-border-dark: rgba(48, 48, 48, 0.25);
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -445,7 +598,7 @@ body::after {
   content: '';
   position: fixed;
   inset: 0;
-  z-index: 9998;
+  z-index: var(--z-grain);
   pointer-events: none;
   opacity: 0.030;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -457,7 +610,13 @@ body::after {
 /* ─────────────────────────────────────────────────────────
    Typography — SF Pro / Cupertino hierarchy
    ───────────────────────────────────────────────────────── */
-h1, h2, h3, h4, h5, h6 {
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h4, h5, h6 {
   font-family: var(--font-display);
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv01" 1;
   letter-spacing: -0.025em;
@@ -467,6 +626,13 @@ h1, h2, h3, h4, h5, h6 {
 h1 { letter-spacing: -0.032em; }
 h2 { letter-spacing: -0.028em; }
 h3 { letter-spacing: -0.022em; }
+
+/* Docs page — bold concept words get retro font */
+.docs-content strong {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: 0.8125rem;
+}
 
 nav a, nav button, aside a, aside button, aside span,
 [role="navigation"] a, [role="navigation"] button {

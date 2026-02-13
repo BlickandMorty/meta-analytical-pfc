@@ -5,14 +5,14 @@
 // Ported from LobeChat's StreamingHandler pattern
 // ═══════════════════════════════════════════════════════════════════
 
-export type StreamChunkType = 'text' | 'reasoning' | 'stop';
+type StreamChunkType = 'text' | 'reasoning' | 'stop';
 
-export interface StreamChunk {
+interface StreamChunk {
   type: StreamChunkType;
   text?: string;
 }
 
-export interface StreamingCallbacks {
+interface StreamingCallbacks {
   onContentUpdate: (content: string, reasoning: string) => void;
   onReasoningUpdate: (reasoning: string) => void;
   onReasoningStart: () => void;
@@ -100,14 +100,11 @@ export class StreamingHandler {
 // Artifact Detection — Parses code/math from AI output
 // ═══════════════════════════════════════════════════════════════════
 
-export const ARTIFACT_TAG = 'pfcArtifact';
-export const THINKING_TAG = 'think';
-
-export const ARTIFACT_TAG_REGEX = /<pfcArtifact\b([^>]*)>([\S\s]*?)(?:<\/pfcArtifact>|$)/;
-export const THINKING_TAG_REGEX = /<think\b[^>]*>([\S\s]*?)(?:<\/think>|$)/;
+const ARTIFACT_TAG_REGEX = /<pfcArtifact\b([^>]*)>([\S\s]*?)(?:<\/pfcArtifact>|$)/;
+const THINKING_TAG_REGEX = /<think\b[^>]*>([\S\s]*?)(?:<\/think>|$)/;
 
 /** Extract attributes from artifact tag */
-export function parseArtifactAttributes(attrString: string): Record<string, string> {
+function parseArtifactAttributes(attrString: string): Record<string, string> {
   const attrs: Record<string, string> = {};
   const regex = /(\w+)="([^"]*)"/g;
   let match;
@@ -118,7 +115,7 @@ export function parseArtifactAttributes(attrString: string): Record<string, stri
 }
 
 /** Detect code blocks in message content that should be pushed to portal */
-export interface DetectedArtifact {
+interface DetectedArtifact {
   identifier: string;
   title: string;
   type: string;
@@ -171,7 +168,7 @@ export function detectArtifacts(content: string): DetectedArtifact[] {
 }
 
 /** Extract thinking content from <think> tags */
-export function extractThinking(content: string): { thinking: string; cleanContent: string } | null {
+function extractThinking(content: string): { thinking: string; cleanContent: string } | null {
   const match = THINKING_TAG_REGEX.exec(content);
   if (!match) return null;
 

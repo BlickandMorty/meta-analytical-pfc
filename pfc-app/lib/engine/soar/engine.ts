@@ -38,7 +38,7 @@ import type { InferenceMode } from '../llm/config';
 // Event callback for streaming UI updates
 // ---------------------------------------------------------------------------
 
-export type SOAREventType =
+type SOAREventType =
   | 'probe-complete'
   | 'teaching-start'
   | 'teaching-complete'
@@ -53,7 +53,7 @@ export type SOAREventType =
   | 'session-complete'
   | 'session-aborted';
 
-export interface SOAREvent {
+interface SOAREvent {
   type: SOAREventType;
   sessionId: string;
   iteration: number;
@@ -61,15 +61,14 @@ export interface SOAREvent {
   timestamp: number;
 }
 
-export type SOAREventCallback = (event: SOAREvent) => void;
+type SOAREventCallback = (event: SOAREvent) => void;
 
 // ---------------------------------------------------------------------------
 // Session ID generator
 // ---------------------------------------------------------------------------
 
-let sessionCounter = 0;
 function generateSessionId(): string {
-  return `soar_${++sessionCounter}_${Date.now()}`;
+  return `soar_${crypto.randomUUID()}`;
 }
 
 // ---------------------------------------------------------------------------

@@ -30,14 +30,6 @@ function saveConfig(config: SOARConfig) {
 export interface SOARSliceState {
   soarConfig: SOARConfig;
   soarSession: SOARSession | null;
-  soarSessionHistory: Array<{
-    id: string;
-    query: string;
-    improved: boolean;
-    iterations: number;
-    reward: number;
-    timestamp: number;
-  }>;
 }
 
 // ── Actions interface ──
@@ -52,7 +44,6 @@ export const createSOARSlice = (set: PFCSet, get: PFCGet) => ({
   // ── Initial state ──
   soarConfig: loadConfig(),
   soarSession: null as SOARSession | null,
-  soarSessionHistory: [] as SOARSliceState['soarSessionHistory'],
 
   // ── Actions ──
 

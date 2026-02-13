@@ -36,6 +36,12 @@ import {
   StrikethroughIcon,
   HighlighterIcon,
   CodeXmlIcon,
+  ScissorsIcon,
+  ClipboardIcon,
+  ClipboardPasteIcon,
+  Trash2Icon,
+  RemoveFormattingIcon,
+  PilcrowIcon,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -69,6 +75,10 @@ function processContentLinks(html: string): string {
       );
     })
     .join('');
+}
+
+function isRangeWithinNode(range: Range, node: Node): boolean {
+  return node.contains(range.startContainer) && node.contains(range.endContainer);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -116,7 +126,7 @@ function PageLinkPopup({
         position: 'fixed',
         top: position.top,
         left: position.left,
-        zIndex: 50,
+        zIndex: 'var(--z-modal)',
         width: '16rem',
         maxHeight: '18rem',
         overflowY: 'auto',
@@ -169,13 +179,13 @@ function PageLinkPopup({
                 cursor: 'pointer',
                 textAlign: 'left',
                 background: isSelected
-                  ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.08)')
+                  ? (isDark ? 'rgba(var(--pfc-accent-rgb), 0.12)' : 'rgba(var(--pfc-accent-rgb), 0.08)')
                   : 'transparent',
                 color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.8)',
                 transition: 'background 0.1s',
               }}
             >
-              <LinkIcon style={{ width: '12px', height: '12px', color: '#C4956A', flexShrink: 0 }} />
+              <LinkIcon style={{ width: '12px', height: '12px', color: 'var(--pfc-accent)', flexShrink: 0 }} />
               <span style={{
                 fontSize: '0.8125rem',
                 fontWeight: 550,
@@ -236,7 +246,7 @@ function FloatingToolbar({
         top: position.top - 44,
         left: position.left,
         transform: 'translateX(-50%)',
-        zIndex: 60,
+        zIndex: 'var(--z-popover)',
         display: 'flex',
         alignItems: 'center',
         gap: '2px',
@@ -279,8 +289,8 @@ function FloatingToolbar({
             transition: `background 0.1s ${CUP}, color 0.1s`,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = isDark ? 'rgba(196,149,106,0.15)' : 'rgba(0,0,0,0.06)';
-            e.currentTarget.style.color = '#C4956A';
+            e.currentTarget.style.background = isDark ? 'rgba(var(--pfc-accent-rgb), 0.15)' : 'rgba(0,0,0,0.06)';
+            e.currentTarget.style.color = 'var(--pfc-accent)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
@@ -290,6 +300,299 @@ function FloatingToolbar({
           <Icon style={{ width: '14px', height: '14px' }} />
         </button>
       ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BlockContextMenu — Craft/Obsidian-style right-click menu
+// Replaces the floating toolbar with a full context menu system
+// ═══════════════════════════════════════════════════════════════════
+
+interface ContextMenuItem {
+  id: string;
+  label: string;
+  icon?: LucideIcon;
+  shortcut?: string;
+  action?: () => void;
+  separator?: boolean;
+  submenu?: ContextMenuItem[];
+  disabled?: boolean;
+}
+
+function BlockContextMenu({
+  position,
+  isDark,
+  onClose,
+  onFormat,
+  onChangeType,
+  onInsert,
+  onDelete,
+  currentBlockType,
+}: {
+  position: { x: number; y: number };
+  isDark: boolean;
+  onClose: () => void;
+  onFormat: (command: string) => void;
+  onChangeType: (type: BlockType, props?: Record<string, string>) => void;
+  onInsert: (type: string) => void;
+  onDelete: () => void;
+  currentBlockType: BlockType;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Close on outside click or Escape
+  useEffect(() => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClick);
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, [onClose]);
+
+  // Clamp menu position to viewport
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  useEffect(() => {
+    if (!menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const x = Math.min(position.x, window.innerWidth - rect.width - 8);
+    const y = Math.min(position.y, window.innerHeight - rect.height - 8);
+    setMenuStyle({ top: Math.max(4, y), left: Math.max(4, x) });
+  }, [position]);
+
+  const handleCut = () => { document.execCommand('cut'); onClose(); };
+  const handleCopy = () => { document.execCommand('copy'); onClose(); };
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      document.execCommand('insertText', false, text);
+    } catch { document.execCommand('paste'); }
+    onClose();
+  };
+  const handleSelectAll = () => {
+    const sel = window.getSelection();
+    const blockEl = sel?.anchorNode?.parentElement?.closest('[data-block-id]');
+    if (blockEl) {
+      const range = document.createRange();
+      range.selectNodeContents(blockEl);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+    onClose();
+  };
+
+  // Menu definitions
+  const formatSubmenu: ContextMenuItem[] = [
+    { id: 'bold', label: 'Bold', icon: BoldIcon, shortcut: '⌘B', action: () => { onFormat('bold'); onClose(); } },
+    { id: 'italic', label: 'Italic', icon: ItalicIcon, shortcut: '⌘I', action: () => { onFormat('italic'); onClose(); } },
+    { id: 'underline', label: 'Underline', icon: UnderlineIcon, shortcut: '⌘U', action: () => { onFormat('underline'); onClose(); } },
+    { id: 'strikethrough', label: 'Strikethrough', icon: StrikethroughIcon, shortcut: '⌘⇧S', action: () => { onFormat('strikethrough'); onClose(); } },
+    { id: 'sep1', label: '', separator: true },
+    { id: 'code', label: 'Inline Code', icon: CodeXmlIcon, shortcut: '⌘E', action: () => { onFormat('inlineCode'); onClose(); } },
+    { id: 'highlight', label: 'Highlight', icon: HighlighterIcon, shortcut: '⌘⇧H', action: () => { onFormat('highlight'); onClose(); } },
+    { id: 'sep2', label: '', separator: true },
+    { id: 'clear', label: 'Clear Formatting', icon: RemoveFormattingIcon, action: () => { document.execCommand('removeFormat'); onClose(); } },
+  ];
+
+  const turnIntoSubmenu: ContextMenuItem[] = [
+    { id: 'paragraph', label: 'Text', icon: PilcrowIcon, action: () => { onChangeType('paragraph'); onClose(); }, disabled: currentBlockType === 'paragraph' },
+    { id: 'h1', label: 'Heading 1', icon: Heading1Icon, action: () => { onChangeType('heading', { level: '1' }); onClose(); } },
+    { id: 'h2', label: 'Heading 2', icon: Heading2Icon, action: () => { onChangeType('heading', { level: '2' }); onClose(); } },
+    { id: 'h3', label: 'Heading 3', icon: Heading3Icon, action: () => { onChangeType('heading', { level: '3' }); onClose(); } },
+    { id: 'sep1', label: '', separator: true },
+    { id: 'bullet', label: 'Bullet List', icon: ListIcon, action: () => { onChangeType('list-item'); onClose(); }, disabled: currentBlockType === 'list-item' },
+    { id: 'numbered', label: 'Numbered List', icon: ListOrderedIcon, action: () => { onChangeType('numbered-item'); onClose(); }, disabled: currentBlockType === 'numbered-item' },
+    { id: 'todo', label: 'To-do', icon: CheckSquareIcon, action: () => { onChangeType('todo', { checked: 'false' }); onClose(); }, disabled: currentBlockType === 'todo' },
+    { id: 'sep2', label: '', separator: true },
+    { id: 'quote', label: 'Quote', icon: QuoteIcon, action: () => { onChangeType('quote'); onClose(); }, disabled: currentBlockType === 'quote' },
+    { id: 'callout', label: 'Callout', icon: AlertCircleIcon, action: () => { onChangeType('callout'); onClose(); }, disabled: currentBlockType === 'callout' },
+    { id: 'code-block', label: 'Code Block', icon: CodeIcon, action: () => { onChangeType('code'); onClose(); }, disabled: currentBlockType === 'code' },
+    { id: 'toggle', label: 'Toggle', icon: ChevronRightIcon, action: () => { onChangeType('toggle'); onClose(); }, disabled: currentBlockType === 'toggle' },
+  ];
+
+  const insertSubmenu: ContextMenuItem[] = [
+    { id: 'divider', label: 'Divider', icon: MinusIcon, action: () => { onInsert('divider'); onClose(); } },
+    { id: 'page-break', label: 'Page Break', icon: MinusIcon, action: () => { onInsert('page-break'); onClose(); } },
+    { id: 'sep1', label: '', separator: true },
+    { id: 'table', label: 'Table', icon: TableIcon, action: () => { onInsert('table'); onClose(); } },
+    { id: 'image', label: 'Image', icon: ImageIcon, action: () => { onInsert('image'); onClose(); } },
+    { id: 'math', label: 'Math Block', icon: SigmaIcon, action: () => { onInsert('math'); onClose(); } },
+    { id: 'embed', label: 'Embed', icon: FrameIcon, action: () => { onInsert('embed'); onClose(); } },
+  ];
+
+  const menuItems: ContextMenuItem[] = [
+    { id: 'format', label: 'Format', icon: BoldIcon, submenu: formatSubmenu },
+    { id: 'turn-into', label: 'Turn into', icon: PilcrowIcon, submenu: turnIntoSubmenu },
+    { id: 'insert', label: 'Insert below', icon: PlusIcon, submenu: insertSubmenu },
+    { id: 'sep-actions', label: '', separator: true },
+    { id: 'cut', label: 'Cut', icon: ScissorsIcon, shortcut: '⌘X', action: handleCut },
+    { id: 'copy', label: 'Copy', icon: ClipboardIcon, shortcut: '⌘C', action: handleCopy },
+    { id: 'paste', label: 'Paste', icon: ClipboardPasteIcon, shortcut: '⌘V', action: handlePaste },
+    { id: 'select-all', label: 'Select All', shortcut: '⌘A', action: handleSelectAll },
+    { id: 'sep-delete', label: '', separator: true },
+    { id: 'delete', label: 'Delete Block', icon: Trash2Icon, action: () => { onDelete(); onClose(); } },
+  ];
+
+  const bg = isDark ? 'rgba(28,24,20,0.96)' : 'rgba(255,255,255,0.98)';
+  const border = isDark ? 'rgba(79,69,57,0.45)' : 'rgba(190,183,170,0.28)';
+  const hoverBg = isDark ? 'rgba(var(--pfc-accent-rgb), 0.1)' : 'rgba(0,0,0,0.04)';
+  const textColor = isDark ? 'rgba(232,228,222,0.85)' : 'rgba(0,0,0,0.7)';
+  const subtleColor = isDark ? 'rgba(232,228,222,0.38)' : 'rgba(0,0,0,0.32)';
+  const dangerColor = isDark ? '#E07850' : '#C44030';
+  const sepColor = isDark ? 'rgba(79,69,57,0.35)' : 'rgba(0,0,0,0.06)';
+
+  const handleSubmenuEnter = (itemId: string, e: React.MouseEvent<HTMLDivElement>) => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setSubmenuPos({ top: rect.top - 4, left: rect.right + 2 });
+    hoverTimerRef.current = setTimeout(() => setOpenSubmenu(itemId), 80);
+  };
+
+  const handleSubmenuLeave = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => setOpenSubmenu(null), 200);
+  };
+
+  const renderMenuItem = (item: ContextMenuItem, inSubmenu = false) => {
+    if (item.separator) {
+      return <div key={item.id} style={{ height: 1, margin: '4px 8px', background: sepColor }} />;
+    }
+
+    const hasSubmenu = !!item.submenu;
+    const isDelete = item.id === 'delete';
+    const Icon = item.icon;
+
+    return (
+      <div
+        key={item.id}
+        onMouseDown={(e) => e.preventDefault()} // Prevent focus theft from contentEditable
+        onClick={item.disabled ? undefined : item.action}
+        onMouseEnter={(e) => {
+          if (item.disabled) return;
+          (e.currentTarget as HTMLElement).style.background = hoverBg;
+          if (hasSubmenu) handleSubmenuEnter(item.id, e);
+          else {
+            if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+            if (!inSubmenu) hoverTimerRef.current = setTimeout(() => setOpenSubmenu(null), 200);
+          }
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLElement).style.background = 'transparent';
+          if (hasSubmenu) handleSubmenuLeave();
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.38rem 0.6rem 0.38rem 0.55rem',
+          borderRadius: '6px',
+          cursor: item.disabled ? 'default' : 'pointer',
+          color: item.disabled ? subtleColor : isDelete ? dangerColor : textColor,
+          fontSize: '0.78rem',
+          fontWeight: 520,
+          letterSpacing: '-0.005em',
+          opacity: item.disabled ? 0.5 : 1,
+          transition: 'background 0.08s',
+          position: 'relative',
+        }}
+      >
+        {Icon && <Icon style={{ width: 14, height: 14, strokeWidth: 2, opacity: 0.7, flexShrink: 0 }} />}
+        <span style={{ flex: 1, lineHeight: 1 }}>{item.label}</span>
+        {item.shortcut && (
+          <span style={{
+            fontSize: '0.66rem', fontWeight: 500, color: subtleColor,
+            fontFamily: 'var(--font-mono)', letterSpacing: '0.02em',
+          }}>{item.shortcut}</span>
+        )}
+        {hasSubmenu && (
+          <ChevronRightIcon style={{ width: 12, height: 12, strokeWidth: 2.2, opacity: 0.4, marginLeft: 'auto' }} />
+        )}
+      </div>
+    );
+  };
+
+  const renderSubmenu = (items: ContextMenuItem[]) => (
+    <div
+      onMouseDown={(e) => e.preventDefault()} // Prevent focus theft from contentEditable
+      onMouseEnter={() => { if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current); }}
+      onMouseLeave={handleSubmenuLeave}
+      style={{
+        position: 'fixed',
+        top: Math.min(submenuPos.top, window.innerHeight - 320),
+        left: Math.min(submenuPos.left, window.innerWidth - 220),
+        width: '13.5rem',
+        maxHeight: '22rem',
+        overflowY: 'auto',
+        padding: '4px',
+        borderRadius: '10px',
+        background: bg,
+        border: `1px solid ${border}`,
+        boxShadow: isDark
+          ? '0 8px 32px rgba(0,0,0,0.65), 0 2px 8px rgba(0,0,0,0.3)'
+          : '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
+        backdropFilter: 'blur(24px) saturate(1.6)',
+        zIndex: 'var(--z-modal)',
+        animation: 'ctx-sub-in 0.1s cubic-bezier(0.32, 0.72, 0, 1)',
+        scrollbarWidth: 'thin',
+        scrollbarColor: isDark ? 'rgba(79,69,57,0.3) transparent' : 'rgba(0,0,0,0.08) transparent',
+      }}
+    >
+      {items.map((item) => renderMenuItem(item, true))}
+    </div>
+  );
+
+  return (
+    <div ref={menuRef} onMouseDown={(e) => e.preventDefault()} style={{ display: 'contents' }}>
+      <div
+        onMouseDown={(e) => e.preventDefault()} // Prevent focus theft from contentEditable
+        style={{
+          position: 'fixed',
+          ...menuStyle,
+          width: '14.5rem',
+          padding: '4px',
+          borderRadius: '10px',
+          background: bg,
+          border: `1px solid ${border}`,
+          boxShadow: isDark
+            ? '0 12px 48px rgba(0,0,0,0.7), 0 4px 12px rgba(0,0,0,0.35)'
+            : '0 12px 48px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.07)',
+          backdropFilter: 'blur(24px) saturate(1.6)',
+          zIndex: 'var(--z-modal)',
+          animation: 'ctx-menu-in 0.12s cubic-bezier(0.32, 0.72, 0, 1)',
+        }}
+      >
+        {menuItems.map((item) => renderMenuItem(item))}
+      </div>
+
+      {/* Render submenu — inside menuRef so outside-click detection works */}
+      {openSubmenu && (() => {
+        const parent = menuItems.find(i => i.id === openSubmenu);
+        return parent?.submenu ? renderSubmenu(parent.submenu) : null;
+      })()}
+
+      <style>{`
+        @keyframes ctx-menu-in {
+          from { opacity: 0; transform: scale(0.96) translateY(-2px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes ctx-sub-in {
+          from { opacity: 0; transform: translateX(-4px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -354,7 +657,7 @@ function SlashMenu({
         position: 'fixed',
         top: position.top,
         left: position.left,
-        zIndex: 50,
+        zIndex: 'var(--z-modal)',
         width: '18rem',
         maxHeight: '22rem',
         overflowY: 'auto',
@@ -403,7 +706,7 @@ function SlashMenu({
                   cursor: 'pointer',
                   textAlign: 'left',
                   background: isSelected
-                    ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.08)')
+                    ? (isDark ? 'rgba(var(--pfc-accent-rgb), 0.12)' : 'rgba(var(--pfc-accent-rgb), 0.08)')
                     : 'transparent',
                   color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.8)',
                   transition: 'background 0.1s',
@@ -412,10 +715,10 @@ function SlashMenu({
                 <div style={{
                   width: '24px', height: '24px', borderRadius: '6px',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(0,0,0,0.04)',
+                  background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(0,0,0,0.04)',
                   flexShrink: 0,
                 }}>
-                  <Icon style={{ width: '13px', height: '13px', color: '#C4956A' }} />
+                  <Icon style={{ width: '13px', height: '13px', color: 'var(--pfc-accent)' }} />
                 </div>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{cmd.label}</div>
@@ -474,8 +777,11 @@ const EmbeddedPageContent = memo(function EmbeddedPageContent({
         <div
           key={b.id}
           style={{
-            fontSize: b.type === 'heading' ? '0.875rem' : '0.8125rem',
-            fontWeight: b.type === 'heading' ? 600 : 400,
+            fontSize: b.type === 'heading'
+              ? (b.properties?.level === '1' ? '1rem' : b.properties?.level === '2' ? '0.9375rem' : '0.875rem')
+              : '0.8125rem',
+            fontWeight: b.type === 'heading' ? 400 : 400,
+            fontFamily: b.type === 'heading' ? 'var(--font-heading)' : undefined,
             lineHeight: 1.6,
             color: isDark ? 'rgba(232,228,222,0.7)' : 'rgba(0,0,0,0.6)',
             paddingLeft: `${b.indent * 1}rem`,
@@ -486,7 +792,7 @@ const EmbeddedPageContent = memo(function EmbeddedPageContent({
       {blocks.length >= 8 && (
         <div style={{
           fontSize: '0.6875rem',
-          color: isDark ? 'rgba(196,149,106,0.4)' : 'rgba(196,149,106,0.5)',
+          color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.4)' : 'rgba(var(--pfc-accent-rgb), 0.5)',
           fontWeight: 500,
         }}>
           Click to view full page →
@@ -514,6 +820,7 @@ const BlockItem = memo(function BlockItem({
   onDrop,
   readOnly,
   onNavigateToPage,
+  isTypewriterTarget,
 }: {
   block: NoteBlock;
   isEditing: boolean;
@@ -528,6 +835,8 @@ const BlockItem = memo(function BlockItem({
   onDrop: () => void;
   readOnly?: boolean;
   onNavigateToPage?: (pageTitle: string) => void;
+  /** Block is actively receiving typewriter AI output */
+  isTypewriterTarget?: boolean;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const updateBlockContent = usePFCStore((s) => s.updateBlockContent);
@@ -563,21 +872,56 @@ const BlockItem = memo(function BlockItem({
   // Track whether we set innerHTML to avoid input event loops
   const suppressInputRef = useRef(false);
 
+  // Track the last content we synced TO the store, so we know when
+  // the store changed externally (e.g., undo/redo)
+  const lastSyncedContentRef = useRef(block.content);
+
+  // ── Debounced typing undo — captures content before typing starts,
+  // pushes a coalesced transaction after user pauses (500ms)
+  const typingSnapshotRef = useRef<string | null>(null);
+  const typingUndoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Sync content from store → DOM on mount and when block changes
   // When not editing, render [[links]] as clickable styled spans
+  // When editing AND store content differs from what we last synced
+  // (undo/redo happened), force-update the DOM
   useEffect(() => {
-    if (contentRef.current && !isEditing) {
+    if (!contentRef.current) return;
+    if (!isEditing) {
       const displayContent = processContentLinks(block.content);
       if (contentRef.current.innerHTML !== displayContent) {
         suppressInputRef.current = true;
         contentRef.current.innerHTML = displayContent;
       }
+    } else if (block.content !== lastSyncedContentRef.current) {
+      // Undo/redo changed the store content — re-sync to DOM
+      suppressInputRef.current = true;
+      contentRef.current.innerHTML = block.content || '<br>';
+      lastSyncedContentRef.current = block.content;
     }
   }, [block.content, isEditing]);
 
-  // Focus + restore cursor when becoming editing block
+  // ── Typewriter mode sync: stream store content → DOM while AI writes ──
+  // Normal sync skips isEditing=true, but typewriter blocks ARE editing.
+  // This effect pushes each SSE token into the contentEditable div.
+  // Note: block.content is authored by the local AI engine, same trust
+  // model as the existing innerHTML sync paths above.
   useEffect(() => {
-    if (isEditing && contentRef.current) {
+    if (isTypewriterTarget && contentRef.current) {
+      const current = contentRef.current.innerHTML;
+      if (current !== block.content) {
+        suppressInputRef.current = true;
+        contentRef.current.innerHTML = block.content;
+        // Keep the growing block visible
+        contentRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [isTypewriterTarget, block.content]);
+
+  // Focus + restore cursor when becoming editing block
+  // Skip when typewriter target — AI is writing, don't steal focus
+  useEffect(() => {
+    if (isEditing && !isTypewriterTarget && contentRef.current) {
       // Set content first
       if (contentRef.current.innerHTML !== block.content) {
         suppressInputRef.current = true;
@@ -594,7 +938,14 @@ const BlockItem = memo(function BlockItem({
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
-  }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isEditing, isTypewriterTarget]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup typing undo timer on unmount
+  useEffect(() => {
+    return () => {
+      if (typingUndoTimerRef.current) clearTimeout(typingUndoTimerRef.current);
+    };
+  }, []);
 
   // ── Input handler — reads innerHTML for rich formatting ──
   const handleInput = useCallback(() => {
@@ -603,6 +954,27 @@ const BlockItem = memo(function BlockItem({
     const html = contentRef.current.innerHTML;
     // Normalize browser-generated empty content
     const cleaned = html === '<br>' ? '' : html;
+
+    // ── Debounced typing undo — capture snapshot before first keystroke
+    if (typingSnapshotRef.current === null) {
+      typingSnapshotRef.current = lastSyncedContentRef.current;
+    }
+    // Reset the debounce timer on each keystroke
+    if (typingUndoTimerRef.current) clearTimeout(typingUndoTimerRef.current);
+    typingUndoTimerRef.current = setTimeout(() => {
+      // Push coalesced typing transaction after 500ms pause
+      const snapshot = typingSnapshotRef.current;
+      typingSnapshotRef.current = null;
+      typingUndoTimerRef.current = null;
+      if (snapshot !== null && snapshot !== cleaned) {
+        usePFCStore.getState().pushTransaction(
+          [{ action: 'update', blockId: block.id, pageId, data: { content: cleaned } }],
+          [{ action: 'update', blockId: block.id, pageId, previousData: { content: snapshot } }],
+        );
+      }
+    }, 500);
+
+    lastSyncedContentRef.current = cleaned;
     updateBlockContent(block.id, cleaned);
 
     // Slash menu tracking
@@ -635,13 +1007,19 @@ const BlockItem = memo(function BlockItem({
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const range = sel.getRangeAt(0);
+        if (!isRangeWithinNode(range, contentRef.current)) return;
         // Get text content up to cursor
-        const beforeRange = document.createRange();
-        beforeRange.setStart(contentRef.current, 0);
-        beforeRange.setEnd(range.startContainer, range.startOffset);
-        const tmpDiv = document.createElement('div');
-        tmpDiv.appendChild(beforeRange.cloneContents());
-        const textBefore = tmpDiv.textContent ?? '';
+        let textBefore = '';
+        try {
+          const beforeRange = document.createRange();
+          beforeRange.setStart(contentRef.current, 0);
+          beforeRange.setEnd(range.startContainer, range.startOffset);
+          const tmpDiv = document.createElement('div');
+          tmpDiv.appendChild(beforeRange.cloneContents());
+          textBefore = tmpDiv.textContent ?? '';
+        } catch {
+          return;
+        }
 
         if (textBefore.endsWith('[[')) {
           const rect = range.getBoundingClientRect();
@@ -658,9 +1036,15 @@ const BlockItem = memo(function BlockItem({
   }, [block.id, updateBlockContent, slashOpen, bracketOpen]);
 
   // ── Apply inline formatting (SiYuan keyboard shortcuts) ──
+  // Pushes a transaction so Cmd+Z can undo format changes
   const applyFormat = useCallback((command: string) => {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
+    if (!contentRef.current) return;
+
+    // Capture before-state for undo
+    const oldHtml = contentRef.current.innerHTML;
+    const oldContent = oldHtml === '<br>' ? '' : oldHtml;
 
     switch (command) {
       case 'bold':
@@ -681,14 +1065,18 @@ const BlockItem = memo(function BlockItem({
         if (range.collapsed) break;
         const code = document.createElement('code');
         code.style.cssText = `
-          background: ${isDark ? 'rgba(196,149,106,0.1)' : 'rgba(0,0,0,0.06)'};
+          background: ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.1)' : 'rgba(0,0,0,0.06)'};
           padding: 0.125em 0.35em;
           border-radius: 4px;
           font-family: var(--font-mono);
           font-size: 0.875em;
           color: ${isDark ? '#E8B06A' : '#B07D42'};
         `;
-        range.surroundContents(code);
+        try {
+          range.surroundContents(code);
+        } catch {
+          break;
+        }
         break;
       }
       case 'highlight': {
@@ -696,17 +1084,29 @@ const BlockItem = memo(function BlockItem({
         if (range.collapsed) break;
         const mark = document.createElement('mark');
         mark.style.cssText = `background: rgba(251,191,36,0.25); padding: 0 2px; border-radius: 2px;`;
-        range.surroundContents(mark);
+        try {
+          range.surroundContents(mark);
+        } catch {
+          break;
+        }
         break;
       }
     }
 
-    // Sync to store
-    if (contentRef.current) {
-      const html = contentRef.current.innerHTML;
-      updateBlockContent(block.id, html === '<br>' ? '' : html);
+    // Capture after-state and sync to store
+    const newHtml = contentRef.current.innerHTML;
+    const newContent = newHtml === '<br>' ? '' : newHtml;
+
+    if (newContent !== oldContent) {
+      lastSyncedContentRef.current = newContent;
+      updateBlockContent(block.id, newContent);
+      // Push transaction for undo/redo
+      usePFCStore.getState().pushTransaction(
+        [{ action: 'update', blockId: block.id, pageId, data: { content: newContent } }],
+        [{ action: 'update', blockId: block.id, pageId, previousData: { content: oldContent } }],
+      );
     }
-  }, [block.id, isDark, updateBlockContent]);
+  }, [block.id, pageId, isDark, updateBlockContent]);
 
   // ── Slash command select ──
   const handleSlashSelect = useCallback((cmd: SlashCommand) => {
@@ -903,24 +1303,38 @@ const BlockItem = memo(function BlockItem({
 
       // Split at cursor position
       const range = sel.getRangeAt(0);
-      const beforeRange = document.createRange();
-      beforeRange.setStart(contentRef.current, 0);
-      beforeRange.setEnd(range.startContainer, range.startOffset);
+      if (!isRangeWithinNode(range, contentRef.current)) {
+        const newId = createBlock(pageId, block.parentId, block.id);
+        requestAnimationFrame(() => setEditingBlock(newId));
+        return;
+      }
 
-      const afterRange = document.createRange();
-      afterRange.setStart(range.endContainer, range.endOffset);
-      afterRange.setEndAfter(contentRef.current.lastChild || contentRef.current);
+      let htmlBefore = '';
+      let htmlAfter = '';
+      try {
+        const beforeRange = document.createRange();
+        beforeRange.setStart(contentRef.current, 0);
+        beforeRange.setEnd(range.startContainer, range.startOffset);
 
-      const beforeFrag = beforeRange.cloneContents();
-      const afterFrag = afterRange.cloneContents();
+        const afterRange = document.createRange();
+        afterRange.setStart(range.endContainer, range.endOffset);
+        afterRange.setEnd(contentRef.current, contentRef.current.childNodes.length);
 
-      const tmpBefore = document.createElement('div');
-      tmpBefore.appendChild(beforeFrag);
-      const tmpAfter = document.createElement('div');
-      tmpAfter.appendChild(afterFrag);
+        const beforeFrag = beforeRange.cloneContents();
+        const afterFrag = afterRange.cloneContents();
 
-      const htmlBefore = tmpBefore.innerHTML;
-      const htmlAfter = tmpAfter.innerHTML;
+        const tmpBefore = document.createElement('div');
+        tmpBefore.appendChild(beforeFrag);
+        const tmpAfter = document.createElement('div');
+        tmpAfter.appendChild(afterFrag);
+
+        htmlBefore = tmpBefore.innerHTML;
+        htmlAfter = tmpAfter.innerHTML;
+      } catch {
+        const newId = createBlock(pageId, block.parentId, block.id);
+        requestAnimationFrame(() => setEditingBlock(newId));
+        return;
+      }
 
       const newId = splitBlock(block.id, htmlBefore, htmlAfter);
       if (newId) {
@@ -1018,17 +1432,38 @@ const BlockItem = memo(function BlockItem({
       }
     }
 
-    // ── Markdown shortcuts on Space ──
+    // ── Markdown shortcuts on Space (Obsidian-complete set) ──
     if (e.key === ' ' && !isMod) {
+      // Headings: # through ######
       if (text === '#') { e.preventDefault(); changeBlockType(block.id, 'heading', { level: '1' }); }
       else if (text === '##') { e.preventDefault(); changeBlockType(block.id, 'heading', { level: '2' }); }
       else if (text === '###') { e.preventDefault(); changeBlockType(block.id, 'heading', { level: '3' }); }
-      else if (text === '-' || text === '*') { e.preventDefault(); changeBlockType(block.id, 'list-item', {}); }
-      else if (text === '1.') { e.preventDefault(); changeBlockType(block.id, 'numbered-item', {}); }
-      else if (text === '[]' || text === '[ ]') { e.preventDefault(); changeBlockType(block.id, 'todo', { checked: 'false' }); }
+      else if (text === '####') { e.preventDefault(); changeBlockType(block.id, 'heading', { level: '4' }); }
+      else if (text === '#####') { e.preventDefault(); changeBlockType(block.id, 'heading', { level: '5' }); }
+      else if (text === '######') { e.preventDefault(); changeBlockType(block.id, 'heading', { level: '6' }); }
+      // Bullet list: - or * or +
+      else if (text === '-' || text === '*' || text === '+') { e.preventDefault(); changeBlockType(block.id, 'list-item', {}); }
+      // Numbered list: 1. 2. etc
+      else if (/^\d+\.$/.test(text)) { e.preventDefault(); changeBlockType(block.id, 'numbered-item', {}); }
+      // Todo / checkbox: [] [ ] [x] -[] -[ ] - [] - [ ]
+      else if (/^-?\s?\[[\sx]?\]$/.test(text)) { e.preventDefault(); changeBlockType(block.id, 'todo', { checked: text.includes('x') ? 'true' : 'false' }); }
+      // Quote: >
       else if (text === '>') { e.preventDefault(); changeBlockType(block.id, 'quote', {}); }
-      else if (text === '---') { e.preventDefault(); changeBlockType(block.id, 'divider', {}); }
+      // Callout: >! or >> (Obsidian-style callout)
+      else if (text === '>!' || text === '>>') { e.preventDefault(); changeBlockType(block.id, 'callout', {}); }
+      // Divider / horizontal rule: --- or *** or ___
+      else if (text === '---' || text === '***' || text === '___') { e.preventDefault(); changeBlockType(block.id, 'divider', {}); }
+      // Code block: ```
       else if (text === '```') { e.preventDefault(); changeBlockType(block.id, 'code', { language: '' }); }
+      // Code block with language: ```js ```python etc.
+      else if (text.startsWith('```') && text.length > 3) {
+        e.preventDefault();
+        changeBlockType(block.id, 'code', { language: text.slice(3).trim() });
+      }
+      // Math block: $$ (LaTeX)
+      else if (text === '$$') { e.preventDefault(); changeBlockType(block.id, 'math', {}); }
+      // Toggle / collapsible: >>>
+      else if (text === '>>>') { e.preventDefault(); changeBlockType(block.id, 'toggle', {}); }
     }
   }, [
     block, pageId, blockIndex, slashOpen, slashQuery, slashIdx,
@@ -1077,7 +1512,7 @@ const BlockItem = memo(function BlockItem({
         return (
           <span style={{
             width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-            background: isDark ? 'rgba(196,149,106,0.5)' : 'rgba(0,0,0,0.3)',
+            background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.5)' : 'rgba(0,0,0,0.3)',
             marginTop: '10px',
           }} />
         );
@@ -1085,7 +1520,7 @@ const BlockItem = memo(function BlockItem({
         return (
           <span style={{
             fontSize: '0.8125rem', fontWeight: 600, flexShrink: 0,
-            color: isDark ? 'rgba(196,149,106,0.6)' : 'rgba(0,0,0,0.35)',
+            color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.6)' : 'rgba(0,0,0,0.35)',
             minWidth: '20px', textAlign: 'right', marginTop: '3px',
           }}>
             {blockIndex + 1}.
@@ -1095,7 +1530,7 @@ const BlockItem = memo(function BlockItem({
         return (
           <div style={{
             width: '3px', flexShrink: 0, borderRadius: '2px',
-            background: isDark ? 'rgba(196,149,106,0.3)' : 'rgba(196,149,106,0.4)',
+            background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.3)' : 'rgba(var(--pfc-accent-rgb), 0.4)',
             alignSelf: 'stretch', marginRight: '4px',
           }} />
         );
@@ -1150,9 +1585,10 @@ const BlockItem = memo(function BlockItem({
     switch (block.type) {
       case 'heading': {
         const level = parseInt(block.properties.level || '1', 10);
-        if (level === 1) return { ...base, fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.3, letterSpacing: '-0.02em', position: 'relative' as const };
-        if (level === 2) return { ...base, fontSize: '1.375rem', fontWeight: 650, lineHeight: 1.35, letterSpacing: '-0.015em', position: 'relative' as const };
-        return { ...base, fontSize: '1.125rem', fontWeight: 600, lineHeight: 1.4, position: 'relative' as const };
+        const headingBase = { ...base, fontFamily: 'var(--font-heading)', position: 'relative' as const };
+        if (level === 1) return { ...headingBase, fontSize: '1.5rem', fontWeight: 400, lineHeight: 1.3, letterSpacing: '-0.01em' };
+        if (level === 2) return { ...headingBase, fontSize: '1.25rem', fontWeight: 400, lineHeight: 1.35, letterSpacing: '-0.01em' };
+        return { ...headingBase, fontSize: '1rem', fontWeight: 400, lineHeight: 1.4 };
       }
       case 'code':
         return {
@@ -1173,8 +1609,8 @@ const BlockItem = memo(function BlockItem({
           ...base,
           padding: '12px 16px',
           borderRadius: '8px',
-          background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
-          borderLeft: '3px solid #C4956A',
+          background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.06)' : 'rgba(var(--pfc-accent-rgb), 0.04)',
+          borderLeft: '3px solid var(--pfc-accent)',
           display: 'block',
         };
       case 'todo': {
@@ -1211,10 +1647,10 @@ const BlockItem = memo(function BlockItem({
         }}
       >
         <div style={{
-          border: `1px solid ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.2)'}`,
+          border: `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.15)' : 'rgba(var(--pfc-accent-rgb), 0.2)'}`,
           borderRadius: '8px',
           padding: '12px 16px',
-          background: isDark ? 'rgba(196,149,106,0.03)' : 'rgba(196,149,106,0.02)',
+          background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.03)' : 'rgba(var(--pfc-accent-rgb), 0.02)',
           cursor: embedPageId ? 'pointer' : 'default',
         }}
         onClick={() => {
@@ -1229,7 +1665,7 @@ const BlockItem = memo(function BlockItem({
             gap: '6px',
             fontSize: '0.75rem',
             fontWeight: 600,
-            color: isDark ? 'rgba(196,149,106,0.6)' : 'rgba(196,149,106,0.7)',
+            color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.6)' : 'rgba(var(--pfc-accent-rgb), 0.7)',
             marginBottom: embedPageId ? '8px' : 0,
           }}>
             <FrameIcon style={{ width: '12px', height: '12px' }} />
@@ -1314,8 +1750,11 @@ const BlockItem = memo(function BlockItem({
           inset: 0,
           borderRadius: '6px',
           pointerEvents: 'none',
-          background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
-          opacity: isEditing ? 1 : hovered ? 0.5 : 0,
+          background: isTypewriterTarget
+            ? (isDark ? 'rgba(52,211,153,0.06)' : 'rgba(52,211,153,0.04)')
+            : (isDark ? 'rgba(var(--pfc-accent-rgb), 0.06)' : 'rgba(var(--pfc-accent-rgb), 0.04)'),
+          opacity: isTypewriterTarget ? 1 : isEditing ? 1 : hovered ? 0.5 : 0,
+          border: isTypewriterTarget ? '1px solid rgba(52,211,153,0.25)' : 'none',
           transition: `opacity 0.15s ${CUP}`,
           transform: 'translateZ(0)',
         }}
@@ -1331,7 +1770,7 @@ const BlockItem = memo(function BlockItem({
             right: '0.5rem',
             height: '2px',
             borderRadius: '1px',
-            background: '#C4956A',
+            background: 'var(--pfc-accent)',
             opacity: 0.7,
             transform: 'translateZ(0) scaleX(1)',
             transformOrigin: 'left',
@@ -1351,7 +1790,7 @@ const BlockItem = memo(function BlockItem({
         flexShrink: 0,
         marginTop: block.type === 'heading' ? '6px' : '3px',
         position: 'relative',
-        zIndex: 1,
+        zIndex: 'var(--z-base)',
       }}>
         <button
           onClick={() => {
@@ -1382,9 +1821,28 @@ const BlockItem = memo(function BlockItem({
       </div>
 
       {/* ── Block prefix ── */}
-      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start' }}>
+      <div style={{ position: 'relative', zIndex: 'var(--z-base)', display: 'flex', alignItems: 'flex-start' }}>
         {renderPrefix()}
       </div>
+
+      {/* ── Auto-generated badge — sparkle indicator for AI-generated blocks ── */}
+      {block.properties?.autoGenerated === 'true' && !isEditing && (
+        <div
+          title="AI-generated content"
+          style={{
+            position: 'absolute',
+            right: 4,
+            top: 4,
+            opacity: hovered ? 0.6 : 0.25,
+            transition: `opacity 0.15s ${CUP}`,
+            transform: 'translateZ(0)',
+            zIndex: 'calc(var(--z-base) + 1)',
+            pointerEvents: 'none',
+          }}
+        >
+          <SparklesIcon style={{ width: '10px', height: '10px', color: 'var(--pfc-accent)' }} />
+        </div>
+      )}
 
       {/* ── Content area (contentEditable with rich formatting) ── */}
       <div
@@ -1408,13 +1866,53 @@ const BlockItem = memo(function BlockItem({
           outline: 'none',
           minHeight: '1.5em',
           color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.8)',
-          caretColor: '#C4956A',
+          caretColor: 'var(--pfc-accent)',
           wordBreak: 'break-word',
           position: 'relative',
-          zIndex: 1,
+          zIndex: 'var(--z-base)',
           ...getBlockStyles(),
         }}
       />
+
+      {/* ── Typewriter cursor indicator — shows when AI is writing into this block ── */}
+      {isTypewriterTarget && (
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.375rem',
+          padding: '0.25rem 0.5rem',
+          pointerEvents: 'none',
+        }}>
+          <span style={{
+            display: 'inline-block',
+            width: 7,
+            height: 16,
+            background: '#34D399',
+            borderRadius: 1.5,
+            animation: 'typewriter-blink 0.8s step-end infinite',
+          }} />
+          <span style={{
+            fontSize: '0.625rem',
+            fontWeight: 700,
+            color: '#34D399',
+            letterSpacing: '0.03em',
+            textTransform: 'uppercase',
+            opacity: 0.7,
+          }}>
+            AI writing...
+          </span>
+          <style>{`
+            @keyframes typewriter-blink {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0; }
+            }
+          `}</style>
+        </div>
+      )}
 
       {/* ── Slash menu overlay — pure CSS animation, no Framer Motion ── */}
       {slashOpen && (
@@ -1461,6 +1959,10 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
   const setActivePage = usePFCStore((s) => s.setActivePage);
   const ensurePage = usePFCStore((s) => s.ensurePage);
 
+  // Typewriter mode — track which block is being written to
+  const typewriterBlockId = usePFCStore((s) => s.noteAI.writeToNote ? s.noteAI.typewriterBlockId : null);
+  const isTypewriting = usePFCStore((s) => s.noteAI.writeToNote && s.noteAI.isGenerating);
+
   // ── Navigate to a page by title (from [[link]] click) ──
   const handleNavigateToPage = useCallback((pageTitle: string) => {
     const normalized = normalizePageName(pageTitle);
@@ -1474,12 +1976,17 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
     }
   }, [notePages, setActivePage, ensurePage]);
 
-  // Floating toolbar position (null = hidden)
-  const [toolbarPos, setToolbarPos] = useState<{ top: number; left: number } | null>(null);
+  // Context menu state (replaces floating toolbar)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; blockId: string } | null>(null);
+  const changeBlockType = usePFCStore((s) => s.changeBlockType);
+  const deleteBlock = usePFCStore((s) => s.deleteBlock);
 
   // Drag state
   const dragSourceRef = useRef<string | null>(null);
   const dragTargetRef = useRef<string | null>(null);
+
+  // Save selection range when context menu opens (restored before format commands)
+  const ctxSavedRangeRef = useRef<Range | null>(null);
 
   // Page blocks sorted, with collapsed heading/toggle children filtered out
   const pageBlocks = useMemo(() => {
@@ -1539,34 +2046,38 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
     return visible;
   }, [noteBlocks, pageId]);
 
-  // ── Selection change listener for floating toolbar ──
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !sel.rangeCount) {
-        setToolbarPos(null);
-        return;
-      }
-      // Only show toolbar if selection is within our editor
-      const range = sel.getRangeAt(0);
-      const container = range.commonAncestorContainer;
-      const blockEl = (container.nodeType === 3 ? container.parentElement : container as HTMLElement)?.closest('[data-block-id]');
-      if (!blockEl) {
-        setToolbarPos(null);
-        return;
-      }
-      const rect = range.getBoundingClientRect();
-      setToolbarPos({ top: rect.top, left: rect.left + rect.width / 2 });
-    };
+  // ── Context menu handler (right-click → block context menu) ──
+  // Always prevent default inside editor to suppress browser menu
+  // Save the current selection so format commands can restore it
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    // Capture current selection before menu steals focus
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      ctxSavedRangeRef.current = sel.getRangeAt(0).cloneContents() ? sel.getRangeAt(0).cloneRange() : null;
+    } else {
+      ctxSavedRangeRef.current = null;
+    }
+    const target = e.target as HTMLElement;
+    const blockEl = target.closest?.('[data-block-id]');
+    const blockId = blockEl?.getAttribute('data-block-id') ?? pageBlocks[0]?.id ?? '';
+    if (blockId) {
+      setCtxMenu({ x: e.clientX, y: e.clientY, blockId });
+    }
+  }, [pageBlocks]);
 
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => document.removeEventListener('selectionchange', handleSelectionChange);
-  }, []);
-
-  // ── Format handler for toolbar ──
+  // ── Format handler for toolbar / context menu ──
+  // Pushes undo transaction so Cmd+Z works for format changes
   const handleFormat = useCallback((command: string) => {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
+
+    // Find the block element BEFORE formatting to capture old content
+    const preRange = sel.getRangeAt(0);
+    const preContainer = preRange.commonAncestorContainer;
+    const blockEl = (preContainer.nodeType === 3 ? preContainer.parentElement : preContainer as HTMLElement)?.closest('[data-block-id]') as HTMLElement;
+    const oldHtml = blockEl ? blockEl.innerHTML : null;
+    const blockId = blockEl?.getAttribute('data-block-id');
 
     switch (command) {
       case 'bold': document.execCommand('bold', false); break;
@@ -1578,12 +2089,16 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
         if (range.collapsed) break;
         const code = document.createElement('code');
         code.style.cssText = `
-          background: ${isDark ? 'rgba(196,149,106,0.1)' : 'rgba(0,0,0,0.06)'};
+          background: ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.1)' : 'rgba(0,0,0,0.06)'};
           padding: 0.125em 0.35em; border-radius: 4px;
           font-family: var(--font-mono); font-size: 0.875em;
           color: ${isDark ? '#E8B06A' : '#B07D42'};
         `;
-        range.surroundContents(code);
+        try {
+          range.surroundContents(code);
+        } catch {
+          break;
+        }
         break;
       }
       case 'highlight': {
@@ -1591,23 +2106,29 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
         if (range.collapsed) break;
         const mark = document.createElement('mark');
         mark.style.cssText = `background: rgba(251,191,36,0.25); padding: 0 2px; border-radius: 2px;`;
-        range.surroundContents(mark);
+        try {
+          range.surroundContents(mark);
+        } catch {
+          break;
+        }
         break;
       }
     }
 
-    // Sync the modified block to store
-    const range = sel.getRangeAt(0);
-    const container = range.commonAncestorContainer;
-    const blockEl = (container.nodeType === 3 ? container.parentElement : container as HTMLElement)?.closest('[data-block-id]') as HTMLElement;
-    if (blockEl) {
-      const blockId = blockEl.getAttribute('data-block-id');
-      if (blockId) {
-        const html = blockEl.innerHTML;
-        usePFCStore.getState().updateBlockContent(blockId, html === '<br>' ? '' : html);
+    // Sync the modified block to store + push undo transaction
+    if (blockEl && blockId) {
+      const newHtml = blockEl.innerHTML;
+      const oldContent = oldHtml === '<br>' ? '' : (oldHtml ?? '');
+      const newContent = newHtml === '<br>' ? '' : newHtml;
+      if (newContent !== oldContent) {
+        usePFCStore.getState().updateBlockContent(blockId, newContent);
+        usePFCStore.getState().pushTransaction(
+          [{ action: 'update', blockId, pageId, data: { content: newContent } }],
+          [{ action: 'update', blockId, pageId, previousData: { content: oldContent } }],
+        );
       }
     }
-  }, [isDark]);
+  }, [isDark, pageId]);
 
   // ── Navigate between blocks ──
   const handleNavigate = useCallback((direction: 'up' | 'down', currentBlockId: string) => {
@@ -1649,23 +2170,68 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
     }
   }, [pageBlocks, pageId, createBlock, setEditingBlock]);
 
+  // ── Context menu callbacks ──
+  const handleCtxFormat = useCallback((command: string) => {
+    // Restore saved selection before executing format (menu click steals focus)
+    const savedRange = ctxSavedRangeRef.current;
+    if (savedRange) {
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+      }
+    }
+    handleFormat(command);
+    ctxSavedRangeRef.current = null;
+  }, [handleFormat]);
+
+  const handleCtxChangeType = useCallback((type: BlockType, props?: Record<string, string>) => {
+    if (ctxMenu?.blockId) {
+      changeBlockType(ctxMenu.blockId, type, props ?? {});
+    }
+  }, [ctxMenu, changeBlockType]);
+
+  const handleCtxInsert = useCallback((type: string) => {
+    if (!ctxMenu?.blockId) return;
+    const newId = createBlock(pageId, null, ctxMenu.blockId, '', type as BlockType);
+    requestAnimationFrame(() => setEditingBlock(newId));
+  }, [ctxMenu, createBlock, pageId, setEditingBlock]);
+
+  const handleCtxDelete = useCallback(() => {
+    if (ctxMenu?.blockId) {
+      deleteBlock(ctxMenu.blockId);
+    }
+  }, [ctxMenu, deleteBlock]);
+
+  const ctxBlock = ctxMenu ? pageBlocks.find((b: NoteBlock) => b.id === ctxMenu.blockId) : null;
+
   return (
     <>
-      {/* Floating formatting toolbar */}
-      <FloatingToolbar
-        position={toolbarPos}
-        isDark={isDark}
-        onFormat={handleFormat}
-      />
+      {/* Right-click context menu (replaces floating toolbar) */}
+      {ctxMenu && ctxBlock && (
+        <BlockContextMenu
+          position={{ x: ctxMenu.x, y: ctxMenu.y }}
+          isDark={isDark}
+          onClose={() => setCtxMenu(null)}
+          onFormat={handleCtxFormat}
+          onChangeType={handleCtxChangeType}
+          onInsert={handleCtxInsert}
+          onDelete={handleCtxDelete}
+          currentBlockType={ctxBlock.type}
+        />
+      )}
 
       {/* Block list — GPU-promoted container with paint containment */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '2px',
-        contain: 'layout style',
-        transform: 'translateZ(0)',
-      }}>
+      <div
+        onContextMenu={handleContextMenu}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '2px',
+          contain: 'layout style',
+          transform: 'translateZ(0)',
+        }}
+      >
         {pageBlocks.map((block, idx) => (
           <BlockItem
             key={block.id}
@@ -1680,8 +2246,9 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            readOnly={readOnly}
+            readOnly={readOnly || (isTypewriting && block.id === typewriterBlockId)}
             onNavigateToPage={handleNavigateToPage}
+            isTypewriterTarget={isTypewriting && block.id === typewriterBlockId}
           />
         ))}
 
@@ -1719,7 +2286,7 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
         [data-block-id] u { text-decoration: underline; text-underline-offset: 2px; }
         [data-block-id] s { text-decoration: line-through; opacity: 0.6; }
         [data-block-id] code {
-          background: ${isDark ? 'rgba(196,149,106,0.1)' : 'rgba(0,0,0,0.06)'};
+          background: ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.1)' : 'rgba(0,0,0,0.06)'};
           padding: 0.125em 0.35em;
           border-radius: 4px;
           font-family: var(--font-mono);
@@ -1732,15 +2299,15 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
           border-radius: 2px;
         }
         .pfc-page-link {
-          color: #C4956A;
+          color: var(--pfc-accent);
           cursor: pointer;
-          border-bottom: 1px solid rgba(196,149,106,0.3);
+          border-bottom: 1px solid rgba(var(--pfc-accent-rgb), 0.3);
           font-weight: 500;
           transition: border-color 0.15s, color 0.15s;
           text-decoration: none;
         }
         .pfc-page-link:hover {
-          border-bottom-color: #C4956A;
+          border-bottom-color: var(--pfc-accent);
           color: #D4B896;
         }
       `}</style>

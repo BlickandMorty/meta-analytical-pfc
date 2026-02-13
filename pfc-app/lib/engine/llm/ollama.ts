@@ -4,7 +4,7 @@
 
 // ── Types ────────────────────────────────────────────────────────
 
-export interface OllamaStatus {
+interface OllamaStatus {
   available: boolean;
   models: string[];
 }
@@ -20,7 +20,7 @@ export interface OllamaRunningModel {
   expiresAt: string;
 }
 
-export interface OllamaModelDetail {
+interface OllamaModelDetail {
   paramSize: string;
   quantization: string;
   contextLength: number;

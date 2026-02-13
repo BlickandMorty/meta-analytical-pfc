@@ -12,6 +12,31 @@ import { StreamingHandler, detectArtifacts } from '@/libs/agent-runtime/Streamin
 // ── Buffer limits to prevent memory exhaustion when paused ──
 const MAX_BUFFER_SIZE = 5 * 1024 * 1024; // 5MB
 
+function isExpectedStreamInterruption(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') return true;
+  const asObject = typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : null;
+  const message = [
+    error instanceof Error ? error.message : '',
+    error instanceof Error ? error.stack ?? '' : '',
+    typeof asObject?.message === 'string' ? asObject.message : '',
+    typeof asObject?.cause === 'string' ? asObject.cause : '',
+    typeof (asObject?.cause as Record<string, unknown> | undefined)?.message === 'string'
+      ? ((asObject?.cause as Record<string, unknown>).message as string)
+      : '',
+    String(error),
+  ]
+    .join(' ')
+    .toLowerCase();
+  const name = error instanceof Error ? error.name : typeof asObject?.name === 'string' ? asObject.name : '';
+  return (
+    name === 'AbortError' ||
+    message.includes('network error') ||
+    message.includes('failed to fetch') ||
+    message.includes('the user aborted a request') ||
+    message.includes('load failed')
+  );
+}
+
 export function useChatStream() {
   const abortRef = useRef<AbortController | null>(null);
   const isStreamingRef = useRef(false);
@@ -85,7 +110,9 @@ export function useChatStream() {
         store.stopStreaming();
       },
       onError: (error) => {
-        console.error('StreamingHandler error:', error);
+        if (!isExpectedStreamInterruption(error)) {
+          console.error('StreamingHandler error:', error);
+        }
         store.stopStreaming();
       },
     });
@@ -313,8 +340,9 @@ export function useChatStream() {
         }
       }
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
+      if (!isExpectedStreamInterruption(error)) {
         console.error('Stream error:', error);
+        usePFCStore.getState().addToast({ message: 'Stream connection failed', type: 'error' });
       }
       store.stopStreaming();
     } finally {

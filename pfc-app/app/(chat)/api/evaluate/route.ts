@@ -1,9 +1,14 @@
 import { NextRequest } from 'next/server';
 import { evaluateMLProject, type MLProjectInput } from '@/lib/engine/ml-evaluator';
+import { parseBodyWithLimit } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const input: MLProjectInput = await request.json();
+    const parsedBody = await parseBodyWithLimit<MLProjectInput>(request, 5 * 1024 * 1024);
+    if ('error' in parsedBody) {
+      return parsedBody.error;
+    }
+    const input = parsedBody.data;
 
     if (!input.name || !input.description) {
       return new Response(

@@ -1,8 +1,7 @@
 'use client';
 
-import type { TDASnapshot, SafetyState } from '@/lib/engine/types';
+import type { TDASnapshot, SafetyState, PipelineControls } from '@/lib/engine/types';
 import type { InferenceMode } from '@/lib/engine/llm/config';
-import type { PipelineControls } from './controls';
 import type { SignalHistoryEntry } from './pipeline';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
 

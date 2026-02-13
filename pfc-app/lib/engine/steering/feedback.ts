@@ -41,7 +41,7 @@ export interface SignalStateInput {
 //
 // Range: 0.0 to 1.0 (higher = better analysis)
 
-export function computeAutoQuality(
+function computeAutoQuality(
   truthAssessment: TruthAssessmentInput | null,
   signals: SignalStateInput,
 ): number {
@@ -83,7 +83,7 @@ export function computeAutoQuality(
 //   autoQuality 0.35-0.65 → near zero (neutral)
 //   autoQuality > 0.65 → positive (good analysis)
 
-export function computeCompositeScore(
+function computeCompositeScore(
   autoQuality: number,
   userRating: number | null,
 ): number {
@@ -120,7 +120,7 @@ export function createSteeringOutcome(
 
 // ── Update an existing outcome with user rating ──────────────────
 
-export function updateOutcomeWithRating(
+function updateOutcomeWithRating(
   existing: SteeringOutcome,
   userRating: number,
 ): SteeringOutcome {

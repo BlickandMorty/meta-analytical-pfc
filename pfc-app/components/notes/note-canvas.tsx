@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
   GripHorizontalIcon,
@@ -12,7 +12,6 @@ import {
   ZoomOutIcon,
   MaximizeIcon,
   FileTextIcon,
-  StickyNoteIcon,
   LinkIcon,
   Undo2Icon,
   Redo2Icon,
@@ -52,9 +51,9 @@ type CardColorId = (typeof CARD_COLORS)[number]['id'];
 
 // ── Types ──
 
-export interface CanvasCard {
+interface CanvasCard {
   id: string;
-  type: 'text' | 'note' | 'group' | 'paper';
+  type: 'text' | 'note' | 'group';
   x: number;
   y: number;
   width: number;
@@ -66,11 +65,9 @@ export interface CanvasCard {
   label?: string;
   createdAt: number;
   updatedAt: number;
-  /** Paper cards: random rotation seed for loose-paper aesthetic */
-  paperRotation?: number;
 }
 
-export interface CanvasEdge {
+interface CanvasEdge {
   id: string;
   fromCardId: string;
   toCardId: string;
@@ -293,6 +290,24 @@ const CanvasCardView = memo(function CanvasCardView({
   const dragStart = useRef({ x: 0, y: 0, cx: 0, cy: 0, w: 0, h: 0 });
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // ── Auto-grow: expand card height when content overflows ──
+  const autoGrow = useCallback(() => {
+    if (card.type !== 'text') return;
+    const el = cardRef.current;
+    if (!el) return;
+    // scrollHeight = actual content height; compare against current card.height
+    const contentH = el.scrollHeight;
+    if (contentH > card.height) {
+      onUpdate(card.id, { height: snap(contentH + 8) });
+    }
+  }, [card.id, card.type, card.height, onUpdate]);
+
+  // Auto-grow on mount (covers paste-created cards where body is pre-filled)
+  useEffect(() => {
+    autoGrow();
+  }, [autoGrow]);
 
   const cp = CARD_COLORS.find((c) => c.id === card.color) || CARD_COLORS[0];
   const isGroup = card.type === 'group';
@@ -311,7 +326,7 @@ const CanvasCardView = memo(function CanvasCardView({
           position: 'absolute',
           left: card.x, top: card.y, width: card.width, height: card.height,
           background: isGroup ? (cp.bg || (isDark ? 'rgba(28,26,23,0.3)' : 'rgba(255,255,255,0.3)')) : cardBg,
-          border: `${isSelected ? 2 : 1}px ${isGroup ? 'dashed' : 'solid'} ${isSelected ? '#C4956A' : cardBorder}`,
+          border: `${isSelected ? 2 : 1}px ${isGroup ? 'dashed' : 'solid'} ${isSelected ? 'var(--pfc-accent)' : cardBorder}`,
           borderRadius: isGroup ? 12 : 10,
           zIndex: isSelected ? 10 : isGroup ? 0 : 1,
         }}
@@ -330,7 +345,7 @@ const CanvasCardView = memo(function CanvasCardView({
           left: card.x, top: card.y, width: card.width, height: card.height,
           display: 'flex', flexDirection: 'column',
           background: isGroup ? (cp.bg || (isDark ? 'rgba(28,26,23,0.4)' : 'rgba(255,255,255,0.4)')) : cardBg,
-          border: `${isSelected ? 2 : 1.5}px ${isGroup ? 'dashed' : 'solid'} ${isSelected ? '#C4956A' : cardBorder}`,
+          border: `${isSelected ? 2 : 1.5}px ${isGroup ? 'dashed' : 'solid'} ${isSelected ? 'var(--pfc-accent)' : cardBorder}`,
           borderRadius: isGroup ? 12 : 10,
           cursor: 'grab',
           zIndex: isSelected ? 10 : isGroup ? 0 : 1,
@@ -375,22 +390,23 @@ const CanvasCardView = memo(function CanvasCardView({
 
   return (
     <div
+      ref={cardRef}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={(e) => { e.stopPropagation(); onSelect(card.id, e.shiftKey); }}
       style={{
         position: 'absolute',
-        left: card.x, top: card.y, width: card.width, height: card.height,
+        left: card.x, top: card.y, width: card.width, minHeight: card.height,
         display: 'flex', flexDirection: 'column',
         background: isGroup ? (cp.bg || (isDark ? 'rgba(28,26,23,0.4)' : 'rgba(255,255,255,0.4)')) : cardBg,
-        border: `${isSelected ? 2 : 1.5}px ${isGroup ? 'dashed' : 'solid'} ${isSelected ? '#C4956A' : cardBorder}`,
+        border: `${isSelected ? 2 : 1.5}px ${isGroup ? 'dashed' : 'solid'} ${isSelected ? 'var(--pfc-accent)' : cardBorder}`,
         borderRadius: isGroup ? 12 : 10,
         boxShadow: isSelected
-          ? `0 0 0 2px ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)'}, 0 8px 32px rgba(0,0,0,0.12)`
+          ? `0 0 0 2px ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.15)' : 'rgba(var(--pfc-accent-rgb), 0.12)'}, 0 8px 32px rgba(0,0,0,0.12)`
           : hovered ? '0 4px 20px rgba(0,0,0,0.1)' : '0 2px 12px rgba(0,0,0,0.06)',
         transition: 'border-color 0.15s, box-shadow 0.2s',
         zIndex: isSelected ? 10 : hovered ? 5 : isGroup ? 0 : 1,
-        contain: 'layout', overflow: 'hidden',
+        contain: 'layout style', overflow: 'visible',
       }}
     >
       {/* Drag handle */}
@@ -407,7 +423,7 @@ const CanvasCardView = memo(function CanvasCardView({
           {isNote && linkedPage && (
             <span
               onClick={(e) => { e.stopPropagation(); if (onNavigateToPage && linkedPage) onNavigateToPage(linkedPage.id); }}
-              style={{ fontSize: '0.625rem', fontWeight: 600, color: '#C4956A', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
+              style={{ fontSize: '0.625rem', fontWeight: 600, color: 'var(--pfc-accent)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
             >
               <LinkIcon style={{ width: 9, height: 9 }} />
               {linkedPage.title}
@@ -435,23 +451,23 @@ const CanvasCardView = memo(function CanvasCardView({
             ref={headerRef}
             contentEditable suppressContentEditableWarning
             data-placeholder="Heading"
-            onInput={(e) => onUpdate(card.id, { header: e.currentTarget.textContent || '', updatedAt: Date.now() })}
+            onInput={(e) => { onUpdate(card.id, { header: e.currentTarget.textContent || '', updatedAt: Date.now() }); autoGrow(); }}
             onFocus={() => onSelect(card.id, false)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); bodyRef.current?.focus(); } }}
             style={{
-              padding: '6px 14px 2px', fontSize: '1.0625rem', fontWeight: 700,
-              letterSpacing: '-0.02em', lineHeight: 1.35, color: textColor,
-              outline: 'none', fontFamily: 'var(--font-display, var(--font-sans))',
+              padding: '6px 14px 2px', fontSize: '1.0625rem', fontWeight: 400,
+              letterSpacing: '-0.01em', lineHeight: 1.35, color: textColor,
+              outline: 'none', fontFamily: 'var(--font-heading)',
               minHeight: '1.5rem', wordBreak: 'break-word',
             }}
             dangerouslySetInnerHTML={{ __html: card.header || '' }}
           />
-          <div style={{ height: 1, margin: '2px 14px 4px', background: isSelected ? '#C4956A30' : cardBorder, transition: 'background 0.15s' }} />
+          <div style={{ height: 1, margin: '2px 14px 4px', background: isSelected ? 'rgba(var(--pfc-accent-rgb),0.19)' : cardBorder, transition: 'background 0.15s' }} />
           <div
             ref={bodyRef}
             contentEditable suppressContentEditableWarning
             data-placeholder="Type here..."
-            onInput={(e) => onUpdate(card.id, { body: e.currentTarget.innerHTML || '', updatedAt: Date.now() })}
+            onInput={(e) => { onUpdate(card.id, { body: e.currentTarget.innerHTML || '', updatedAt: Date.now() }); autoGrow(); }}
             onFocus={() => onSelect(card.id, false)}
             style={{
               padding: '2px 14px 12px', fontSize: '0.875rem', fontWeight: 400,
@@ -470,18 +486,17 @@ const CanvasCardView = memo(function CanvasCardView({
         </div>
       )}
 
-      <style>{`[data-placeholder]:empty::before { content: attr(data-placeholder); color: ${isDark ? 'rgba(156,143,128,0.3)' : 'rgba(0,0,0,0.2)'}; pointer-events: none; }`}</style>
-
-      {/* Resize handles */}
+      {/* Resize handles — wider hit targets outside the card boundary */}
       {isSelected && !isGroup && ['n', 'e', 's', 'w', 'ne', 'se', 'sw', 'nw'].map((h) => {
         const corner = h.length === 2;
-        const s: React.CSSProperties = { position: 'absolute', background: 'transparent', zIndex: 20 };
-        if (h.includes('n')) { s.top = -3; s.height = 6; s.cursor = corner ? `${h}-resize` : 'n-resize'; }
-        if (h.includes('s')) { s.bottom = -3; s.height = 6; s.cursor = corner ? `${h}-resize` : 's-resize'; }
-        if (h.includes('e')) { s.right = -3; s.width = 6; s.cursor = corner ? `${h}-resize` : 'e-resize'; }
-        if (h.includes('w')) { s.left = -3; s.width = 6; s.cursor = corner ? `${h}-resize` : 'w-resize'; }
+        const hitSize = corner ? 14 : 8; // bigger hit targets
+        const s: React.CSSProperties = { position: 'absolute', background: 'transparent', zIndex: 'var(--z-nav)' };
+        if (h.includes('n')) { s.top = -(hitSize / 2); s.height = hitSize; s.cursor = corner ? `${h}-resize` : 'n-resize'; }
+        if (h.includes('s')) { s.bottom = -(hitSize / 2); s.height = hitSize; s.cursor = corner ? `${h}-resize` : 's-resize'; }
+        if (h.includes('e')) { s.right = -(hitSize / 2); s.width = hitSize; s.cursor = corner ? `${h}-resize` : 'e-resize'; }
+        if (h.includes('w')) { s.left = -(hitSize / 2); s.width = hitSize; s.cursor = corner ? `${h}-resize` : 'w-resize'; }
         if (!corner) { if (h === 'n' || h === 's') { s.left = 0; s.width = '100%'; } else { s.top = 0; s.height = '100%'; } }
-        if (corner) { s.width = 10; s.height = 10; }
+        if (corner) { s.width = hitSize; s.height = hitSize; }
         return <div key={h} style={s} onMouseDown={(e) => onResizeStart(e, h)} />;
       })}
 
@@ -493,9 +508,9 @@ const CanvasCardView = memo(function CanvasCardView({
           style={{
             position: 'absolute', ...css,
             width: 8, height: 8, borderRadius: '50%',
-            background: '#C4956A',
+            background: 'var(--pfc-accent)',
             border: `2px solid ${isDark ? 'rgba(28,26,23,0.9)' : 'rgba(255,255,255,0.9)'}`,
-            cursor: 'crosshair', zIndex: 25,
+            cursor: 'crosshair', zIndex: 'calc(var(--z-sticky) + 5)',
           }}
         />
       ))}
@@ -503,190 +518,6 @@ const CanvasCardView = memo(function CanvasCardView({
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// PaperCard — loose paper with tap-to-unfold animation
-//
-// Visual: slightly rotated, paper texture, folded corner, shadow.
-// On tap: spring zoom + unfold into full card. After animation,
-// the card transitions from type 'paper' → 'text'.
-// ═══════════════════════════════════════════════════════════════════
-
-interface PaperCardProps {
-  card: CanvasCard;
-  isDark: boolean;
-  isSelected: boolean;
-  zoom: number;
-  onSelect: (id: string, multi: boolean) => void;
-  onUpdate: (id: string, updates: Partial<CanvasCard>) => void;
-  onDragStart: (cardId: string, e: React.MouseEvent) => void;
-  onUnfold: (cardId: string) => void;
-}
-
-const PAPER_SPRING = { type: 'spring' as const, stiffness: 260, damping: 24, mass: 0.8 };
-const UNFOLD_SPRING = { type: 'spring' as const, stiffness: 180, damping: 22, mass: 1.0 };
-
-const PaperCard = memo(function PaperCard({
-  card, isDark, isSelected, zoom, onSelect, onUpdate, onDragStart, onUnfold,
-}: PaperCardProps) {
-  const [phase, setPhase] = useState<'idle' | 'hover' | 'unfolding' | 'done'>('idle');
-  const rotation = card.paperRotation ?? ((card.createdAt % 13) - 6); // -6° to +6°
-
-  const paperBg = isDark
-    ? 'linear-gradient(135deg, rgba(52,48,42,0.95) 0%, rgba(42,38,33,0.92) 100%)'
-    : 'linear-gradient(135deg, rgba(255,252,245,0.98) 0%, rgba(248,241,228,0.95) 100%)';
-
-  const shadowIdle = isDark
-    ? '2px 3px 12px rgba(0,0,0,0.4), 1px 1px 4px rgba(0,0,0,0.3)'
-    : '2px 3px 16px rgba(0,0,0,0.08), 1px 1px 6px rgba(0,0,0,0.04)';
-
-  const shadowHover = isDark
-    ? '3px 5px 20px rgba(0,0,0,0.5), 2px 2px 8px rgba(0,0,0,0.35)'
-    : '3px 5px 24px rgba(0,0,0,0.12), 2px 2px 8px rgba(0,0,0,0.06)';
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (phase === 'unfolding' || phase === 'done') return;
-    setPhase('unfolding');
-    onSelect(card.id, false);
-    onUnfold(card.id);
-  }, [phase, card.id, onSelect, onUnfold]);
-
-  // After unfold animation completes, convert to text card
-  const handleUnfoldComplete = useCallback(() => {
-    if (phase !== 'unfolding') return;
-    setPhase('done');
-    onUpdate(card.id, { type: 'text', paperRotation: undefined });
-  }, [phase, card.id, onUpdate]);
-
-  const isUnfolding = phase === 'unfolding';
-  const foldedCornerSize = isUnfolding ? 0 : 16;
-
-  return (
-    <div
-      onMouseDown={(e) => {
-        if (phase !== 'unfolding') {
-          e.preventDefault();
-          e.stopPropagation();
-          onDragStart(card.id, e);
-        }
-      }}
-      onClick={handleClick}
-      onMouseEnter={() => { if (phase === 'idle') setPhase('hover'); }}
-      onMouseLeave={() => { if (phase === 'hover') setPhase('idle'); }}
-      onTransitionEnd={handleUnfoldComplete}
-      style={{
-        position: 'absolute',
-        left: card.x,
-        top: card.y,
-        width: card.width,
-        height: card.height,
-        transformOrigin: 'center center',
-        transform: isUnfolding
-          ? 'rotate(0deg) scale(1.08)'
-          : `rotate(${rotation}deg) scale(${phase === 'hover' ? 1.04 : 1})`,
-        transition: isUnfolding
-          ? 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease'
-          : 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease',
-        background: paperBg,
-        borderRadius: isUnfolding ? 10 : 6,
-        border: `1.5px solid ${isSelected ? '#C4956A' : (isDark ? 'rgba(79,69,57,0.3)' : 'rgba(208,196,180,0.35)')}`,
-        boxShadow: phase === 'hover' || isUnfolding ? shadowHover : shadowIdle,
-        cursor: isUnfolding ? 'default' : 'pointer',
-        zIndex: isUnfolding ? 50 : isSelected ? 10 : 2,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      {/* Folded corner — triangle in top-right, disappears on unfold */}
-      {foldedCornerSize > 0 && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: 0,
-          height: 0,
-          borderStyle: 'solid',
-          borderWidth: `0 ${foldedCornerSize}px ${foldedCornerSize}px 0`,
-          borderColor: `transparent ${isDark ? 'rgba(28,25,20,0.9)' : 'rgba(232,224,212,0.95)'} transparent transparent`,
-          filter: isDark ? 'drop-shadow(-1px 1px 2px rgba(0,0,0,0.3))' : 'drop-shadow(-1px 1px 2px rgba(0,0,0,0.06))',
-          transition: 'opacity 0.3s ease',
-          opacity: isUnfolding ? 0 : 1,
-          zIndex: 2,
-        }} />
-      )}
-
-      {/* Paper lines — decorative ruled lines */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        opacity: isDark ? 0.06 : 0.08,
-        backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 23px, ${isDark ? 'rgba(196,149,106,1)' : 'rgba(120,100,80,1)'} 23px, transparent 24px)`,
-        backgroundPosition: '0 28px',
-        pointerEvents: 'none',
-      }} />
-
-      {/* Paper content */}
-      <div style={{
-        flex: 1,
-        padding: '10px 12px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
-        position: 'relative',
-        zIndex: 1,
-      }}>
-        <div style={{
-          fontSize: '0.75rem',
-          fontWeight: 600,
-          color: isDark ? 'rgba(196,149,106,0.7)' : 'rgba(120,90,60,0.65)',
-          overflow: 'hidden',
-          whiteSpace: 'nowrap',
-          textOverflow: 'ellipsis',
-        }}>
-          {card.header || 'Loose Paper'}
-        </div>
-        {card.body && (
-          <div style={{
-            fontSize: '0.6875rem',
-            color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)',
-            lineHeight: 1.5,
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical' as const,
-          }}>
-            {card.body}
-          </div>
-        )}
-      </div>
-
-      {/* "Tap to open" hint */}
-      {phase !== 'unfolding' && phase !== 'done' && (
-        <div style={{
-          padding: '4px 12px 8px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '4px',
-          opacity: phase === 'hover' ? 0.7 : 0.35,
-          transition: 'opacity 0.2s ease',
-        }}>
-          <FileTextIcon style={{ width: 10, height: 10, color: isDark ? 'rgba(196,149,106,0.5)' : 'rgba(120,90,60,0.4)' }} />
-          <span style={{
-            fontSize: '0.5625rem',
-            fontWeight: 500,
-            color: isDark ? 'rgba(196,149,106,0.5)' : 'rgba(120,90,60,0.4)',
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-          }}>
-            Tap to open
-          </span>
-        </div>
-      )}
-    </div>
-  );
-});
 
 // ═══════════════════════════════════════════════════════════════════
 // Minimap
@@ -729,9 +560,11 @@ const Minimap = memo(function Minimap({
         onJump(mx, my);
       }}
       style={{
-        position: 'absolute', bottom: '4.5rem', left: '1rem', zIndex: 20,
+        position: 'absolute', bottom: '4.5rem', left: '1rem', zIndex: 'var(--z-sticky)',
         width: W, height: H, borderRadius: 8, overflow: 'hidden',
         background: isDark ? 'rgba(22,21,19,0.65)' : 'rgba(237,232,222,0.6)',
+        backdropFilter: 'blur(12px) saturate(1.4)',
+        WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
         border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
         cursor: 'pointer',
       }}
@@ -744,7 +577,7 @@ const Minimap = memo(function Minimap({
             y={(c.y - y0) * scale}
             width={c.width * scale}
             height={c.height * scale}
-            fill={isDark ? 'rgba(196,149,106,0.3)' : 'rgba(196,149,106,0.25)'}
+            fill={isDark ? 'rgba(var(--pfc-accent-rgb), 0.3)' : 'rgba(var(--pfc-accent-rgb), 0.25)'}
             rx={2}
           />
         ))}
@@ -754,7 +587,7 @@ const Minimap = memo(function Minimap({
           width={vw * scale}
           height={vh * scale}
           fill="none"
-          stroke={isDark ? 'rgba(196,149,106,0.6)' : 'rgba(196,149,106,0.5)'}
+          stroke={isDark ? 'rgba(var(--pfc-accent-rgb), 0.6)' : 'rgba(var(--pfc-accent-rgb), 0.5)'}
           strokeWidth={1.5}
           rx={2}
         />
@@ -764,13 +597,78 @@ const Minimap = memo(function Minimap({
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// ZoomHint — subtle bottom-left indicator for zoom & pan controls
+// Shows on mount for 3.5s, then fades away. Reappears briefly on zoom change.
+// ═══════════════════════════════════════════════════════════════════
+
+const ZoomHint = memo(function ZoomHint({ isDark, zoom }: { isDark: boolean; zoom: number }) {
+  const [visible, setVisible] = useState(true);
+  const [fading, setFading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevZoomRef = useRef(zoom);
+
+  // Initial show — fade after 3.5s
+  useEffect(() => {
+    timerRef.current = setTimeout(() => setFading(true), 3000);
+    const fadeOut = setTimeout(() => setVisible(false), 3500);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      clearTimeout(fadeOut);
+    };
+  }, []);
+
+  // Re-show briefly on zoom change
+  useEffect(() => {
+    if (prevZoomRef.current === zoom) return;
+    prevZoomRef.current = zoom;
+    const raf = requestAnimationFrame(() => {
+      setVisible(true);
+      setFading(false);
+    });
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setFading(true), 1500);
+    const fadeOut = setTimeout(() => setVisible(false), 2000);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      clearTimeout(fadeOut);
+    };
+  }, [zoom]);
+
+  if (!visible) return null;
+
+  const mutedColor = isDark ? 'rgba(156,143,128,0.45)' : 'rgba(0,0,0,0.25)';
+  const bgColor = isDark ? 'rgba(28,26,23,0.75)' : 'rgba(255,255,255,0.8)';
+  const borderColor = isDark ? 'rgba(79,69,57,0.3)' : 'rgba(190,183,170,0.25)';
+
+  return (
+    <div style={{
+      position: 'absolute', bottom: 16, left: 16, zIndex: 'calc(var(--z-dropdown) + 5)',
+      display: 'flex', gap: '0.625rem', alignItems: 'center',
+      padding: '0.375rem 0.75rem',
+      borderRadius: 8,
+      background: bgColor,
+      border: `1px solid ${borderColor}`,
+      backdropFilter: 'blur(8px)',
+      pointerEvents: 'none', userSelect: 'none',
+      opacity: fading ? 0 : 0.9,
+      transition: 'opacity 0.5s ease',
+    }}>
+      <span style={{ fontSize: '0.6875rem', fontWeight: 500, color: mutedColor, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+        Scroll to zoom · Drag to pan · Shift+drag to select
+      </span>
+    </div>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // Canvas Controls — zoom, add, fit, undo/redo, minimap toggle
 // ═══════════════════════════════════════════════════════════════════
 
-function CanvasControls({ isDark, zoom, canUndo, canRedo, showMinimap, onZoomIn, onZoomOut, onFitView, onAddCard, onAddPaper, onAddGroup, onUndo, onRedo, onToggleMinimap }: {
+function CanvasControls({ isDark, zoom, canUndo, canRedo, showMinimap, onZoomIn, onZoomOut, onFitView, onAddCard, onAddGroup, onUndo, onRedo, onToggleMinimap }: {
   isDark: boolean; zoom: number; canUndo: boolean; canRedo: boolean; showMinimap: boolean;
   onZoomIn: () => void; onZoomOut: () => void; onFitView: () => void;
-  onAddCard: () => void; onAddPaper: () => void; onAddGroup: () => void;
+  onAddCard: () => void; onAddGroup: () => void;
   onUndo: () => void; onRedo: () => void; onToggleMinimap: () => void;
 }) {
   const btn = (disabled?: boolean): React.CSSProperties => ({
@@ -789,15 +687,16 @@ function CanvasControls({ isDark, zoom, canUndo, canRedo, showMinimap, onZoomIn,
 
   return (
     <div style={{
-      position: 'absolute', bottom: '4.5rem', right: '1rem', zIndex: 20,
+      position: 'absolute', bottom: '4.5rem', right: '1rem', zIndex: 'var(--z-sticky)',
       display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center',
       borderRadius: '9999px', padding: '0.25rem',
       background: isDark ? 'rgba(22,21,19,0.65)' : 'rgba(237,232,222,0.6)',
+      backdropFilter: 'blur(12px) saturate(1.4)',
+      WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
       border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
       boxShadow: isDark ? '0 2px 12px -2px rgba(0,0,0,0.3)' : '0 2px 16px -2px rgba(0,0,0,0.06)',
     }}>
       <button onClick={onAddCard} style={btn()} title="Add text card"><PlusIcon style={{ width: 14, height: 14 }} /></button>
-      <button onClick={onAddPaper} style={btn()} title="Add loose paper"><StickyNoteIcon style={{ width: 12, height: 12 }} /></button>
       <button onClick={onAddGroup} style={btn()} title="Add group"><FileTextIcon style={{ width: 12, height: 12 }} /></button>
       <div style={sep} />
       <button onClick={onUndo} style={btn(!canUndo)} title="Undo (Cmd+Z)" disabled={!canUndo}><Undo2Icon style={{ width: 13, height: 13 }} /></button>
@@ -810,7 +709,7 @@ function CanvasControls({ isDark, zoom, canUndo, canRedo, showMinimap, onZoomIn,
       <button onClick={onZoomOut} style={btn()} title="Zoom out"><ZoomOutIcon style={{ width: 14, height: 14 }} /></button>
       <div style={sep} />
       <button onClick={onFitView} style={btn()} title="Fit view"><MaximizeIcon style={{ width: 12, height: 12 }} /></button>
-      <button onClick={onToggleMinimap} style={{ ...btn(), background: showMinimap ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.08)') : 'transparent' }} title="Toggle minimap"><MapIcon style={{ width: 12, height: 12 }} /></button>
+      <button onClick={onToggleMinimap} style={{ ...btn(), background: showMinimap ? (isDark ? 'rgba(var(--pfc-accent-rgb), 0.12)' : 'rgba(var(--pfc-accent-rgb), 0.08)') : 'transparent' }} title="Toggle minimap"><MapIcon style={{ width: 12, height: 12 }} /></button>
     </div>
   );
 }
@@ -826,32 +725,48 @@ interface NoteCanvasProps {
 }
 
 export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanvasProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
 
   const notePages = usePFCStore((s) => s.notePages);
   const setActivePage = usePFCStore((s) => s.setActivePage);
+  const initialData = useMemo(() => loadCanvas(vaultId, pageId), [vaultId, pageId]);
 
-  const [cards, setCards] = useState<CanvasCard[]>([]);
-  const [edges, setEdges] = useState<CanvasEdge[]>([]);
+  const [cards, setCards] = useState<CanvasCard[]>(() => initialData.cards);
+  const [edges, setEdges] = useState<CanvasEdge[]>(() => initialData.edges);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 1 });
   const [isPanning, setIsPanning] = useState(false);
-  const [spaceDown, setSpaceDown] = useState(false);
   const [edgeDraft, setEdgeDraft] = useState<{ fromId: string; fromSide: 'top' | 'right' | 'bottom' | 'left'; mx: number; my: number } | null>(null);
+  const [undoCounts, setUndoCounts] = useState({ past: 0, future: 0 });
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [showMinimap, setShowMinimap] = useState(false);
   const [viewSize, setViewSize] = useState({ w: 800, h: 600 });
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const panStart = useRef({ x: 0, y: 0, cx: 0, cy: 0 });
+  const transformRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const undoStackRef = useRef<UndoStack>({ past: [], future: [] });
   const inertiaRef = useRef<{ vx: number; vy: number; raf: number | null }>({ vx: 0, vy: 0, raf: null });
   const lastPanPos = useRef({ x: 0, y: 0, t: 0 });
+  const prevPanPos = useRef({ x: 0, y: 0, t: 0 }); // previous move sample for velocity
   const isDraggingCards = useRef(false);
+  // Refs to avoid stale closures in undo/redo and pan callbacks
+  const cardsRef = useRef(cards);
+  const edgesRef = useRef(edges);
+  const cameraRef = useRef(camera);
+
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
+
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
+
+  useEffect(() => {
+    cameraRef.current = camera;
+  }, [camera]);
 
   // ── Track container size ──
   useEffect(() => {
@@ -864,16 +779,6 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
     return () => ro.disconnect();
   }, []);
 
-  // ── Load ──
-  useEffect(() => {
-    const data = loadCanvas(vaultId, pageId);
-    setCards(data.cards);
-    setEdges(data.edges);
-    setSelectedIds(new Set());
-    setCamera({ x: 0, y: 0, zoom: 1 });
-    undoStackRef.current = { past: [], future: [] };
-  }, [pageId, vaultId]);
-
   // ── Auto-save ──
   const saveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -884,69 +789,109 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
   }, [cards, edges, vaultId, pageId]);
 
   // ── Undo/Redo ──
+  const updateUndoCounts = useCallback(() => {
+    const stack = undoStackRef.current;
+    setUndoCounts({ past: stack.past.length, future: stack.future.length });
+  }, []);
 
   const pushUndo = useCallback(() => {
-    undoStackRef.current.past.push({ cards: JSON.parse(JSON.stringify(cards)), edges: JSON.parse(JSON.stringify(edges)) });
+    const c = cardsRef.current, e = edgesRef.current;
+    undoStackRef.current.past.push({ cards: JSON.parse(JSON.stringify(c)), edges: JSON.parse(JSON.stringify(e)) });
     if (undoStackRef.current.past.length > 50) undoStackRef.current.past.shift();
     undoStackRef.current.future = [];
-  }, [cards, edges]);
+    updateUndoCounts();
+  }, [updateUndoCounts]);
 
   const undo = useCallback(() => {
     const stack = undoStackRef.current;
     if (stack.past.length === 0) return;
-    stack.future.push({ cards: JSON.parse(JSON.stringify(cards)), edges: JSON.parse(JSON.stringify(edges)) });
+    const c = cardsRef.current, e = edgesRef.current;
+    stack.future.push({ cards: JSON.parse(JSON.stringify(c)), edges: JSON.parse(JSON.stringify(e)) });
     const prev = stack.past.pop()!;
     setCards(prev.cards);
     setEdges(prev.edges);
-  }, [cards, edges]);
+    updateUndoCounts();
+  }, [updateUndoCounts]);
 
   const redo = useCallback(() => {
     const stack = undoStackRef.current;
     if (stack.future.length === 0) return;
-    stack.past.push({ cards: JSON.parse(JSON.stringify(cards)), edges: JSON.parse(JSON.stringify(edges)) });
+    const c = cardsRef.current, e = edgesRef.current;
+    stack.past.push({ cards: JSON.parse(JSON.stringify(c)), edges: JSON.parse(JSON.stringify(e)) });
     const next = stack.future.pop()!;
     setCards(next.cards);
     setEdges(next.edges);
-  }, [cards, edges]);
+    updateUndoCounts();
+  }, [updateUndoCounts]);
 
   // ── Wheel zoom (toward cursor) ──
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const delta = e.ctrlKey ? -e.deltaY * 0.01 : -e.deltaY * 0.001;
-    setCamera((cam) => {
-      const nz = clamp(cam.zoom * (1 + delta), MIN_ZOOM, MAX_ZOOM);
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const s = nz / cam.zoom;
-      return { x: mx - s * (mx - cam.x), y: my - s * (my - cam.y), zoom: nz };
-    });
+  // Uses a native event listener (not React) so we can set { passive: false }
+  // to actually call preventDefault() and block the browser's pinch-to-zoom.
+  // Scroll up/down = zoom in/out; trackpad pinch also zooms.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Block browser zoom — this only works with { passive: false }
+      e.preventDefault();
+
+      const rect = el.getBoundingClientRect();
+      // Normalize delta: deltaMode 1 = lines (~40px each), deltaMode 2 = pages
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 40;
+      if (e.deltaMode === 2) dy *= 800;
+      // ctrlKey = trackpad pinch; plain scroll = mouse wheel / two-finger vertical
+      const delta = e.ctrlKey ? -dy * 0.01 : -dy * 0.003;
+      setCamera((cam) => {
+        const nz = clamp(cam.zoom * (1 + delta), MIN_ZOOM, MAX_ZOOM);
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const s = nz / cam.zoom;
+        return { x: mx - s * (mx - cam.x), y: my - s * (my - cam.y), zoom: nz };
+      });
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
   }, []);
 
   // ── Inertial panning (Freeform physics) ──
+  // Uses direct DOM manipulation for smooth 60fps — syncs React state when done.
   const startInertia = useCallback(() => {
-    const now = performance.now();
-    const dt = now - lastPanPos.current.t;
+    // Velocity from the last two move samples (prevPanPos → lastPanPos)
+    const dt = lastPanPos.current.t - prevPanPos.current.t;
     if (dt > 0 && dt < 150) {
-      inertiaRef.current.vx = (panStart.current.cx - lastPanPos.current.x) / dt * 16;
-      inertiaRef.current.vy = (panStart.current.cy - lastPanPos.current.y) / dt * 16;
-      // Note: vx/vy are per-frame estimates
+      inertiaRef.current.vx = (lastPanPos.current.x - prevPanPos.current.x) / dt * 16;
+      inertiaRef.current.vy = (lastPanPos.current.y - prevPanPos.current.y) / dt * 16;
     }
 
     if (inertiaRef.current.raf) cancelAnimationFrame(inertiaRef.current.raf);
+
+    const transformEl = transformRef.current;
+    const gridEl = gridRef.current;
 
     const animate = () => {
       const { vx, vy } = inertiaRef.current;
       if (Math.abs(vx) < INERTIA_MIN_V && Math.abs(vy) < INERTIA_MIN_V) {
         inertiaRef.current.raf = null;
+        // Sync React state when inertia finishes
+        const cam = cameraRef.current;
+        setCamera({ x: cam.x, y: cam.y, zoom: cam.zoom });
         return;
       }
-      setCamera((c) => ({
-        ...c,
-        x: c.x + vx,
-        y: c.y + vy,
-      }));
+      const cam = cameraRef.current;
+      const nx = cam.x + vx;
+      const ny = cam.y + vy;
+      cameraRef.current = { x: nx, y: ny, zoom: cam.zoom };
+      // Direct DOM update — no React re-render
+      if (transformEl) {
+        transformEl.style.transform = `translate(${nx}px,${ny}px) scale(${cam.zoom})`;
+      }
+      if (gridEl) {
+        const gs = GRID_SIZE * cam.zoom;
+        gridEl.style.backgroundPosition = `${nx % gs}px ${ny % gs}px`;
+      }
       inertiaRef.current.vx *= INERTIA_FRICTION;
       inertiaRef.current.vy *= INERTIA_FRICTION;
       inertiaRef.current.raf = requestAnimationFrame(animate);
@@ -954,6 +899,10 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
 
     if (Math.abs(inertiaRef.current.vx) > INERTIA_MIN_V || Math.abs(inertiaRef.current.vy) > INERTIA_MIN_V) {
       inertiaRef.current.raf = requestAnimationFrame(animate);
+    } else {
+      // No inertia — sync immediately
+      const cam = cameraRef.current;
+      setCamera({ x: cam.x, y: cam.y, zoom: cam.zoom });
     }
   }, []);
 
@@ -966,92 +915,127 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
     inertiaRef.current.vy = 0;
   }, []);
 
-  // ── Pan (Space+drag, alt+drag, or middle-click) ──
+  // ── Pan (click+drag on background, middle-click, or alt+drag) ──
+  // Uses direct DOM manipulation during drag for 60fps — no React re-renders.
+  // React state is synced on mouseup.
   const startPan = useCallback((e: React.MouseEvent | MouseEvent) => {
     stopInertia();
     setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY, cx: camera.x, cy: camera.y };
-    lastPanPos.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+    const cam = cameraRef.current;
+    // Snapshot: mouse origin + camera origin (NEVER mutated during drag)
+    const originX = e.clientX;
+    const originY = e.clientY;
+    const camOriginX = cam.x;
+    const camOriginY = cam.y;
+    const zoom = cam.zoom;
+    const now = performance.now();
+    prevPanPos.current = { x: cam.x, y: cam.y, t: now };
+    lastPanPos.current = { x: cam.x, y: cam.y, t: now };
+
+    const gridSize = GRID_SIZE * zoom;
+    const transformEl = transformRef.current;
+    const gridEl = gridRef.current;
+
     const onMove = (ev: MouseEvent) => {
-      const nx = panStart.current.cx + (ev.clientX - panStart.current.x);
-      const ny = panStart.current.cy + (ev.clientY - panStart.current.y);
-      // Track velocity for inertia
-      lastPanPos.current = { x: panStart.current.cx, y: panStart.current.cy, t: performance.now() };
-      panStart.current.cx = nx;
-      panStart.current.cy = ny;
-      setCamera((c) => ({ ...c, x: nx, y: ny }));
+      // 1:1 mapping — camera moves exactly as far as the cursor
+      const nx = camOriginX + (ev.clientX - originX);
+      const ny = camOriginY + (ev.clientY - originY);
+      // Track velocity for inertia (last two samples)
+      prevPanPos.current = { ...lastPanPos.current };
+      lastPanPos.current = { x: nx, y: ny, t: performance.now() };
+      // Write directly to DOM — skip React reconciliation for 60fps panning
+      cameraRef.current = { x: nx, y: ny, zoom };
+      if (transformEl) {
+        transformEl.style.transform = `translate(${nx}px,${ny}px) scale(${zoom})`;
+      }
+      if (gridEl) {
+        gridEl.style.backgroundPosition = `${nx % gridSize}px ${ny % gridSize}px`;
+      }
     };
     const onUp = () => {
       setIsPanning(false);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      // Sync React state with final DOM position
+      const final = cameraRef.current;
+      setCamera({ x: final.x, y: final.y, zoom: final.zoom });
       startInertia();
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [camera.x, camera.y, stopInertia, startInertia]);
+  }, [stopInertia, startInertia]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.target !== e.currentTarget && !(e.target as HTMLElement).dataset.canvasGrid) return;
 
-    // Space+drag or middle-click or alt/meta+click => pan
-    if (spaceDown || e.button === 1 || (e.button === 0 && (e.altKey || e.metaKey))) {
+    // Middle-click always pans
+    if (e.button === 1) {
       e.preventDefault();
       startPan(e);
       return;
     }
 
-    // Left-click on background => start marquee selection
+    // Left-click on background
     if (e.button === 0) {
-      if (!e.shiftKey) setSelectedIds(new Set());
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const wx = (e.clientX - rect.left - camera.x) / camera.zoom;
-      const wy = (e.clientY - rect.top - camera.y) / camera.zoom;
-      setMarquee({ x0: wx, y0: wy, x1: wx, y1: wy });
-      const onMove = (ev: MouseEvent) => {
-        const ewx = (ev.clientX - rect.left - camera.x) / camera.zoom;
-        const ewy = (ev.clientY - rect.top - camera.y) / camera.zoom;
-        setMarquee((m) => m ? { ...m, x1: ewx, y1: ewy } : null);
-      };
-      const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-        setMarquee((m) => {
-          if (!m) return null;
-          const sx = Math.min(m.x0, m.x1), sy = Math.min(m.y0, m.y1);
-          const sw = Math.abs(m.x1 - m.x0), sh = Math.abs(m.y1 - m.y0);
-          if (sw < 5 && sh < 5) return null; // too small, treat as click-deselect
-          // Select cards intersecting the marquee
-          setSelectedIds((prev) => {
-            const ids = new Set(e.shiftKey ? prev : []);
-            for (const c of cards) {
-              if (c.x + c.width >= sx && c.x <= sx + sw && c.y + c.height >= sy && c.y <= sy + sh) {
-                ids.add(c.id);
+      // Shift+drag => marquee selection
+      if (e.shiftKey) {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const cam = cameraRef.current;
+        const wx = (e.clientX - rect.left - cam.x) / cam.zoom;
+        const wy = (e.clientY - rect.top - cam.y) / cam.zoom;
+        setMarquee({ x0: wx, y0: wy, x1: wx, y1: wy });
+        const onMove = (ev: MouseEvent) => {
+          const c = cameraRef.current;
+          const ewx = (ev.clientX - rect.left - c.x) / c.zoom;
+          const ewy = (ev.clientY - rect.top - c.y) / c.zoom;
+          setMarquee((m) => m ? { ...m, x1: ewx, y1: ewy } : null);
+        };
+        const onUp = () => {
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+          setMarquee((m) => {
+            if (!m) return null;
+            const sx = Math.min(m.x0, m.x1), sy = Math.min(m.y0, m.y1);
+            const sw = Math.abs(m.x1 - m.x0), sh = Math.abs(m.y1 - m.y0);
+            if (sw < 5 && sh < 5) return null;
+            setSelectedIds((prev) => {
+              const ids = new Set(prev);
+              for (const c of cardsRef.current) {
+                if (c.x + c.width >= sx && c.x <= sx + sw && c.y + c.height >= sy && c.y <= sy + sh) {
+                  ids.add(c.id);
+                }
               }
-            }
-            return ids;
+              return ids;
+            });
+            return null;
           });
-          return null;
-        });
-      };
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        return;
+      }
+
+      // Plain left-click + drag => pan (click on empty = deselect, then pan)
+      setSelectedIds(new Set());
+      e.preventDefault();
+      startPan(e);
     }
-  }, [camera, spaceDown, startPan, cards]);
+  }, [startPan]);
 
   // ── Double-click to create ──
   const handleDblClick = useCallback((e: React.MouseEvent) => {
     if (e.target !== e.currentTarget && !(e.target as HTMLElement).dataset.canvasGrid) return;
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const wx = (e.clientX - rect.left - camera.x) / camera.zoom;
-    const wy = (e.clientY - rect.top - camera.y) / camera.zoom;
+    const cam = cameraRef.current;
+    const wx = (e.clientX - rect.left - cam.x) / cam.zoom;
+    const wy = (e.clientY - rect.top - cam.y) / cam.zoom;
     pushUndo();
     const id = uid();
     setCards((p) => [...p, { id, type: 'text', x: snap(wx - 140), y: snap(wy - 40), width: 280, height: 160, color: 'default', header: '', body: '', createdAt: Date.now(), updatedAt: Date.now() }]);
     setSelectedIds(new Set([id]));
-  }, [camera, pushUndo]);
+  }, [pushUndo]);
 
   const handleSelect = useCallback((id: string, multi: boolean) => {
     setSelectedIds((p) => {
@@ -1072,28 +1056,37 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
   }, [pushUndo]);
 
   // ── Card drag with snap alignment guides ──
+  const selectedIdsRef = useRef(selectedIds);
+  useEffect(() => {
+    selectedIdsRef.current = selectedIds;
+  }, [selectedIds]);
+
   const handleCardDragStart = useCallback((cardId: string, e: React.MouseEvent) => {
     // If card isn't selected, select it
-    const ids = selectedIds.has(cardId) ? selectedIds : new Set([cardId]);
-    if (!selectedIds.has(cardId)) setSelectedIds(ids);
+    const curSel = selectedIdsRef.current;
+    const ids = curSel.has(cardId) ? curSel : new Set([cardId]);
+    if (!curSel.has(cardId)) setSelectedIds(ids);
 
     pushUndo();
     isDraggingCards.current = true;
     const startX = e.clientX, startY = e.clientY;
+    const zoomAtStart = cameraRef.current.zoom;
 
     // Snapshot positions of all selected cards
     const startPositions = new Map<string, { x: number; y: number }>();
-    for (const c of cards) {
+    const snapCards = cardsRef.current;
+    for (const c of snapCards) {
       if (ids.has(c.id)) startPositions.set(c.id, { x: c.x, y: c.y });
     }
 
     const onMove = (ev: MouseEvent) => {
-      const dx = (ev.clientX - startX) / camera.zoom;
-      const dy = (ev.clientY - startY) / camera.zoom;
+      const dx = (ev.clientX - startX) / zoomAtStart;
+      const dy = (ev.clientY - startY) / zoomAtStart;
 
-      // Compute bounds of all moving cards
+      // Compute bounds of all moving cards using latest cards for snap guides
+      const currentCards = cardsRef.current;
       let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
-      for (const c of cards) {
+      for (const c of currentCards) {
         const sp = startPositions.get(c.id);
         if (!sp) continue;
         const nx = snap(sp.x + dx), ny = snap(sp.y + dy);
@@ -1104,7 +1097,7 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
       }
 
       // Compute snap guides
-      const { guides, snapDx, snapDy } = computeSnapGuides(ids, { x: bx0, y: by0, w: bx1 - bx0, h: by1 - by0 }, cards);
+      const { guides, snapDx, snapDy } = computeSnapGuides(ids, { x: bx0, y: by0, w: bx1 - bx0, h: by1 - by0 }, currentCards);
       setSnapGuides(guides);
 
       setCards((prev) => prev.map((c) => {
@@ -1122,20 +1115,25 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [cards, selectedIds, camera.zoom, pushUndo]);
+  }, [pushUndo]);
 
   // ── Edge creation ──
   const handleStartEdge = useCallback((cardId: string, side: 'top' | 'right' | 'bottom' | 'left') => {
-    setEdgeDraft({ fromId: cardId, fromSide: side, mx: 0, my: 0 });
-    const onMove = (ev: MouseEvent) => { setEdgeDraft((d) => d ? { ...d, mx: ev.clientX, my: ev.clientY } : null); };
+    setEdgeDraft({ fromId: cardId, fromSide: side, mx: Number.NaN, my: Number.NaN });
+    const onMove = (ev: MouseEvent) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setEdgeDraft((d) => d ? { ...d, mx: ev.clientX - rect.left, my: ev.clientY - rect.top } : null);
+    };
     const onUp = (ev: MouseEvent) => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) { setEdgeDraft(null); return; }
-      const wx = (ev.clientX - rect.left - camera.x) / camera.zoom;
-      const wy = (ev.clientY - rect.top - camera.y) / camera.zoom;
-      const target = cards.find((c) => c.id !== cardId && wx >= c.x && wx <= c.x + c.width && wy >= c.y && wy <= c.y + c.height);
+      const cam = cameraRef.current;
+      const wx = (ev.clientX - rect.left - cam.x) / cam.zoom;
+      const wy = (ev.clientY - rect.top - cam.y) / cam.zoom;
+      const target = cardsRef.current.find((c) => c.id !== cardId && wx >= c.x && wx <= c.x + c.width && wy >= c.y && wy <= c.y + c.height);
       if (target) {
         pushUndo();
         setEdges((p) => [...p, { id: uid(), fromCardId: cardId, toCardId: target.id, fromSide: side, toSide: closestSide(target, wx, wy), color: 'default' }]);
@@ -1144,19 +1142,12 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [cards, camera, pushUndo]);
+  }, [pushUndo]);
 
   // ── Keyboard shortcuts ──
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const isEditable = (document.activeElement as HTMLElement)?.isContentEditable;
-
-      // Space key for pan mode
-      if (e.key === ' ' && !isEditable) {
-        e.preventDefault();
-        setSpaceDown(true);
-        return;
-      }
 
       // Delete/Backspace — delete selected
       if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditable && selectedIds.size > 0) {
@@ -1234,14 +1225,67 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
       }
     };
 
-    const keyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ') setSpaceDown(false);
+    window.addEventListener('keydown', handler);
+    return () => { window.removeEventListener('keydown', handler); };
+  }, [selectedIds, cards, pushUndo, undo, redo]);
+
+  // ── Paste handler — strip formatting + auto-resize (Obsidian/Notion style) ──
+  useEffect(() => {
+    const handler = (e: ClipboardEvent) => {
+      const isEditable = (document.activeElement as HTMLElement)?.isContentEditable;
+
+      // If pasting into a contentEditable card, strip formatting but let it flow
+      if (isEditable) {
+        e.preventDefault();
+        const plain = e.clipboardData?.getData('text/plain') || '';
+        if (plain) document.execCommand('insertText', false, plain);
+        return;
+      }
+
+      // Canvas-level paste — create a new card with the text
+      const plain = e.clipboardData?.getData('text/plain')?.trim();
+      if (!plain) return;
+      e.preventDefault();
+
+      pushUndo();
+
+      // Estimate card dimensions from text content
+      const lines = plain.split('\n');
+      const firstLine = lines[0] || '';
+      const restLines = lines.slice(1).join('\n').trim();
+
+      // Width: based on longest line (rough: 7.5px per char at ~14px font), min 240, max 520
+      const longestLine = lines.reduce((a, b) => a.length > b.length ? a : b, '');
+      const estWidth = snap(clamp(longestLine.length * 7.5 + 40, 240, 520));
+      // Height: ~24px per line + header + padding, min 100, max 600
+      const lineCount = lines.length;
+      const estHeight = snap(clamp(lineCount * 24 + 72, 100, 600));
+
+      const cam = cameraRef.current;
+      const cx = viewSize.w / 2, cy = viewSize.h / 2;
+      const wx = (cx - cam.x) / cam.zoom;
+      const wy = (cy - cam.y) / cam.zoom;
+      const id = uid();
+
+      setCards((p) => [...p, {
+        id,
+        type: 'text' as const,
+        x: snap(wx - estWidth / 2),
+        y: snap(wy - estHeight / 2),
+        width: estWidth,
+        height: estHeight,
+        color: 'default' as const,
+        header: firstLine.slice(0, 120),
+        body: restLines,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }]);
+      setSelectedIds(new Set([id]));
     };
 
-    window.addEventListener('keydown', handler);
-    window.addEventListener('keyup', keyUp);
-    return () => { window.removeEventListener('keydown', handler); window.removeEventListener('keyup', keyUp); };
-  }, [selectedIds, cards, pushUndo, undo, redo]);
+    window.addEventListener('paste', handler);
+    return () => window.removeEventListener('paste', handler);
+  }, [pushUndo, viewSize]);
 
   // ── Zoom controls ──
   const zoomIn = useCallback(() => setCamera((c) => {
@@ -1268,77 +1312,26 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
   }, [cards, viewSize]);
 
   const addCard = useCallback(() => {
+    const cam = cameraRef.current;
     const cx = viewSize.w / 2, cy = viewSize.h / 2;
-    const wx = (cx - camera.x) / camera.zoom;
-    const wy = (cy - camera.y) / camera.zoom;
+    const wx = (cx - cam.x) / cam.zoom;
+    const wy = (cy - cam.y) / cam.zoom;
     pushUndo();
     const id = uid();
     setCards((p) => [...p, { id, type: 'text', x: snap(wx - 140), y: snap(wy - 80), width: 280, height: 160, color: 'default', header: '', body: '', createdAt: Date.now(), updatedAt: Date.now() }]);
     setSelectedIds(new Set([id]));
-  }, [camera, viewSize, pushUndo]);
+  }, [viewSize, pushUndo]);
 
   const addGroup = useCallback(() => {
+    const cam = cameraRef.current;
     const cx = viewSize.w / 2, cy = viewSize.h / 2;
-    const wx = (cx - camera.x) / camera.zoom;
-    const wy = (cy - camera.y) / camera.zoom;
+    const wx = (cx - cam.x) / cam.zoom;
+    const wy = (cy - cam.y) / cam.zoom;
     pushUndo();
     const id = uid();
     setCards((p) => [...p, { id, type: 'group', x: snap(wx - 200), y: snap(wy - 150), width: 400, height: 300, color: 'default', header: '', body: '', label: 'Group', createdAt: Date.now(), updatedAt: Date.now() }]);
     setSelectedIds(new Set([id]));
-  }, [camera, viewSize, pushUndo]);
-
-  // ── Add loose paper (tap-to-unfold card) ──
-  const addPaper = useCallback(() => {
-    const cx = viewSize.w / 2, cy = viewSize.h / 2;
-    const wx = (cx - camera.x) / camera.zoom;
-    const wy = (cy - camera.y) / camera.zoom;
-    pushUndo();
-    const id = uid();
-    const rotation = Math.round((Math.random() - 0.5) * 12); // -6° to +6°
-    setCards((p) => [...p, {
-      id, type: 'paper' as const,
-      x: snap(wx - 100), y: snap(wy - 60),
-      width: 200, height: 140,
-      color: 'default', header: '', body: '',
-      createdAt: Date.now(), updatedAt: Date.now(),
-      paperRotation: rotation,
-    }]);
-    setSelectedIds(new Set([id]));
-  }, [camera, viewSize, pushUndo]);
-
-  // ── Paper unfold: smooth camera zoom to paper, then transition to text card ──
-  const handlePaperUnfold = useCallback((cardId: string) => {
-    const card = cards.find((c) => c.id === cardId);
-    if (!card) return;
-
-    // Animate camera to center on the paper and zoom in
-    const targetZoom = clamp(1.2, MIN_ZOOM, MAX_ZOOM);
-    const cardCenterX = card.x + card.width / 2;
-    const cardCenterY = card.y + card.height / 2;
-    const targetX = viewSize.w / 2 - cardCenterX * targetZoom;
-    const targetY = viewSize.h / 2 - cardCenterY * targetZoom;
-
-    // Smooth CSS transition via requestAnimationFrame
-    const duration = 500; // ms
-    const startTime = performance.now();
-    const startCam = { ...camera };
-
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const t = Math.min(elapsed / duration, 1);
-      // Ease-out cubic
-      const ease = 1 - Math.pow(1 - t, 3);
-
-      setCamera({
-        x: startCam.x + (targetX - startCam.x) * ease,
-        y: startCam.y + (targetY - startCam.y) * ease,
-        zoom: startCam.zoom + (targetZoom - startCam.zoom) * ease,
-      });
-
-      if (t < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }, [cards, camera, viewSize]);
+  }, [viewSize, pushUndo]);
 
   const handleMinimapJump = useCallback((wx: number, wy: number) => {
     setCamera((c) => ({
@@ -1349,6 +1342,7 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
   }, [viewSize]);
 
   const pageMap = useMemo(() => { const m = new Map<string, NotePage>(); for (const p of notePages) m.set(p.id, p); return m; }, [notePages]);
+  const cardMap = useMemo(() => { const m = new Map<string, CanvasCard>(); for (const c of cards) m.set(c.id, c); return m; }, [cards]);
   const dotColor = isDark ? 'rgba(79,69,57,0.15)' : 'rgba(180,170,155,0.12)';
 
   // ── LOD level based on zoom ──
@@ -1365,32 +1359,34 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
 
   // ── Draft edge SVG path ──
   const draftPath = useMemo(() => {
-    if (!edgeDraft || !edgeDraft.mx) return null;
-    const fc = cards.find((c) => c.id === edgeDraft.fromId);
+    if (!edgeDraft || !Number.isFinite(edgeDraft.mx) || !Number.isFinite(edgeDraft.my)) return null;
+    const fc = cardMap.get(edgeDraft.fromId);
     if (!fc) return null;
     const from = getAnchor(fc, edgeDraft.fromSide);
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return null;
-    const to = { x: (edgeDraft.mx - rect.left - camera.x) / camera.zoom, y: (edgeDraft.my - rect.top - camera.y) / camera.zoom };
+    const to = { x: (edgeDraft.mx - camera.x) / camera.zoom, y: (edgeDraft.my - camera.y) / camera.zoom };
     return buildEdgePath(from, to, edgeDraft.fromSide, 'left');
-  }, [edgeDraft, cards, camera]);
+  }, [edgeDraft, cardMap, camera]);
 
   const lod = getLod(camera.zoom);
 
   return (
     <div
       ref={canvasRef}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onDoubleClick={handleDblClick}
       style={{
         position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
-        cursor: spaceDown ? (isPanning ? 'grabbing' : 'grab') : isPanning ? 'grabbing' : 'default',
+        cursor: isPanning ? 'grabbing' : 'grab',
         background: isDark ? 'var(--background)' : 'var(--background)',
+        touchAction: 'none', // prevent browser pinch/scroll gestures on canvas
       }}
     >
+      {/* Placeholder style — single instance instead of per-card */}
+      <style>{`[data-placeholder]:empty::before{content:attr(data-placeholder);color:${isDark ? 'rgba(156,143,128,0.3)' : 'rgba(0,0,0,0.2)'};pointer-events:none}`}</style>
+
       {/* Dot grid */}
       <div
+        ref={gridRef}
         data-canvas-grid="true"
         style={{
           position: 'absolute', inset: 0,
@@ -1402,7 +1398,7 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
       />
 
       {/* Transform layer */}
-      <div style={{
+      <div ref={transformRef} style={{
         position: 'absolute', top: 0, left: 0, transformOrigin: '0 0',
         transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`,
         willChange: 'transform',
@@ -1410,14 +1406,14 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
         {/* SVG edges + snap guides + marquee */}
         <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}>
           {edges.map((edge) => {
-            const fc = cards.find((c) => c.id === edge.fromCardId);
-            const tc = cards.find((c) => c.id === edge.toCardId);
+            const fc = cardMap.get(edge.fromCardId);
+            const tc = cardMap.get(edge.toCardId);
             if (!fc || !tc) return null;
             const from = getAnchor(fc, edge.fromSide);
             const to = getAnchor(tc, edge.toSide);
             const d = buildEdgePath(from, to, edge.fromSide, edge.toSide);
             const ec = CARD_COLORS.find((c) => c.id === edge.color);
-            const stroke = ec?.border || (isDark ? 'rgba(196,149,106,0.4)' : 'rgba(196,149,106,0.3)');
+            const stroke = ec?.border || (isDark ? 'rgba(var(--pfc-accent-rgb), 0.4)' : 'rgba(var(--pfc-accent-rgb), 0.3)');
             return (
               <g key={edge.id}>
                 <path d={d} fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" />
@@ -1427,47 +1423,33 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
               </g>
             );
           })}
-          {draftPath && <path d={draftPath} fill="none" stroke={isDark ? 'rgba(196,149,106,0.5)' : 'rgba(196,149,106,0.4)'} strokeWidth={2} strokeDasharray="6 4" strokeLinecap="round" />}
+          {draftPath && <path d={draftPath} fill="none" stroke={isDark ? 'rgba(var(--pfc-accent-rgb), 0.5)' : 'rgba(var(--pfc-accent-rgb), 0.4)'} strokeWidth={2} strokeDasharray="6 4" strokeLinecap="round" />}
 
           {/* Snap alignment guides */}
           {snapGuides.map((g, i) => (
             g.type === 'x'
-              ? <line key={`sg-${i}`} x1={g.pos} y1={-10000} x2={g.pos} y2={10000} stroke="rgba(196,149,106,0.5)" strokeWidth={1} strokeDasharray="4 3" />
-              : <line key={`sg-${i}`} x1={-10000} y1={g.pos} x2={10000} y2={g.pos} stroke="rgba(196,149,106,0.5)" strokeWidth={1} strokeDasharray="4 3" />
+              ? <line key={`sg-${i}`} x1={g.pos} y1={-10000} x2={g.pos} y2={10000} stroke="rgba(var(--pfc-accent-rgb), 0.5)" strokeWidth={1} strokeDasharray="4 3" />
+              : <line key={`sg-${i}`} x1={-10000} y1={g.pos} x2={10000} y2={g.pos} stroke="rgba(var(--pfc-accent-rgb), 0.5)" strokeWidth={1} strokeDasharray="4 3" />
           ))}
         </svg>
 
-        {/* Cards — viewport culled, LOD-aware, paper cards get special treatment */}
+        {/* Cards — viewport culled, LOD-aware */}
         {visibleCards.map((card) => (
-          card.type === 'paper' ? (
-            <PaperCard
-              key={card.id}
-              card={card}
-              isDark={isDark}
-              isSelected={selectedIds.has(card.id)}
-              zoom={camera.zoom}
-              onSelect={handleSelect}
-              onUpdate={handleUpdateCard}
-              onDragStart={handleCardDragStart}
-              onUnfold={handlePaperUnfold}
-            />
-          ) : (
-            <CanvasCardView
-              key={card.id}
-              card={card}
-              isDark={isDark}
-              isSelected={selectedIds.has(card.id)}
-              zoom={camera.zoom}
-              lod={lod}
-              onSelect={handleSelect}
-              onUpdate={handleUpdateCard}
-              onDelete={handleDeleteCard}
-              onStartEdge={handleStartEdge}
-              onDragStart={handleCardDragStart}
-              linkedPage={card.linkedPageId ? pageMap.get(card.linkedPageId) ?? null : null}
-              onNavigateToPage={setActivePage}
-            />
-          )
+          <CanvasCardView
+            key={card.id}
+            card={card}
+            isDark={isDark}
+            isSelected={selectedIds.has(card.id)}
+            zoom={camera.zoom}
+            lod={lod}
+            onSelect={handleSelect}
+            onUpdate={handleUpdateCard}
+            onDelete={handleDeleteCard}
+            onStartEdge={handleStartEdge}
+            onDragStart={handleCardDragStart}
+            linkedPage={card.linkedPageId ? pageMap.get(card.linkedPageId) ?? null : null}
+            onNavigateToPage={setActivePage}
+          />
         ))}
       </div>
 
@@ -1480,8 +1462,8 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
             top: Math.min(marquee.y0, marquee.y1) * camera.zoom + camera.y,
             width: Math.abs(marquee.x1 - marquee.x0) * camera.zoom,
             height: Math.abs(marquee.y1 - marquee.y0) * camera.zoom,
-            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
-            border: `1.5px solid ${isDark ? 'rgba(196,149,106,0.35)' : 'rgba(196,149,106,0.3)'}`,
+            background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
+            border: `1.5px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.35)' : 'rgba(var(--pfc-accent-rgb), 0.3)'}`,
             borderRadius: 4,
             pointerEvents: 'none',
           }}
@@ -1498,16 +1480,20 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
           <div style={{
             width: 44, height: 44, borderRadius: 12,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
-            border: `1px solid ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)'}`,
+            background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
+            border: `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.15)' : 'rgba(var(--pfc-accent-rgb), 0.12)'}`,
           }}>
-            <TypeIcon style={{ width: 20, height: 20, color: isDark ? 'rgba(196,149,106,0.5)' : 'rgba(196,149,106,0.45)' }} />
+            <TypeIcon style={{ width: 20, height: 20, color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.5)' : 'rgba(var(--pfc-accent-rgb), 0.45)' }} />
           </div>
-          <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: isDark ? 'rgba(156,143,128,0.35)' : 'rgba(0,0,0,0.2)', letterSpacing: '-0.01em', textAlign: 'center' }}>
-            Double-click to add a card · Drop loose paper from toolbar · Space+drag to pan
+          <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: isDark ? 'rgba(156,143,128,0.35)' : 'rgba(0,0,0,0.2)', letterSpacing: '-0.01em', textAlign: 'center', lineHeight: 1.6 }}>
+            Double-click to add a card · Click + drag to pan<br />
+            Scroll to zoom · Shift+drag to select
           </span>
         </div>
       )}
+
+      {/* Zoom hint — subtle bottom-left indicator */}
+      <ZoomHint isDark={isDark} zoom={camera.zoom} />
 
       {showMinimap && (
         <Minimap cards={cards} camera={camera} viewW={viewSize.w} viewH={viewSize.h} isDark={isDark} onJump={handleMinimapJump} />
@@ -1516,14 +1502,14 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
       <CanvasControls
         isDark={isDark}
         zoom={camera.zoom}
-        canUndo={undoStackRef.current.past.length > 0}
-        canRedo={undoStackRef.current.future.length > 0}
+        canUndo={undoCounts.past > 0}
+        canRedo={undoCounts.future > 0}
         showMinimap={showMinimap}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onFitView={fitView}
         onAddCard={addCard}
-        onAddPaper={addPaper}
+
         onAddGroup={addGroup}
         onUndo={undo}
         onRedo={redo}

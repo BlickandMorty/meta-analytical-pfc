@@ -23,7 +23,7 @@ export function smoothEMA(data: [number, number][], factor: number): [number, nu
 }
 
 /** Centred Moving Average — window-based smoothing */
-export function smoothCMA(data: [number, number][], windowSize: number): [number, number][] {
+function smoothCMA(data: [number, number][], windowSize: number): [number, number][] {
   if (data.length === 0 || windowSize < 2) return data;
   const half = Math.floor((windowSize - 1) / 2);
   return data.map(([x], i) => {
@@ -39,8 +39,8 @@ export function smoothCMA(data: [number, number][], windowSize: number): [number
 // Aggregation (AIM: utils/aggregateGroupData.ts)
 // ---------------------------------------------------------------------------
 
-export type AggLineMethod = 'mean' | 'median' | 'min' | 'max';
-export type AggAreaMethod = 'none' | 'minmax' | 'stddev' | 'stderr' | 'ci95';
+type AggLineMethod = 'mean' | 'median' | 'min' | 'max';
+type AggAreaMethod = 'none' | 'minmax' | 'stddev' | 'stderr' | 'ci95';
 
 function median(arr: number[]): number {
   const sorted = [...arr].sort((a, b) => a - b);
@@ -54,7 +54,7 @@ function stdDev(arr: number[], mean: number): number {
 }
 
 /** Aggregate multiple series at matching x positions */
-export function aggregateSeries(
+function aggregateSeries(
   allSeries: [number, number][][],
   lineMethod: AggLineMethod = 'mean',
   areaMethod: AggAreaMethod = 'stddev',
@@ -115,7 +115,7 @@ export function aggregateSeries(
 // Outlier removal (AIM: utils/removeOutliers.ts)
 // ---------------------------------------------------------------------------
 
-export function removeOutliers(data: [number, number][], threshold = 2): [number, number][] {
+function removeOutliers(data: [number, number][], threshold = 2): [number, number][] {
   if (data.length < 4) return data;
   const ys = data.map((d) => d[1]);
   const sorted = [...ys].sort((a, b) => a - b);

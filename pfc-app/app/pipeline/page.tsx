@@ -25,8 +25,7 @@ import { PageShell, GlassSection } from '@/components/page-shell';
 import { PixelBook } from '@/components/pixel-book';
 import { EducationalTooltipButton } from '@/components/educational-tooltip';
 import { PIPELINE_TOOLTIPS } from '@/lib/research/educational-data';
-import { useTheme } from 'next-themes';
-import { useState, useEffect } from 'react';
+import { useIsDark } from '@/hooks/use-is-dark';
 
 function StatusIcon({ status }: { status: StageStatus }) {
   switch (status) {
@@ -105,10 +104,7 @@ export default function PipelinePage() {
   const ready = useSetupGuard();
   const pipelineStages = usePFCStore((s) => s.pipelineStages);
   const isProcessing = usePFCStore((s) => s.isProcessing);
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
 
   const completedCount = pipelineStages.filter((s) => s.status === 'complete').length;
   const overallProgress = (completedCount / STAGES.length) * 100;

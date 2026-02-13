@@ -42,7 +42,7 @@ export interface S2Paper {
   } | null;
 }
 
-export interface S2SearchResult {
+interface S2SearchResult {
   total: number;
   offset: number;
   data: S2Paper[];
@@ -278,11 +278,31 @@ export async function getPaperReferences(
 // Utility
 // ═══════════════════════════════════════════════════════════════════
 
-function normalizePaper(raw: any): S2Paper {
+interface RawS2Author {
+  authorId?: string | null;
+  name?: string | null;
+}
+
+interface RawS2Paper {
+  paperId?: string | null;
+  title?: string | null;
+  authors?: RawS2Author[] | null;
+  year?: number | null;
+  venue?: string | null;
+  abstract?: string | null;
+  citationCount?: number | null;
+  url?: string | null;
+  citationStyles?: S2Paper['citationStyles'];
+  externalIds?: S2Paper['externalIds'];
+  openAccessPdf?: S2Paper['openAccessPdf'];
+  tldr?: S2Paper['tldr'];
+}
+
+function normalizePaper(raw: RawS2Paper): S2Paper {
   return {
     paperId: raw.paperId ?? '',
     title: raw.title ?? 'Untitled',
-    authors: (raw.authors ?? []).map((a: any) => ({
+    authors: (raw.authors ?? []).map((a: RawS2Author) => ({
       authorId: a.authorId ?? null,
       name: a.name ?? 'Unknown',
     })),

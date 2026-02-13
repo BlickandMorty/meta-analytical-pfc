@@ -21,12 +21,14 @@ import { createUISlice } from './slices/ui';
 import { createNotesSlice } from './slices/notes';
 import { createLearningSlice } from './slices/learning';
 import { createSOARSlice } from './slices/soar';
+import { createToastSlice } from './slices/toast';
 
-// Slice types — local imports for composition + re-exports for consumers
+// Slice types — local imports for composition
 import type { MessageSliceState, MessageSliceActions } from './slices/message';
 import type { PipelineSliceState, PipelineSliceActions, SignalHistoryEntry } from './slices/pipeline';
 import type { InferenceSliceState, InferenceSliceActions } from './slices/inference';
-import type { ControlsSliceState, ControlsSliceActions, PipelineControls } from './slices/controls';
+import type { ControlsSliceState, ControlsSliceActions } from './slices/controls';
+import type { PipelineControls } from '@/lib/engine/types';
 import type { CortexSliceState, CortexSliceActions, CortexSnapshot } from './slices/cortex';
 import type { ConceptsSliceState, ConceptsSliceActions, ConceptWeight, QueryConceptEntry } from './slices/concepts';
 import type { TierSliceState, TierSliceActions } from './slices/tier';
@@ -36,24 +38,13 @@ import type { UISliceState, UISliceActions } from './slices/ui';
 import type { NotesSliceState, NotesSliceActions } from './slices/notes';
 import type { LearningSliceState, LearningSliceActions } from './slices/learning';
 import type { SOARSliceState, SOARSliceActions } from './slices/soar';
+import type { ToastSliceState, ToastSliceActions } from './slices/toast';
 
-// Re-export slice types for consumers
-export type { MessageSliceState, MessageSliceActions } from './slices/message';
-export type { PipelineSliceState, PipelineSliceActions, SignalHistoryEntry } from './slices/pipeline';
-export type { InferenceSliceState, InferenceSliceActions } from './slices/inference';
-export type { ControlsSliceState, ControlsSliceActions, PipelineControls } from './slices/controls';
-export type { CortexSliceState, CortexSliceActions, CortexSnapshot } from './slices/cortex';
-export type { ConceptsSliceState, ConceptsSliceActions, ConceptWeight, QueryConceptEntry } from './slices/concepts';
-export type { TierSliceState, TierSliceActions } from './slices/tier';
-export type { ResearchSliceState, ResearchSliceActions } from './slices/research';
-export type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifact, PortalViewType } from './slices/portal';
-export type { UISliceState, UISliceActions, ChatMode } from './slices/ui';
-export type { NotesSliceState, NotesSliceActions } from './slices/notes';
-export type { LearningSliceState, LearningSliceActions } from './slices/learning';
-export type { SOARSliceState, SOARSliceActions } from './slices/soar';
-
-// Re-export constants
-export { STAGES, STAGE_LABELS } from '@/lib/constants';
+// Re-export selected slice types used outside the store
+export type { SignalHistoryEntry } from './slices/pipeline';
+export type { CortexSnapshot } from './slices/cortex';
+export type { ConceptWeight } from './slices/concepts';
+export type { ChatMode } from './slices/ui';
 
 // ═══════════════════════════════════════════════════════════════════
 // Slice creator helpers — typed set/get for all slices
@@ -79,7 +70,8 @@ export type PFCStoreState =
   & UISliceState
   & NotesSliceState
   & LearningSliceState
-  & SOARSliceState;
+  & SOARSliceState
+  & ToastSliceState;
 
 export type PFCStoreActions =
   & MessageSliceActions
@@ -95,6 +87,7 @@ export type PFCStoreActions =
   & NotesSliceActions
   & LearningSliceActions
   & SOARSliceActions
+  & ToastSliceActions
   & { reset: () => void };
 
 export type PFCState = PFCStoreState & PFCStoreActions;
@@ -119,6 +112,7 @@ export const usePFCStore = create<PFCState>()(
     ...createNotesSlice(set, get),
     ...createLearningSlice(set, get),
     ...createSOARSlice(set, get),
+    ...createToastSlice(set, get),
 
     // Global reset — preserves tier settings, cortex, and codebase analyses
     reset: () => {
@@ -198,9 +192,7 @@ export const usePFCStore = create<PFCState>()(
 
         // Reset SOAR (preserve config)
         soarSession: null,
-        soarSessionHistory: [],
       });
     },
   })),
 );
-

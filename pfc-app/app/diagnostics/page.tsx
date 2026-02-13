@@ -25,10 +25,9 @@ import { PixelBook } from '@/components/pixel-book';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { EducationalTooltipButton } from '@/components/educational-tooltip';
 import { SIGNAL_TOOLTIPS } from '@/lib/research/educational-data';
-import { useTheme } from 'next-themes';
-import { useState, useEffect } from 'react';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -212,10 +211,7 @@ export default function DiagnosticsPage() {
   const totalTraces = usePFCStore((s) => s.totalTraces);
   const skillGapsDetected = usePFCStore((s) => s.skillGapsDetected);
   const signalHistory = usePFCStore((s) => s.signalHistory);
-  const { resolvedTheme } = useTheme();
-  const [thMounted, setThMounted] = useState(false);
-  useEffect(() => { setThMounted(true); }, []);
-  const isDark = thMounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
 
   const anomalies = getAnomalies({ entropy, dissonance, healthScore, riskScore, confidence });
 

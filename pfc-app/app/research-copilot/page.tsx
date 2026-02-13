@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from 'next-themes';
 import {
   FlaskConicalIcon,
   SearchIcon,
@@ -30,6 +29,7 @@ import {
   UploadIcon,
 } from 'lucide-react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, Section } from '@/components/page-shell';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
@@ -254,9 +254,9 @@ function PaperCard({ paper, isDark, onSave }: {
             {paper.tldr?.text && (
               <div style={{
                 marginTop: '0.5rem', padding: '0.5rem 0.75rem', borderRadius: '0.5rem',
-                background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
                 fontSize: '0.6875rem', lineHeight: 1.5,
-                color: isDark ? 'rgba(196,149,106,0.9)' : 'rgba(139,100,50,0.8)',
+                color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.9)' : 'rgba(139,100,50,0.8)',
               }}>
                 <strong>TL;DR:</strong> {paper.tldr.text}
               </div>
@@ -829,7 +829,7 @@ function CitationSearchTab({ isDark }: { isDark: boolean }) {
                         <div style={{ flex: 1 }}>
                           <div style={{
                             fontSize: '0.6875rem', fontStyle: 'italic', marginBottom: '0.25rem',
-                            color: isDark ? 'rgba(196,149,106,0.8)' : 'rgba(139,100,50,0.7)',
+                            color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.8)' : 'rgba(139,100,50,0.7)',
                           }}>
                             &ldquo;{claim}&rdquo;
                           </div>
@@ -1059,7 +1059,7 @@ function IdeaGeneratorTab({ isDark }: { isDark: boolean }) {
                             <div style={{
                               fontWeight: 600, fontSize: '0.6875rem', marginBottom: '0.25rem',
                               textTransform: 'uppercase', letterSpacing: '0.05em',
-                              color: isDark ? 'rgba(196,149,106,0.7)' : 'rgba(139,100,50,0.6)',
+                              color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.7)' : 'rgba(139,100,50,0.6)',
                             }}>
                               {field.charAt(0).toUpperCase() + field.slice(1)}
                             </div>
@@ -1195,7 +1195,7 @@ function LibraryTab({ isDark }: { isDark: boolean }) {
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     border: isActive
-      ? `1px solid ${isDark ? 'rgba(196,149,106,0.2)' : 'rgba(196,149,106,0.15)'}`
+      ? `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.2)' : 'rgba(var(--pfc-accent-rgb), 0.15)'}`
       : '1px solid transparent',
     background: isActive
       ? (isDark ? 'rgba(44,43,41,0.85)' : 'rgba(255,255,255,0.85)')
@@ -1439,10 +1439,7 @@ function LibraryTab({ isDark }: { isDark: boolean }) {
 
 export default function ResearchHubPage() {
   const ready = useSetupGuard();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
   const [activeTab, setActiveTab] = useState<HubTab>('search');
 
   if (!ready) {
@@ -1491,7 +1488,7 @@ export default function ResearchHubPage() {
               fontWeight: activeTab === tab.key ? 600 : 500,
               cursor: 'pointer',
               border: activeTab === tab.key
-                ? `1px solid ${isDark ? 'rgba(196,149,106,0.2)' : 'rgba(196,149,106,0.15)'}`
+                ? `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.2)' : 'rgba(var(--pfc-accent-rgb), 0.15)'}`
                 : '1px solid transparent',
               background: activeTab === tab.key
                 ? (isDark ? 'rgba(44,43,41,0.85)' : 'rgba(255,255,255,0.85)')

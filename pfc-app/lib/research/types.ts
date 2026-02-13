@@ -19,16 +19,16 @@ import type { InferenceMode } from '@/lib/engine/llm/config';
 export type SuiteTier = 'notes' | 'programming' | 'full';
 
 /** Legacy alias — kept for migration */
-export type SuiteMode = SuiteTier;
+type SuiteMode = SuiteTier;
 
 /** Research chat mode toggle */
 export type ChatViewMode = 'chat' | 'visualize-thought';
 
 /** Thinking playback state */
-export type ThinkingPlayState = 'playing' | 'paused' | 'stopped';
+type ThinkingPlayState = 'playing' | 'paused' | 'stopped';
 
 /** Thinking speed multiplier */
-export type ThinkingSpeed = 0.25 | 0.5 | 1 | 1.5 | 2;
+type ThinkingSpeed = 0.25 | 0.5 | 1 | 1.5 | 2;
 
 // ═══════════════════════════════════════════════════════════════════
 // Research Types
@@ -132,7 +132,7 @@ export interface RerouteInstruction {
 // ═══════════════════════════════════════════════════════════════════
 
 /** Which features are available per inference mode */
-export interface InferenceModeFeatures {
+interface InferenceModeFeatures {
   playPause: boolean;
   speedControl: boolean;
   stopThinking: boolean;

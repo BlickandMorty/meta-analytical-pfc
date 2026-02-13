@@ -70,10 +70,6 @@ export async function updateChatTitle(chatId: string, title: string) {
     .run();
 }
 
-export async function deleteChat(chatId: string) {
-  await db.delete(chat).where(eq(chat.id, chatId)).run();
-}
-
 // --- Messages ---
 
 export async function getMessagesByChatId(
@@ -128,66 +124,5 @@ export async function saveMessage({
   await db.update(chat)
     .set({ updatedAt: new Date() })
     .where(eq(chat.id, chatId))
-    .run();
-}
-
-// --- Signals ---
-
-export async function getSignalsByChatId(chatId: string) {
-  return db.query.chatSignals.findFirst({
-    where: eq(chatSignals.chatId, chatId),
-  });
-}
-
-export async function updateSignals(
-  chatId: string,
-  signals: Partial<{
-    confidence: number;
-    entropy: number;
-    dissonance: number;
-    healthScore: number;
-    safetyState: string;
-    riskScore: number;
-    focusDepth: number;
-    temperatureScale: number;
-    queriesProcessed: number;
-    tda: string;
-    concepts: string;
-  }>
-) {
-  await db.update(chatSignals)
-    .set({ ...signals, updatedAt: new Date() })
-    .where(eq(chatSignals.chatId, chatId))
-    .run();
-}
-
-// --- Pipeline Runs ---
-
-export async function savePipelineRun({
-  id,
-  chatId,
-  messageId,
-  stages,
-}: {
-  id: string;
-  chatId: string;
-  messageId: string;
-  stages: string;
-}) {
-  await db.insert(pipelineRun)
-    .values({
-      id,
-      chatId,
-      messageId,
-      stages,
-      startedAt: new Date(),
-    })
-    .run();
-}
-
-export async function completePipelineRun(runId: string) {
-  await db.update(pipelineRun)
-    .set({ completedAt: new Date() })
-    .where(eq(pipelineRun.id, runId))
     .run();
 }

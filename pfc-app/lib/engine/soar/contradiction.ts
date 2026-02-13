@@ -24,7 +24,7 @@ import type { Contradiction, ContradictionScan } from './types';
 // ---------------------------------------------------------------------------
 
 /** Extract discrete claims from a body of text */
-export function extractClaims(text: string): string[] {
+function extractClaims(text: string): string[] {
   // Split into sentences, filter noise
   const sentences = text
     .replace(/\n+/g, ' ')

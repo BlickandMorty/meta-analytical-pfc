@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 
 /* ═══════════════════════════════════════════════════════════
    GlassBubbleButton — NavBubble-style pill button
@@ -15,7 +15,7 @@ import { useTheme } from 'next-themes';
    • Warm brown palette with clean transitions
    ═══════════════════════════════════════════════════════════ */
 
-export type BubbleColor = 'violet' | 'ember' | 'green' | 'cyan' | 'red' | 'yellow' | 'neutral';
+type BubbleColor = 'violet' | 'ember' | 'green' | 'cyan' | 'red' | 'yellow' | 'neutral';
 
 interface GlassBubbleButtonProps {
   children: React.ReactNode;
@@ -31,13 +31,13 @@ interface GlassBubbleButtonProps {
 }
 
 const COLOR_MAP: Record<BubbleColor, { accent: string; activeBg: string; activeBgLight: string; hoverBorder: string; hoverBorderLight: string }> = {
-  violet:  { accent: '#C4956A', activeBg: 'rgba(44,43,41,0.85)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(196,149,106,0.2)', hoverBorderLight: 'rgba(196,149,106,0.15)' },
-  ember:   { accent: '#C4956A', activeBg: 'rgba(44,43,41,0.85)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(196,149,106,0.2)', hoverBorderLight: 'rgba(196,149,106,0.15)' },
-  green:   { accent: '#34D399', activeBg: 'rgba(44,43,41,0.85)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(52,211,153,0.2)',  hoverBorderLight: 'rgba(52,211,153,0.15)' },
-  cyan:    { accent: '#22D3EE', activeBg: 'rgba(44,43,41,0.85)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(34,211,238,0.2)',  hoverBorderLight: 'rgba(34,211,238,0.15)' },
-  red:     { accent: '#F87171', activeBg: 'rgba(44,43,41,0.85)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(248,113,113,0.2)', hoverBorderLight: 'rgba(248,113,113,0.15)' },
-  yellow:  { accent: '#FBBF24', activeBg: 'rgba(44,43,41,0.85)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(251,191,36,0.2)',  hoverBorderLight: 'rgba(251,191,36,0.15)' },
-  neutral: { accent: '#C4956A', activeBg: 'rgba(44,43,41,0.85)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(196,149,106,0.2)', hoverBorderLight: 'rgba(196,149,106,0.15)' },
+  violet:  { accent: 'var(--pfc-accent)', activeBg: 'rgba(16,13,10,0.92)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(var(--pfc-accent-rgb), 0.2)', hoverBorderLight: 'rgba(var(--pfc-accent-rgb), 0.15)' },
+  ember:   { accent: 'var(--pfc-accent)', activeBg: 'rgba(16,13,10,0.92)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(var(--pfc-accent-rgb), 0.2)', hoverBorderLight: 'rgba(var(--pfc-accent-rgb), 0.15)' },
+  green:   { accent: '#34D399', activeBg: 'rgba(16,13,10,0.92)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(52,211,153,0.2)',  hoverBorderLight: 'rgba(52,211,153,0.15)' },
+  cyan:    { accent: '#22D3EE', activeBg: 'rgba(16,13,10,0.92)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(34,211,238,0.2)',  hoverBorderLight: 'rgba(34,211,238,0.15)' },
+  red:     { accent: '#F87171', activeBg: 'rgba(16,13,10,0.92)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(248,113,113,0.2)', hoverBorderLight: 'rgba(248,113,113,0.15)' },
+  yellow:  { accent: '#FBBF24', activeBg: 'rgba(16,13,10,0.92)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(251,191,36,0.2)',  hoverBorderLight: 'rgba(251,191,36,0.15)' },
+  neutral: { accent: 'var(--pfc-accent)', activeBg: 'rgba(16,13,10,0.92)',  activeBgLight: 'rgba(255,255,255,0.85)', hoverBorder: 'rgba(var(--pfc-accent-rgb), 0.2)', hoverBorderLight: 'rgba(var(--pfc-accent-rgb), 0.15)' },
 };
 
 const SIZE_MAP = {
@@ -58,8 +58,7 @@ export function GlassBubbleButton({
   disabled = false,
   type = 'button',
 }: GlassBubbleButtonProps) {
-  const { resolvedTheme } = useTheme();
-  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
+  const { isDark } = useIsDark();
   const [hovered, setHovered] = useState(false);
 
   const c = COLOR_MAP[color];
@@ -97,8 +96,7 @@ export function GlassBubbleButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      whileHover={disabled ? undefined : { scale: 1.04, y: -2 }}
-      whileTap={disabled ? undefined : { scale: 0.92 }}
+      whileTap={disabled ? undefined : { scale: 0.97 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={className}

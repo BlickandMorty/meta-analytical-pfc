@@ -381,7 +381,7 @@ function clampBias(value: number, maxAbs: number): number {
 // Simple 2-component PCA via power iteration.
 // Projects the 40-dim synthesis keys to 2D for scatter plot.
 
-export interface PCAResult {
+interface PCAResult {
   points: Array<{ x: number; y: number; id: string; score: number }>;
   steeringArrow: { dx: number; dy: number } | null;
   varianceExplained: [number, number];

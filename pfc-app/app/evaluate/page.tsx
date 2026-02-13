@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import {
@@ -21,6 +21,9 @@ import {
   LayersIcon,
   TargetIcon,
   ActivityIcon,
+  FolderOpenIcon,
+  FileTextIcon,
+  UploadIcon,
 } from 'lucide-react';
 
 import { PageShell, GlassSection } from '@/components/page-shell';
@@ -129,8 +132,8 @@ function GlassInput({
         ...styleProp,
       }}
       onFocus={(e) => {
-        e.currentTarget.style.borderColor = 'rgba(196,149,106,0.4)';
-        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(196,149,106,0.08)';
+        e.currentTarget.style.borderColor = 'rgba(var(--pfc-accent-rgb), 0.4)';
+        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--pfc-accent-rgb), 0.08)';
       }}
       onBlur={(e) => {
         e.currentTarget.style.borderColor = isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)';
@@ -167,9 +170,9 @@ function TagPill({
         borderRadius: '9999px',
         fontSize: '0.6875rem',
         fontWeight: 600,
-        background: isDark ? 'rgba(196,149,106,0.1)' : 'rgba(196,149,106,0.08)',
-        color: isDark ? 'rgba(196,149,106,0.9)' : 'rgba(160,120,80,0.9)',
-        border: `1px solid ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)'}`,
+        background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.1)' : 'rgba(var(--pfc-accent-rgb), 0.08)',
+        color: isDark ? 'rgba(var(--pfc-accent-rgb), 0.9)' : 'rgba(160,120,80,0.9)',
+        border: `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.15)' : 'rgba(var(--pfc-accent-rgb), 0.12)'}`,
         cursor: 'pointer',
       }}
       onClick={onRemove}
@@ -434,7 +437,7 @@ function DimensionRow({
                       fontSize: '0.5625rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
-                      color: 'rgba(196,149,106,0.6)',
+                      color: 'rgba(var(--pfc-accent-rgb), 0.6)',
                       marginBottom: '0.375rem',
                     }}
                   >
@@ -453,7 +456,7 @@ function DimensionRow({
                         lineHeight: 1.5,
                       }}
                     >
-                      <TrendingUpIcon style={{ width: 11, height: 11, marginTop: 2, flexShrink: 0, color: '#C4956A', opacity: 0.6 }} />
+                      <TrendingUpIcon style={{ width: 11, height: 11, marginTop: 2, flexShrink: 0, color: 'var(--pfc-accent)', opacity: 0.6 }} />
                       {r}
                     </p>
                   ))}
@@ -539,15 +542,114 @@ export default function EvaluatePage() {
     concerns: [],
     performanceMetrics: {},
   });
-  const [techStackInput, setTechStackInput] = useState('');
-  const [metricKey, setMetricKey] = useState('');
-  const [metricValue, setMetricValue] = useState('');
   const [evaluation, setEvaluation] = useState<MLProjectEvaluation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importedFiles, setImportedFiles] = useState<File[]>([]);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   // Results ref for scroll-to
   const resultsRef = useRef<HTMLDivElement>(null);
+
+  // Auto-detect project metadata from imported files
+  const autoFillFromFiles = useCallback(async (files: File[]) => {
+    setImporting(true);
+    try {
+      const fileContents: string[] = [];
+      const fileNames = files.map(f => f.name);
+      const techSet = new Set<string>();
+      let totalSize = 0;
+      let hasTestFiles = false;
+      let hasDocFiles = false;
+      let detectedArch = '';
+      let detectedType: ProjectType = 'general_ml';
+
+      for (const file of files) {
+        totalSize += file.size;
+        const name = file.name.toLowerCase();
+
+        // Detect tests
+        if (name.includes('test') || name.includes('spec') || name.includes('__test__')) hasTestFiles = true;
+        // Detect docs
+        if (name.endsWith('.md') || name.endsWith('.rst') || name.endsWith('.txt') || name === 'readme') hasDocFiles = true;
+
+        // Detect tech stack from file extensions & names
+        if (name.endsWith('.py')) techSet.add('Python');
+        if (name.endsWith('.ipynb')) techSet.add('Jupyter');
+        if (name.endsWith('.r') || name.endsWith('.rmd')) techSet.add('R');
+        if (name.endsWith('.ts') || name.endsWith('.tsx')) techSet.add('TypeScript');
+        if (name.endsWith('.js') || name.endsWith('.jsx')) techSet.add('JavaScript');
+        if (name === 'requirements.txt' || name === 'pyproject.toml') techSet.add('Python');
+        if (name === 'package.json') techSet.add('Node.js');
+        if (name === 'cargo.toml') techSet.add('Rust');
+        if (name === 'dockerfile' || name.startsWith('docker-compose')) techSet.add('Docker');
+
+        // Read text files for content analysis
+        if (file.size < 500_000 && (name.endsWith('.py') || name.endsWith('.ipynb') || name.endsWith('.ts') || name.endsWith('.js') || name.endsWith('.r') || name.endsWith('.md'))) {
+          try {
+            const text = await file.text();
+            fileContents.push(text);
+
+            // Detect frameworks
+            if (text.includes('import torch') || text.includes('from torch')) techSet.add('PyTorch');
+            if (text.includes('import tensorflow') || text.includes('from tensorflow')) techSet.add('TensorFlow');
+            if (text.includes('import sklearn') || text.includes('from sklearn')) techSet.add('scikit-learn');
+            if (text.includes('import keras') || text.includes('from keras')) techSet.add('Keras');
+            if (text.includes('import xgboost') || text.includes('from xgboost')) { techSet.add('XGBoost'); detectedArch = detectedArch || 'XGBoost'; }
+            if (text.includes('import lightgbm') || text.includes('from lightgbm')) { techSet.add('LightGBM'); detectedArch = detectedArch || 'LightGBM'; }
+            if (text.includes('import pandas') || text.includes('from pandas')) techSet.add('pandas');
+            if (text.includes('import numpy') || text.includes('from numpy')) techSet.add('NumPy');
+            if (text.includes('import transformers') || text.includes('from transformers')) { techSet.add('Hugging Face'); detectedType = 'nlp_pipeline'; }
+            if (text.includes('import cv2') || text.includes('from torchvision')) { detectedType = 'computer_vision'; detectedArch = detectedArch || 'CNN'; }
+            if (text.includes('LSTM') || text.includes('GRU')) { detectedArch = detectedArch || 'LSTM/GRU'; detectedType = 'time_series'; }
+            if (text.includes('RandomForest') || text.includes('random_forest')) detectedArch = detectedArch || 'Random Forest';
+            if (text.includes('ResNet') || text.includes('resnet')) detectedArch = detectedArch || 'ResNet';
+            if (text.includes('BERT') || text.includes('bert')) detectedArch = detectedArch || 'BERT';
+            if (text.includes('KMeans') || text.includes('DBSCAN')) detectedType = 'clustering';
+            if (text.includes('IsolationForest') || text.includes('anomaly')) detectedType = 'anomaly_detection';
+            if (text.includes('gym') || text.includes('stable_baselines')) detectedType = 'reinforcement_learning';
+          } catch { /* skip binary files */ }
+        }
+      }
+
+      // Format dataset size
+      const sizeStr = totalSize > 1_000_000
+        ? `${(totalSize / 1_000_000).toFixed(1)}MB (${files.length} files)`
+        : `${(totalSize / 1_000).toFixed(0)}KB (${files.length} files)`;
+
+      // Build auto-filled name from folder structure
+      const autoName = input.name || (files.length > 0 ? files[0].webkitRelativePath?.split('/')[0] || '' : '');
+
+      setInput(prev => ({
+        ...prev,
+        name: autoName || prev.name,
+        techStack: Array.from(techSet),
+        hasTests: hasTestFiles || (prev.hasTests ?? false),
+        hasDocumentation: hasDocFiles || (prev.hasDocumentation ?? false),
+        modelArchitecture: detectedArch || prev.modelArchitecture,
+        datasetSize: sizeStr,
+        projectType: detectedType !== 'general_ml' ? detectedType : (prev.projectType ?? 'general_ml'),
+      }));
+
+      // Build a description snippet from file names
+      if (!input.description) {
+        const snippet = `ML project with ${files.length} files: ${fileNames.slice(0, 8).join(', ')}${files.length > 8 ? ` and ${files.length - 8} more` : ''}. Tech: ${Array.from(techSet).join(', ') || 'unknown'}.${detectedArch ? ` Architecture: ${detectedArch}.` : ''}`;
+        setInput(prev => ({ ...prev, description: prev.description || snippet }));
+      }
+    } finally {
+      setImporting(false);
+    }
+  }, [input.name, input.description]);
+
+  const handleFileImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) {
+      setImportedFiles(files);
+      autoFillFromFiles(files);
+    }
+  }, [autoFillFromFiles]);
 
   const handleEvaluate = async () => {
     if (!input.name || !input.description) {
@@ -579,30 +681,6 @@ export default function EvaluatePage() {
     }
   };
 
-  const addTechStack = () => {
-    if (techStackInput.trim()) {
-      setInput(prev => ({
-        ...prev,
-        techStack: [...(prev.techStack ?? []), techStackInput.trim()],
-      }));
-      setTechStackInput('');
-    }
-  };
-
-  const addMetric = () => {
-    if (metricKey.trim() && metricValue.trim()) {
-      const val = parseFloat(metricValue);
-      if (!isNaN(val)) {
-        setInput(prev => ({
-          ...prev,
-          performanceMetrics: { ...(prev.performanceMetrics ?? {}), [metricKey.trim()]: val },
-        }));
-        setMetricKey('');
-        setMetricValue('');
-      }
-    }
-  };
-
   if (!ready) {
     return (
       <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--chat-surface)' }}>
@@ -619,156 +697,185 @@ export default function EvaluatePage() {
       subtitle="12-dimension intelligence assessment for ML projects"
     >
       {/* ═══════════════════════════════════════════════════════
-          Input Form
+          Input Form — streamlined with import
          ═══════════════════════════════════════════════════════ */}
+
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".py,.ipynb,.ts,.tsx,.js,.jsx,.r,.rmd,.md,.txt,.json,.yaml,.yml,.toml,.cfg,.csv"
+        style={{ display: 'none' }}
+        onChange={handleFileImport}
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        {...{ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>}
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleFileImport}
+      />
+
       <GlassSection title="Project Details">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* Row 1: Name + Architecture */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.6875rem',
-                  fontWeight: 600,
-                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
-                  marginBottom: '0.375rem',
-                  letterSpacing: '0.02em',
-                }}
-              >
-                Project Name *
-              </label>
-              <GlassInput
-                value={input.name ?? ''}
-                onChange={(v) => setInput(prev => ({ ...prev, name: v }))}
-                placeholder="e.g. Customer Churn Predictor"
-                isDark={isDark}
-              />
-            </div>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.6875rem',
-                  fontWeight: 600,
-                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
-                  marginBottom: '0.375rem',
-                  letterSpacing: '0.02em',
-                }}
-              >
-                Model Architecture
-              </label>
-              <GlassInput
-                value={input.modelArchitecture ?? ''}
-                onChange={(v) => setInput(prev => ({ ...prev, modelArchitecture: v }))}
-                placeholder="e.g. XGBoost, ResNet-50, LSTM"
-                isDark={isDark}
-              />
-            </div>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-          {/* Description */}
-          <div>
-            <label
+          {/* Import Area — drop zone style */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...SPRING_SOFT, delay: 0.05 }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '2rem 1.5rem',
+              borderRadius: '1rem',
+              border: `2px dashed ${importedFiles.length > 0 ? 'rgba(var(--pfc-accent-rgb), 0.4)' : isDark ? 'rgba(79,69,57,0.35)' : 'rgba(0,0,0,0.1)'}`,
+              background: importedFiles.length > 0
+                ? (isDark ? 'rgba(var(--pfc-accent-rgb), 0.04)' : 'rgba(var(--pfc-accent-rgb), 0.03)')
+                : (isDark ? 'rgba(30,28,26,0.3)' : 'rgba(255,255,255,0.3)'),
+              transition: `all 0.3s ${CUPERTINO}`,
+            }}
+          >
+            <motion.div
+              animate={importing ? { rotate: 360 } : { rotate: 0 }}
+              transition={importing ? { duration: 1.5, repeat: Infinity, ease: 'linear' } : { duration: 0.3 }}
               style={{
-                display: 'block',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
-                marginBottom: '0.375rem',
-                letterSpacing: '0.02em',
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: importedFiles.length > 0
+                  ? 'rgba(var(--pfc-accent-rgb), 0.12)'
+                  : (isDark ? 'rgba(79,69,57,0.15)' : 'rgba(0,0,0,0.04)'),
+                color: importedFiles.length > 0
+                  ? 'var(--pfc-accent)'
+                  : (isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)'),
+                transition: `all 0.3s ${CUPERTINO}`,
               }}
             >
-              Project Description *
-            </label>
-            <textarea
-              value={input.description}
-              onChange={(e) => setInput(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Describe what your ML project does, the problem it solves, data sources, preprocessing steps, training approach, evaluation methodology, and any specific techniques used."
-              rows={4}
-              style={{
-                width: '100%',
-                padding: '0.625rem 0.75rem',
-                borderRadius: '0.625rem',
-                border: `1px solid ${isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)'}`,
-                background: isDark ? 'rgba(30,28,26,0.6)' : 'rgba(255,255,255,0.5)',
-                backdropFilter: 'blur(8px)',
-                color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(0,0,0,0.75)',
-                fontSize: '0.8125rem',
-                outline: 'none',
-                resize: 'none',
-                lineHeight: 1.6,
-                transition: `border 0.2s ${CUPERTINO}, box-shadow 0.2s ${CUPERTINO}`,
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(196,149,106,0.4)';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(196,149,106,0.08)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            />
-          </div>
+              {importing ? (
+                <FlaskConicalIcon style={{ width: 22, height: 22 }} />
+              ) : importedFiles.length > 0 ? (
+                <CheckCircle2Icon style={{ width: 22, height: 22 }} />
+              ) : (
+                <UploadIcon style={{ width: 22, height: 22 }} />
+              )}
+            </motion.div>
 
-          {/* Project Type pills */}
-          <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
-                marginBottom: '0.5rem',
-                letterSpacing: '0.02em',
-              }}
-            >
-              Project Type
-            </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-              {PROJECT_TYPES.map((pt) => (
-                <GlassBubbleButton
-                  key={pt.value}
-                  onClick={() => setInput(prev => ({ ...prev, projectType: pt.value }))}
-                  active={input.projectType === pt.value}
-                  color="ember"
-                  size="sm"
-                >
-                  {pt.label}
-                </GlassBubbleButton>
-              ))}
-            </div>
-          </div>
-
-          {/* Row 3: Tech stack + Dataset size */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.6875rem',
-                  fontWeight: 600,
-                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
-                  marginBottom: '0.375rem',
-                  letterSpacing: '0.02em',
-                }}
+            {importedFiles.length > 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={SPRING_SNAPPY}
+                style={{ textAlign: 'center' }}
               >
-                Tech Stack
-              </label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <GlassInput
-                  value={techStackInput}
-                  onChange={setTechStackInput}
-                  placeholder="e.g. pytorch"
-                  isDark={isDark}
-                  style={{ flex: 1 }}
-                />
-                <GlassBubbleButton onClick={addTechStack} color="ember" size="sm">
-                  <PlusIcon style={{ width: 14, height: 14 }} />
-                </GlassBubbleButton>
+                <p style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: 'var(--pfc-accent)',
+                  marginBottom: '0.25rem',
+                }}>
+                  {importedFiles.length} file{importedFiles.length !== 1 ? 's' : ''} imported
+                </p>
+                <p style={{
+                  fontSize: '0.6875rem',
+                  color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(0,0,0,0.4)',
+                }}>
+                  Project details auto-filled below
+                </p>
+              </motion.div>
+            ) : (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.55)',
+                  marginBottom: '0.25rem',
+                }}>
+                  Import your ML project
+                </p>
+                <p style={{
+                  fontSize: '0.6875rem',
+                  color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.35)',
+                }}>
+                  Auto-detects tech stack, architecture, and project type
+                </p>
               </div>
-              {(input.techStack ?? []).length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <GlassBubbleButton
+                onClick={() => fileInputRef.current?.click()}
+                color="ember"
+                size="sm"
+              >
+                <FileTextIcon style={{ width: 14, height: 14 }} />
+                Select Files
+              </GlassBubbleButton>
+              <GlassBubbleButton
+                onClick={() => folderInputRef.current?.click()}
+                color="ember"
+                size="sm"
+              >
+                <FolderOpenIcon style={{ width: 14, height: 14 }} />
+                Import Folder
+              </GlassBubbleButton>
+            </div>
+          </motion.div>
+
+          {/* Auto-filled tags preview */}
+          <AnimatePresence>
+            {(input.techStack ?? []).length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', alignItems: 'center' }}>
+                  <span style={{
+                    fontSize: '0.5625rem',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                    marginRight: '0.25rem',
+                  }}>
+                    Detected:
+                  </span>
+                  {input.projectType && input.projectType !== 'general_ml' && (
+                    <span style={{
+                      fontSize: '0.625rem',
+                      fontWeight: 600,
+                      padding: '0.125rem 0.5rem',
+                      borderRadius: '9999px',
+                      background: 'rgba(34,211,238,0.08)',
+                      color: '#22D3EE',
+                      border: '1px solid rgba(34,211,238,0.15)',
+                    }}>
+                      {PROJECT_TYPES.find(p => p.value === input.projectType)?.label ?? input.projectType}
+                    </span>
+                  )}
+                  {input.modelArchitecture && (
+                    <span style={{
+                      fontSize: '0.625rem',
+                      fontWeight: 600,
+                      padding: '0.125rem 0.5rem',
+                      borderRadius: '9999px',
+                      background: 'rgba(var(--pfc-accent-rgb), 0.08)',
+                      color: 'var(--pfc-accent)',
+                      border: '1px solid rgba(var(--pfc-accent-rgb), 0.15)',
+                    }}>
+                      {input.modelArchitecture}
+                    </span>
+                  )}
                   <AnimatePresence mode="popLayout">
                     {(input.techStack ?? []).map((t, i) => (
                       <TagPill
@@ -785,32 +892,16 @@ export default function EvaluatePage() {
                     ))}
                   </AnimatePresence>
                 </div>
-              )}
-            </div>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.6875rem',
-                  fontWeight: 600,
-                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
-                  marginBottom: '0.375rem',
-                  letterSpacing: '0.02em',
-                }}
-              >
-                Dataset Size
-              </label>
-              <GlassInput
-                value={input.datasetSize ?? ''}
-                onChange={(v) => setInput(prev => ({ ...prev, datasetSize: v }))}
-                placeholder="e.g. 100k rows"
-                isDark={isDark}
-              />
-            </div>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Performance metrics */}
-          <div>
+          {/* Project Name */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...SPRING_SOFT, delay: 0.1 }}
+          >
             <label
               style={{
                 display: 'block',
@@ -821,50 +912,71 @@ export default function EvaluatePage() {
                 letterSpacing: '0.02em',
               }}
             >
-              Performance Metrics
+              Project Name *
             </label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <GlassInput
-                value={metricKey}
-                onChange={setMetricKey}
-                placeholder="Metric name"
-                isDark={isDark}
-                style={{ flex: 1 }}
-              />
-              <GlassInput
-                value={metricValue}
-                onChange={setMetricValue}
-                placeholder="Value"
-                isDark={isDark}
-                type="text"
-                style={{ width: '5rem' }}
-              />
-              <GlassBubbleButton onClick={addMetric} color="ember" size="sm">
-                <PlusIcon style={{ width: 14, height: 14 }} />
-              </GlassBubbleButton>
-            </div>
-            {Object.keys(input.performanceMetrics ?? {}).length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.5rem' }}>
-                <AnimatePresence mode="popLayout">
-                  {Object.entries(input.performanceMetrics ?? {}).map(([k, v]) => (
-                    <TagPill
-                      key={k}
-                      label={`${k}: ${v}`}
-                      isDark={isDark}
-                      onRemove={() => {
-                        const next = { ...(input.performanceMetrics ?? {}) };
-                        delete next[k];
-                        setInput(prev => ({ ...prev, performanceMetrics: next }));
-                      }}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
+            <GlassInput
+              value={input.name ?? ''}
+              onChange={(v) => setInput(prev => ({ ...prev, name: v }))}
+              placeholder="e.g. Customer Churn Predictor"
+              isDark={isDark}
+            />
+          </motion.div>
+
+          {/* Description */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...SPRING_SOFT, delay: 0.15 }}
+          >
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)',
+                marginBottom: '0.375rem',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Project Description *
+            </label>
+            <textarea
+              value={input.description}
+              onChange={(e) => setInput(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Describe what your ML project does, the problem it solves, data sources, preprocessing steps, training approach, and any specific techniques used. Or import files above to auto-generate."
+              rows={4}
+              style={{
+                width: '100%',
+                padding: '0.625rem 0.75rem',
+                borderRadius: '0.625rem',
+                border: `1px solid ${isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)'}`,
+                background: isDark ? 'rgba(30,28,26,0.6)' : 'rgba(255,255,255,0.5)',
+                backdropFilter: 'blur(8px)',
+                color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(0,0,0,0.75)',
+                fontSize: '0.8125rem',
+                outline: 'none',
+                resize: 'none',
+                lineHeight: 1.6,
+                transition: `border 0.2s ${CUPERTINO}, box-shadow 0.2s ${CUPERTINO}`,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(var(--pfc-accent-rgb), 0.4)';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(var(--pfc-accent-rgb), 0.08)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = isDark ? 'rgba(79,69,57,0.4)' : 'rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+          </motion.div>
 
           {/* Checkboxes */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...SPRING_SOFT, delay: 0.2 }}
+            style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}
+          >
             {[
               { key: 'hasTests', label: 'Has test suite' },
               { key: 'hasDocumentation', label: 'Has documentation' },
@@ -888,11 +1000,11 @@ export default function EvaluatePage() {
                     borderRadius: 4,
                     border: `1.5px solid ${
                       (input as Record<string, unknown>)[key]
-                        ? '#C4956A'
+                        ? 'var(--pfc-accent)'
                         : isDark ? 'rgba(79,69,57,0.5)' : 'rgba(0,0,0,0.15)'
                     }`,
                     background: (input as Record<string, unknown>)[key]
-                      ? 'rgba(196,149,106,0.2)'
+                      ? 'rgba(var(--pfc-accent-rgb), 0.2)'
                       : 'transparent',
                     display: 'flex',
                     alignItems: 'center',
@@ -903,13 +1015,13 @@ export default function EvaluatePage() {
                   onClick={() => setInput(prev => ({ ...prev, [key]: !(prev as Record<string, unknown>)[key] }))}
                 >
                   {Boolean((input as Record<string, unknown>)[key]) && (
-                    <CheckCircle2Icon style={{ width: 10, height: 10, color: '#C4956A' }} />
+                    <CheckCircle2Icon style={{ width: 10, height: 10, color: 'var(--pfc-accent)' }} />
                   )}
                 </motion.div>
                 <span onClick={() => setInput(prev => ({ ...prev, [key]: !(prev as Record<string, unknown>)[key] }))}>{label}</span>
               </label>
             ))}
-          </div>
+          </motion.div>
 
           {/* Error + Submit */}
           <AnimatePresence>
@@ -925,29 +1037,35 @@ export default function EvaluatePage() {
             )}
           </AnimatePresence>
 
-          <GlassBubbleButton
-            onClick={handleEvaluate}
-            disabled={loading}
-            color="ember"
-            size="lg"
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...SPRING_SOFT, delay: 0.25 }}
           >
-            {loading ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-                >
-                  <FlaskConicalIcon style={{ width: 16, height: 16 }} />
-                </motion.div>
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <SendIcon style={{ width: 14, height: 14 }} />
-                Run Evaluation
-              </>
-            )}
-          </GlassBubbleButton>
+            <GlassBubbleButton
+              onClick={handleEvaluate}
+              disabled={loading}
+              color="ember"
+              size="lg"
+            >
+              {loading ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <FlaskConicalIcon style={{ width: 16, height: 16 }} />
+                  </motion.div>
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <SendIcon style={{ width: 14, height: 14 }} />
+                  Run Evaluation
+                </>
+              )}
+            </GlassBubbleButton>
+          </motion.div>
         </div>
       </GlassSection>
 
@@ -1047,10 +1165,10 @@ export default function EvaluatePage() {
                     max={150}
                     size={72}
                     strokeWidth={5}
-                    color="#C4956A"
+                    color="var(--pfc-accent)"
                     isDark={isDark}
                   >
-                    <span style={{ fontSize: '1.375rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#C4956A' }}>
+                    <span style={{ fontSize: '1.375rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: 'var(--pfc-accent)' }}>
                       {evaluation.intelligenceQuotient}
                     </span>
                   </ScoreRing>
@@ -1166,7 +1284,7 @@ export default function EvaluatePage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                    <ShieldCheckIcon style={{ width: 14, height: 14, color: '#C4956A' }} />
+                    <ShieldCheckIcon style={{ width: 14, height: 14, color: 'var(--pfc-accent)' }} />
                     <span style={{ fontSize: '0.8125rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.85)' : 'rgba(0,0,0,0.7)' }}>
                       Robustness Profile
                     </span>
@@ -1215,7 +1333,7 @@ export default function EvaluatePage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                    <GaugeIcon style={{ width: 14, height: 14, color: '#C4956A' }} />
+                    <GaugeIcon style={{ width: 14, height: 14, color: 'var(--pfc-accent)' }} />
                     <span style={{ fontSize: '0.8125rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.85)' : 'rgba(0,0,0,0.7)' }}>
                       Calibration Profile
                     </span>
@@ -1227,7 +1345,7 @@ export default function EvaluatePage() {
                       <span style={{ fontSize: '0.5625rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)' }}>
                         ECE
                       </span>
-                      <p style={{ fontSize: '1.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#C4956A', marginTop: 2 }}>
+                      <p style={{ fontSize: '1.25rem', fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: 'var(--pfc-accent)', marginTop: 2 }}>
                         {evaluation.calibration.expectedCalibrationError.toFixed(3)}
                       </p>
                     </div>
@@ -1277,9 +1395,9 @@ export default function EvaluatePage() {
                           padding: '0.0625rem 0.375rem',
                           borderRadius: '9999px',
                           textTransform: 'capitalize',
-                          background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
-                          color: '#C4956A',
-                          border: '1px solid rgba(196,149,106,0.15)',
+                          background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
+                          color: 'var(--pfc-accent)',
+                          border: '1px solid rgba(var(--pfc-accent-rgb), 0.15)',
                         }}
                       >
                         {evaluation.calibration.reliabilityDiagramShape.replace(/-/g, ' ')}
@@ -1326,7 +1444,7 @@ export default function EvaluatePage() {
                         >
                           <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#F87171' }}>{ap.name}</p>
                           <p style={{ fontSize: '0.625rem', color: isDark ? 'rgba(237,224,212,0.45)' : 'rgba(0,0,0,0.35)', marginTop: 2 }}>{ap.impact}</p>
-                          <p style={{ fontSize: '0.625rem', color: '#C4956A', marginTop: 3 }}>Fix: {ap.fix}</p>
+                          <p style={{ fontSize: '0.625rem', color: 'var(--pfc-accent)', marginTop: 3 }}>Fix: {ap.fix}</p>
                         </div>
                       ))}
                     </div>
@@ -1404,7 +1522,7 @@ export default function EvaluatePage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
-                    <SparklesIcon style={{ width: 13, height: 13, color: '#C4956A' }} />
+                    <SparklesIcon style={{ width: 13, height: 13, color: 'var(--pfc-accent)' }} />
                     <span style={{ fontSize: '0.75rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.65)' }}>
                       Innovation
                     </span>
@@ -1419,9 +1537,9 @@ export default function EvaluatePage() {
                             fontWeight: 600,
                             padding: '0.125rem 0.5rem',
                             borderRadius: '9999px',
-                            background: 'rgba(196,149,106,0.08)',
-                            color: '#C4956A',
-                            border: '1px solid rgba(196,149,106,0.15)',
+                            background: 'rgba(var(--pfc-accent-rgb), 0.08)',
+                            color: 'var(--pfc-accent)',
+                            border: '1px solid rgba(var(--pfc-accent-rgb), 0.15)',
                           }}
                         >
                           {ia}
@@ -1475,14 +1593,14 @@ export default function EvaluatePage() {
                 <div
                   style={{
                     borderRadius: '0.75rem',
-                    border: `1px solid ${isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.1)'}`,
+                    border: `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.15)' : 'rgba(var(--pfc-accent-rgb), 0.1)'}`,
                     padding: '1rem',
                     background: isDark ? 'rgba(30,28,26,0.4)' : 'rgba(255,255,255,0.4)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
-                    <TrendingUpIcon style={{ width: 13, height: 13, color: '#C4956A' }} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 650, color: '#C4956A' }}>
+                    <TrendingUpIcon style={{ width: 13, height: 13, color: 'var(--pfc-accent)' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 650, color: 'var(--pfc-accent)' }}>
                       Quick Wins
                     </span>
                   </div>
@@ -1507,7 +1625,7 @@ export default function EvaluatePage() {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.75rem' }}>
-                    <BookOpenIcon style={{ width: 13, height: 13, color: '#C4956A' }} />
+                    <BookOpenIcon style={{ width: 13, height: 13, color: 'var(--pfc-accent)' }} />
                     <span style={{ fontSize: '0.75rem', fontWeight: 650, color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.65)' }}>
                       Long-Term
                     </span>

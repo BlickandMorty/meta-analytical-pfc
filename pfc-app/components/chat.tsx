@@ -15,8 +15,9 @@ import { RecentChats, type ChatEntry, formatRelativeTime, parseTimestamp } from 
 import { ResearchModeBar } from './research-mode-bar';
 import { ThinkingControls } from './thinking-controls';
 import { ErrorBoundary } from './error-boundary';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { getInferenceModeFeatures } from '@/lib/research/types';
 import { CloudIcon, MonitorIcon, ArrowLeftIcon, MessageSquareIcon, SearchIcon } from 'lucide-react';
 import type { ChatMode } from '@/lib/store/use-pfc-store';
@@ -40,6 +41,7 @@ const ENTER_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mas
 function ModeToggle({ isDark }: { isDark: boolean }) {
   const chatMode = usePFCStore((s) => s.chatMode);
   const setChatMode = usePFCStore((s) => s.setChatMode);
+  const [hovered, setHovered] = useState<string | null>(null);
 
   const modes: { key: ChatMode; label: string }[] = [
     { key: 'measurement', label: 'Research Suite' },
@@ -61,13 +63,15 @@ function ModeToggle({ isDark }: { isDark: boolean }) {
     >
       {modes.map((m) => {
         const isActive = chatMode === m.key;
+        const isHovered = hovered === m.key && !isActive;
         return (
           <motion.button
             key={m.key}
-            whileTap={{ scale: 0.93 }}
-            whileHover={{ scale: 1.06, y: -3 }}
+            whileTap={{ scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 500, damping: 25, mass: 0.5 }}
             onClick={() => setChatMode(m.key)}
+            onMouseEnter={() => setHovered(m.key)}
+            onMouseLeave={() => setHovered(null)}
             style={{
               padding: '0.3125rem 0.75rem',
               borderRadius: 'var(--shape-full)',
@@ -77,15 +81,19 @@ function ModeToggle({ isDark }: { isDark: boolean }) {
               fontWeight: 600,
               fontFamily: 'var(--font-sans)',
               letterSpacing: '0.02em',
-              transition: 'color 0.15s cubic-bezier(0.32,0.72,0,1), background 0.15s cubic-bezier(0.32,0.72,0,1), box-shadow 0.15s cubic-bezier(0.32,0.72,0,1)',
+              transition: 'color 0.15s cubic-bezier(0.32,0.72,0,1), background 0.2s cubic-bezier(0.32,0.72,0,1), box-shadow 0.2s cubic-bezier(0.32,0.72,0,1)',
               color: isActive
-                ? '#FFFFFF'
-                : (isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)'),
+                ? (isDark ? '#1A1816' : '#FFFFFF')
+                : isHovered
+                  ? (isDark ? 'rgba(232,228,222,0.9)' : 'rgba(43,42,39,0.75)')
+                  : (isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.35)'),
               background: isActive
-                ? '#C4956A'
-                : (isDark ? 'rgba(55,50,45,0.4)' : 'rgba(0,0,0,0.05)'),
+                ? 'var(--pfc-accent)'
+                : isHovered
+                  ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(160,120,80,0.1)')
+                  : 'transparent',
               boxShadow: isActive
-                ? '0 4px 24px -4px rgba(196,149,106,0.25), 0 2px 8px -2px rgba(196,149,106,0.15)'
+                ? '0 4px 24px -4px rgba(var(--pfc-accent-rgb), 0.25), 0 2px 8px -2px rgba(var(--pfc-accent-rgb), 0.15)'
                 : 'none',
             }}
           >
@@ -98,8 +106,25 @@ function ModeToggle({ isDark }: { isDark: boolean }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// IDE Syntax Coloring — rotating code prompts as subtitle
+// Greeting Subtitle — casual rotating prompts with typewriter
 // ═══════════════════════════════════════════════════════════════════
+
+// Only 3 colors: ashy red, warm mocha, light blue
+const ASHY_RED = '#B85C5C';
+const WARM_ORANGE = '#C4956A';
+const LIGHT_BLUE = '#6B8EBF';
+
+// Landing page greetings — randomly picked each visit
+const LANDING_GREETINGS = [
+  'Greetings, Researcher...',
+  'Greetings, Nerd!',
+  'Greetings, Blerd!',
+  'Hey there...You!',
+  'Greetings, Scholar...',
+  'Greetings, Thinker...',
+  'Sup, Brainiac!',
+  'Hey there, Curious One...',
+];
 
 interface ColoredSpan {
   text: string;
@@ -113,126 +138,208 @@ type PromptDef = {
 
 const PROMPT_DEFS: PromptDef[] = [
   {
-    plain: 'print("What\'s on your mind?")',
+    plain: 'print("what\'s on your mind?")',
     colored: [
-      { text: 'print', color: '#22D3EE' },
-      { text: '(', color: '#9CA3AF' },
-      { text: '"What\'s on your mind?"', color: '#4ADE80' },
-      { text: ')', color: '#9CA3AF' },
+      { text: 'print', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"what\'s on your mind?"', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
     ],
   },
   {
-    plain: 'console.log("Any interesting queries?")',
+    plain: 'echo "whatcha waitin forrrrr?"',
     colored: [
-      { text: 'console', color: '#E07850' },
-      { text: '.', color: '#9CA3AF' },
-      { text: 'log', color: '#E07850' },
-      { text: '(', color: '#9CA3AF' },
-      { text: '"Any interesting queries?"', color: '#4ADE80' },
-      { text: ')', color: '#9CA3AF' },
+      { text: 'echo', color: LIGHT_BLUE },
+      { text: ' ', color: WARM_ORANGE },
+      { text: '"whatcha waitin forrrrr?"', color: ASHY_RED },
     ],
   },
   {
-    plain: 'echo "What do you want?"',
+    plain: 'console.log("soooooo... you gonna type something?")',
     colored: [
-      { text: 'echo', color: '#F87171' },
-      { text: ' ', color: '#9CA3AF' },
-      { text: '"What do you want?"', color: '#FBBF24' },
+      { text: 'console', color: WARM_ORANGE },
+      { text: '.', color: WARM_ORANGE },
+      { text: 'log', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"soooooo... you gonna type something?"', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
     ],
   },
   {
-    plain: 'return "Ready to research"',
+    plain: 'puts "hmmmm any interesting queries?"',
     colored: [
-      { text: 'return', color: '#C4B5FD' },
-      { text: ' ', color: '#9CA3AF' },
-      { text: '"Ready to research"', color: '#4ADE80' },
+      { text: 'puts', color: LIGHT_BLUE },
+      { text: ' ', color: WARM_ORANGE },
+      { text: '"hmmmm any interesting queries?"', color: ASHY_RED },
     ],
   },
   {
-    plain: 'SELECT insight FROM questions',
+    plain: 'print("whats t?")',
     colored: [
-      { text: 'SELECT', color: '#22D3EE' },
-      { text: ' insight ', color: '#F9A8D4' },
-      { text: 'FROM', color: '#22D3EE' },
-      { text: ' questions', color: '#FBBF24' },
+      { text: 'print', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"whats t?"', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
     ],
   },
   {
-    plain: 'fmt.Println("Ask me anything")',
+    plain: 'log("ask me anything, literally anything")',
     colored: [
-      { text: 'fmt', color: '#22D3EE' },
-      { text: '.', color: '#9CA3AF' },
-      { text: 'Println', color: '#E07850' },
-      { text: '(', color: '#9CA3AF' },
-      { text: '"Ask me anything"', color: '#4ADE80' },
-      { text: ')', color: '#9CA3AF' },
+      { text: 'log', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"ask me anything, literally anything"', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
     ],
   },
   {
-    plain: 'puts "Let\'s dive in"',
+    plain: 'echo "got a burning question?"',
     colored: [
-      { text: 'puts', color: '#C4B5FD' },
-      { text: ' ', color: '#9CA3AF' },
-      { text: '"Let\'s dive in"', color: '#F87171' },
+      { text: 'echo', color: LIGHT_BLUE },
+      { text: ' ', color: WARM_ORANGE },
+      { text: '"got a burning question?"', color: ASHY_RED },
     ],
   },
   {
-    plain: 'System.out.println("Curious?")',
+    plain: 'print("i\'m ready when you are")',
     colored: [
-      { text: 'System', color: '#FACC15' },
-      { text: '.out.', color: '#9CA3AF' },
-      { text: 'println', color: '#E07850' },
-      { text: '(', color: '#9CA3AF' },
-      { text: '"Curious?"', color: '#4ADE80' },
-      { text: ')', color: '#9CA3AF' },
+      { text: 'print', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"i\'m ready when you are"', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
     ],
   },
   {
-    plain: 'grep -i "research topic"',
+    plain: 'console.log("type type type type type...")',
     colored: [
-      { text: 'grep', color: '#22D3EE' },
-      { text: ' -i ', color: '#C4B5FD' },
-      { text: '"research topic"', color: '#4ADE80' },
+      { text: 'console', color: WARM_ORANGE },
+      { text: '.', color: WARM_ORANGE },
+      { text: 'log', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"type type type type type..."', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
     ],
   },
   {
-    plain: 'whats t?',
+    plain: 'puts "hellloooo? anyone there?"',
     colored: [
-      { text: 'whats t?', color: '#FBBF24' },
+      { text: 'puts', color: LIGHT_BLUE },
+      { text: ' ', color: WARM_ORANGE },
+      { text: '"hellloooo? anyone there?"', color: ASHY_RED },
     ],
   },
   {
-    plain: 'soooooo....you gonna type something?',
+    plain: 'echo "just vibing... waiting on you"',
     colored: [
-      { text: 'soooooo....you gonna type something?', color: '#F87171' },
+      { text: 'echo', color: LIGHT_BLUE },
+      { text: ' ', color: WARM_ORANGE },
+      { text: '"just vibing... waiting on you"', color: ASHY_RED },
+    ],
+  },
+  {
+    plain: 'print("go on... don\'t be shy")',
+    colored: [
+      { text: 'print', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"go on... don\'t be shy"', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
+    ],
+  },
+  {
+    plain: 'log("what are we researching today?")',
+    colored: [
+      { text: 'log', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"what are we researching today?"', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
+    ],
+  },
+  {
+    plain: 'fmt.print("curiosity killed the cat. but not here.")',
+    colored: [
+      { text: 'fmt', color: WARM_ORANGE },
+      { text: '.', color: WARM_ORANGE },
+      { text: 'print', color: LIGHT_BLUE },
+      { text: '(', color: WARM_ORANGE },
+      { text: '"curiosity killed the cat. but not here."', color: ASHY_RED },
+      { text: ')', color: WARM_ORANGE },
+    ],
+  },
+  {
+    plain: 'puts "the search bar is right there ↑"',
+    colored: [
+      { text: 'puts', color: LIGHT_BLUE },
+      { text: ' ', color: WARM_ORANGE },
+      { text: '"the search bar is right there ↑"', color: ASHY_RED },
     ],
   },
 ];
 
 // ═══════════════════════════════════════════════════════════════════
-// SyntaxSubtitle — IDE-colored typewriter subtitle with blinking cursor
+// GreetingSubtitle — syntax-styled typewriter subtitle with blinking cursor
 // ═══════════════════════════════════════════════════════════════════
 
-function SyntaxSubtitle({ isDark }: { isDark: boolean }) {
+function GreetingSubtitle({ isDark, isOled, dismissing }: { isDark: boolean; isOled?: boolean; dismissing?: boolean }) {
   const [displayText, setDisplayText] = useState('');
   const [cursorOn, setCursorOn] = useState(true);
   const [variationIdx, setVariationIdx] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
   const stateRef = useRef({
     variation: 0,
     charIdx: 0,
-    phase: 'typing' as 'typing' | 'pausing' | 'deleting',
+    phase: 'typing' as 'typing' | 'pausing' | 'deleting' | 'dismissed',
   });
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     const id = setInterval(() => setCursorOn((v) => !v), 530);
     return () => clearInterval(id);
   }, []);
 
+  // When dismissing=true, interrupt the normal cycle and backspace away
   useEffect(() => {
+    if (!dismissing) {
+      // If we were dismissed and now coming back, reset to typing
+      if (dismissed) {
+        setDismissed(false);
+        stateRef.current.phase = 'typing';
+        stateRef.current.charIdx = 0;
+        stateRef.current.variation = (stateRef.current.variation + 1) % PROMPT_DEFS.length;
+      }
+      return;
+    }
+
+    // Start backspace animation from current position
+    stateRef.current.phase = 'dismissed';
+
+    function backspaceTick() {
+      const s = stateRef.current;
+      if (s.charIdx > 0) {
+        s.charIdx--;
+        const target = PROMPT_DEFS[s.variation].plain;
+        setDisplayText(target.slice(0, s.charIdx));
+        dismissTimerRef.current = setTimeout(backspaceTick, 20); // Fast backspace
+      } else {
+        setDisplayText('');
+        setDismissed(true);
+      }
+    }
+
+    backspaceTick();
+    return () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dismissing]);
+
+  useEffect(() => {
+    if (dismissing || dismissed) return; // Don't run normal cycle while dismissing
+
     let timer: ReturnType<typeof setTimeout>;
 
     function tick() {
       const s = stateRef.current;
+      if (s.phase === 'dismissed') return; // Guard against stale tick
+
       const target = PROMPT_DEFS[s.variation].plain;
 
       if (s.phase === 'typing') {
@@ -240,10 +347,12 @@ function SyntaxSubtitle({ isDark }: { isDark: boolean }) {
           s.charIdx++;
           setDisplayText(target.slice(0, s.charIdx));
           setVariationIdx(s.variation);
-          timer = setTimeout(tick, s.variation === 0 ? 55 : 40);
+          // Slower typing: 75ms first prompt, 60ms rest
+          timer = setTimeout(tick, s.variation === 0 ? 75 : 60);
         } else {
           s.phase = 'pausing';
-          timer = setTimeout(tick, s.variation === 0 ? 2500 : 3200);
+          // Longer pause before deleting
+          timer = setTimeout(tick, s.variation === 0 ? 3000 : 3800);
         }
       } else if (s.phase === 'pausing') {
         s.phase = 'deleting';
@@ -252,19 +361,20 @@ function SyntaxSubtitle({ isDark }: { isDark: boolean }) {
         if (s.charIdx > 0) {
           s.charIdx--;
           setDisplayText(target.slice(0, s.charIdx));
-          timer = setTimeout(tick, 18);
+          // Slower delete
+          timer = setTimeout(tick, 25);
         } else {
           s.variation = (s.variation + 1) % PROMPT_DEFS.length;
           s.phase = 'typing';
           setVariationIdx(s.variation);
-          timer = setTimeout(tick, 500);
+          timer = setTimeout(tick, 600);
         }
       }
     }
 
-    timer = setTimeout(tick, 120);
+    timer = setTimeout(tick, 200);
     return () => clearTimeout(timer);
-  }, []);
+  }, [dismissing, dismissed]);
 
   const def = PROMPT_DEFS[variationIdx];
 
@@ -281,13 +391,23 @@ function SyntaxSubtitle({ isDark }: { isDark: boolean }) {
     return spans;
   }, [displayText, def]);
 
+  // Opacity multiplier: syntax colors show through but muted for placeholder feel
+  const opacityMul = isOled ? 0.6 : isDark ? 0.5 : 0.55;
+
+  // Cursor color — matches the general text tone
+  const cursorColor = isOled
+    ? 'rgba(160,160,160,0.5)'
+    : isDark
+      ? 'rgba(180,160,140,0.4)'
+      : 'rgba(0,0,0,0.25)';
+
   return (
     <span
       style={{
-        fontFamily: 'var(--font-mono)',
-        fontSize: '0.9375rem',
-        letterSpacing: '0em',
-        lineHeight: 1.3,
+        fontFamily: 'ui-monospace, "SF Mono", "Fira Code", "Cascadia Code", monospace',
+        fontSize: '0.8125rem',
+        letterSpacing: '0.01em',
+        lineHeight: 1.6,
         fontWeight: 400,
         whiteSpace: 'nowrap',
         minHeight: '1.5rem',
@@ -296,14 +416,14 @@ function SyntaxSubtitle({ isDark }: { isDark: boolean }) {
       }}
     >
       {coloredOutput.map((span, i) => (
-        <span key={i} style={{ color: span.color }}>{span.text}</span>
+        <span key={i} style={{ color: span.color, opacity: opacityMul }}>{span.text}</span>
       ))}
       <span
         style={{
           display: 'inline-block',
-          width: '2px',
-          height: '0.9375rem',
-          backgroundColor: 'var(--m3-primary)',
+          width: '1.5px',
+          height: '0.875rem',
+          backgroundColor: cursorColor,
           marginLeft: '1px',
           opacity: cursorOn ? 1 : 0,
           transition: 'opacity 0.1s',
@@ -317,7 +437,7 @@ function SyntaxSubtitle({ isDark }: { isDark: boolean }) {
 // AllChatsView — fullscreen searchable list replacing greeting
 // ═══════════════════════════════════════════════════════════════════
 
-function AllChatsView({ chats, isDark, onBack }: { chats: ChatEntry[]; isDark: boolean; onBack: () => void }) {
+function AllChatsView({ chats, isDark, isOled, onBack }: { chats: ChatEntry[]; isDark: boolean; isOled?: boolean; onBack: () => void }) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -347,9 +467,7 @@ function AllChatsView({ chats, isDark, onBack }: { chats: ChatEntry[]; isDark: b
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <motion.button
           onClick={onBack}
-          whileHover={{ scale: 1.04, y: -2 }}
-          whileTap={{ scale: 0.96 }}
-          transition={ENTER_SPRING}
+          whileTap={{ scale: 0.97 }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -363,9 +481,8 @@ function AllChatsView({ chats, isDark, onBack }: { chats: ChatEntry[]; isDark: b
             fontWeight: 500,
             fontFamily: 'var(--font-sans)',
             color: isDark ? 'rgba(155,150,137,0.8)' : 'rgba(0,0,0,0.45)',
-            background: isDark ? 'rgba(28,27,25,0.7)' : 'rgba(255,255,255,0.75)',
-            backdropFilter: 'blur(12px) saturate(1.4)',
-            WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+            background: isDark ? (isOled ? 'rgba(14,14,14,0.85)' : 'rgba(28,27,25,0.7)') : 'rgba(255,255,255,0.75)',
+            transition: 'background 0.15s ease',
           }}
         >
           <ArrowLeftIcon style={{ height: '0.8125rem', width: '0.8125rem' }} />
@@ -389,10 +506,10 @@ function AllChatsView({ chats, isDark, onBack }: { chats: ChatEntry[]; isDark: b
         gap: '0.5rem',
         padding: '0.5rem 0.875rem',
         borderRadius: '9999px',
-        background: isDark ? 'rgba(22,21,19,0.65)' : 'rgba(237,232,222,0.6)',
+        background: isDark ? (isOled ? 'rgba(10,10,10,0.8)' : 'rgba(22,21,19,0.65)') : 'rgba(237,232,222,0.6)',
         backdropFilter: 'blur(12px) saturate(1.4)',
         WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-        border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+        border: `1px solid ${isDark ? (isOled ? 'rgba(40,40,40,0.3)' : 'rgba(50,49,45,0.25)') : 'rgba(190,183,170,0.3)'}`,
       }}>
         <SearchIcon style={{
           height: '0.875rem',
@@ -436,8 +553,6 @@ function AllChatsView({ chats, isDark, onBack }: { chats: ChatEntry[]; isDark: b
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...ENTER_SPRING, delay: Math.min(idx * 0.02, 0.3) }}
-              whileHover={{ scale: 1.02, y: -1 }}
-              whileTap={{ scale: 0.98 }}
               onClick={() => router.push(`/chat/${chat.id}`)}
               onMouseEnter={() => setHoveredId(chat.id)}
               onMouseLeave={() => setHoveredId(null)}
@@ -445,41 +560,35 @@ function AllChatsView({ chats, isDark, onBack }: { chats: ChatEntry[]; isDark: b
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
-                padding: '0.625rem 0.875rem',
+                padding: '0.75rem 1rem',
                 borderRadius: 'var(--shape-lg)',
                 cursor: 'pointer',
                 textAlign: 'left',
                 width: '100%',
+                minHeight: '3.25rem',
                 background: isDark
-                  ? (isHovered ? 'rgba(55,50,45,0.45)' : 'rgba(28,27,25,0.5)')
-                  : (isHovered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)'),
-                boxShadow: isHovered
-                  ? (isDark
-                    ? '0 2px 8px -1px rgba(0,0,0,0.3), 0 1px 3px -1px rgba(0,0,0,0.2)'
-                    : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.04)')
-                  : 'none',
+                  ? (isOled
+                    ? (isHovered ? 'rgba(35,35,35,0.8)' : 'rgba(14,14,14,0.8)')
+                    : (isHovered ? 'rgba(45,42,38,0.6)' : 'rgba(28,27,25,0.5)'))
+                  : (isHovered ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.6)'),
                 border: `1px solid ${
-                  isHovered
-                    ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.2)')
-                    : (isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)')
+                  isDark ? (isOled ? 'rgba(40,40,40,0.35)' : 'rgba(50,49,45,0.25)') : 'rgba(190,183,170,0.2)'
                 }`,
-                backdropFilter: 'blur(10px) saturate(1.3)',
-                WebkitBackdropFilter: 'blur(10px) saturate(1.3)',
-                transition: 'all 0.2s ease',
-                overflow: 'hidden',
+                transition: 'background 0.15s ease',
               }}
             >
               <MessageSquareIcon style={{
-                height: '0.9375rem',
-                width: '0.9375rem',
+                height: '1rem',
+                width: '1rem',
                 flexShrink: 0,
-                color: isHovered ? '#C4956A' : (isDark ? 'rgba(155,150,137,0.45)' : 'rgba(0,0,0,0.2)'),
+                color: isHovered ? 'var(--pfc-accent)' : (isDark ? 'rgba(155,150,137,0.45)' : 'rgba(0,0,0,0.2)'),
                 transition: 'color 0.15s',
               }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: '0.8125rem',
+                  fontSize: '0.875rem',
                   fontWeight: 500,
+                  lineHeight: 1.4,
                   color: isHovered
                     ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
                     : (isDark ? 'rgba(155,150,137,0.75)' : 'rgba(0,0,0,0.5)'),
@@ -492,11 +601,11 @@ function AllChatsView({ chats, isDark, onBack }: { chats: ChatEntry[]; isDark: b
                   {chat.title}
                 </div>
                 <div style={{
-                  fontSize: '0.625rem',
+                  fontSize: '0.6875rem',
                   fontWeight: 500,
                   color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)',
                   fontFamily: 'var(--font-sans)',
-                  marginTop: '0.125rem',
+                  marginTop: '0.1875rem',
                 }}>
                   {timeStr}
                 </div>
@@ -518,7 +627,7 @@ function AllChatsView({ chats, isDark, onBack }: { chats: ChatEntry[]; isDark: b
 // ChatsOverlay — domino-staggered chat bubbles (replaces sidebar)
 // ═══════════════════════════════════════════════════════════════════
 
-function ChatsOverlay({ isDark, onClose }: { isDark: boolean; onClose: () => void }) {
+function ChatsOverlay({ isDark, isOled, onClose }: { isDark: boolean; isOled?: boolean; onClose: () => void }) {
   const router = useRouter();
   const [chats, setChats] = useState<ChatEntry[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -556,7 +665,7 @@ function ChatsOverlay({ isDark, onClose }: { isDark: boolean; onClose: () => voi
         style={{
           position: 'absolute',
           inset: 0,
-          zIndex: 30,
+          zIndex: 'var(--z-nav)',
           background: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.08)',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
@@ -569,7 +678,7 @@ function ChatsOverlay({ isDark, onClose }: { isDark: boolean; onClose: () => voi
           position: 'absolute',
           top: '3.5rem',
           left: '0.625rem',
-          zIndex: 31,
+          zIndex: 'calc(var(--z-nav) + 1)',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.375rem',
@@ -599,7 +708,6 @@ function ChatsOverlay({ isDark, onClose }: { isDark: boolean; onClose: () => voi
               onClick={() => router.push(`/chat/${chat.id}`)}
               onMouseEnter={() => setHoveredId(chat.id)}
               onMouseLeave={() => setHoveredId(null)}
-              whileHover={{ scale: 1.03, x: 4 }}
               whileTap={{ scale: 0.97 }}
               style={{
                 display: 'flex',
@@ -612,8 +720,8 @@ function ChatsOverlay({ isDark, onClose }: { isDark: boolean; onClose: () => voi
                 border: 'none',
                 maxWidth: '22rem',
                 background: isHovered
-                  ? (isDark ? 'rgba(55,50,45,0.85)' : 'rgba(255,255,255,0.95)')
-                  : (isDark ? 'rgba(28,27,25,0.8)' : 'rgba(255,255,255,0.85)'),
+                  ? (isDark ? (isOled ? 'rgba(24,24,24,0.9)' : 'rgba(55,50,45,0.85)') : 'rgba(255,255,255,0.95)')
+                  : (isDark ? (isOled ? 'rgba(12,12,12,0.9)' : 'rgba(28,27,25,0.8)') : 'rgba(255,255,255,0.85)'),
                 boxShadow: isHovered
                   ? (isDark
                     ? '0 4px 20px -4px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.2)'
@@ -630,7 +738,7 @@ function ChatsOverlay({ isDark, onClose }: { isDark: boolean; onClose: () => voi
                 height: '0.75rem',
                 width: '0.75rem',
                 flexShrink: 0,
-                color: isHovered ? '#C4956A' : (isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.2)'),
+                color: isHovered ? 'var(--pfc-accent)' : (isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.2)'),
                 transition: 'color 0.15s',
               }} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -680,7 +788,7 @@ function ChatsOverlay({ isDark, onClose }: { isDark: boolean; onClose: () => voi
 // AllChatsButton — standalone pill on landing page (no card list)
 // ═══════════════════════════════════════════════════════════════════
 
-function AllChatsButton({ isDark, onShowAll }: { isDark: boolean; onShowAll: (chats: ChatEntry[]) => void }) {
+function AllChatsButton({ isDark, isOled, onShowAll }: { isDark: boolean; isOled?: boolean; onShowAll: (chats: ChatEntry[]) => void }) {
   const [allChats, setAllChats] = useState<ChatEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -711,9 +819,7 @@ function AllChatsButton({ isDark, onShowAll }: { isDark: boolean; onShowAll: (ch
     >
       <motion.button
         onClick={() => onShowAll(allChats)}
-        whileHover={{ scale: 1.04, y: -2 }}
-        whileTap={{ scale: 0.96 }}
-        transition={ENTER_SPRING}
+        whileTap={{ scale: 0.97 }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -721,14 +827,12 @@ function AllChatsButton({ isDark, onShowAll }: { isDark: boolean; onShowAll: (ch
           padding: '0.4375rem 0.875rem',
           borderRadius: '9999px',
           border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
-          background: isDark ? 'rgba(22,21,19,0.65)' : 'rgba(237,232,222,0.6)',
-          backdropFilter: 'blur(12px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+          background: isDark ? (isOled ? 'rgba(10,10,10,0.8)' : 'rgba(22,21,19,0.65)') : 'rgba(237,232,222,0.6)',
           cursor: 'pointer',
-          fontSize: '0.75rem',
-          fontWeight: 600,
+          fontSize: '0.625rem',
+          fontWeight: 400,
           color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)',
-          fontFamily: 'var(--font-sans)',
+          fontFamily: 'var(--font-heading)',
           letterSpacing: '0.02em',
           boxShadow: isDark
             ? '0 2px 8px -1px rgba(0,0,0,0.2)'
@@ -765,12 +869,19 @@ export function Chat() {
   const inferenceMode = usePFCStore((s) => s.inferenceMode);
   const clearMessages = usePFCStore((s) => s.clearMessages);
   const { sendQuery, abort, pause, resume } = useChatStream();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const { isDark, isOled, mounted } = useIsDark();
   const [modeHintDismissed, setModeHintDismissed] = useState(false);
   const [showAllChats, setShowAllChats] = useState(false);
   const [allChatsData, setAllChatsData] = useState<ChatEntry[]>([]);
   const [showChatsOverlay, setShowChatsOverlay] = useState(false);
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [landingGreeting, setLandingGreeting] = useState(LANDING_GREETINGS[0]);
+  // Pick random greeting client-side only to avoid hydration mismatch
+  useEffect(() => {
+    setLandingGreeting(LANDING_GREETINGS[Math.floor(Math.random() * LANDING_GREETINGS.length)]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const lastBackClickRef = useRef(0);
   const lastChatsClickRef = useRef(0);
 
@@ -779,10 +890,7 @@ export function Chat() {
     setShowAllChats(true);
   }, []);
 
-  useEffect(() => setMounted(true), []);
-
   const isEmpty = messages.length === 0;
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
   const showThoughtViz = researchChatMode && chatViewMode === 'visualize-thought' && tierFeatures.thoughtVisualizer !== 'off' && !isEmpty;
   const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
   const showModeHint = researchChatMode && !features.playPause && !modeHintDismissed && !isEmpty;
@@ -801,23 +909,41 @@ export function Chat() {
           animate={{ opacity: 1 }}
           style={{
             position: 'relative',
-            zIndex: 1,
+            zIndex: 'var(--z-base)',
             display: 'flex',
             flex: 1,
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            background: 'var(--m3-surface)',
+            background: isOled
+              ? 'transparent'
+              : isDark
+                ? '#151311'
+                : 'var(--m3-surface)',
             transform: 'translateZ(0)',
           }}
         >
+          {/* Wallpaper fade overlay — covers starfield when search focused */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              background: isOled ? '#000' : isDark ? '#151311' : 'var(--m3-surface)',
+              opacity: searchFocused ? 1 : 0,
+              transition: searchFocused ? 'opacity 0.4s ease-out' : 'opacity 3s ease-in',
+              pointerEvents: 'none',
+            }}
+          />
+
           <AnimatePresence mode="wait">
             {showAllChats ? (
               <AllChatsView
                 key="all-chats"
                 chats={allChatsData}
                 isDark={isDark}
+                isOled={isOled}
                 onBack={() => setShowAllChats(false)}
               />
             ) : (
@@ -829,7 +955,7 @@ export function Chat() {
                 transition={ENTER_SPRING}
                 style={{
                   position: 'relative',
-                  zIndex: 2,
+                  zIndex: 'calc(var(--z-base) + 1)',
                   width: '100%',
                   maxWidth: '38rem',
                   display: 'flex',
@@ -839,71 +965,82 @@ export function Chat() {
                 }}
               >
 
-                {/* Mode toggle — Measurement / Research / Plain Chat */}
-                {mounted && <ModeToggle isDark={isDark} />}
-
-                {/* Greeting section — Title with sun/moon, syntax subtitle below */}
-                <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.375rem' }}>
-                  {/* Static title — Minecraft font, with sun/moon GIF */}
+                {/* Pixel mascot — sun for light mode, robot for dark/OLED */}
+                <motion.div
+                  initial={{ opacity: 0, y: 16, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ ...ENTER_SPRING, delay: 0.02 }}
+                  style={{ display: 'flex', justifyContent: 'center' }}
+                >
                   <motion.div
-                    initial={{ opacity: 0, y: 20, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ ...ENTER_SPRING, delay: 0.08 }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.625rem',
-                    }}
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                   >
-                    {mounted && (isDark ? <PixelMoon size={36} /> : <PixelSun size={36} />)}
-                    <h1
+                    <Image
+                      src={isDark ? '/pixel-robot.gif' : '/pixel-sun.gif'}
+                      alt={isDark ? 'PFC Robot' : 'PFC Sun'}
+                      width={96}
+                      height={96}
+                      unoptimized
                       style={{
-                        fontFamily: "'Minecraft', var(--font-display)",
-                        fontSize: '2.5rem',
-                        letterSpacing: '-0.03em',
-                        lineHeight: 1.15,
-                        fontWeight: 550,
-                        margin: 0,
-                        color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(43,42,39,0.9)',
+                        imageRendering: 'pixelated',
+                        width: '4.5rem',
+                        height: '4.5rem',
                       }}
-                    >
-                      Greetings, Researcher
-                    </h1>
+                    />
                   </motion.div>
+                </motion.div>
 
-                  {/* Syntax typewriter subtitle — below the title, smaller */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ ...ENTER_SPRING, delay: 0.16 }}
+                {/* Greeting title — RetroGaming font */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ ...ENTER_SPRING, delay: 0.08 }}
+                  style={{ textAlign: 'center' }}
+                >
+                  <h1
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      fontFamily: "'RetroGaming', var(--font-display)",
+                      fontSize: '2.75rem',
+                      letterSpacing: '-0.01em',
+                      lineHeight: 1.2,
+                      fontWeight: 400,
+                      margin: 0,
+                      color: isDark ? 'rgba(232,228,222,0.95)' : 'rgba(43,42,39,0.9)',
                     }}
                   >
-                    {mounted && <SyntaxSubtitle isDark={isDark} />}
-                  </motion.div>
-                </div>
+                    {landingGreeting}
+                  </h1>
+                </motion.div>
 
-                {/* Search bar — M3 surface container with tonal elevation */}
+                {/* Search bar — pill nav style with glassmorphism */}
                 <motion.div
                   initial={{ opacity: 0, y: 20, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ ...ENTER_SPRING, delay: 0.18 }}
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', display: 'flex', justifyContent: 'center' }}
                 >
-                  <div
+                  <motion.div
                     data-search-bar
+                    animate={{
+                      borderRadius: searchExpanded ? '1.25rem' : '1.625rem',
+                    }}
+                    transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
                     style={{
-                      borderRadius: '1.25rem',
+                      borderRadius: '1.625rem',
                       overflow: 'hidden',
+                      width: '100%',
+                      maxWidth: '36rem',
                       background: isDark
-                        ? 'var(--m3-surface-container)'
-                        : 'var(--m3-surface-container-high)',
-                      border: `1px solid ${isDark ? 'rgba(50,49,45,0.3)' : 'var(--m3-outline-variant)'}`,
-                      boxShadow: 'none',
+                        ? (isOled ? 'rgba(18,18,18,0.88)' : 'rgba(30,28,25,0.72)')
+                        : 'rgba(237,232,222,0.6)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      border: `1px solid ${isDark ? (isOled ? 'rgba(55,55,55,0.4)' : 'rgba(55,50,44,0.3)') : 'rgba(190,183,170,0.3)'}`,
+                      boxShadow: isDark
+                        ? '0 2px 12px -2px rgba(0,0,0,0.3)'
+                        : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
+                      transform: 'translateZ(0)',
                     }}
                   >
                     <MultimodalInput
@@ -911,35 +1048,31 @@ export function Chat() {
                       onStop={abort}
                       isProcessing={isProcessing}
                       hero
+                      onExpandChange={setSearchExpanded}
                       inputStyle={{
                         fontFamily: 'var(--font-display)',
                         fontSize: '1rem',
                         fontWeight: 500,
                         letterSpacing: '-0.01em',
                       }}
+                      onFocusChange={setSearchFocused}
+                      placeholderOverlay={mounted ? <GreetingSubtitle isDark={isDark} isOled={isOled} dismissing={searchFocused} /> : undefined}
                     />
-                  </div>
+                  </motion.div>
                 </motion.div>
 
-                {/* Feature buttons — M3 tonal pills (hidden in plain chat mode) */}
-                <AnimatePresence>
-                  {chatMode !== 'plain' && (
-                    <motion.div
-                      key="feature-btns"
-                      initial={{ opacity: 0, y: 16, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: 'auto' }}
-                      exit={{ opacity: 0, y: -8, height: 0 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 30, mass: 0.6 }}
-                      style={{ overflow: 'hidden' }}
-                    >
-                      {mounted && <FeatureButtons isDark={isDark} onSubmit={sendQuery} />}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* Feature action chips — 4 buttons below search bar */}
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...ENTER_SPRING, delay: 0.26 }}
+                >
+                  <FeatureButtons isDark={isDark} onSubmit={sendQuery} />
+                </motion.div>
 
-                {/* All Chats — standalone pill (replaces RecentChats card list) */}
+                {/* All Chats — standalone pill */}
                 {mounted && (
-                  <AllChatsButton isDark={isDark} onShowAll={handleShowAllChats} />
+                  <AllChatsButton isDark={isDark} isOled={isOled} onShowAll={handleShowAllChats} />
                 )}
               </motion.div>
             )}
@@ -959,7 +1092,7 @@ export function Chat() {
             transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] }}
             style={{
               position: 'relative',
-              zIndex: 1,
+              zIndex: 'var(--z-base)',
               display: 'flex',
               flex: 1,
               minHeight: 0,
@@ -970,7 +1103,7 @@ export function Chat() {
             {/* Chats overlay — domino bubbles */}
             <AnimatePresence>
               {showChatsOverlay && (
-                <ChatsOverlay isDark={isDark} onClose={() => setShowChatsOverlay(false)} />
+                <ChatsOverlay isDark={isDark} isOled={isOled} onClose={() => setShowChatsOverlay(false)} />
               )}
             </AnimatePresence>
 
@@ -986,7 +1119,7 @@ export function Chat() {
                   top: '0.625rem',
                   left: '0.625rem',
                   right: '0.625rem',
-                  zIndex: 10,
+                  zIndex: 'var(--z-dropdown)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.375rem',
@@ -995,8 +1128,7 @@ export function Chat() {
               >
                 {/* Back button */}
                 <motion.button
-                  whileHover={{ scale: 1.04, y: -2 }}
-                  whileTap={{ scale: 0.96 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => {
                     if (Date.now() - lastBackClickRef.current < 300) return;
                     lastBackClickRef.current = Date.now();
@@ -1039,8 +1171,7 @@ export function Chat() {
 
                 {/* Chats overlay toggle */}
                 <motion.button
-                  whileHover={{ scale: 1.04, y: -2 }}
-                  whileTap={{ scale: 0.96 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => {
                     if (Date.now() - lastChatsClickRef.current < 300) return;
                     lastChatsClickRef.current = Date.now();
@@ -1092,9 +1223,15 @@ export function Chat() {
 
               {/* Thought Visualizer (mind-map mode) */}
               {showThoughtViz ? (
+                <ErrorBoundary fallback={
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5, fontSize: 13 }}>
+                    Visualization unavailable
+                  </div>
+                }>
                 <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
                   <ThoughtVisualizer isDark={isDark} />
                 </div>
+                </ErrorBoundary>
               ) : (
                 <Messages />
               )}
@@ -1141,7 +1278,7 @@ export function Chat() {
                           onClick={() => setModeHintDismissed(true)}
                           style={{
                             border: 'none',
-                            background: isDark ? 'rgba(196,149,106,0.08)' : 'rgba(196,149,106,0.06)',
+                            background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.08)' : 'rgba(var(--pfc-accent-rgb), 0.06)',
                             cursor: 'pointer',
                             fontSize: 'var(--type-label-sm)',
                             color: 'var(--m3-primary)',

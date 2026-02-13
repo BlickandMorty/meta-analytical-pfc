@@ -203,7 +203,7 @@ export const DEFAULT_STEERING_CONFIG: SteeringConfig = {
 
 // ── Empty/initial states ─────────────────────────────────────────
 
-export function createEmptyPriors(): SteeringPriors {
+function createEmptyPriors(): SteeringPriors {
   return {
     dimensions: {},
     globalSteeringStrength: 0,

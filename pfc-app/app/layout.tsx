@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AppShell } from '@/components/app-shell';
-import { Toaster } from 'sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -20,7 +19,6 @@ export const viewport: Viewport = {
   ],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -41,7 +39,6 @@ export default function RootLayout({
           <AppShell>
             {children}
           </AppShell>
-          <Toaster position="bottom-right" richColors />
         </ThemeProvider>
       </body>
     </html>

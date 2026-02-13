@@ -19,7 +19,7 @@ import { z } from 'zod';
 // Types
 // ═══════════════════════════════════════════════════════════════════
 
-export interface PaperReviewInput {
+interface PaperReviewInput {
   title: string;
   abstract: string;
   fullText?: string;        // Full paper text (optional but recommended)
@@ -32,7 +32,7 @@ export interface PaperReviewInput {
   };
 }
 
-export interface PaperReviewScores {
+interface PaperReviewScores {
   originality: number;      // 1-4: low, medium, high, very high
   quality: number;          // 1-4
   clarity: number;          // 1-4
@@ -44,7 +44,7 @@ export interface PaperReviewScores {
   confidence: number;       // 1-5
 }
 
-export interface PaperReview {
+interface PaperReview {
   scores: PaperReviewScores;
   summary: string;
   strengths: string[];
@@ -56,7 +56,7 @@ export interface PaperReview {
   detailedFeedback: string;
 }
 
-export interface EnsembleReview {
+interface EnsembleReview {
   individualReviews: PaperReview[];
   averagedScores: PaperReviewScores;
   metaReview: string;
@@ -305,7 +305,7 @@ function avg(nums: number[]): number {
 /**
  * Map an overall score to a human-readable verdict.
  */
-export function overallScoreToVerdict(score: number): string {
+function overallScoreToVerdict(score: number): string {
   if (score >= 8) return 'Strong Accept';
   if (score >= 6) return 'Weak Accept';
   if (score >= 5) return 'Borderline';
@@ -316,7 +316,7 @@ export function overallScoreToVerdict(score: number): string {
 /**
  * Calculate a letter grade from averaged scores.
  */
-export function scoresToGrade(scores: PaperReviewScores): string {
+function scoresToGrade(scores: PaperReviewScores): string {
   const composite = (
     scores.originality * 0.2 +
     scores.quality * 0.2 +

@@ -49,7 +49,7 @@ export interface LearnabilityThresholds {
   difficultyFloor: number;
 }
 
-export const DEFAULT_LEARNABILITY_THRESHOLDS: LearnabilityThresholds = {
+const DEFAULT_LEARNABILITY_THRESHOLDS: LearnabilityThresholds = {
   confidenceFloor: 0.35,
   entropyCeiling: 0.7,
   dissonanceCeiling: 0.6,
@@ -161,7 +161,7 @@ export interface RewardWeights {
   tda: number;         // default: 0.05
 }
 
-export const DEFAULT_REWARD_WEIGHTS: RewardWeights = {
+const DEFAULT_REWARD_WEIGHTS: RewardWeights = {
   confidence: 0.35,
   entropy: 0.25,
   dissonance: 0.20,
@@ -310,7 +310,7 @@ export const DEFAULT_SOAR_CONFIG: SOARConfig = {
 // ---------------------------------------------------------------------------
 
 /** Runtime limitations based on inference mode */
-export interface SOARLimitations {
+interface SOARLimitations {
   mode: InferenceMode;
   maxIterations: number;
   maxStonesPerCurriculum: number;

@@ -22,18 +22,14 @@ export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingA
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Auto-expand when thinking starts
-  useEffect(() => {
-    if (isThinking) setIsExpanded(true);
-  }, [isThinking]);
+  const effectiveExpanded = isThinking || isExpanded;
 
   // Auto-scroll during active thinking
   useEffect(() => {
-    if (isThinking && isExpanded && scrollRef.current) {
+    if (isThinking && effectiveExpanded && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [content, isThinking, isExpanded]);
+  }, [content, isThinking, effectiveExpanded]);
 
   if (!content && !isThinking) return null;
 
@@ -47,7 +43,9 @@ export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingA
     <div className={`rounded-xl overflow-hidden ${className ?? ''}`}>
       {/* Header */}
       <button
-        onClick={() => setIsExpanded((prev) => !prev)}
+        onClick={() => {
+          if (!isThinking) setIsExpanded((prev) => !prev);
+        }}
         className="w-full flex items-center gap-2 px-3 py-2 text-xs
                    bg-white/[0.04] dark:bg-white/[0.02] hover:bg-white/[0.06]
                    transition-colors duration-200"
@@ -58,7 +56,7 @@ export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingA
           {isThinking ? (
             <PixelBook size={16} />
           ) : (
-            <AtomIcon className={`w-3 h-3 ${isExpanded ? 'text-pfc-violet' : 'text-muted-foreground/50'}`} />
+            <AtomIcon className={`w-3 h-3 ${effectiveExpanded ? 'text-pfc-violet' : 'text-muted-foreground/50'}`} />
           )}
         </span>
 
@@ -69,7 +67,7 @@ export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingA
 
         {/* Chevron */}
         <motion.span
-          animate={{ rotate: isExpanded ? 180 : 0 }}
+          animate={{ rotate: effectiveExpanded ? 180 : 0 }}
           transition={{ duration: 0.2, ease: CUPERTINO }}
         >
           <ChevronDownIcon className="w-3.5 h-3.5 text-muted-foreground/40" />
@@ -78,7 +76,7 @@ export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingA
 
       {/* Content */}
       <AnimatePresence initial={false}>
-        {isExpanded && (
+        {effectiveExpanded && (
           <motion.div
             initial={{ opacity: 0, scaleY: 0 }}
             animate={{ opacity: 1, scaleY: 1 }}

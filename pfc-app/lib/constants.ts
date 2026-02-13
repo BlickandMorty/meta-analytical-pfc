@@ -10,8 +10,6 @@ export type PipelineStage =
   | 'adversarial'
   | 'calibration';
 
-export type StageStatus = 'idle' | 'active' | 'complete' | 'error';
-
 export const STAGES: PipelineStage[] = [
   'triage',
   'memory',

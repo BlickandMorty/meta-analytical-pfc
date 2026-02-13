@@ -267,7 +267,7 @@ export default function SettingsPage() {
                   className="flex-col"
                 >
                   <Icon style={{ height: 20, width: 20 }} />
-                  <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{opt.label}</span>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.625rem', fontWeight: 400 }}>{opt.label}</span>
                   <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 400 }}>{opt.description}</span>
                 </GlassBubbleButton>
               );
@@ -290,7 +290,7 @@ export default function SettingsPage() {
                         fullWidth
                         className="flex-col"
                       >
-                        <span style={{ fontWeight: 600 }}>{p.label}</span>
+                        <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5625rem', fontWeight: 400 }}>{p.label}</span>
                         <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 400 }}>{p.hint}</span>
                       </GlassBubbleButton>
                     ))}
@@ -451,7 +451,7 @@ export default function SettingsPage() {
                   className="flex-col"
                 >
                   <Icon style={{ height: 20, width: 20 }} />
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{opt.label}</span>
+                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5625rem', fontWeight: 400 }}>{opt.label}</span>
                   <span style={{ fontSize: '0.6875rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
                 </GlassBubbleButton>
               );
@@ -496,7 +496,7 @@ export default function SettingsPage() {
                 <BrainCircuitIcon className="h-4 w-4 text-pfc-cyan" />
               </span>
               <div>
-                <p className="text-sm font-semibold">Enable SOAR</p>
+                <p className="text-sm font-semibold" style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5625rem', fontWeight: 400 }}>Enable SOAR</p>
                 <p className="text-xs text-muted-foreground/50">Teacher-student meta-reasoning loop</p>
               </div>
             </div>
@@ -704,7 +704,7 @@ export default function SettingsPage() {
                 className="flex-col"
               >
                 <Icon style={{ height: 20, width: 20 }} />
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{label}</span>
+                <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5625rem', fontWeight: 400 }}>{label}</span>
               </GlassBubbleButton>
             ))}
           </div>

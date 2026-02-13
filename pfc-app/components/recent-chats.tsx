@@ -44,10 +44,11 @@ export function parseTimestamp(value: string | number | Date): Date {
 
 interface RecentChatsProps {
   isDark: boolean;
+  isOled?: boolean;
   onShowAll?: (allChats: ChatEntry[]) => void;
 }
 
-function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
+function RecentChatsBase({ isDark, isOled, onShowAll }: RecentChatsProps) {
   const router = useRouter();
   const [allChats, setAllChats] = useState<ChatEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +88,7 @@ function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
       transition={{ ...ENTER_SPRING, delay: 0.28 }}
       style={{
         width: '100%',
-        maxWidth: '32rem',
+        maxWidth: '36rem',
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
@@ -128,9 +129,7 @@ function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
         {hasMore && onShowAll && (
           <motion.button
             onClick={() => onShowAll(allChats)}
-            whileHover={{ scale: 1.04, y: -2 }}
-            whileTap={{ scale: 0.96 }}
-            transition={ENTER_SPRING}
+            whileTap={{ scale: 0.97 }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -138,7 +137,7 @@ function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
               padding: '0.25rem 0.625rem',
               borderRadius: '9999px',
               border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
-              background: isDark ? 'rgba(22,21,19,0.85)' : 'rgba(237,232,222,0.85)',
+              background: isDark ? (isOled ? 'rgba(10,10,10,0.9)' : 'rgba(22,21,19,0.85)') : 'rgba(237,232,222,0.85)',
               cursor: 'pointer',
               fontSize: '0.625rem',
               fontWeight: 600,
@@ -173,8 +172,6 @@ function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...ENTER_SPRING, delay: 0.3 + idx * 0.04 }}
-              whileHover={{ scale: 1.02, y: -1 }}
-              whileTap={{ scale: 0.98 }}
               onClick={() => router.push(`/chat/${chat.id}`)}
               onMouseEnter={() => setHoveredId(chat.id)}
               onMouseLeave={() => setHoveredId(null)}
@@ -182,35 +179,30 @@ function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
-                padding: '0.625rem 0.875rem',
+                padding: '0.75rem 1rem',
                 borderRadius: 'var(--shape-lg)',
                 cursor: 'pointer',
                 textAlign: 'left',
                 width: '100%',
+                minHeight: '3.25rem',
                 background: isDark
-                  ? (isHovered ? 'rgba(55,50,45,0.45)' : 'rgba(28,27,25,0.5)')
-                  : (isHovered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)'),
-                boxShadow: isHovered
-                  ? (isDark
-                    ? '0 2px 8px -1px rgba(0,0,0,0.3), 0 1px 3px -1px rgba(0,0,0,0.2)'
-                    : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.04)')
-                  : 'none',
+                  ? (isOled
+                    ? (isHovered ? 'rgba(35,35,35,0.8)' : 'rgba(14,14,14,0.8)')
+                    : (isHovered ? 'rgba(45,42,38,0.6)' : 'rgba(28,27,25,0.5)'))
+                  : (isHovered ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.6)'),
                 border: `1px solid ${
-                  isHovered
-                    ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.2)')
-                    : (isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)')
+                  isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)'
                 }`,
-                transition: 'all 0.2s ease',
-                overflow: 'hidden',
+                transition: 'background 0.15s ease',
               }}
             >
               <MessageSquareIcon
                 style={{
-                  height: '0.9375rem',
-                  width: '0.9375rem',
+                  height: '1rem',
+                  width: '1rem',
                   flexShrink: 0,
                   color: isHovered
-                    ? '#C4956A'
+                    ? 'var(--pfc-accent)'
                     : (isDark ? 'rgba(155,150,137,0.45)' : 'rgba(0,0,0,0.2)'),
                   transition: 'color 0.15s',
                 }}
@@ -218,8 +210,9 @@ function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontSize: '0.8125rem',
+                    fontSize: '0.875rem',
                     fontWeight: 500,
+                    lineHeight: 1.4,
                     color: isHovered
                       ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
                       : (isDark ? 'rgba(155,150,137,0.75)' : 'rgba(0,0,0,0.5)'),
@@ -234,11 +227,11 @@ function RecentChatsBase({ isDark, onShowAll }: RecentChatsProps) {
                 </div>
                 <div
                   style={{
-                    fontSize: '0.625rem',
+                    fontSize: '0.6875rem',
                     fontWeight: 500,
                     color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)',
                     fontFamily: 'var(--font-sans)',
-                    marginTop: '0.125rem',
+                    marginTop: '0.1875rem',
                   }}
                 >
                   {timeStr}

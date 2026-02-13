@@ -144,7 +144,7 @@ export interface QueryAnalysis {
   followUpFocus: string | null;
 }
 
-export function analyzeQuery(query: string, context?: ConversationContext): QueryAnalysis {
+function analyzeQuery(query: string, context?: ConversationContext): QueryAnalysis {
   const lower = query.toLowerCase();
   const words = query.split(/\s+/);
   const wordCount = words.length;
@@ -505,7 +505,7 @@ function isTrivialQuery(query: string): boolean {
 
 type SectionLabels = NonNullable<LaymanSummary['sectionLabels']>;
 
-export function getSectionLabels(qa: QueryAnalysis): SectionLabels {
+function getSectionLabels(qa: QueryAnalysis): SectionLabels {
   if (qa.isPhilosophical) {
     return {
       whatWasTried: 'Analysis approach',

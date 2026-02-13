@@ -1,8 +1,8 @@
 'use client';
 
-import { memo, useState, useCallback, useEffect } from 'react';
+import { memo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import type { Vault } from '@/lib/notes/types';
 import {
@@ -23,10 +23,7 @@ interface VaultPickerProps {
 }
 
 export const VaultPicker = memo(function VaultPicker({ onClose }: VaultPickerProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
 
   const vaults = usePFCStore((s) => s.vaults);
   const activeVaultId = usePFCStore((s) => s.activeVaultId);
@@ -78,7 +75,7 @@ export const VaultPicker = memo(function VaultPicker({ onClose }: VaultPickerPro
   const muted = isDark
     ? 'rgba(156,143,128,0.5)'
     : 'rgba(0,0,0,0.35)';
-  const accent = '#C4956A';
+  const accent = 'var(--pfc-accent)';
 
   return (
     <div
@@ -86,7 +83,7 @@ export const VaultPicker = memo(function VaultPicker({ onClose }: VaultPickerPro
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 100,
+        zIndex: 'var(--z-vault-picker)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

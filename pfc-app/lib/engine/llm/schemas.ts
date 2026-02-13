@@ -49,7 +49,7 @@ export const reflectionResultSchema = z.object({
 
 // ── EngineVote + ArbitrationResult (types.ts:39-51) ─────────────
 
-export const engineVoteSchema = z.object({
+const engineVoteSchema = z.object({
   engine: z.string().describe('The pipeline stage name (e.g. "statistical", "causal", "bayesian")'),
   position: z.enum(['supports', 'opposes', 'neutral']),
   reasoning: z.string().describe('Why this engine takes this position. 1-2 sentences.'),

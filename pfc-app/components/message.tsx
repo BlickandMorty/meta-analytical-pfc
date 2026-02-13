@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, memo, useMemo } from 'react';
+import { useState, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { MessageLayman } from './message-layman';
@@ -12,7 +12,7 @@ import type { ChatMessage } from '@/lib/engine/types';
 import { cn } from '@/lib/utils';
 import { UserIcon, ChevronDownIcon } from 'lucide-react';
 import { PixelSun } from './pixel-sun';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 import { ConceptMiniMap } from './concept-mini-map';
 import { SteeringFeedback } from './steering-feedback';
 import { useSteeringStore } from '@/lib/store/use-steering-store';
@@ -37,10 +37,7 @@ function MessageInner({ message }: MessageProps) {
   const researchChatMode = usePFCStore(selectResearchChatMode);
   const latestSynthesisKeyId = useSteeringStore(selectLatestSynthesisKeyId);
   const exemplars = useSteeringStore(selectSteeringExemplars);
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
   const isUser = message.role === 'user';
   const [deepOpen, setDeepOpen] = useState(false);
 
@@ -68,6 +65,26 @@ function MessageInner({ message }: MessageProps) {
 
   const isSimulation = inferenceMode === 'simulation';
 
+  const containerStyle = useMemo<React.CSSProperties>(() => ({
+    display: 'flex',
+    gap: '0.75rem',
+    width: '100%',
+    justifyContent: isUser ? 'flex-end' : 'flex-start',
+  }), [isUser]);
+
+  const bubbleStyle = useMemo<React.CSSProperties>(() => ({
+    maxWidth: isUser ? '80%' : '88%',
+    borderRadius: isUser
+      ? 'var(--shape-xl) var(--shape-xl) var(--shape-sm) var(--shape-xl)'
+      : 'var(--shape-xl) var(--shape-xl) var(--shape-xl) var(--shape-sm)',
+    padding: isUser ? '0.625rem 1rem' : '0.875rem 1.125rem',
+    background: isUser ? 'var(--m3-primary)' : 'var(--m3-surface-container)',
+    color: isUser ? 'var(--m3-on-primary)' : 'var(--foreground)',
+    ...(isUser ? {} : {
+      border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)'}`,
+    }),
+  }), [isUser, isDark]);
+
   return (
     <motion.div
       role="article"
@@ -75,12 +92,7 @@ function MessageInner({ message }: MessageProps) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={MSG_SPRING}
-      style={{
-        display: 'flex',
-        gap: '0.75rem',
-        width: '100%',
-        justifyContent: isUser ? 'flex-end' : 'flex-start',
-      }}
+      style={containerStyle}
     >
       {/* Assistant avatar */}
       {!isUser && (
@@ -90,26 +102,7 @@ function MessageInner({ message }: MessageProps) {
       )}
 
       {/* Message bubble */}
-      <div
-        style={{
-          maxWidth: isUser ? '80%' : '88%',
-          borderRadius: isUser
-            ? 'var(--shape-xl) var(--shape-xl) var(--shape-sm) var(--shape-xl)'
-            : 'var(--shape-xl) var(--shape-xl) var(--shape-xl) var(--shape-sm)',
-          padding: isUser ? '0.625rem 1rem' : '0.875rem 1.125rem',
-          background: isUser
-            ? 'var(--m3-primary)'
-            : isDark
-              ? 'var(--m3-surface-container)'
-              : 'var(--m3-surface-container)',
-          color: isUser
-            ? 'var(--m3-on-primary)'
-            : 'var(--foreground)',
-          ...(isUser ? {} : {
-            border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)'}`,
-          }),
-        }}
-      >
+      <div style={bubbleStyle}>
         {isUser ? (
           <p style={{
             fontSize: 'var(--type-body-md)',
@@ -171,7 +164,7 @@ function MessageInner({ message }: MessageProps) {
                   <span style={{
                     padding: '0.0625rem 0.375rem',
                     borderRadius: 'var(--shape-full)',
-                    background: isDark ? 'rgba(196,149,106,0.06)' : 'rgba(196,149,106,0.04)',
+                    background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.06)' : 'rgba(var(--pfc-accent-rgb), 0.04)',
                     color: 'var(--m3-primary)',
                     fontSize: 'var(--type-label-sm)',
                   }}>
@@ -196,7 +189,7 @@ function MessageInner({ message }: MessageProps) {
                 fontSize: 'var(--type-label-sm)',
                 fontWeight: 500,
                 color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.4)',
-                background: isDark ? 'rgba(196,149,106,0.05)' : 'rgba(0,0,0,0.03)',
+                background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.05)' : 'rgba(0,0,0,0.03)',
                 transition: 'color 0.15s, background 0.15s',
                 alignSelf: 'flex-start',
               }}

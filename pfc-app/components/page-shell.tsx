@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
+import { useTypewriter } from '@/hooks/use-typewriter';
 import { motion } from 'framer-motion';
 
 /* ═══════════════════════════════════════════════════════════
@@ -45,10 +45,12 @@ export function PageShell({
   subtitle,
   children,
 }: PageShellProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark, isOled } = useIsDark();
+  const { displayText: titleText, cursorVisible: titleCursor } = useTypewriter(title, true, {
+    speed: 30,
+    startDelay: 200,
+    cursorLingerMs: 500,
+  });
 
   return (
     <div
@@ -68,7 +70,7 @@ export function PageShell({
           maxWidth: '56rem',
           marginLeft: 'auto',
           marginRight: 'auto',
-          padding: '1.5rem 2rem 4rem 4rem',
+          padding: '3.5rem 2rem 4rem 4rem',
           width: '100%',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
@@ -94,34 +96,48 @@ export function PageShell({
                 justifyContent: 'center',
                 borderRadius: '1rem',
                 flexShrink: 0,
-                background: isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
+                background: isOled ? 'rgba(25,25,25,0.8)' : isDark ? 'var(--pfc-accent-light)' : 'rgba(0,0,0,0.04)',
               }}
             >
               <Icon
                 style={{
                   height: '1.75rem',
                   width: '1.75rem',
-                  color: iconColor || '#C4956A',
+                  color: iconColor || 'var(--pfc-accent)',
                 }}
               />
             </div>
             <div>
               <h1
                 style={{
+                  fontFamily: 'var(--font-heading)',
                   fontSize: '2.25rem',
-                  fontWeight: 700,
-                  letterSpacing: '-0.03em',
-                  lineHeight: 1.15,
+                  fontWeight: 400,
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1.2,
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
               >
-                {title}
+                {titleText}
+                {titleCursor && (
+                  <span style={{
+                    display: 'inline-block',
+                    width: '2px',
+                    height: '2rem',
+                    backgroundColor: 'var(--pfc-accent)',
+                    marginLeft: '2px',
+                    flexShrink: 0,
+                    opacity: 0.8,
+                  }} />
+                )}
               </h1>
               {subtitle && (
                 <p
                   style={{
                     fontSize: '1rem',
                     marginTop: '0.25rem',
-                    color: isDark ? 'rgba(156,143,128,0.9)' : 'rgba(0,0,0,0.4)',
+                    color: isOled ? 'rgba(140,140,140,0.9)' : isDark ? 'rgba(156,143,128,0.9)' : 'rgba(0,0,0,0.4)',
                     lineHeight: 1.5,
                   }}
                 >
@@ -170,10 +186,7 @@ const sectionVariants = {
 };
 
 export function Section({ title, badge, children, className }: SectionProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark, isOled } = useIsDark();
 
   return (
     <motion.div variants={sectionVariants} className={className} style={{ transform: 'translateZ(0)', contain: 'layout style' }}>
@@ -185,15 +198,16 @@ export function Section({ title, badge, children, className }: SectionProps) {
             justifyContent: 'space-between',
             marginBottom: '1.25rem',
             paddingBottom: '0.75rem',
-            borderBottom: `1px solid ${isDark ? 'rgba(79,69,57,0.5)' : 'rgba(0,0,0,0.06)'}`,
+            borderBottom: `1px solid ${isOled ? 'rgba(40,40,40,0.5)' : isDark ? 'rgba(79,69,57,0.5)' : 'rgba(0,0,0,0.06)'}`,
           }}
         >
           <h2
             style={{
+              fontFamily: 'var(--font-heading)',
               fontSize: '1.125rem',
-              fontWeight: 650,
-              letterSpacing: '-0.02em',
-              color: isDark ? 'rgba(237,224,212,0.9)' : 'rgba(0,0,0,0.75)',
+              fontWeight: 400,
+              letterSpacing: '-0.01em',
+              color: isOled ? 'rgba(220,220,220,0.9)' : isDark ? 'rgba(237,224,212,0.9)' : 'rgba(0,0,0,0.75)',
             }}
           >
             {title}
@@ -211,4 +225,6 @@ export function Section({ title, badge, children, className }: SectionProps) {
    while we migrate all pages
    ═══════════════════════════════════════════════════════════ */
 
-export const GlassSection = Section;
+export function GlassSection(props: SectionProps) {
+  return <Section {...props} />;
+}

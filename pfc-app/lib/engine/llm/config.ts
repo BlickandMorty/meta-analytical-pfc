@@ -24,17 +24,6 @@ export interface InferenceConfig {
   temperature?: number;
 }
 
-export const DEFAULT_INFERENCE_CONFIG: InferenceConfig = {
-  mode: 'simulation',
-  apiProvider: 'openai',
-  openaiModel: 'gpt-4o',
-  anthropicModel: 'claude-sonnet-4-20250514',
-  ollamaBaseUrl: 'http://localhost:11434',
-  ollamaModel: 'llama3.1',
-  maxTokens: 4096,
-  temperature: 0.7,
-};
-
 // Model display names for UI
 export const OPENAI_MODELS: { value: OpenAIModel; label: string }[] = [
   { value: 'gpt-4o', label: 'GPT-4o' },

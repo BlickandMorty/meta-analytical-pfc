@@ -32,7 +32,7 @@ export interface ResearchIdea {
   novelty: string;                // Why this might be novel
 }
 
-export interface IdeaGenerationInput {
+interface IdeaGenerationInput {
   topic: string;                  // Research topic / area
   context?: string;               // Additional context about the field
   constraints?: string;           // Any constraints on the idea (methods, data, compute)
@@ -40,14 +40,14 @@ export interface IdeaGenerationInput {
   existingIdeas?: string[];       // Titles of ideas already generated (for dedup)
 }
 
-export interface ReflectionRound {
+interface ReflectionRound {
   roundNumber: number;
   critique: string;               // LLM's critique of the current idea
   improvements: string[];         // Specific improvements suggested
   refinedIdea: ResearchIdea;      // The improved idea
 }
 
-export interface GeneratedIdea {
+interface GeneratedIdea {
   idea: ResearchIdea;
   reflectionRounds: ReflectionRound[];
   noveltyCheck?: NoveltyCheckResult;
@@ -55,7 +55,7 @@ export interface GeneratedIdea {
   generationTimestamp: number;
 }
 
-export interface IdeaGenerationResult {
+interface IdeaGenerationResult {
   ideas: GeneratedIdea[];
   totalGenerated: number;
   totalAfterDedup: number;

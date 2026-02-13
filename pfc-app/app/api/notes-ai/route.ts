@@ -2,7 +2,72 @@ import { NextRequest } from 'next/server';
 import { streamText } from 'ai';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
-import type { NotePage, NoteBlock } from '@/lib/notes/types';
+import {
+  createSSEWriter,
+  isAbortLikeError,
+  parseBodyWithLimit,
+} from '@/lib/api-utils';
+
+interface NotesAIRequestBody {
+  pages?: unknown;
+  blocks?: unknown;
+  prompt?: unknown;
+  targetBlockId?: unknown;
+  inferenceConfig?: InferenceConfig;
+}
+
+interface NotesAIPageInput {
+  id: string;
+  title: string;
+}
+
+interface NotesAIBlockInput {
+  id: string;
+  pageId: string;
+  order: string;
+  indent: number;
+  content: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizePages(raw: unknown): NotesAIPageInput[] | null {
+  if (raw == null) return [];
+  if (!Array.isArray(raw)) return null;
+
+  const pages: NotesAIPageInput[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) return null;
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const title = typeof item.title === 'string' ? item.title.trim() : '';
+    if (!id || !title) return null;
+    pages.push({ id, title });
+  }
+  return pages;
+}
+
+function normalizeBlocks(raw: unknown): NotesAIBlockInput[] | null {
+  if (raw == null) return [];
+  if (!Array.isArray(raw)) return null;
+
+  const blocks: NotesAIBlockInput[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) return null;
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const pageId = typeof item.pageId === 'string' ? item.pageId.trim() : '';
+    const order = typeof item.order === 'string' ? item.order : '';
+    const content = typeof item.content === 'string' ? item.content : '';
+    const indent =
+      typeof item.indent === 'number' && Number.isFinite(item.indent)
+        ? Math.max(0, Math.floor(item.indent))
+        : 0;
+    if (!id || !pageId || !order) return null;
+    blocks.push({ id, pageId, order, indent, content });
+  }
+  return blocks;
+}
 
 // ── SSE helper ──
 function sseEvent(data: Record<string, unknown>): string {
@@ -10,7 +75,7 @@ function sseEvent(data: Record<string, unknown>): string {
 }
 
 // ── Build note content string ──
-function buildNoteContent(pages: NotePage[], blocks: NoteBlock[]): string {
+function buildNoteContent(pages: NotesAIPageInput[], blocks: NotesAIBlockInput[]): string {
   const sections: string[] = [];
 
   for (const page of pages) {
@@ -105,25 +170,82 @@ function generateSimulatedResponse(action: string, noteContent: string): string 
   }
 }
 
+function getNotesAIGenerationBudget(action: string, mode: InferenceConfig['mode'] | undefined): {
+  maxOutputTokens: number;
+  temperature: number;
+} {
+  const isLocal = mode === 'local';
+  if (isLocal) {
+    switch (action) {
+      case 'continue':
+      case 'expand':
+        return { maxOutputTokens: 900, temperature: 0.55 };
+      case 'summarize':
+      case 'rewrite':
+        return { maxOutputTokens: 620, temperature: 0.45 };
+      default:
+        return { maxOutputTokens: 760, temperature: 0.5 };
+    }
+  }
+
+  switch (action) {
+    case 'continue':
+    case 'expand':
+      return { maxOutputTokens: 2048, temperature: 0.7 };
+    case 'summarize':
+    case 'rewrite':
+      return { maxOutputTokens: 1400, temperature: 0.6 };
+    default:
+      return { maxOutputTokens: 1700, temperature: 0.68 };
+  }
+}
+
 // ── POST handler ──
 export async function POST(request: NextRequest) {
-  let pages: NotePage[];
-  let blocks: NoteBlock[];
+  let pages: NotesAIPageInput[];
+  let blocks: NotesAIBlockInput[];
   let prompt: string;
   let targetBlockId: string | null;
-  let inferenceConfig: InferenceConfig;
+  let inferenceConfig: InferenceConfig | undefined;
 
   try {
-    const body = await request.json();
-    pages = body.pages ?? [];
-    blocks = body.blocks ?? [];
-    prompt = body.prompt ?? '';
-    targetBlockId = body.targetBlockId ?? null;
+    const parsedBody = await parseBodyWithLimit<NotesAIRequestBody>(request, 10 * 1024 * 1024);
+    if ('error' in parsedBody) {
+      return parsedBody.error;
+    }
+    const body = parsedBody.data;
+
+    const normalizedPages = normalizePages(body.pages);
+    if (!normalizedPages) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid pages payload' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    const normalizedBlocks = normalizeBlocks(body.blocks);
+    if (!normalizedBlocks) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid blocks payload' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    pages = normalizedPages;
+    blocks = normalizedBlocks;
+    prompt = typeof body.prompt === 'string' ? body.prompt : '';
+    targetBlockId = typeof body.targetBlockId === 'string' ? body.targetBlockId : null;
     inferenceConfig = body.inferenceConfig;
 
-    if (!prompt) {
+    if (!prompt || typeof prompt !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Missing prompt' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (prompt.length > 50000) {
+      return new Response(
+        JSON.stringify({ error: 'Prompt too long (max 50,000 characters)' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
     }
@@ -148,11 +270,13 @@ export async function POST(request: NextRequest) {
 
   const encoder = new TextEncoder();
 
+  // Use request.signal to detect client disconnect
+  const clientSignal = request.signal;
+
   const stream = new ReadableStream({
     async start(controller) {
-      const emit = (data: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(sseEvent(data)));
-      };
+      const writer = createSSEWriter(controller, encoder);
+      const emit = (data: Record<string, unknown>) => writer.raw(sseEvent(data));
 
       try {
         if (isSimulation) {
@@ -161,46 +285,81 @@ export async function POST(request: NextRequest) {
           // Stream character by character with small delay for effect
           const chunkSize = 3;
           for (let i = 0; i < response.length; i += chunkSize) {
+            // Stop if client disconnected
+            if (clientSignal.aborted || writer.isClosed()) {
+              writer.close();
+              return;
+            }
+
             const chunk = response.slice(i, i + chunkSize);
-            emit({ type: 'text', text: chunk });
+            if (!emit({ type: 'text', text: chunk })) {
+              writer.close();
+              return;
+            }
             await new Promise((r) => setTimeout(r, 15));
           }
         } else {
           // ── Real LLM mode ──
           let model;
           try {
+            if (!inferenceConfig) {
+              throw new Error('Missing inference configuration');
+            }
             model = resolveProvider(inferenceConfig);
           } catch (error) {
             emit({ type: 'error', message: error instanceof Error ? error.message : 'Failed to resolve provider' });
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
+            writer.done();
+            writer.close();
             return;
           }
 
           const systemPrompt = buildSystemPrompt(action);
           const userPrompt = buildUserPrompt(action, prompt, noteContent, targetBlockContent);
+          const generationBudget = getNotesAIGenerationBudget(action, inferenceConfig?.mode);
 
           const result = streamText({
             model,
             system: systemPrompt,
             prompt: userPrompt,
-            maxOutputTokens: 2048,
-            temperature: 0.7,
+            maxOutputTokens: generationBudget.maxOutputTokens,
+            temperature: generationBudget.temperature,
           });
 
+          let emittedText = false;
           for await (const chunk of result.textStream) {
-            emit({ type: 'text', text: chunk });
+            // Stop if client disconnected
+            if (clientSignal.aborted || writer.isClosed()) {
+              writer.close();
+              return;
+            }
+
+            emittedText = true;
+            if (!emit({ type: 'text', text: chunk })) {
+              writer.close();
+              return;
+            }
+          }
+
+          if (!emittedText && inferenceConfig?.mode === 'local') {
+            emit({
+              type: 'error',
+              message: 'Local model produced no output. Check Ollama server and selected model.',
+            });
           }
         }
 
         emit({ type: 'done' });
       } catch (error) {
+        if (clientSignal.aborted || writer.isClosed() || isAbortLikeError(error)) {
+          writer.close();
+          return;
+        }
         const message = error instanceof Error ? error.message : 'Unknown error';
         console.error('[notes-ai] Error:', message);
         emit({ type: 'error', message });
       } finally {
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
+        writer.done();
+        writer.close();
       }
     },
   });

@@ -66,7 +66,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
             style={{
               position: 'absolute',
               ...positionStyles[position],
-              zIndex: 50,
+              zIndex: 'var(--z-modal)',
               width: '18rem',
               padding: '0.875rem',
               borderRadius: '0.75rem',
@@ -121,7 +121,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
                 gap: '0.25rem',
                 marginBottom: '0.375rem',
               }}>
-                <SparklesIcon style={{ height: '0.625rem', width: '0.625rem', color: '#C4956A' }} />
+                <SparklesIcon style={{ height: '0.625rem', width: '0.625rem', color: 'var(--pfc-accent)' }} />
                 <span style={{
                   fontSize: '0.5625rem',
                   fontWeight: 600,
@@ -150,7 +150,7 @@ export const EducationalTooltipButton = memo(function EducationalTooltipButton({
                     <span style={{
                       position: 'absolute',
                       left: 0,
-                      color: '#C4956A',
+                      color: 'var(--pfc-accent)',
                     }}>
                       \u2022
                     </span>

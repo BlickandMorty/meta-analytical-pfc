@@ -12,9 +12,43 @@ import {
   extractPageLinks, orderBetween, migrateBlock, stripHtml,
   generateVaultId,
 } from '@/lib/notes/types';
+import {
+  checkMigrationStatus,
+  loadVaultsFromDb,
+  loadVaultDataFromDb,
+  syncVaultToServer,
+  migrateToSqlite,
+  upsertVaultOnServer,
+  deleteVaultOnServer,
+} from '@/lib/notes/sync-client';
 
 // ── Module-scope abort controller for Note AI SSE (not in Zustand state) ──
 let _noteAIAbortController: AbortController | null = null;
+
+function isExpectedStreamInterruption(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === 'AbortError') return true;
+  const asObject = typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : null;
+  const message = [
+    error instanceof Error ? error.message : '',
+    error instanceof Error ? error.stack ?? '' : '',
+    typeof asObject?.message === 'string' ? asObject.message : '',
+    typeof asObject?.cause === 'string' ? asObject.cause : '',
+    typeof (asObject?.cause as Record<string, unknown> | undefined)?.message === 'string'
+      ? ((asObject?.cause as Record<string, unknown>).message as string)
+      : '',
+    String(error),
+  ]
+    .join(' ')
+    .toLowerCase();
+  const name = error instanceof Error ? error.name : typeof asObject?.name === 'string' ? asObject.name : '';
+  return (
+    name === 'AbortError' ||
+    message.includes('network error') ||
+    message.includes('failed to fetch') ||
+    message.includes('the user aborted a request') ||
+    message.includes('load failed')
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // State
@@ -42,6 +76,9 @@ export interface NotesSliceState {
   notesSidebarOpen: boolean;
   notesSidebarView: 'pages' | 'journals' | 'books' | 'graph';
   notesSearchQuery: string;
+
+  // Tabs — ordered list of open page tabs (like browser tabs)
+  openTabIds: string[];
 
   // Undo/redo (SiYuan-inspired transaction system)
   undoStack: Transaction[];
@@ -94,14 +131,22 @@ export interface NotesSliceActions {
   toggleNotesSidebar: () => void;
   setNotesSidebarView: (view: 'pages' | 'journals' | 'books' | 'graph') => void;
 
+  // Tabs
+  openTab: (pageId: string) => void;
+  closeTab: (pageId: string) => void;
+  reorderTabs: (fromIndex: number, toIndex: number) => void;
+
   // Books
-  createNoteBook: (title: string, pageIds?: string[]) => string;
+  createNoteBook: (title: string, pageIds?: string[], parentId?: string | null) => string;
   addPageToBook: (bookId: string, pageId: string) => void;
   removePageFromBook: (bookId: string, pageId: string) => void;
   movePageToBook: (pageId: string, targetBookId: string | null) => void;
+  moveNoteBook: (bookId: string, newParentId: string | null) => void;
 
   // AI
   startNoteAIGeneration: (pageId: string, blockId: string | null, prompt: string) => void;
+  /** Typewriter mode: AI writes directly into the note instead of the chat panel */
+  startNoteAITypewriter: (pageId: string, blockId: string | null, prompt: string) => void;
   appendNoteAIText: (text: string) => void;
   stopNoteAIGeneration: () => void;
 
@@ -227,24 +272,62 @@ function connectNoteAISSE(set: PFCSet, get: PFCGet) {
 
             switch (event.type) {
               case 'text': {
-                set((s) => ({
-                  noteAI: {
-                    ...s.noteAI,
-                    generatedText: s.noteAI.generatedText + event.text,
-                  },
-                }));
+                const currentState = get();
+                const ai = currentState.noteAI;
+
+                if (ai.writeToNote && ai.typewriterBlockId) {
+                  // ── Typewriter mode: write directly into the note block ──
+                  const block = currentState.noteBlocks.find(
+                    (b: NoteBlock) => b.id === ai.typewriterBlockId
+                  );
+                  if (block) {
+                    // Strip the placeholder text on first token
+                    const currentContent = block.content === '✍️ Writing...' ? '' : block.content;
+                    const newContent = currentContent + event.text;
+                    set((s) => ({
+                      noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
+                        b.id === ai.typewriterBlockId
+                          ? { ...b, content: newContent, updatedAt: Date.now() }
+                          : b
+                      ),
+                      noteAI: {
+                        ...s.noteAI,
+                        generatedText: s.noteAI.generatedText + event.text,
+                      },
+                    }));
+                  }
+                } else {
+                  // ── Normal mode: accumulate in AI chat panel ──
+                  set((s) => ({
+                    noteAI: {
+                      ...s.noteAI,
+                      generatedText: s.noteAI.generatedText + event.text,
+                    },
+                  }));
+                }
                 break;
               }
               case 'done': {
+                const doneState = get();
+                const wasTypewriting = doneState.noteAI.writeToNote;
                 set((s) => ({
-                  noteAI: { ...s.noteAI, isGenerating: false },
+                  noteAI: { ...s.noteAI, isGenerating: false, writeToNote: false, typewriterBlockId: null },
+                  // Exit editing mode for the typewriter block so it renders in view mode
+                  ...(wasTypewriting ? { editingBlockId: null } : {}),
                 }));
                 break;
               }
               case 'error': {
-                console.error('[note-ai] SSE error:', event.message);
+                if (typeof event.message === 'string' && event.message.includes('Local model produced no output')) {
+                  console.warn('[note-ai] SSE warning:', event.message);
+                } else {
+                  console.error('[note-ai] SSE error:', event.message);
+                }
+                const errState = get();
+                const wasTypewritingOnErr = errState.noteAI.writeToNote;
                 set((s) => ({
-                  noteAI: { ...s.noteAI, isGenerating: false },
+                  noteAI: { ...s.noteAI, isGenerating: false, writeToNote: false, typewriterBlockId: null },
+                  ...(wasTypewritingOnErr ? { editingBlockId: null } : {}),
                 }));
                 break;
               }
@@ -255,10 +338,13 @@ function connectNoteAISSE(set: PFCSet, get: PFCGet) {
         }
       }
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
+      if (!isExpectedStreamInterruption(error)) {
         console.error('[note-ai] Stream error:', error);
+        const catchState = get();
+        const wasTypewritingOnCatch = catchState.noteAI.writeToNote;
         set((s) => ({
-          noteAI: { ...s.noteAI, isGenerating: false },
+          noteAI: { ...s.noteAI, isGenerating: false, writeToNote: false, typewriterBlockId: null },
+          ...(wasTypewritingOnCatch ? { editingBlockId: null } : {}),
         }));
       }
     } finally {
@@ -293,6 +379,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   notesSidebarOpen: true,
   notesSidebarView: 'pages' as 'pages' | 'journals' | 'books' | 'graph',
   notesSearchQuery: '',
+  openTabIds: [] as string[],
 
   undoStack: [] as Transaction[],
   redoStack: [] as Transaction[],
@@ -303,6 +390,8 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     targetBlockId: null,
     generatedText: '',
     prompt: '',
+    writeToNote: false,
+    typewriterBlockId: null,
   } as NoteAIState,
 
   // ═════════════════════════════════════════════════════════════════
@@ -339,7 +428,9 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
           break;
         case 'delete':
           // Undo delete = re-insert the block
-          if (op.previousData) blocks.push(op.previousData);
+          if (op.previousData && typeof op.previousData === 'object' && 'id' in op.previousData) {
+            blocks.push(op.previousData as NoteBlock);
+          }
           break;
         case 'update':
           blocks = blocks.map((b: NoteBlock) =>
@@ -356,7 +447,13 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
         case 'move':
           blocks = blocks.map((b: NoteBlock) =>
             b.id === op.blockId
-              ? { ...b, parentId: op.previousData?.parentId, order: op.previousData?.order, indent: op.previousData?.indent ?? b.indent, updatedAt: Date.now() }
+              ? {
+                  ...b,
+                  parentId: op.previousData?.parentId ?? b.parentId,
+                  order: op.previousData?.order ?? b.order,
+                  indent: op.previousData?.indent ?? b.indent,
+                  updatedAt: Date.now(),
+                }
               : b
           );
           break;
@@ -383,7 +480,9 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     for (const op of txn.doOps) {
       switch (op.action) {
         case 'insert':
-          if (op.data) blocks.push(op.data);
+          if (op.data && typeof op.data === 'object' && 'id' in op.data) {
+            blocks.push(op.data as NoteBlock);
+          }
           break;
         case 'delete':
           blocks = blocks.filter((b: NoteBlock) => b.id !== op.blockId);
@@ -403,7 +502,13 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
         case 'move':
           blocks = blocks.map((b: NoteBlock) =>
             b.id === op.blockId
-              ? { ...b, parentId: op.data?.parentId, order: op.data?.order, indent: op.data?.indent ?? b.indent, updatedAt: Date.now() }
+              ? {
+                  ...b,
+                  parentId: op.data?.parentId ?? b.parentId,
+                  order: op.data?.order ?? b.order,
+                  indent: op.data?.indent ?? b.indent,
+                  updatedAt: Date.now(),
+                }
               : b
           );
           break;
@@ -432,6 +537,8 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       notePages: [...s.notePages, page],
       noteBlocks: [...s.noteBlocks, firstBlock],
       activePageId: page.id,
+      // Auto-open tab for the new page (matches setActivePage behavior)
+      openTabIds: [...s.openTabIds, page.id],
     }));
 
     debouncedSave(get);
@@ -439,12 +546,21 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   },
 
   deletePage: (pageId: string) => {
-    set((s) => ({
-      notePages: s.notePages.filter((p: NotePage) => p.id !== pageId),
-      noteBlocks: s.noteBlocks.filter((b: NoteBlock) => b.pageId !== pageId),
-      pageLinks: s.pageLinks.filter((l: PageLink) => l.sourcePageId !== pageId && l.targetPageId !== pageId),
-      activePageId: s.activePageId === pageId ? null : s.activePageId,
-    }));
+    set((s) => {
+      const newTabs = s.openTabIds.filter((id) => id !== pageId);
+      let newActive = s.activePageId;
+      if (s.activePageId === pageId) {
+        const idx = s.openTabIds.indexOf(pageId);
+        newActive = newTabs.length > 0 ? newTabs[Math.min(idx, newTabs.length - 1)] : null;
+      }
+      return {
+        notePages: s.notePages.filter((p: NotePage) => p.id !== pageId),
+        noteBlocks: s.noteBlocks.filter((b: NoteBlock) => b.pageId !== pageId),
+        pageLinks: s.pageLinks.filter((l: PageLink) => l.sourcePageId !== pageId && l.targetPageId !== pageId),
+        activePageId: newActive,
+        openTabIds: newTabs,
+      };
+    });
     debouncedSave(get);
   },
 
@@ -480,7 +596,16 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     debouncedSave(get);
   },
 
-  setActivePage: (pageId: string | null) => set({ activePageId: pageId, editingBlockId: null }),
+  setActivePage: (pageId: string | null) => {
+    set((s) => ({
+      activePageId: pageId,
+      editingBlockId: null,
+      // Auto-open tab when navigating to a page
+      openTabIds: pageId && !s.openTabIds.includes(pageId)
+        ? [...s.openTabIds, pageId]
+        : s.openTabIds,
+    }));
+  },
 
   ensurePage: (title: string): string => {
     const s = get();
@@ -892,7 +1017,13 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     const today = getTodayJournalDate();
     const existing = s.notePages.find((p: NotePage) => p.isJournal && p.journalDate === today);
     if (existing) {
-      set({ activePageId: existing.id });
+      set((prev) => ({
+        activePageId: existing.id,
+        // Auto-open tab (matches setActivePage behavior)
+        openTabIds: prev.openTabIds.includes(existing.id)
+          ? prev.openTabIds
+          : [...prev.openTabIds, existing.id],
+      }));
       return existing.id;
     }
     const d = new Date();
@@ -952,10 +1083,42 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     set({ notesSidebarView: view }),
 
   // ═════════════════════════════════════════════════════════════════
+  // Tabs — open/close note tabs (browser-tab style)
+  // ═════════════════════════════════════════════════════════════════
+
+  openTab: (pageId: string) => set((s) => ({
+    openTabIds: s.openTabIds.includes(pageId)
+      ? s.openTabIds
+      : [...s.openTabIds, pageId],
+  })),
+
+  closeTab: (pageId: string) => set((s) => {
+    const newTabs = s.openTabIds.filter((id) => id !== pageId);
+    // If closing the active tab, switch to adjacent tab or null
+    let newActivePageId = s.activePageId;
+    if (s.activePageId === pageId) {
+      const idx = s.openTabIds.indexOf(pageId);
+      if (newTabs.length > 0) {
+        newActivePageId = newTabs[Math.min(idx, newTabs.length - 1)];
+      } else {
+        newActivePageId = null;
+      }
+    }
+    return { openTabIds: newTabs, activePageId: newActivePageId, editingBlockId: null };
+  }),
+
+  reorderTabs: (fromIndex: number, toIndex: number) => set((s) => {
+    const newTabs = [...s.openTabIds];
+    const [moved] = newTabs.splice(fromIndex, 1);
+    newTabs.splice(toIndex, 0, moved);
+    return { openTabIds: newTabs };
+  }),
+
+  // ═════════════════════════════════════════════════════════════════
   // Books
   // ═════════════════════════════════════════════════════════════════
 
-  createNoteBook: (title: string, pageIds: string[] = []): string => {
+  createNoteBook: (title: string, pageIds: string[] = [], parentId: string | null = null): string => {
     const book: NoteBook = {
       id: `book-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       title,
@@ -964,6 +1127,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       updatedAt: Date.now(),
       autoGenerated: false,
       chapters: [],
+      parentId: parentId || undefined,
     };
     set((s) => ({ noteBooks: [...s.noteBooks, book] }));
     debouncedSave(get);
@@ -1009,6 +1173,27 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     debouncedSave(get);
   },
 
+  moveNoteBook: (bookId: string, newParentId: string | null) => {
+    // Prevent circular nesting (book can't be its own ancestor)
+    const books = get().noteBooks;
+    if (newParentId) {
+      let cursor: string | null | undefined = newParentId;
+      while (cursor) {
+        if (cursor === bookId) return; // would create cycle
+        const parent = books.find((b: NoteBook) => b.id === cursor);
+        cursor = parent?.parentId;
+      }
+    }
+    set((s) => ({
+      noteBooks: s.noteBooks.map((b: NoteBook) =>
+        b.id === bookId
+          ? { ...b, parentId: newParentId || undefined, updatedAt: Date.now() }
+          : b
+      ),
+    }));
+    debouncedSave(get);
+  },
+
   // ═════════════════════════════════════════════════════════════════
   // AI
   // ═════════════════════════════════════════════════════════════════
@@ -1021,9 +1206,32 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
         targetBlockId: blockId,
         generatedText: '',
         prompt,
+        writeToNote: false,
+        typewriterBlockId: null,
       },
     });
     // Connect to SSE endpoint to stream the AI response
+    connectNoteAISSE(set, get);
+  },
+
+  startNoteAITypewriter: (pageId: string, blockId: string | null, prompt: string) => {
+    // Create a new block for the typewriter to write into
+    const newBlockId = get().createBlock(pageId, null, blockId, '✍️ Writing...', 'paragraph');
+
+    set({
+      noteAI: {
+        isGenerating: true,
+        targetPageId: pageId,
+        targetBlockId: blockId,
+        generatedText: '',
+        prompt,
+        writeToNote: true,
+        typewriterBlockId: newBlockId,
+      },
+      // Set editing focus to the new block for visual feedback
+      editingBlockId: newBlockId,
+    });
+    // Connect to SSE — the handler will write tokens into the block
     connectNoteAISSE(set, get);
   },
 
@@ -1039,7 +1247,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       _noteAIAbortController = null;
     }
     set((s) => ({
-      noteAI: { ...s.noteAI, isGenerating: false },
+      noteAI: { ...s.noteAI, isGenerating: false, writeToNote: false, typewriterBlockId: null },
     }));
   },
 
@@ -1048,42 +1256,78 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   // ═════════════════════════════════════════════════════════════════
 
   loadVaultIndex: () => {
-    try {
-      const vaultsRaw = localStorage.getItem(STORAGE_KEY_VAULTS);
-      const vaults: Vault[] = vaultsRaw ? JSON.parse(vaultsRaw) : [];
-      const activeVaultId = localStorage.getItem(STORAGE_KEY_ACTIVE_VAULT);
+    // Try loading from SQLite first, then fall back to localStorage.
+    // Also handles one-time migration from localStorage → SQLite.
+    (async () => {
+      try {
+        const hasMigrated = await checkMigrationStatus();
 
-      // Migrate: if old non-vault data exists, create a default vault and migrate
-      const legacyPages = localStorage.getItem('pfc-note-pages');
-      if (legacyPages && vaults.length === 0) {
-        const defaultVault: Vault = {
-          id: generateVaultId(),
-          name: 'My Vault',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          pageCount: 0,
-        };
-        vaults.push(defaultVault);
-        // Migrate legacy data to vault-scoped keys
-        const legacyBlocks = localStorage.getItem('pfc-note-blocks');
-        const legacyBooks = localStorage.getItem('pfc-note-books');
-        if (legacyPages) localStorage.setItem(vaultKey(defaultVault.id, 'pages'), legacyPages);
-        if (legacyBlocks) localStorage.setItem(vaultKey(defaultVault.id, 'blocks'), legacyBlocks);
-        if (legacyBooks) localStorage.setItem(vaultKey(defaultVault.id, 'books'), legacyBooks);
-        // Clean up legacy keys
-        localStorage.removeItem('pfc-note-pages');
-        localStorage.removeItem('pfc-note-blocks');
-        localStorage.removeItem('pfc-note-books');
-        localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
-        localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, defaultVault.id);
-        set({ vaults, activeVaultId: defaultVault.id, vaultReady: true });
-        return;
+        if (hasMigrated) {
+          // SQLite is the source of truth — load from server
+          const dbVaults = await loadVaultsFromDb();
+          const activeVaultId = localStorage.getItem(STORAGE_KEY_ACTIVE_VAULT);
+          set({
+            vaults: dbVaults,
+            activeVaultId: activeVaultId || (dbVaults[0]?.id ?? null),
+            vaultReady: true,
+          });
+          return;
+        }
+
+        // SQLite is empty — load from localStorage (legacy path)
+        const vaultsRaw = localStorage.getItem(STORAGE_KEY_VAULTS);
+        let vaults: Vault[] = vaultsRaw ? JSON.parse(vaultsRaw) : [];
+        const activeVaultId = localStorage.getItem(STORAGE_KEY_ACTIVE_VAULT);
+
+        // Migrate: if old non-vault data exists, create a default vault
+        const legacyPages = localStorage.getItem('pfc-note-pages');
+        if (legacyPages && vaults.length === 0) {
+          const defaultVault: Vault = {
+            id: generateVaultId(),
+            name: 'My Vault',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            pageCount: 0,
+          };
+          vaults = [defaultVault];
+          const legacyBlocks = localStorage.getItem('pfc-note-blocks');
+          const legacyBooks = localStorage.getItem('pfc-note-books');
+          if (legacyPages) localStorage.setItem(vaultKey(defaultVault.id, 'pages'), legacyPages);
+          if (legacyBlocks) localStorage.setItem(vaultKey(defaultVault.id, 'blocks'), legacyBlocks);
+          if (legacyBooks) localStorage.setItem(vaultKey(defaultVault.id, 'books'), legacyBooks);
+          localStorage.removeItem('pfc-note-pages');
+          localStorage.removeItem('pfc-note-blocks');
+          localStorage.removeItem('pfc-note-books');
+          localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
+          localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, defaultVault.id);
+        }
+
+        set({
+          vaults,
+          activeVaultId: activeVaultId || (vaults[0]?.id ?? null),
+          vaultReady: true,
+        });
+
+        // ── Async: migrate localStorage vaults to SQLite (one-time) ──
+        if (vaults.length > 0) {
+          triggerMigration(vaults, get);
+        }
+      } catch {
+        // Fallback: load from localStorage if server is down
+        try {
+          const vaultsRaw = localStorage.getItem(STORAGE_KEY_VAULTS);
+          const vaults: Vault[] = vaultsRaw ? JSON.parse(vaultsRaw) : [];
+          const activeVaultId = localStorage.getItem(STORAGE_KEY_ACTIVE_VAULT);
+          set({
+            vaults,
+            activeVaultId: activeVaultId || (vaults[0]?.id ?? null),
+            vaultReady: true,
+          });
+        } catch {
+          set({ vaultReady: true });
+        }
       }
-
-      set({ vaults, activeVaultId: activeVaultId || (vaults[0]?.id ?? null), vaultReady: true });
-    } catch {
-      set({ vaultReady: true });
-    }
+    })();
   },
 
   createVault: (name: string): string => {
@@ -1099,11 +1343,13 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       const s = get();
       localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(s.vaults));
     } catch {}
+    // Async: persist to SQLite
+    upsertVaultOnServer(vault).catch(() => {});
     return vault.id;
   },
 
   switchVault: (vaultId: string) => {
-    // Save current vault synchronously (not debounced) to prevent data loss
+    // Save current vault to localStorage (sync) + SQLite (async) before switching
     try {
       const s = get();
       const oldVid = s.activeVaultId;
@@ -1112,6 +1358,11 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
         localStorage.setItem(vaultKey(oldVid, 'blocks'), JSON.stringify(s.noteBlocks));
         localStorage.setItem(vaultKey(oldVid, 'books'), JSON.stringify(s.noteBooks));
         localStorage.setItem(vaultKey(oldVid, 'concepts'), JSON.stringify(s.concepts));
+        // Async: flush to SQLite before switch
+        const oldVault = s.vaults.find((v: Vault) => v.id === oldVid);
+        if (oldVault) {
+          syncVaultToServer(oldVid, oldVault, s.notePages, s.noteBlocks, s.noteBooks, s.concepts, s.pageLinks).catch(() => {});
+        }
       }
     } catch {}
     // Clear current data and switch
@@ -1132,13 +1383,15 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   },
 
   deleteVault: (vaultId: string) => {
-    // Remove vault data from storage
+    // Remove vault data from localStorage
     try {
       localStorage.removeItem(vaultKey(vaultId, 'pages'));
       localStorage.removeItem(vaultKey(vaultId, 'blocks'));
       localStorage.removeItem(vaultKey(vaultId, 'books'));
       localStorage.removeItem(vaultKey(vaultId, 'concepts'));
     } catch {}
+    // Async: delete from SQLite (cascade deletes pages, blocks, etc.)
+    deleteVaultOnServer(vaultId).catch(() => {});
     set((s) => {
       const vaults = s.vaults.filter((v: Vault) => v.id !== vaultId);
       localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
@@ -1158,6 +1411,9 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     set((s) => {
       const vaults = s.vaults.map((v: Vault) => v.id === vaultId ? { ...v, name, updatedAt: Date.now() } : v);
       localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
+      // Async: persist renamed vault to SQLite
+      const updated = vaults.find((v: Vault) => v.id === vaultId);
+      if (updated) upsertVaultOnServer(updated).catch(() => {});
       return { vaults };
     });
   },
@@ -1314,48 +1570,78 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   // ═════════════════════════════════════════════════════════════════
 
   loadNotesFromStorage: () => {
-    try {
-      const activeVaultId = get().activeVaultId;
-      if (!activeVaultId) return;
+    const activeVaultId = get().activeVaultId;
+    if (!activeVaultId) return;
 
-      const pagesRaw = localStorage.getItem(vaultKey(activeVaultId, 'pages'));
-      const blocksRaw = localStorage.getItem(vaultKey(activeVaultId, 'blocks'));
-      const booksRaw = localStorage.getItem(vaultKey(activeVaultId, 'books'));
-      const conceptsRaw = localStorage.getItem(vaultKey(activeVaultId, 'concepts'));
+    // Try SQLite first, fall back to localStorage
+    (async () => {
+      try {
+        const dbData = await loadVaultDataFromDb(activeVaultId);
+        if (dbData && (dbData.pages.length > 0 || dbData.blocks.length > 0)) {
+          // SQLite has data — use it as source of truth
+          set({
+            notePages: dbData.pages,
+            noteBlocks: dbData.blocks,
+            noteBooks: dbData.books,
+            concepts: dbData.concepts,
+            pageLinks: dbData.pageLinks,
+          });
+          return;
+        }
+      } catch {
+        // Server unavailable — fall through to localStorage
+      }
 
-      const notePages = pagesRaw ? JSON.parse(pagesRaw) : [];
-      const rawBlocks = blocksRaw ? JSON.parse(blocksRaw) : [];
-      const noteBlocks = rawBlocks.map(migrateBlock);
-      const noteBooks = booksRaw ? JSON.parse(booksRaw) : [];
-      const concepts = conceptsRaw ? JSON.parse(conceptsRaw) : [];
+      // Fallback: load from localStorage (legacy or offline)
+      try {
+        const pagesRaw = localStorage.getItem(vaultKey(activeVaultId, 'pages'));
+        const blocksRaw = localStorage.getItem(vaultKey(activeVaultId, 'blocks'));
+        const booksRaw = localStorage.getItem(vaultKey(activeVaultId, 'books'));
+        const conceptsRaw = localStorage.getItem(vaultKey(activeVaultId, 'concepts'));
 
-      set({ notePages, noteBlocks, noteBooks, concepts });
-      get().rebuildPageLinks();
-    } catch {
-      // Ignore parse errors
-    }
+        const notePages = pagesRaw ? JSON.parse(pagesRaw) : [];
+        const rawBlocks = blocksRaw ? JSON.parse(blocksRaw) : [];
+        const noteBlocks = rawBlocks.map(migrateBlock);
+        const noteBooks = booksRaw ? JSON.parse(booksRaw) : [];
+        const concepts = conceptsRaw ? JSON.parse(conceptsRaw) : [];
+
+        set({ notePages, noteBlocks, noteBooks, concepts });
+        get().rebuildPageLinks();
+      } catch {
+        // Ignore parse errors
+      }
+    })();
   },
 
   saveNotesToStorage: () => {
-    try {
-      const s = get();
-      const vid = s.activeVaultId;
-      if (!vid) return;
+    const s = get();
+    const vid = s.activeVaultId;
+    if (!vid) return;
 
+    // Still save to localStorage as backup
+    try {
       localStorage.setItem(vaultKey(vid, 'pages'), JSON.stringify(s.notePages));
       localStorage.setItem(vaultKey(vid, 'blocks'), JSON.stringify(s.noteBlocks));
       localStorage.setItem(vaultKey(vid, 'books'), JSON.stringify(s.noteBooks));
       localStorage.setItem(vaultKey(vid, 'concepts'), JSON.stringify(s.concepts));
-
-      // Update vault page count
-      set((st) => ({
-        vaults: st.vaults.map((v: Vault) =>
-          v.id === vid ? { ...v, pageCount: s.notePages.length, updatedAt: Date.now() } : v
-        ),
-      }));
-      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(get().vaults));
     } catch {
       // Storage full or unavailable
+    }
+
+    // Update vault page count
+    set((st) => ({
+      vaults: st.vaults.map((v: Vault) =>
+        v.id === vid ? { ...v, pageCount: s.notePages.length, updatedAt: Date.now() } : v
+      ),
+    }));
+    try {
+      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(get().vaults));
+    } catch {}
+
+    // Async: write-through to SQLite
+    const vault = get().vaults.find((v: Vault) => v.id === vid);
+    if (vault) {
+      syncVaultToServer(vid, vault, s.notePages, s.noteBlocks, s.noteBooks, s.concepts, s.pageLinks).catch(() => {});
     }
   },
 
@@ -1363,23 +1649,26 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
 
   rebuildPageLinks: () => {
     const s = get();
+    // Build indexed lookup: O(m) once instead of O(m) per block
+    const pageByName = new Map<string, string>();
+    for (const p of s.notePages) {
+      pageByName.set(normalizePageName(p.name), p.id);
+    }
     const links: PageLink[] = [];
-
     for (const block of s.noteBlocks) {
       const pageRefs = extractPageLinks(block.content);
       for (const ref of pageRefs) {
-        const targetPage = s.notePages.find((p: NotePage) => p.name === normalizePageName(ref));
-        if (targetPage) {
+        const targetPageId = pageByName.get(normalizePageName(ref));
+        if (targetPageId) {
           links.push({
             sourcePageId: block.pageId,
-            targetPageId: targetPage.id,
+            targetPageId,
             sourceBlockId: block.id,
             context: stripHtml(block.content).slice(0, 100),
           });
         }
       }
     }
-
     set({ pageLinks: links });
   },
 
@@ -1396,4 +1685,60 @@ function debouncedSave(get: PFCGet) {
     _notesSaveTimer = null;
     get().saveNotesToStorage();
   }, 300);
+}
+
+// ── One-time localStorage → SQLite migration ──
+// Reads all vault data from localStorage and pushes to SQLite via API.
+// Non-blocking — runs in background after loadVaultIndex completes.
+async function triggerMigration(vaults: Vault[], get: PFCGet) {
+  try {
+    const migrationPayload: Array<{
+      vault: Vault;
+      pages: NotePage[];
+      blocks: NoteBlock[];
+      books: NoteBook[];
+      concepts: Concept[];
+      pageLinks: PageLink[];
+    }> = [];
+
+    for (const vault of vaults) {
+      const pagesRaw = localStorage.getItem(vaultKey(vault.id, 'pages'));
+      const blocksRaw = localStorage.getItem(vaultKey(vault.id, 'blocks'));
+      const booksRaw = localStorage.getItem(vaultKey(vault.id, 'books'));
+      const conceptsRaw = localStorage.getItem(vaultKey(vault.id, 'concepts'));
+
+      const pages: NotePage[] = pagesRaw ? JSON.parse(pagesRaw) : [];
+      const rawBlocks: NoteBlock[] = blocksRaw ? JSON.parse(blocksRaw) : [];
+      const blocks = rawBlocks.map(migrateBlock);
+      const books: NoteBook[] = booksRaw ? JSON.parse(booksRaw) : [];
+      const concepts: Concept[] = conceptsRaw ? JSON.parse(conceptsRaw) : [];
+
+      // Build page links from block content
+      const pageByName = new Map<string, string>();
+      for (const p of pages) pageByName.set(normalizePageName(p.name), p.id);
+      const pageLinks: PageLink[] = [];
+      for (const block of blocks) {
+        for (const ref of extractPageLinks(block.content)) {
+          const targetId = pageByName.get(normalizePageName(ref));
+          if (targetId) {
+            pageLinks.push({
+              sourcePageId: block.pageId,
+              targetPageId: targetId,
+              sourceBlockId: block.id,
+              context: stripHtml(block.content).slice(0, 100),
+            });
+          }
+        }
+      }
+
+      migrationPayload.push({ vault, pages, blocks, books, concepts, pageLinks });
+    }
+
+    const result = await migrateToSqlite(migrationPayload);
+    if (result.ok && !result.skipped) {
+      console.log('[notes] Migration to SQLite complete:', migrationPayload.length, 'vaults');
+    }
+  } catch (err) {
+    console.warn('[notes] Migration to SQLite failed (will retry next load):', err);
+  }
 }

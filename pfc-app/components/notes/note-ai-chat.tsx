@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from 'next-themes';
+import { useIsDark } from '@/hooks/use-is-dark';
 import {
   Sparkles,
   X,
@@ -207,12 +207,7 @@ type AITab = 'ask' | 'learn';
 // ── Component ──────────────────────────────────────────────────────
 
 export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAIChatProps) {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const { isDark } = useIsDark();
 
   // ── Local UI state ──
   // Controlled via parent toolbar props; fallback to internal state
@@ -413,8 +408,8 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
     : 'rgba(255, 255, 255, 0.78)';
 
   const glassBorder = isDark
-    ? 'rgba(255, 255, 255, 0.08)'
-    : 'rgba(0, 0, 0, 0.08)';
+    ? 'rgba(255, 255, 255, 0.04)'
+    : 'rgba(0, 0, 0, 0.05)';
 
   const subtleText = isDark
     ? 'rgba(255, 255, 255, 0.45)'
@@ -463,11 +458,11 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
           background: glassBackground,
           border: `1px solid ${glassBorder}`,
           borderRadius: '1rem',
-          backdropFilter: 'blur(12px) saturate(1.3)',
-          WebkitBackdropFilter: 'blur(12px) saturate(1.3)',
+          backdropFilter: 'blur(10px) saturate(1.2)',
+          WebkitBackdropFilter: 'blur(10px) saturate(1.2)',
           boxShadow: 'none',
           overflow: 'hidden',
-          zIndex: 50,
+          zIndex: 'calc(var(--z-modal) + 1)',
         }}
       >
         {/* ── Header with tabs ── */}
@@ -490,7 +485,7 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
                 padding: '0.25rem 0.625rem', fontSize: '0.6875rem', fontWeight: activeTab === 'ask' ? 650 : 450,
                 borderRadius: '9999px', border: 'none', cursor: 'pointer',
                 background: activeTab === 'ask' ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)') : 'transparent',
-                color: activeTab === 'ask' ? '#C4956A' : subtleText,
+                color: activeTab === 'ask' ? 'var(--pfc-accent)' : subtleText,
                 transition: 'background 0.15s, color 0.15s',
               }}
             >
@@ -504,7 +499,7 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
                 padding: '0.25rem 0.625rem', fontSize: '0.6875rem', fontWeight: activeTab === 'learn' ? 650 : 450,
                 borderRadius: '9999px', border: 'none', cursor: 'pointer',
                 background: activeTab === 'learn' ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)') : 'transparent',
-                color: activeTab === 'learn' ? '#C4956A' : subtleText,
+                color: activeTab === 'learn' ? 'var(--pfc-accent)' : subtleText,
                 transition: 'background 0.15s, color 0.15s',
               }}
             >
@@ -585,7 +580,7 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
                     {isGenerating && (
                       <span className="animate-blink" style={{
                         display: 'inline-block', width: 6, height: 13, marginLeft: 2,
-                        background: '#C4956A', borderRadius: 1.5, verticalAlign: 'text-bottom',
+                        background: 'var(--pfc-accent)', borderRadius: 1.5, verticalAlign: 'text-bottom',
                       }} />
                     )}
                   </div>
@@ -647,7 +642,7 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
                     background: inputValue.trim() ? 'rgba(196,149,106,0.15)' : inputBg,
                     border: `1px solid ${inputValue.trim() ? 'rgba(196,149,106,0.3)' : inputBorder}`,
                     cursor: inputValue.trim() ? 'pointer' : 'default',
-                    color: inputValue.trim() ? '#C4956A' : subtleText,
+                    color: inputValue.trim() ? 'var(--pfc-accent)' : subtleText,
                     flexShrink: 0, opacity: inputValue.trim() ? 1 : 0.5,
                     transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
                   }} aria-label="Send prompt">

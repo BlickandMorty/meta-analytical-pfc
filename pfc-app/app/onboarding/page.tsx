@@ -105,6 +105,13 @@ const DEVICE_ICON: Record<string, typeof SmartphoneIcon> = {
   unknown: CpuIcon,
 };
 
+function getInitialDeviceProfile(): DeviceProfile | null {
+  if (typeof window === 'undefined') return null;
+  const profile = detectDevice();
+  cacheDeviceProfile(profile);
+  return profile;
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
@@ -112,20 +119,11 @@ export default function OnboardingPage() {
   const [visibleCount, setVisibleCount] = useState(0);
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<SuiteTier>('programming');
-  const [deviceProfile, setDeviceProfile] = useState<DeviceProfile | null>(null);
-
-  useEffect(() => setMounted(true), []);
-
-  // Detect device on mount
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const profile = detectDevice();
-    cacheDeviceProfile(profile);
-    setDeviceProfile(profile);
-    setSelectedTier(profile.recommendedTier);
-  }, []);
+  const mounted = typeof window !== 'undefined';
+  const [deviceProfile] = useState<DeviceProfile | null>(() => getInitialDeviceProfile());
+  const [selectedTier, setSelectedTier] = useState<SuiteTier>(
+    () => getInitialDeviceProfile()?.recommendedTier ?? 'programming',
+  );
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -200,7 +198,7 @@ export default function OnboardingPage() {
           position: 'fixed',
           top: '1rem',
           right: '1rem',
-          zIndex: 20,
+          zIndex: 'var(--z-sticky)',
           fontFamily: 'var(--font-mono)',
           fontSize: '0.6875rem',
           cursor: 'pointer',
@@ -230,7 +228,7 @@ export default function OnboardingPage() {
         style={{
           ...bubbleGlass,
           position: 'relative',
-          zIndex: 10,
+          zIndex: 'var(--z-dropdown)',
           width: '100%',
           maxWidth: '32rem',
           padding: '1.5rem 1.75rem',
@@ -370,19 +368,25 @@ export default function OnboardingPage() {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 + idx * 0.06 }}
                       onClick={() => setSelectedTier(opt.value)}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.02)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.background = 'transparent';
+                      }}
                       style={{
                         display: 'flex',
                         alignItems: 'flex-start',
                         gap: '0.75rem',
                         padding: '0.75rem',
-                        borderRadius: '9999px',
+                        borderRadius: '0.75rem',
                         border: 'none',
                         background: isSelected
                           ? (isDark ? 'rgba(244,189,111,0.12)' : 'rgba(0,0,0,0.02)')
                           : 'transparent',
                         cursor: 'pointer',
                         textAlign: 'left',
-                        transition: 'background 0.2s',
+                        transition: 'background 0.15s ease',
                         color: 'inherit',
                       }}
                     >

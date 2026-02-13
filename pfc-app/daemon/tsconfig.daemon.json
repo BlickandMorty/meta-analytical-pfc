@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "paths": {
+      "@/*": ["../*"]
+    },
+    "baseUrl": ".",
+    "types": ["node"]
+  },
+  "include": [
+    "./**/*.ts",
+    "../lib/notes/types.ts",
+    "../lib/notes/learning-prompts.ts",
+    "../lib/engine/llm/provider.ts",
+    "../lib/engine/llm/config.ts"
+  ],
+  "exclude": [
+    "../node_modules",
+    "../.next"
+  ]
+}

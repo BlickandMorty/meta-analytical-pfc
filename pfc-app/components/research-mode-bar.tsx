@@ -122,7 +122,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                     fontWeight: isActive ? 600 : 400,
                     background: isActive ? (isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.10)') : 'transparent',
                     color: isActive
-                      ? '#C4956A'
+                      ? 'var(--pfc-accent)'
                       : (isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.3)'),
                     transition: 'all 0.15s',
                   }}
@@ -163,7 +163,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 color: inferenceMode === 'local'
                   ? 'var(--color-pfc-green)'
                   : inferenceMode === 'api'
-                    ? '#C4956A'
+                    ? 'var(--pfc-accent)'
                     : (isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)'),
               }}
               title={features.modeHint}
@@ -223,7 +223,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.1)',
               backdropFilter: 'blur(12px) saturate(1.3)',
               minWidth: '14rem',
-              zIndex: 50,
+              zIndex: 'var(--z-modal)',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.5rem',
@@ -296,7 +296,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               cursor: 'pointer',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <EyeIcon style={{ height: '0.75rem', width: '0.75rem', color: '#C4956A' }} />
+                <EyeIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--pfc-accent)' }} />
                 <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.55)' }}>
                   Preview visualizations
                 </span>
@@ -312,7 +312,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   height: '1.125rem',
                   borderRadius: '9999px',
                   background: researchModeControls.showVisualizationPreview
-                    ? '#C4956A'
+                    ? 'var(--pfc-accent)'
                     : (isDark ? 'rgba(156,143,128,0.2)' : 'rgba(0,0,0,0.15)'),
                   position: 'relative',
                   transition: 'background 0.2s',
@@ -411,7 +411,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 color: inferenceMode === 'local'
                   ? 'var(--color-pfc-green)'
                   : inferenceMode === 'api'
-                    ? '#C4956A'
+                    ? 'var(--pfc-accent)'
                     : (isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)'),
               }} />
               <span style={{

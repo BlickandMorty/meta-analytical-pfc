@@ -1,0 +1,1009 @@
+'use client';
+
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  BotIcon,
+  PlayIcon,
+  SquareIcon,
+  RefreshCwIcon,
+  ClockIcon,
+  BrainCircuitIcon,
+  BookOpenIcon,
+  TagsIcon,
+  SearchIcon,
+  GraduationCapIcon,
+  LinkIcon,
+  CircleIcon,
+  AlertTriangleIcon,
+  CheckCircle2Icon,
+  XCircleIcon,
+  SettingsIcon,
+  ScrollTextIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ShieldIcon,
+  FolderOpenIcon,
+  TerminalIcon,
+  UploadIcon,
+  DownloadIcon,
+  LockIcon,
+  UnlockIcon,
+} from 'lucide-react';
+
+import { PageShell, GlassSection } from '@/components/page-shell';
+import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { PixelBook } from '@/components/pixel-book';
+import { useSetupGuard } from '@/hooks/use-setup-guard';
+import { cn } from '@/lib/utils';
+
+// ═══════════════════════════════════════════════════════════════════
+// Types
+// ═══════════════════════════════════════════════════════════════════
+
+interface TaskStatus {
+  name: string;
+  enabled: boolean;
+  intervalMs: number;
+  lastRunAt: number | null;
+  lastResult: string | null;
+}
+
+interface DaemonStatus {
+  pid?: number;
+  uptime?: number;
+  running: boolean;
+  state?: string;
+  currentTask?: string | null;
+  tasks?: TaskStatus[];
+  error?: string;
+}
+
+interface DaemonEvent {
+  id: number;
+  event_type: string;
+  task_name: string | null;
+  payload: string | null;
+  created_at: string;
+}
+
+interface DaemonConfig {
+  [key: string]: string;
+}
+
+interface PermissionsInfo {
+  level: 'sandboxed' | 'file-access' | 'full-access';
+  baseDir: string | null;
+  capabilities: {
+    sqlite: boolean;
+    llm: boolean;
+    fileRead: boolean;
+    fileWrite: boolean;
+    shell: boolean;
+    markdownSync: boolean;
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Constants
+// ═══════════════════════════════════════════════════════════════════
+
+const POLL_INTERVAL = 5000;
+
+const TASK_META: Record<string, { icon: typeof BrainCircuitIcon; color: string; label: string; description: string }> = {
+  'connection-finder': {
+    icon: LinkIcon,
+    color: 'text-pfc-cyan',
+    label: 'Connection Finder',
+    description: 'Discovers hidden links between your notes using cross-reference analysis',
+  },
+  'daily-brief': {
+    icon: BookOpenIcon,
+    color: 'text-pfc-green',
+    label: 'Daily Brief',
+    description: 'Generates a morning summary of recent changes and key insights',
+  },
+  'auto-organizer': {
+    icon: TagsIcon,
+    color: 'text-pfc-violet',
+    label: 'Auto-Organizer',
+    description: 'Tags untagged pages and clusters notes by topic similarity',
+  },
+  'research-assistant': {
+    icon: SearchIcon,
+    color: 'text-pfc-ember',
+    label: 'Research Assistant',
+    description: 'Identifies research questions in your notes and drafts answers',
+  },
+  'learning-runner': {
+    icon: GraduationCapIcon,
+    color: 'text-pfc-yellow',
+    label: 'Learning Protocol',
+    description: 'Runs the 7-step recursive learning engine to deepen understanding',
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Animation variants
+// ═══════════════════════════════════════════════════════════════════
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.06, duration: 0.35, ease: [0.32, 0.72, 0, 1] as const },
+  }),
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════════════════
+
+function formatUptime(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return `${h}h ${m}m`;
+}
+
+function formatInterval(ms: number): string {
+  const hours = ms / 3600000;
+  if (hours >= 24) return `${Math.round(hours / 24)}d`;
+  if (hours >= 1) return `${Math.round(hours)}h`;
+  return `${Math.round(ms / 60000)}m`;
+}
+
+function timeAgo(timestamp: number | string): string {
+  const ms = typeof timestamp === 'string' ? Date.now() - new Date(timestamp).getTime() : Date.now() - timestamp;
+  if (ms < 60000) return 'just now';
+  if (ms < 3600000) return `${Math.floor(ms / 60000)}m ago`;
+  if (ms < 86400000) return `${Math.floor(ms / 3600000)}h ago`;
+  return `${Math.floor(ms / 86400000)}d ago`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Component
+// ═══════════════════════════════════════════════════════════════════
+
+export default function DaemonPage() {
+  const ready = useSetupGuard();
+
+  const [status, setStatus] = useState<DaemonStatus | null>(null);
+  const [events, setEvents] = useState<DaemonEvent[]>([]);
+  const [config, setConfig] = useState<DaemonConfig>({});
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showEvents, setShowEvents] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [permissions, setPermissions] = useState<PermissionsInfo | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [baseDirDraft, setBaseDirDraft] = useState('');
+  const [editingBaseDir, setEditingBaseDir] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Fetch daemon status ──
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/daemon?endpoint=status');
+      const data: DaemonStatus = await res.json();
+      setStatus(data);
+    } catch {
+      setStatus({ running: false, error: 'Failed to reach API' });
+    }
+    setLoading(false);
+  }, []);
+
+  // ── Fetch events ──
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await fetch('/api/daemon?endpoint=events&limit=30');
+      const data = await res.json();
+      if (Array.isArray(data)) setEvents(data);
+    } catch { /* non-critical */ }
+  }, []);
+
+  // ── Fetch config ──
+  const fetchConfig = useCallback(async () => {
+    try {
+      const res = await fetch('/api/daemon?endpoint=config');
+      const data = await res.json();
+      if (data && typeof data === 'object' && !data.error) setConfig(data);
+    } catch { /* non-critical */ }
+  }, []);
+
+  // ── Fetch permissions ──
+  const fetchPermissions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/daemon?endpoint=permissions');
+      const data = await res.json();
+      if (data && data.level) {
+        setPermissions(data);
+        if (data.baseDir && !baseDirDraft) setBaseDirDraft(data.baseDir);
+      }
+    } catch { /* non-critical */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Auto-poll ──
+  useEffect(() => {
+    fetchStatus();
+    pollRef.current = setInterval(fetchStatus, POLL_INTERVAL);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [fetchStatus]);
+
+  // Fetch events + config when panels open
+  useEffect(() => {
+    if (showEvents) fetchEvents();
+  }, [showEvents, fetchEvents]);
+
+  useEffect(() => {
+    if (showConfig) fetchConfig();
+  }, [showConfig, fetchConfig]);
+
+  // Also fetch events when status changes (new task completed)
+  useEffect(() => {
+    if (showEvents && status?.running) fetchEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.currentTask]);
+
+  // Fetch permissions when daemon is running
+  useEffect(() => {
+    if (status?.running && status?.pid) fetchPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.running]);
+
+  // ── Actions ──
+  const handleStart = async () => {
+    setActionLoading(true);
+    try {
+      await fetch('/api/daemon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start' }),
+      });
+      // Give it a moment to boot
+      setTimeout(() => {
+        fetchStatus();
+        setActionLoading(false);
+      }, 3000);
+    } catch {
+      setActionLoading(false);
+    }
+  };
+
+  const handleStop = async () => {
+    setActionLoading(true);
+    try {
+      await fetch('/api/daemon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stop' }),
+      });
+      setTimeout(() => {
+        fetchStatus();
+        setActionLoading(false);
+      }, 1500);
+    } catch {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfigUpdate = async (key: string, value: string) => {
+    try {
+      await fetch('/api/daemon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'config', config: { [key]: value } }),
+      });
+      setConfig(prev => ({ ...prev, [key]: value }));
+    } catch { /* non-critical */ }
+  };
+
+  const handlePermissionChange = async (level: string) => {
+    await handleConfigUpdate('permissions.level', level);
+    setTimeout(fetchPermissions, 500);
+  };
+
+  const handleBaseDirSave = async () => {
+    await handleConfigUpdate('permissions.baseDir', baseDirDraft);
+    setEditingBaseDir(false);
+    setTimeout(fetchPermissions, 500);
+  };
+
+  const handleSyncExport = async () => {
+    setSyncStatus('Exporting...');
+    try {
+      const res = await fetch('/api/daemon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'proxy',
+          daemonPath: '/fs/sync-export',
+          data: { vaultId: config['vault.activeId'] || '' },
+        }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        setSyncStatus(`Exported ${result.exported} pages to ${result.dir}`);
+      } else {
+        setSyncStatus(`Export failed: ${result.error || 'unknown error'}`);
+      }
+    } catch {
+      setSyncStatus('Export failed — daemon may not be running');
+    }
+    setTimeout(() => setSyncStatus(null), 5000);
+  };
+
+  const handleSyncImport = async () => {
+    setSyncStatus('Importing...');
+    try {
+      const res = await fetch('/api/daemon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'proxy',
+          daemonPath: '/fs/sync-import',
+          data: { vaultId: config['vault.activeId'] || '' },
+        }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        setSyncStatus(`Imported ${result.imported} new, ${result.updated} updated`);
+      } else {
+        setSyncStatus(`Import failed: ${result.error || 'unknown error'}`);
+      }
+    } catch {
+      setSyncStatus('Import failed — daemon may not be running');
+    }
+    setTimeout(() => setSyncStatus(null), 5000);
+  };
+
+  const isRunning = status?.running === true && !!status?.pid;
+
+  if (!ready) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
+        <PixelBook size={40} />
+      </div>
+    );
+  }
+
+  return (
+    <PageShell
+      icon={BotIcon}
+      iconColor="var(--color-pfc-cyan)"
+      title="Daemon"
+      subtitle="Autonomous agent — 24/7 note analysis, learning, and organization"
+    >
+      {/* ── Status + Controls ── */}
+      <GlassSection title="Agent Status">
+        <div className="space-y-5">
+          {/* Status header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                'h-3 w-3 rounded-full transition-colors',
+                loading ? 'bg-muted-foreground/30 animate-pulse' :
+                isRunning ? 'bg-pfc-green animate-[pulse_2s_ease-in-out_infinite]' :
+                'bg-pfc-red/60',
+              )} />
+              <div>
+                <p className="text-sm font-semibold" style={{ fontFamily: 'var(--font-heading)', fontSize: '0.625rem', fontWeight: 400 }}>
+                  {loading ? 'Checking...' : isRunning ? 'Running' : 'Stopped'}
+                </p>
+                {isRunning && status?.uptime != null && (
+                  <p className="text-xs text-muted-foreground/50">
+                    PID {status.pid} · Uptime {formatUptime(status.uptime)}
+                  </p>
+                )}
+                {!isRunning && !loading && (
+                  <p className="text-xs text-muted-foreground/50">
+                    Daemon is not running
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <GlassBubbleButton
+                size="sm"
+                color="neutral"
+                onClick={fetchStatus}
+                disabled={loading}
+              >
+                <RefreshCwIcon className="h-3 w-3" />
+              </GlassBubbleButton>
+
+              {isRunning ? (
+                <GlassBubbleButton
+                  size="sm"
+                  color="red"
+                  onClick={handleStop}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? <PixelBook size={14} /> : <SquareIcon className="h-3 w-3" />}
+                  Stop
+                </GlassBubbleButton>
+              ) : (
+                <GlassBubbleButton
+                  size="sm"
+                  color="green"
+                  onClick={handleStart}
+                  disabled={actionLoading || loading}
+                >
+                  {actionLoading ? <PixelBook size={14} /> : <PlayIcon className="h-3 w-3" />}
+                  Start
+                </GlassBubbleButton>
+              )}
+            </div>
+          </div>
+
+          {/* Current task indicator */}
+          <AnimatePresence>
+            {isRunning && status?.currentTask && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl border border-pfc-cyan/20 bg-pfc-cyan/5 px-4 py-3"
+              >
+                <div className="flex items-center gap-2">
+                  <BrainCircuitIcon className="h-4 w-4 text-pfc-cyan animate-pulse" />
+                  <span className="text-sm font-semibold text-pfc-cyan">
+                    Running: {TASK_META[status.currentTask]?.label || status.currentTask}
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </GlassSection>
+
+      {/* ── Task Overview ── */}
+      <GlassSection
+        title="Agent Tasks"
+        badge={
+          isRunning && status?.tasks ? (
+            <Badge variant="outline" className="text-[10px] font-mono text-pfc-green border-pfc-green/30">
+              {status.tasks.filter(t => t.enabled).length}/{status.tasks.length} active
+            </Badge>
+          ) : null
+        }
+      >
+        {!isRunning && !loading ? (
+          <div className="rounded-xl border border-border/20 bg-muted/20 px-4 py-6 text-center">
+            <BotIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground/50">Start the daemon to see task status</p>
+          </div>
+        ) : loading ? (
+          <div className="flex justify-center py-8">
+            <PixelBook size={24} />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {(status?.tasks || []).map((task, i) => {
+              const meta = TASK_META[task.name] || {
+                icon: BrainCircuitIcon,
+                color: 'text-muted-foreground',
+                label: task.name,
+                description: '',
+              };
+              const Icon = meta.icon;
+              const isActive = status?.currentTask === task.name;
+
+              return (
+                <motion.div
+                  key={task.name}
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  custom={i}
+                  className={cn(
+                    'rounded-xl border p-4 transition-colors',
+                    isActive
+                      ? 'border-pfc-cyan/30 bg-pfc-cyan/5'
+                      : task.enabled
+                        ? 'border-border/20 bg-muted/20'
+                        : 'border-border/10 bg-muted/10 opacity-50',
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={cn(
+                        'mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg',
+                        task.enabled ? 'bg-muted/50' : 'bg-muted/20',
+                      )}>
+                        <Icon className={cn('h-4 w-4', meta.color)} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold">{meta.label}</p>
+                          {isActive && (
+                            <Badge className="text-[9px] bg-pfc-cyan/20 text-pfc-cyan border-0 animate-pulse">
+                              running
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground/50 mt-0.5">
+                          {meta.description}
+                        </p>
+                        <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground/40">
+                          <span className="flex items-center gap-1">
+                            <ClockIcon className="h-3 w-3" />
+                            Every {formatInterval(task.intervalMs)}
+                          </span>
+                          {task.lastRunAt && (
+                            <span>Last: {timeAgo(task.lastRunAt)}</span>
+                          )}
+                        </div>
+                        {task.lastResult && (
+                          <p className="text-[11px] text-muted-foreground/60 mt-1 font-mono">
+                            → {task.lastResult.slice(0, 120)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Enable/disable toggle */}
+                    <button
+                      onClick={() => {
+                        const configKey = `task.${task.name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())}.enabled`;
+                        handleConfigUpdate(configKey, task.enabled ? 'false' : 'true');
+                      }}
+                      className={cn(
+                        'relative mt-1 h-5 w-9 rounded-full transition-colors flex-shrink-0',
+                        task.enabled ? 'bg-pfc-green' : 'bg-muted-foreground/20',
+                      )}
+                    >
+                      <div className={cn(
+                        'absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform shadow-sm',
+                        task.enabled ? 'translate-x-4' : 'translate-x-0.5',
+                      )} />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </GlassSection>
+
+      {/* ── Event Log (collapsible) ── */}
+      <GlassSection>
+        <button
+          onClick={() => setShowEvents(!showEvents)}
+          className="flex items-center gap-2 w-full text-left"
+        >
+          <ScrollTextIcon className="h-4 w-4 text-muted-foreground/50" />
+          <span className="text-sm font-semibold flex-1" style={{ fontFamily: 'var(--font-heading)', fontSize: '0.625rem', fontWeight: 400 }}>Event Log</span>
+          {showEvents
+            ? <ChevronDownIcon className="h-4 w-4 text-muted-foreground/40" />
+            : <ChevronRightIcon className="h-4 w-4 text-muted-foreground/40" />
+          }
+        </button>
+
+        <AnimatePresence>
+          {showEvents && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 overflow-hidden"
+            >
+              {events.length === 0 ? (
+                <p className="text-xs text-muted-foreground/40 text-center py-4">
+                  No events recorded yet
+                </p>
+              ) : (
+                <div className="space-y-1 max-h-80 overflow-y-auto pr-1">
+                  {events.map((evt) => {
+                    const isError = evt.event_type === 'error' || evt.event_type === 'task_error';
+                    const isComplete = evt.event_type === 'task_complete';
+                    const isStart = evt.event_type === 'task_start';
+                    return (
+                      <div
+                        key={evt.id}
+                        className="flex items-start gap-2 py-1.5 border-b border-border/10 last:border-0"
+                      >
+                        {isError ? (
+                          <XCircleIcon className="h-3 w-3 mt-0.5 text-pfc-red flex-shrink-0" />
+                        ) : isComplete ? (
+                          <CheckCircle2Icon className="h-3 w-3 mt-0.5 text-pfc-green flex-shrink-0" />
+                        ) : isStart ? (
+                          <PlayIcon className="h-3 w-3 mt-0.5 text-pfc-cyan flex-shrink-0" />
+                        ) : (
+                          <CircleIcon className="h-3 w-3 mt-0.5 text-muted-foreground/30 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              'text-[11px] font-semibold',
+                              isError ? 'text-pfc-red' : 'text-foreground/80',
+                            )}>
+                              {evt.task_name || evt.event_type}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/30">
+                              {timeAgo(evt.created_at)}
+                            </span>
+                          </div>
+                          {evt.payload && (
+                            <p className="text-[10px] text-muted-foreground/50 font-mono truncate">
+                              {(() => {
+                                try { return JSON.parse(evt.payload).result || JSON.parse(evt.payload).error || evt.payload; }
+                                catch { return evt.payload; }
+                              })()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="flex justify-center mt-3">
+                <GlassBubbleButton size="sm" color="neutral" onClick={fetchEvents}>
+                  <RefreshCwIcon className="h-3 w-3" />
+                  Refresh
+                </GlassBubbleButton>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </GlassSection>
+
+      {/* ── Configuration (collapsible) ── */}
+      <GlassSection>
+        <button
+          onClick={() => setShowConfig(!showConfig)}
+          className="flex items-center gap-2 w-full text-left"
+        >
+          <SettingsIcon className="h-4 w-4 text-muted-foreground/50" />
+          <span className="text-sm font-semibold flex-1" style={{ fontFamily: 'var(--font-heading)', fontSize: '0.625rem', fontWeight: 400 }}>Configuration</span>
+          {showConfig
+            ? <ChevronDownIcon className="h-4 w-4 text-muted-foreground/40" />
+            : <ChevronRightIcon className="h-4 w-4 text-muted-foreground/40" />
+          }
+        </button>
+
+        <AnimatePresence>
+          {showConfig && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 overflow-hidden"
+            >
+              {!isRunning ? (
+                <p className="text-xs text-muted-foreground/40 text-center py-4">
+                  Start the daemon to view and edit configuration
+                </p>
+              ) : Object.keys(config).length === 0 ? (
+                <div className="flex justify-center py-4">
+                  <PixelBook size={16} />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* LLM Settings */}
+                  <ConfigGroup title="LLM">
+                    {Object.entries(config)
+                      .filter(([k]) => k.startsWith('llm.'))
+                      .map(([key, value]) => (
+                        <ConfigRow
+                          key={key}
+                          label={key.replace('llm.', '')}
+                          value={value}
+                          onSave={(v) => handleConfigUpdate(key, v)}
+                        />
+                      ))}
+                  </ConfigGroup>
+
+                  {/* Task Settings */}
+                  <ConfigGroup title="Tasks">
+                    {Object.entries(config)
+                      .filter(([k]) => k.startsWith('task.'))
+                      .map(([key, value]) => (
+                        <ConfigRow
+                          key={key}
+                          label={key.replace('task.', '')}
+                          value={value}
+                          onSave={(v) => handleConfigUpdate(key, v)}
+                        />
+                      ))}
+                  </ConfigGroup>
+
+                  {/* Other Settings */}
+                  {Object.entries(config).filter(([k]) => !k.startsWith('llm.') && !k.startsWith('task.')).length > 0 && (
+                    <ConfigGroup title="Other">
+                      {Object.entries(config)
+                        .filter(([k]) => !k.startsWith('llm.') && !k.startsWith('task.'))
+                        .map(([key, value]) => (
+                          <ConfigRow
+                            key={key}
+                            label={key}
+                            value={value}
+                            onSave={(v) => handleConfigUpdate(key, v)}
+                          />
+                        ))}
+                    </ConfigGroup>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </GlassSection>
+
+      {/* ── System Access (Phase C) ── */}
+      <GlassSection
+        title="System Access"
+        badge={
+          permissions ? (
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-[10px] font-mono',
+                permissions.level === 'sandboxed' ? 'text-pfc-yellow border-pfc-yellow/30' :
+                permissions.level === 'file-access' ? 'text-pfc-green border-pfc-green/30' :
+                'text-pfc-cyan border-pfc-cyan/30',
+              )}
+            >
+              {permissions.level}
+            </Badge>
+          ) : null
+        }
+      >
+        {!isRunning ? (
+          <p className="text-xs text-muted-foreground/40 text-center py-4">
+            Start the daemon to configure system access
+          </p>
+        ) : (
+          <div className="space-y-5">
+            {/* Permission tiers */}
+            <div>
+              <p className="text-xs text-muted-foreground/60 mb-3">
+                Control what the daemon can access on your system. Higher tiers unlock filesystem and shell access.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: 'sandboxed', label: 'Sandboxed', desc: 'SQLite + LLM only', icon: LockIcon, color: 'yellow' as const },
+                  { value: 'file-access', label: 'File Access', desc: '+ Read/write files', icon: FolderOpenIcon, color: 'green' as const },
+                  { value: 'full-access', label: 'Full Access', desc: '+ Shell commands', icon: UnlockIcon, color: 'cyan' as const },
+                ] as const).map((opt) => {
+                  const Icon = opt.icon;
+                  const isActive = permissions?.level === opt.value;
+                  return (
+                    <GlassBubbleButton
+                      key={opt.value}
+                      onClick={() => handlePermissionChange(opt.value)}
+                      active={isActive}
+                      color={opt.color}
+                      size="lg"
+                      fullWidth
+                      className="flex-col"
+                    >
+                      <Icon style={{ height: 16, width: 16 }} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{opt.label}</span>
+                      <span style={{ fontSize: '0.625rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
+                    </GlassBubbleButton>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Base directory config */}
+            {permissions && permissions.level !== 'sandboxed' && (
+              <div className="space-y-2 pt-3 border-t border-border/20">
+                <div className="flex items-center gap-2">
+                  <FolderOpenIcon className="h-4 w-4 text-muted-foreground/50" />
+                  <span className="text-sm font-semibold">Base Directory</span>
+                </div>
+                <p className="text-xs text-muted-foreground/50">
+                  All file operations are restricted to this directory. Path traversal is blocked.
+                </p>
+                {editingBaseDir ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={baseDirDraft}
+                      onChange={(e) => setBaseDirDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleBaseDirSave(); if (e.key === 'Escape') setEditingBaseDir(false); }}
+                      placeholder="/Users/you/notes"
+                      autoFocus
+                      className="flex-1 rounded-lg border border-border/30 bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-pfc-cyan/50"
+                    />
+                    <GlassBubbleButton size="sm" color="green" onClick={handleBaseDirSave}>
+                      Save
+                    </GlassBubbleButton>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setBaseDirDraft(permissions.baseDir || ''); setEditingBaseDir(true); }}
+                    className="w-full text-left rounded-lg border border-border/20 bg-muted/20 px-3 py-2 text-sm font-mono text-muted-foreground/70 hover:border-border/40 transition-colors"
+                  >
+                    {permissions.baseDir || '(not configured — click to set)'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Capabilities */}
+            {permissions && (
+              <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/20">
+                {([
+                  { key: 'sqlite', label: 'SQLite' },
+                  { key: 'llm', label: 'LLM' },
+                  { key: 'fileRead', label: 'File Read' },
+                  { key: 'fileWrite', label: 'File Write' },
+                  { key: 'shell', label: 'Shell' },
+                  { key: 'markdownSync', label: 'MD Sync' },
+                ] as const).map(({ key, label }) => {
+                  const enabled = permissions.capabilities[key];
+                  return (
+                    <div key={key} className="flex items-center gap-1.5">
+                      <div className={cn(
+                        'h-1.5 w-1.5 rounded-full',
+                        enabled ? 'bg-pfc-green' : 'bg-muted-foreground/20',
+                      )} />
+                      <span className={cn(
+                        'text-[11px]',
+                        enabled ? 'text-foreground/70' : 'text-muted-foreground/30',
+                      )}>
+                        {label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Markdown Sync actions */}
+            {permissions && permissions.capabilities.markdownSync && permissions.baseDir && (
+              <div className="space-y-2 pt-3 border-t border-border/20">
+                <div className="flex items-center gap-2">
+                  <ShieldIcon className="h-4 w-4 text-muted-foreground/50" />
+                  <span className="text-sm font-semibold">Markdown Sync</span>
+                </div>
+                <p className="text-xs text-muted-foreground/50">
+                  Export notes to markdown files with YAML frontmatter, or import .md files into your vault.
+                </p>
+                <div className="flex items-center gap-2">
+                  <GlassBubbleButton size="sm" color="green" onClick={handleSyncExport}>
+                    <DownloadIcon className="h-3 w-3" />
+                    Export to Markdown
+                  </GlassBubbleButton>
+                  <GlassBubbleButton size="sm" color="cyan" onClick={handleSyncImport}>
+                    <UploadIcon className="h-3 w-3" />
+                    Import from Markdown
+                  </GlassBubbleButton>
+                </div>
+                {syncStatus && (
+                  <p className="text-xs text-pfc-cyan font-mono">{syncStatus}</p>
+                )}
+              </div>
+            )}
+
+            {/* Shell info */}
+            {permissions?.level === 'full-access' && (
+              <div className="rounded-xl border border-pfc-cyan/20 bg-pfc-cyan/5 px-4 py-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <TerminalIcon className="h-4 w-4 text-pfc-cyan" />
+                  <span className="text-sm font-semibold text-pfc-cyan">Shell Access Active</span>
+                </div>
+                <p className="text-xs text-muted-foreground/60">
+                  Allowlisted commands: git, rg, find, ls, cat, head, tail, wc, grep, diff, tree, stat, file, which, echo
+                </p>
+                <p className="text-xs text-muted-foreground/40">
+                  30s timeout per command · execFile (no shell injection) · 1MB output limit
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </GlassSection>
+
+      {/* ── How it works ── */}
+      <GlassSection title="How It Works">
+        <div className="rounded-xl border border-border/20 bg-muted/20 px-4 py-3 text-sm text-muted-foreground space-y-2">
+          <p>
+            The PFC Daemon is a standalone Node.js process that runs alongside the web app.
+            It accesses your notes directly via SQLite, calls your local LLM (Ollama), and
+            writes results back — all without keeping a browser tab open.
+          </p>
+          <ol className="list-decimal list-inside space-y-1 text-xs text-muted-foreground/60">
+            <li>Tasks run one at a time (your GPU handles one LLM call at a time)</li>
+            <li>The scheduler checks every 60 seconds for due tasks</li>
+            <li>All generated content is tagged <code className="font-mono bg-muted px-1 rounded">autoGenerated</code></li>
+            <li>Stop the daemon anytime — your notes are never modified destructively</li>
+          </ol>
+        </div>
+      </GlassSection>
+    </PageShell>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Sub-components
+// ═══════════════════════════════════════════════════════════════════
+
+function ConfigGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 font-semibold mb-1">
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function ConfigRow({
+  label,
+  value,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  onSave: (value: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  const handleSave = () => {
+    if (draft !== value) onSave(draft);
+    setEditing(false);
+  };
+
+  // For boolean values, render as toggle
+  if (value === 'true' || value === 'false') {
+    return (
+      <div className="flex items-center justify-between py-1.5">
+        <span className="text-xs text-muted-foreground/70 font-mono">{label}</span>
+        <button
+          onClick={() => onSave(value === 'true' ? 'false' : 'true')}
+          className={cn(
+            'relative h-4 w-7 rounded-full transition-colors',
+            value === 'true' ? 'bg-pfc-green' : 'bg-muted-foreground/20',
+          )}
+        >
+          <div className={cn(
+            'absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform shadow-sm',
+            value === 'true' ? 'translate-x-3' : 'translate-x-0.5',
+          )} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between py-1.5 gap-3">
+      <span className="text-xs text-muted-foreground/70 font-mono flex-shrink-0">{label}</span>
+      {editing ? (
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false); }}
+            onBlur={handleSave}
+            autoFocus
+            className="w-32 rounded-lg border border-border/30 bg-background px-2 py-1 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-pfc-cyan/50"
+          />
+        </div>
+      ) : (
+        <button
+          onClick={() => { setDraft(value); setEditing(true); }}
+          className="text-xs font-mono text-foreground/60 hover:text-foreground/90 transition-colors truncate max-w-[200px]"
+        >
+          {value}
+        </button>
+      )}
+    </div>
+  );
+}
