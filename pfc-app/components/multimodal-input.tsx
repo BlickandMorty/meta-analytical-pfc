@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useCallback, useEffect, type KeyboardEvent } from 'react';
-import { ArrowUpIcon, StopCircleIcon, SlidersHorizontalIcon, SearchIcon, PaperclipIcon } from 'lucide-react';
+import { ArrowUpIcon, StopCircleIcon, SlidersHorizontalIcon, SearchIcon, PaperclipIcon, WrenchIcon, NetworkIcon, BookOpenIcon, SparklesIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -126,7 +126,7 @@ function generateRealtimeSuggestions(input: string): string[] {
 
   for (const { pattern, templates } of INTENT_TEMPLATES) {
     if (pattern.test(trimmed)) {
-      const picked = templates[Math.floor(Math.random() * templates.length)];
+      const picked = templates[Math.floor(Math.random() * templates.length)]!;
       results.push(picked.replace('{input}', trimmed));
       break;
     }
@@ -193,10 +193,21 @@ function BrainButtonWithToggle({
   const { theme, setTheme } = useTheme();
 
   const handlePress = () => {
-    // Cycle: light → dark → oled → light
+    // Disable system auto mode when manually cycling
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pfc-system-auto', 'false');
+    }
+    // Cycle: light → sunny → dark → navy → cosmic → oled → light
     const current = theme || 'light';
-    const next = current === 'light' ? 'dark' : current === 'dark' ? 'oled' : 'light';
-    setTheme(next);
+    const cycle: Record<string, string> = {
+      light: 'sunny',
+      sunny: 'dark',
+      dark: 'navy',
+      navy: 'cosmic',
+      cosmic: 'oled',
+      oled: 'light',
+    };
+    setTheme(cycle[current] || 'dark');
     onBrainTap();
   };
 
@@ -320,6 +331,7 @@ export function MultimodalInput({
   const [typingSuggestions, setTypingSuggestions] = useState<string[]>([]);
   const [brainGlow, setBrainGlow] = useState(false);
   const [themeCycleFlash, setThemeCycleFlash] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const brainGlowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -329,9 +341,12 @@ export function MultimodalInput({
   // Triple-click theme cycling on search bar
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       // Cleanup all timers on unmount
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
@@ -357,6 +372,14 @@ export function MultimodalInput({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [value]);
+
+  // Close tools dropdown on outside click
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const close = () => setToolsOpen(false);
+    const timer = setTimeout(() => document.addEventListener('click', close), 0);
+    return () => { clearTimeout(timer); document.removeEventListener('click', close); };
+  }, [toolsOpen]);
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
@@ -408,6 +431,7 @@ export function MultimodalInput({
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
     blurTimerRef.current = setTimeout(() => {
       blurTimerRef.current = null;
+      if (!mountedRef.current) return; // Guard: no state updates after unmount
       setFocused(false);
       onFocusChange?.(false);
     }, 200);
@@ -418,6 +442,7 @@ export function MultimodalInput({
     if (brainGlowTimerRef.current) clearTimeout(brainGlowTimerRef.current);
     brainGlowTimerRef.current = setTimeout(() => {
       brainGlowTimerRef.current = null;
+      if (!mountedRef.current) return; // Guard: no state updates after unmount
       setBrainGlow(false);
     }, 800);
   }, []);
@@ -459,7 +484,7 @@ export function MultimodalInput({
   }, [showTyping, onExpandChange]);
 
   // Label for the theme cycle flash
-  const themeLabel = theme === 'oled' ? 'OLED' : theme === 'dark' ? 'Dark' : 'Light';
+  const themeLabel = theme === 'oled' ? 'OLED' : theme === 'dark' ? 'Ember' : theme === 'navy' ? 'Navy' : theme === 'cosmic' ? 'Cosmic' : theme === 'sunny' ? 'Sunny' : 'Light';
 
   return (
     <div className="relative">
@@ -484,7 +509,7 @@ export function MultimodalInput({
               fontFamily: 'var(--font-sans)',
               letterSpacing: '0.04em',
               color: isDark ? 'rgba(232,228,222,0.9)' : 'rgba(43,42,39,0.8)',
-              background: isDark ? 'rgba(28,27,25,0.9)' : 'rgba(255,255,255,0.9)',
+              background: isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.9)',
               border: `1px solid ${isDark ? 'rgba(var(--pfc-accent-rgb), 0.3)' : 'rgba(var(--pfc-accent-rgb), 0.25)'}`,
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
@@ -500,7 +525,7 @@ export function MultimodalInput({
       <div
         className={cn(
           'relative flex w-full flex-col',
-          hero ? 'p-2.5 pr-2 pl-4' : 'p-3',
+          hero ? 'px-4 pt-3 pb-2' : 'p-3',
           !hero && 'rounded-2xl',
           !hero && !className?.includes('glass') && 'border bg-card/80',
           className,
@@ -512,146 +537,352 @@ export function MultimodalInput({
           } : undefined),
         }}
       >
-        {/* Text row */}
-        <div className="flex w-full items-center gap-2">
-          {showControlsToggle && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                'h-7 w-7 shrink-0 rounded-xl transition-all duration-200',
-                liveControlsOpen
-                  ? 'text-pfc-violet bg-pfc-violet/10'
-                  : 'text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/40',
+        {hero ? (
+          /* ═══ HERO (Gemini-style) — two-row layout ═══ */
+          <>
+            {/* Row 1: Textarea spanning full width */}
+            <div style={{ position: 'relative', width: '100%' }}>
+              {/* Animated placeholder overlay — extends all the way left */}
+              {placeholderOverlay && !value && (
+                <div
+                  onClick={() => textareaRef.current?.focus()}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    pointerEvents: 'auto',
+                    cursor: 'text',
+                    zIndex: 1,
+                  }}
+                >
+                  {placeholderOverlay}
+                </div>
               )}
-              onClick={toggleLiveControls}
-            >
-              <SlidersHorizontalIcon className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          {/* Upload file button — hero (landing) only */}
-          {hero && (
-            <button
-              type="button"
-              onClick={() => {
-                // Create hidden file input and trigger click
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.pdf,.txt,.md,.csv,.json,.doc,.docx,.png,.jpg,.jpeg,.webp';
-                input.style.display = 'none';
-                input.onchange = () => {
-                  // TODO: handle file upload — wire to store/API
-                  if (input.files?.[0]) {
-                    console.log('File selected:', input.files[0].name);
-                  }
-                  input.remove();
-                };
-                document.body.appendChild(input);
-                input.click();
-              }}
-              style={{
-                height: '2rem',
-                width: '2rem',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                border: 'none',
-                flexShrink: 0,
-                background: 'transparent',
-                color: isDark ? 'rgba(200,200,200,0.4)' : 'rgba(0,0,0,0.25)',
-                transition: 'color 0.15s, background 0.15s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = isDark ? 'rgba(230,230,230,0.7)' : 'rgba(0,0,0,0.5)';
-                e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = isDark ? 'rgba(200,200,200,0.4)' : 'rgba(0,0,0,0.25)';
-                e.currentTarget.style.background = 'transparent';
-              }}
-              aria-label="Upload file"
-            >
-              <PaperclipIcon style={{ height: '1rem', width: '1rem' }} />
-            </button>
-          )}
-          <div style={{ flex: 1, position: 'relative' }}>
-            {/* Animated placeholder overlay — shown when input empty; stays during focus for backspace animation */}
-            {placeholderOverlay && !value && (
-              <div
-                onClick={() => textareaRef.current?.focus()}
+              <textarea
+                ref={textareaRef}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onInput={handleInput}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onClick={handleSearchBarClick}
+                placeholder={placeholderOverlay ? '' : 'Ask a research question...'}
+                className="flex-1 resize-none bg-transparent leading-relaxed text-foreground placeholder:text-muted-foreground/40 outline-none border-0 focus:outline-none focus:border-0 focus-visible:outline-none px-0 text-[0.9375rem] min-h-[40px] max-h-[200px] py-[6px]"
+                rows={1}
+                maxLength={10000}
+                disabled={isProcessing}
+                style={{ boxShadow: 'none', width: '100%', ...inputStyle }}
+              />
+            </div>
+
+            {/* Row 2: Buttons bottom row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}>
+              {/* Upload file button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.pdf,.txt,.md,.csv,.json,.doc,.docx,.png,.jpg,.jpeg,.webp';
+                  input.style.display = 'none';
+                  const cleanup = () => { input.remove(); };
+                  input.multiple = true;
+                  input.onchange = () => {
+                    const files = input.files;
+                    if (!files || files.length === 0) { cleanup(); return; }
+
+                    Array.from(files).forEach((file) => {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const base64 = reader.result as string;
+                        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+                        const isImage = ['png', 'jpg', 'jpeg', 'webp'].includes(ext);
+                        const store = usePFCStore.getState();
+                        store.addAttachment({
+                          id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                          name: file.name,
+                          type: isImage ? 'image' : ext === 'pdf' ? 'pdf' : ext === 'csv' ? 'csv' : ext === 'txt' || ext === 'md' ? 'text' : 'other',
+                          uri: base64,
+                          size: file.size,
+                          mimeType: file.type,
+                          preview: isImage ? base64 : undefined,
+                        });
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                    cleanup();
+                  };
+                  // Clean up if user cancels the file picker
+                  input.addEventListener('cancel', cleanup);
+                  document.body.appendChild(input);
+                  input.click();
+                }}
                 style={{
-                  position: 'absolute',
-                  inset: 0,
+                  height: '2rem',
+                  width: '2rem',
+                  borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
-                  pointerEvents: 'auto',
-                  cursor: 'text',
-                  zIndex: 1,
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  border: 'none',
+                  flexShrink: 0,
+                  background: 'transparent',
+                  color: isDark ? 'rgba(200,200,200,0.4)' : 'rgba(0,0,0,0.25)',
+                  transition: 'color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = isDark ? 'rgba(230,230,230,0.7)' : 'rgba(0,0,0,0.5)';
+                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = isDark ? 'rgba(200,200,200,0.4)' : 'rgba(0,0,0,0.25)';
+                  e.currentTarget.style.background = 'transparent';
+                }}
+                aria-label="Upload file"
+              >
+                <PaperclipIcon style={{ height: '1rem', width: '1rem' }} />
+              </button>
+
+              {/* Tools text button — like Gemini */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setToolsOpen((p) => !p); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    height: '2rem',
+                    padding: '0 0.625rem',
+                    borderRadius: '9999px',
+                    cursor: 'pointer',
+                    border: 'none',
+                    flexShrink: 0,
+                    background: toolsOpen
+                      ? (isDark ? 'rgba(var(--pfc-accent-rgb), 0.12)' : 'rgba(var(--pfc-accent-rgb), 0.08)')
+                      : 'transparent',
+                    color: toolsOpen
+                      ? 'var(--m3-primary)'
+                      : (isDark ? 'rgba(200,200,200,0.45)' : 'rgba(0,0,0,0.3)'),
+                    fontSize: '0.8125rem',
+                    fontWeight: 500,
+                    fontFamily: 'var(--font-sans)',
+                    transition: 'color 0.15s, background 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!toolsOpen) {
+                      e.currentTarget.style.color = isDark ? 'rgba(230,230,230,0.7)' : 'rgba(0,0,0,0.5)';
+                      e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!toolsOpen) {
+                      e.currentTarget.style.color = isDark ? 'rgba(200,200,200,0.45)' : 'rgba(0,0,0,0.3)';
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                  aria-label="Research tools"
+                >
+                  <WrenchIcon style={{ height: '0.875rem', width: '0.875rem' }} />
+                  Tools
+                </button>
+                <AnimatePresence>
+                  {toolsOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                      style={{
+                        position: 'absolute',
+                        bottom: 'calc(100% + 0.5rem)',
+                        left: 0,
+                        minWidth: '13rem',
+                        padding: '0.375rem',
+                        borderRadius: '0.75rem',
+                        background: isDark ? 'var(--m3-surface-container-high)' : 'rgba(255,255,255,0.65)',
+                        border: `1px solid ${isDark ? 'rgba(79,69,57,0.35)' : 'rgba(0,0,0,0.08)'}`,
+                        backdropFilter: 'blur(24px) saturate(1.4)',
+                        WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
+                        boxShadow: isDark
+                          ? '0 8px 32px -4px rgba(0,0,0,0.5)'
+                          : '0 8px 32px -4px rgba(0,0,0,0.10), 0 0 0 1px rgba(255,255,255,0.5) inset',
+                        zIndex: 50,
+                      }}
+                    >
+                      {[
+                        { icon: SparklesIcon, label: 'Meta-Analysis', desc: 'Synthesize evidence', action: () => { setValue('Synthesize the meta-analytic evidence on '); setToolsOpen(false); textareaRef.current?.focus(); } },
+                        { icon: NetworkIcon, label: 'Compare Studies', desc: 'Head-to-head', action: () => { setValue('Compare competing explanations for '); setToolsOpen(false); textareaRef.current?.focus(); } },
+                        { icon: BookOpenIcon, label: 'Literature Review', desc: 'Survey the field', action: () => { setValue('What does the strongest evidence show about '); setToolsOpen(false); textareaRef.current?.focus(); } },
+                      ].map((tool) => (
+                        <button
+                          key={tool.label}
+                          type="button"
+                          onClick={tool.action}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            width: '100%',
+                            padding: '0.5rem 0.625rem',
+                            borderRadius: '0.5rem',
+                            border: 'none',
+                            cursor: 'pointer',
+                            background: 'transparent',
+                            color: 'var(--foreground)',
+                            fontSize: '0.8125rem',
+                            fontFamily: 'var(--font-secondary)',
+                            textAlign: 'left',
+                            transition: 'background 0.12s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <tool.icon style={{ height: '0.875rem', width: '0.875rem', flexShrink: 0, color: 'var(--muted-foreground)' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 500, lineHeight: 1.2 }}>{tool.label}</div>
+                            <div style={{ fontSize: '0.6875rem', color: 'var(--muted-foreground)', opacity: 0.7, lineHeight: 1.2 }}>{tool.desc}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Spacer */}
+              <div style={{ flex: 1 }} />
+
+              {/* Send / Stop / Brain button */}
+              {isProcessing ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 rounded-full"
+                  onClick={onStop}
+                >
+                  <StopCircleIcon className="h-4 w-4 text-destructive" />
+                </Button>
+              ) : trimmedValue ? (
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  onClick={handleSubmit}
+                  style={{
+                    height: '2.25rem',
+                    width: '2.25rem',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    border: 'none',
+                    flexShrink: 0,
+                    background: 'var(--m3-primary)',
+                    color: 'var(--m3-on-primary)',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <ArrowUpIcon style={{ height: '1.125rem', width: '1.125rem' }} />
+                </motion.button>
+              ) : (
+                <BrainButtonWithToggle isDark={isDark} brainGlow={brainGlow} onBrainTap={handleBrainTap} />
+              )}
+            </div>
+          </>
+        ) : (
+          /* ═══ NON-HERO (chat mode) — single-row layout ═══ */
+          <div className="flex w-full items-center gap-2">
+            {showControlsToggle && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'h-7 w-7 shrink-0 rounded-xl transition-all duration-200',
+                  liveControlsOpen
+                    ? 'text-pfc-violet bg-pfc-violet/10'
+                    : 'text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/40',
+                )}
+                onClick={toggleLiveControls}
+              >
+                <SlidersHorizontalIcon className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            <div style={{ flex: 1, position: 'relative' }}>
+              {placeholderOverlay && !value && (
+                <div
+                  onClick={() => textareaRef.current?.focus()}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    pointerEvents: 'auto',
+                    cursor: 'text',
+                    zIndex: 1,
+                  }}
+                >
+                  {placeholderOverlay}
+                </div>
+              )}
+              <textarea
+                ref={textareaRef}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onInput={handleInput}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onClick={handleSearchBarClick}
+                placeholder={placeholderOverlay ? '' : 'Ask a research question...'}
+                className="flex-1 resize-none bg-transparent leading-relaxed text-foreground placeholder:text-muted-foreground/40 outline-none border-0 focus:outline-none focus:border-0 focus-visible:outline-none px-0 text-sm min-h-[24px] max-h-[200px] py-0"
+                rows={1}
+                maxLength={10000}
+                disabled={isProcessing}
+                style={{ boxShadow: 'none', width: '100%', ...inputStyle }}
+              />
+            </div>
+            {isProcessing ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-full"
+                onClick={onStop}
+              >
+                <StopCircleIcon className="h-4 w-4 text-destructive" />
+              </Button>
+            ) : trimmedValue ? (
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={handleSubmit}
+                style={{
+                  height: '2.5rem',
+                  width: '2.5rem',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  border: 'none',
+                  flexShrink: 0,
+                  background: 'var(--m3-primary)',
+                  color: 'var(--m3-on-primary)',
+                  transition: 'background 0.15s',
                 }}
               >
-                {placeholderOverlay}
-              </div>
+                <ArrowUpIcon style={{ height: '1.125rem', width: '1.125rem' }} />
+              </motion.button>
+            ) : (
+              <BrainButtonWithToggle isDark={isDark} brainGlow={brainGlow} onBrainTap={handleBrainTap} />
             )}
-            <textarea
-              ref={textareaRef}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onInput={handleInput}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              onClick={handleSearchBarClick}
-              placeholder={placeholderOverlay ? '' : 'Ask a research question...'}
-              className={cn(
-                'flex-1 resize-none bg-transparent leading-relaxed text-foreground placeholder:text-muted-foreground/40 outline-none border-0 focus:outline-none focus:border-0 focus-visible:outline-none px-0',
-                hero ? 'text-[0.9rem] min-h-[36px] max-h-[200px] py-[6px]' : 'text-sm min-h-[24px] max-h-[200px] py-0',
-              )}
-              rows={1}
-              maxLength={10000}
-              disabled={isProcessing}
-              style={{ boxShadow: 'none', width: '100%', ...inputStyle }}
-            />
           </div>
-
-          {/* Send / Stop / Brain button */}
-          {isProcessing ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 rounded-full"
-              onClick={onStop}
-            >
-              <StopCircleIcon className="h-4 w-4 text-destructive" />
-            </Button>
-          ) : trimmedValue ? (
-            /* Active send arrow */
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={handleSubmit}
-              style={{
-                height: '2.5rem',
-                width: '2.5rem',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                border: 'none',
-                flexShrink: 0,
-                background: 'var(--m3-primary)',
-                color: 'var(--m3-on-primary)',
-                transition: 'background 0.15s',
-              }}
-            >
-              <ArrowUpIcon style={{ height: '1.125rem', width: '1.125rem' }} />
-            </motion.button>
-          ) : (
-            /* Brain resting state — PFC logo + theme toggle */
-            <BrainButtonWithToggle isDark={isDark} brainGlow={brainGlow} onBrainTap={handleBrainTap} />
-          )}
-        </div>
+        )}
 
         {/* Grok-style inline suggestions — only appear when typing */}
         <AnimatePresence>
