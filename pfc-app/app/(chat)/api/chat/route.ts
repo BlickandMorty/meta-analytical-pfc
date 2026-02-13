@@ -12,7 +12,7 @@ import {
   readFileFromDisk,
 } from '@/lib/engine/file-processor';
 import { writeFile, mkdir } from 'fs/promises';
-import { join, extname } from 'path';
+import { join, extname, resolve, basename } from 'path';
 import {
   saveMessage,
   createChat,
@@ -153,13 +153,25 @@ async function _POST(request: NextRequest) {
         try {
           const base64Data = (att.uri || '').split(',')[1] || '';
           const buffer = Buffer.from(base64Data, 'base64');
-          const ext = extname(att.name).toLowerCase();
+          // Sanitize attachment name: use only the base filename to prevent path traversal
+          const safeName = basename(att.name || 'file');
+          const ext = extname(safeName).toLowerCase();
           const category = classifyFile(att.mimeType, ext);
+
+          // Sanitize attachment id: strip any path separators to prevent traversal
+          const safeId = (att.id || generateUUID()).replace(/[/\\]/g, '_');
 
           // Save to uploads directory
           const uploadsDir = join(process.cwd(), 'uploads');
           await mkdir(uploadsDir, { recursive: true });
-          const savedPath = join(uploadsDir, `${att.id}${ext}`);
+          const savedPath = join(uploadsDir, `${safeId}${ext}`);
+
+          // Final guard: ensure the resolved path is still within uploads dir
+          if (!resolve(savedPath).startsWith(resolve(uploadsDir))) {
+            logger.error('chat/route', `Path traversal blocked for attachment: ${att.id}`);
+            continue;
+          }
+
           await writeFile(savedPath, buffer);
 
           const extractedText = await extractTextContent(buffer, att.mimeType, ext);

@@ -211,9 +211,17 @@ async function _POST(request: NextRequest) {
             { role: 'system', content: systemPrompt },
           ];
 
-          if (conversationHistory) {
+          if (Array.isArray(conversationHistory)) {
             for (const msg of conversationHistory.slice(-8)) {
-              messages.push({ role: msg.role, content: msg.content });
+              // Validate each history entry: role must be 'user' or 'assistant', content must be a string
+              if (
+                msg &&
+                typeof msg === 'object' &&
+                (msg.role === 'user' || msg.role === 'assistant') &&
+                typeof msg.content === 'string'
+              ) {
+                messages.push({ role: msg.role, content: msg.content.slice(0, 50_000) });
+              }
             }
           }
 

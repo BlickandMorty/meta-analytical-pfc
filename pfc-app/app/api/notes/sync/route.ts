@@ -168,7 +168,7 @@ async function _POST(req: NextRequest) {
 
       default:
         return NextResponse.json(
-          { error: `Unknown action: ${(body as { action: string }).action}` },
+          { error: 'Unknown action' },
           { status: 400 },
         );
     }

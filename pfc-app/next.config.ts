@@ -65,6 +65,27 @@ const nextConfig: NextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
           },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            // Report-only CSP: logs violations without breaking the app.
+            // Allows inline styles/scripts (Next.js needs them), local resources,
+            // and common CDN origins used for fonts/assets.
+            key: 'Content-Security-Policy-Report-Only',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob:",
+              "font-src 'self' data:",
+              "connect-src 'self' http://localhost:* ws://localhost:* https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.semanticscholar.org",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; '),
+          },
         ],
       },
     ];
