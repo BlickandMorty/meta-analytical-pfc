@@ -1477,7 +1477,12 @@ export async function* runPipeline(
   }
 
   // Template-generated content
-  const rawAnalysis = generateRawAnalysis(qa);
+  let rawAnalysis = generateRawAnalysis(qa);
+
+  // In simulation mode, acknowledge attached files
+  if (images && images.length > 0) {
+    rawAnalysis = `[Attached ${images.length} image(s) — in API/Local mode, these would be analyzed via vision API.]\n\n${rawAnalysis}`;
+  }
   const laymanSummary = generateLaymanSummary(qa, rawAnalysis);
   const reflection = generateReflection(stageResults, rawAnalysis);
   const arbitration = generateArbitration(stageResults);
