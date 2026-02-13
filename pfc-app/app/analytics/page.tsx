@@ -30,7 +30,7 @@ function SubpageLoader() {
    ═══════════════════════════════════════════════════════════ */
 
 const DiagnosticsPage = dynamic(() => import('../diagnostics/page'), { ssr: false, loading: SubpageLoader });
-const VisualizerPage = dynamic(() => import('../visualizer/page'), { ssr: false, loading: SubpageLoader });
+const VisualizerPage = dynamic(() => import('../visualizer/visualizer-content'), { ssr: false, loading: SubpageLoader });
 const SteeringLabPage = dynamic(() => import('../steering-lab/page'), { ssr: false, loading: SubpageLoader });
 const CortexArchivePage = dynamic(() => import('../cortex-archive/page'), { ssr: false, loading: SubpageLoader });
 const PipelinePage = dynamic(() => import('../pipeline/page'), { ssr: false, loading: SubpageLoader });

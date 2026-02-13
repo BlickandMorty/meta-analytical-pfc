@@ -45,25 +45,41 @@ import { PixelBook } from '@/components/pixel-book';
 // Dynamic imports — code-split heavy editor components
 // ═══════════════════════════════════════════════════════════════════
 
+function DynamicFallback() {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '2rem', opacity: 0.3,
+    }}>
+      <div style={{
+        width: '1.5rem', height: '1.5rem', borderRadius: '50%',
+        border: '2px solid currentColor', borderTopColor: 'transparent',
+        animation: 'pfc-dyn-spin 0.8s linear infinite',
+      }} />
+      <style>{`@keyframes pfc-dyn-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
 const NotesSidebar = dynamic(
   () => import('@/components/notes/notes-sidebar').then((m) => ({ default: m.NotesSidebar })),
-  { ssr: false },
+  { ssr: false, loading: DynamicFallback },
 );
 const BlockEditor = dynamic(
   () => import('@/components/notes/block-editor').then((m) => ({ default: m.BlockEditor })),
-  { ssr: false },
+  { ssr: false, loading: DynamicFallback },
 );
 const VaultPicker = dynamic(
   () => import('@/components/notes/vault-picker').then((m) => ({ default: m.VaultPicker })),
-  { ssr: false },
+  { ssr: false, loading: DynamicFallback },
 );
 const ConceptCorrelationPanel = dynamic(
   () => import('@/components/notes/concept-panel').then((m) => ({ default: m.ConceptCorrelationPanel })),
-  { ssr: false },
+  { ssr: false, loading: DynamicFallback },
 );
 const NoteCanvas = dynamic(
   () => import('@/components/notes/note-canvas').then((m) => ({ default: m.NoteCanvas })),
-  { ssr: false },
+  { ssr: false, loading: DynamicFallback },
 );
 
 // ── 60fps: Cupertino easing for CSS transitions (S-Tier only) ──
