@@ -29,17 +29,33 @@ import {
   SearchIcon,
   SlidersHorizontalIcon,
   SmartphoneIcon,
+  AnchorIcon,
+  SparklesIcon,
+  ImageIcon,
+  CloudSunIcon,
+  BookOpenIcon,
+  DownloadIcon,
+  FileJsonIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+  ActivityIcon,
+  MessageSquareIcon,
+  BrainIcon,
+  NetworkIcon,
+  PackageIcon,
 } from 'lucide-react';
 import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
 import { formatBytes } from '@/lib/engine/llm/ollama';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
+import { exportData, downloadExport, getMimeType } from '@/lib/research/export';
+import type { ExportFormat, ExportDataType } from '@/lib/research/types';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { cn } from '@/lib/utils';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { OPENAI_MODELS, ANTHROPIC_MODELS } from '@/lib/engine/llm/config';
-import type { InferenceMode, ApiProvider, OpenAIModel, AnthropicModel } from '@/lib/engine/llm/config';
+import { OPENAI_MODELS, ANTHROPIC_MODELS, GOOGLE_MODELS } from '@/lib/engine/llm/config';
+import type { InferenceMode, ApiProvider, OpenAIModel, AnthropicModel, GoogleModel } from '@/lib/engine/llm/config';
 import { getSOARLimitations } from '@/lib/engine/soar/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +94,9 @@ export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [systemAuto, setSystemAuto] = useState(false);
+  const [systemDarkVariant, setSystemDarkVariant] = useState<string>('dark');
+  const [systemLightVariant, setSystemLightVariant] = useState<string>('light');
 
   const inferenceMode = usePFCStore((s) => s.inferenceMode);
   const setInferenceMode = usePFCStore((s) => s.setInferenceMode);
@@ -89,6 +108,8 @@ export default function SettingsPage() {
   const setOpenAIModel = usePFCStore((s) => s.setOpenAIModel);
   const anthropicModel = usePFCStore((s) => s.anthropicModel);
   const setAnthropicModel = usePFCStore((s) => s.setAnthropicModel);
+  const googleModel = usePFCStore((s) => s.googleModel);
+  const setGoogleModel = usePFCStore((s) => s.setGoogleModel);
   const ollamaBaseUrl = usePFCStore((s) => s.ollamaBaseUrl);
   const setOllamaBaseUrl = usePFCStore((s) => s.setOllamaBaseUrl);
   const ollamaModel = usePFCStore((s) => s.ollamaModel);
@@ -106,6 +127,8 @@ export default function SettingsPage() {
   const soarConfig = usePFCStore((s) => s.soarConfig);
   const setSOARConfig = usePFCStore((s) => s.setSOARConfig);
   const setSOAREnabled = usePFCStore((s) => s.setSOAREnabled);
+  const analyticsEngineEnabled = usePFCStore((s) => s.analyticsEngineEnabled);
+  const setAnalyticsEngineEnabled = usePFCStore((s) => s.setAnalyticsEngineEnabled);
 
   const soarLimitations = getSOARLimitations(inferenceMode);
 
@@ -115,8 +138,48 @@ export default function SettingsPage() {
   const [hwLoading, setHwLoading] = useState(false);
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
 
+  // ── Export state ──
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('json');
+  const [selectedData, setSelectedData] = useState<ExportDataType>('all');
+  const [exported, setExported] = useState(false);
+
+  const signals = usePFCStore((s) => s.signalHistory);
+  const papers = usePFCStore((s) => s.researchPapers);
+  const messages = usePFCStore((s) => s.messages);
+  const cortexArchive = usePFCStore((s) => s.cortexArchive);
+
+  const handleExport = useCallback(() => {
+    const content = exportData(selectedFormat, selectedData, {
+      signals,
+      papers,
+      chatHistory: messages,
+      cortexSnapshots: cortexArchive,
+    });
+    const ext =
+      selectedFormat === 'bibtex' ? 'bib' :
+      selectedFormat === 'ris' ? 'ris' :
+      selectedFormat;
+    downloadExport(
+      content,
+      `pfc-export-${selectedData}-${new Date().toISOString().slice(0, 10)}.${ext}`,
+      getMimeType(selectedFormat),
+    );
+    setExported(true);
+    setTimeout(() => setExported(false), 2000);
+  }, [selectedFormat, selectedData, signals, papers, messages, cortexArchive]);
+
   useEffect(() => {
     setMounted(true);
+    // Load system auto-theme settings
+    setSystemAuto(localStorage.getItem('pfc-system-auto') === 'true');
+    const storedVariant = localStorage.getItem('pfc-system-dark-variant');
+    if (storedVariant && ['dark', 'navy', 'cosmic', 'sunset', 'oled'].includes(storedVariant)) {
+      setSystemDarkVariant(storedVariant);
+    }
+    const storedLightVariant = localStorage.getItem('pfc-system-light-variant');
+    if (storedLightVariant && ['light', 'sunny'].includes(storedLightVariant)) {
+      setSystemLightVariant(storedLightVariant);
+    }
     const storedKey = localStorage.getItem('pfc-api-key') || '';
     if (storedKey && !apiKey) setApiKey(storedKey);
     const storedMode = localStorage.getItem('pfc-inference-mode') as InferenceMode;
@@ -218,7 +281,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: inferenceMode, provider: apiProvider, apiKey, openaiModel, anthropicModel, ollamaBaseUrl, ollamaModel }),
+        body: JSON.stringify({ mode: inferenceMode, provider: apiProvider, apiKey, openaiModel, anthropicModel, googleModel, ollamaBaseUrl, ollamaModel }),
       });
       const data = await res.json();
       if (data.success) setTestStatus('success');
@@ -248,8 +311,8 @@ export default function SettingsPage() {
       <div className="space-y-6">
         {/* Inference Mode */}
         <GlassSection title="Inference Mode">
-          <p className="text-sm text-muted-foreground/60 mb-5">
-            Choose how PFC processes queries. Simulation uses the built-in engine; API mode connects to cloud LLMs; Local uses Ollama.
+          <p className="text-sm text-muted-foreground/60 mb-5" style={{ fontFamily: 'var(--font-secondary)', fontWeight: 400 }}>
+            Choose how ResearchLab processes queries. Simulation uses the built-in heuristic engine; API mode connects to cloud LLMs; Local uses Ollama.
           </p>
           <div className="grid grid-cols-3 gap-4 mb-5">
             {MODE_OPTIONS.map((opt) => {
@@ -267,8 +330,8 @@ export default function SettingsPage() {
                   className="flex-col"
                 >
                   <Icon style={{ height: 20, width: 20 }} />
-                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.625rem', fontWeight: 400 }}>{opt.label}</span>
-                  <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 400 }}>{opt.description}</span>
+                  <span style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.625rem', fontWeight: 500 }}>{opt.label}</span>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 400, fontFamily: 'var(--font-secondary)' }}>{opt.description}</span>
                 </GlassBubbleButton>
               );
             })}
@@ -280,8 +343,12 @@ export default function SettingsPage() {
               <motion.div initial={{ opacity: 0, scaleY: 0 }} animate={{ opacity: 1, scaleY: 1 }} exit={{ opacity: 0, scaleY: 0 }} className="space-y-4 pt-4 border-t border-border/20" style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}>
                 <div>
                   <label className="text-sm font-semibold text-muted-foreground mb-2 block">Provider</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([{ value: 'openai' as const, label: 'OpenAI', hint: 'GPT-4o' }, { value: 'anthropic' as const, label: 'Anthropic', hint: 'Claude' }]).map((p) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: 'openai' as const, label: 'OpenAI', hint: 'GPT-5.3' },
+                      { value: 'anthropic' as const, label: 'Anthropic', hint: 'Claude' },
+                      { value: 'google' as const, label: 'Google', hint: 'Gemini' },
+                    ]).map((p) => (
                       <GlassBubbleButton
                         key={p.value}
                         onClick={() => handleProviderChange(p.value)}
@@ -290,24 +357,34 @@ export default function SettingsPage() {
                         fullWidth
                         className="flex-col"
                       >
-                        <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5625rem', fontWeight: 400 }}>{p.label}</span>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 400 }}>{p.hint}</span>
+                        <span style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5625rem', fontWeight: 500 }}>{p.label}</span>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.5, fontWeight: 400, fontFamily: 'var(--font-secondary)' }}>{p.hint}</span>
                       </GlassBubbleButton>
                     ))}
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-muted-foreground mb-2 block">Model</label>
-                  <select value={apiProvider === 'openai' ? openaiModel : anthropicModel} onChange={(e) => { if (apiProvider === 'openai') setOpenAIModel(e.target.value as OpenAIModel); else setAnthropicModel(e.target.value as AnthropicModel); }} className="w-full rounded-full border border-border/30 bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-pfc-violet/50">
-                    {(apiProvider === 'openai' ? OPENAI_MODELS : ANTHROPIC_MODELS).map((m) => (
+                  <select value={apiProvider === 'openai' ? openaiModel : apiProvider === 'google' ? googleModel : anthropicModel} onChange={(e) => { if (apiProvider === 'openai') setOpenAIModel(e.target.value as OpenAIModel); else if (apiProvider === 'google') setGoogleModel(e.target.value as GoogleModel); else setAnthropicModel(e.target.value as AnthropicModel); }} className="w-full rounded-full border border-border/30 bg-background px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-pfc-violet/50">
+                    {(apiProvider === 'openai' ? OPENAI_MODELS : apiProvider === 'google' ? GOOGLE_MODELS : ANTHROPIC_MODELS).map((m) => (
                       <option key={m.value} value={m.value}>{m.label}</option>
                     ))}
                   </select>
                 </div>
                 <div>
                   <label className="text-sm font-semibold text-muted-foreground mb-2 block">API Key</label>
-                  <Input type="password" placeholder={apiProvider === 'openai' ? 'sk-...' : 'sk-ant-...'} value={apiKey} onChange={(e) => handleApiKeyChange(e.target.value)} className="font-mono text-sm rounded-xl" />
-                  <p className="text-xs text-muted-foreground/50 mt-1">Stored locally. Never sent to our servers.</p>
+                  <Input type="password" placeholder={apiProvider === 'openai' ? 'sk-...' : apiProvider === 'google' ? 'AIza...' : 'sk-ant-...'} value={apiKey} onChange={(e) => handleApiKeyChange(e.target.value)} className="font-mono text-sm rounded-xl" />
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <p className="text-xs text-muted-foreground/50">Stored locally. Never sent to our servers.</p>
+                    <a
+                      href={apiProvider === 'openai' ? 'https://platform.openai.com/api-keys' : apiProvider === 'google' ? 'https://aistudio.google.com/apikey' : 'https://console.anthropic.com/settings/keys'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-pfc-violet hover:underline whitespace-nowrap"
+                    >
+                      Get API Key <ExternalLinkIcon className="h-2.5 w-2.5" />
+                    </a>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <GlassBubbleButton size="sm" color="violet" onClick={testConnection} disabled={!apiKey || testStatus === 'testing'}>
@@ -430,14 +507,14 @@ export default function SettingsPage() {
 
         {/* Suite Tier */}
         <GlassSection title="Suite Tier">
-          <p className="text-sm text-muted-foreground/60 mb-5">
+          <p className="text-sm text-muted-foreground/60 mb-5" style={{ fontFamily: 'var(--font-secondary)', fontWeight: 400 }}>
             Each tier includes everything below it. Lower tiers skip heavy computation for mobile and low-power devices.
           </p>
           <div className="grid grid-cols-3 gap-4 mb-5">
             {([
-              { value: 'notes' as const, label: 'Notes & Research', desc: 'Chat, library, export', icon: FlaskConicalIcon, color: 'green' as const },
-              { value: 'programming' as const, label: 'Programming', desc: '+ Code tools, steering', icon: CodeIcon, color: 'violet' as const },
-              { value: 'full' as const, label: 'Full Measurement', desc: '+ Pipeline, signals, TDA', icon: LayersIcon, color: 'ember' as const },
+              { value: 'notes' as const, label: 'Notes & Research (Light)', desc: 'Chat, library, export', icon: FlaskConicalIcon, color: 'green' as const },
+              { value: 'programming' as const, label: 'Deep Analysis', desc: '+ Steering, code tools, analytics', icon: CodeIcon, color: 'violet' as const },
+              { value: 'full' as const, label: 'Full AI & Measurement', desc: '+ Pipeline, signals, deep analysis', icon: LayersIcon, color: 'ember' as const },
             ]).map((opt) => {
               const Icon = opt.icon;
               return (
@@ -451,8 +528,8 @@ export default function SettingsPage() {
                   className="flex-col"
                 >
                   <Icon style={{ height: 20, width: 20 }} />
-                  <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5625rem', fontWeight: 400 }}>{opt.label}</span>
-                  <span style={{ fontSize: '0.6875rem', opacity: 0.5, fontWeight: 400 }}>{opt.desc}</span>
+                  <span style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5625rem', fontWeight: 500 }}>{opt.label}</span>
+                  <span style={{ fontSize: '0.6875rem', opacity: 0.5, fontWeight: 400, fontFamily: 'var(--font-secondary)' }}>{opt.desc}</span>
                 </GlassBubbleButton>
               );
             })}
@@ -462,8 +539,8 @@ export default function SettingsPage() {
               <motion.div initial={{ opacity: 0, scaleY: 0 }} animate={{ opacity: 1, scaleY: 1 }} exit={{ opacity: 0, scaleY: 0 }} className="pt-3 border-t border-border/20" style={{ transformOrigin: 'top', transform: 'translateZ(0)' }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold">Measurement Suite</p>
-                    <p className="text-xs text-muted-foreground/50">Toggle to temporarily disable heavy measurement without switching tiers</p>
+                    <p className="text-sm font-semibold">Full AI & Measurement</p>
+                    <p className="text-xs text-muted-foreground/50">Toggle to temporarily disable full AI pipeline without switching tiers</p>
                   </div>
                   <button
                     onClick={() => setMeasurementEnabled(!measurementEnabled)}
@@ -483,6 +560,81 @@ export default function SettingsPage() {
           </AnimatePresence>
         </GlassSection>
 
+        {/* Analytics Engine */}
+        <GlassSection title="Analytics Engine">
+          <p className="text-sm text-muted-foreground/60 mb-5" style={{ fontFamily: 'var(--font-secondary)', fontWeight: 400 }}>
+            Controls the research analytics pipeline: signal generation (confidence, entropy, dissonance), structural complexity analysis, steering directive composition, and SOAR meta-reasoning. The pipeline uses structured prompt templates encoding mathematical frameworks (Bradford Hill, Cohen's d, DerSimonian-Laird, Bayesian updating) to guide LLM reasoning. Disable this to use the app as a pure chat + notes tool without analytical overhead.
+          </p>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center h-8 w-8 rounded-xl bg-pfc-ember/10">
+                <ActivityIcon className="h-4 w-4 text-pfc-ember" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold" style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5625rem', fontWeight: 500 }}>Analytics Engine</p>
+                <p className="text-xs text-muted-foreground/50">Signal computation, steering, SOAR</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAnalyticsEngineEnabled(!analyticsEngineEnabled)}
+              className={cn(
+                'relative h-6 w-11 rounded-full transition-colors',
+                analyticsEngineEnabled ? 'bg-pfc-green' : 'bg-muted-foreground/20',
+              )}
+            >
+              <div className={cn(
+                'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform shadow-sm',
+                analyticsEngineEnabled ? 'translate-x-5' : 'translate-x-0.5',
+              )} />
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {!analyticsEngineEnabled && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="rounded-xl border border-pfc-yellow/20 bg-pfc-yellow/5 px-4 py-3"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertTriangleIcon className="h-4 w-4 text-pfc-yellow" />
+                  <span className="text-sm font-semibold text-pfc-yellow">Analytics Disabled</span>
+                </div>
+                <p className="text-xs text-muted-foreground/60">
+                  Signal computation, steering directives, and SOAR meta-reasoning are all disabled. The AI chat will still work but without analytical pipeline processing — responses will not include confidence scores, evidence grades, or epistemic tags.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {analyticsEngineEnabled && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2 text-xs text-muted-foreground/50"
+              >
+                <p className="font-semibold text-foreground/60 text-[11px]">What the analytics engine does:</p>
+                <ul className="space-y-1.5 pl-3">
+                  <li className="flex items-start gap-2"><span className="text-pfc-green mt-0.5">●</span> <span><strong>Signal Generation</strong> — Heuristic functions of query properties (domain, complexity, entity count) producing confidence, entropy, dissonance, risk, and health. Formula: <code className="font-mono bg-muted px-1 rounded text-[10px]">healthScore = 1 - entropy×0.45 - dissonance×0.35</code></span></li>
+                  <li className="flex items-start gap-2"><span className="text-pfc-cyan mt-0.5">●</span> <span><strong>Structural Complexity</strong> — Heuristic structural metrics derived from entity count and complexity, providing useful relative rankings for query categorization and analytical depth scaling.</span></li>
+                  <li className="flex items-start gap-2"><span className="text-pfc-violet mt-0.5">●</span> <span><strong>Steering Directives</strong> — Translates your control settings (complexity bias, adversarial intensity, Bayesian prior strength) into behavioral instructions injected into the LLM system prompt. This is the bridge between slider controls and actual LLM behavior.</span></li>
+                  <li className="flex items-start gap-2"><span className="text-pfc-ember mt-0.5">●</span> <span><strong>SOAR Meta-Reasoning</strong> — Self-Optimizing Analytical Reasoning loop that detects hard queries and generates stepping-stone curricula. Uses heuristic difficulty estimation + LLM-powered curriculum generation.</span></li>
+                </ul>
+                <div className="mt-3 rounded-lg border border-muted-foreground/10 bg-muted/30 px-3 py-2.5">
+                  <p className="font-semibold text-foreground/60 text-[10px] mb-1.5">Computation honesty note</p>
+                  <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
+                    Signals are <strong>heuristic</strong> — hand-tuned formulas responding to query properties and your steering settings. They are not calibrated probabilities or information-theoretic measures. In <strong>API/Local mode</strong>, the prompt-composer translates signals into behavioral LLM directives and structured analytical frameworks (Bradford Hill criteria, Cohen's d scale, DerSimonian-Laird concepts, Bayesian updating) — so they genuinely influence output quality and analytical rigor. The <strong>steering engine</strong> (3-layer hybrid: contrastive vectors + Bayesian priors + k-NN recall) uses real linear algebra.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </GlassSection>
+
         {/* SOAR Meta-Reasoning */}
         <GlassSection title="SOAR Meta-Reasoning">
           <p className="text-sm text-muted-foreground/60 mb-5">
@@ -496,7 +648,7 @@ export default function SettingsPage() {
                 <BrainCircuitIcon className="h-4 w-4 text-pfc-cyan" />
               </span>
               <div>
-                <p className="text-sm font-semibold" style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5625rem', fontWeight: 400 }}>Enable SOAR</p>
+                <p className="text-sm font-semibold" style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5625rem', fontWeight: 500 }}>Enable SOAR</p>
                 <p className="text-xs text-muted-foreground/50">Teacher-student meta-reasoning loop</p>
               </div>
             </div>
@@ -687,27 +839,338 @@ export default function SettingsPage() {
 
         {/* Appearance */}
         <GlassSection title="Appearance">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-8">
             {([
               { value: 'light', label: 'Light', Icon: SunIcon },
-              { value: 'dark', label: 'Dark', Icon: MoonIcon },
+              { value: 'sunny', label: 'Sunny', Icon: CloudSunIcon },
+              { value: 'dark', label: 'Ember', Icon: MoonIcon },
+              { value: 'navy', label: 'Navy', Icon: AnchorIcon },
+              { value: 'cosmic', label: 'Cosmic', Icon: SparklesIcon },
+              { value: 'sunset', label: 'Sunset', Icon: ImageIcon },
               { value: 'oled', label: 'OLED', Icon: SmartphoneIcon },
               { value: 'system', label: 'System', Icon: MonitorIcon },
-            ] as const).map(({ value, label, Icon }) => (
-              <GlassBubbleButton
-                key={value}
-                onClick={() => setTheme(value)}
-                active={mounted && theme === value}
-                color="ember"
-                size="lg"
-                fullWidth
-                className="flex-col"
-              >
-                <Icon style={{ height: 20, width: 20 }} />
-                <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5625rem', fontWeight: 400 }}>{label}</span>
-              </GlassBubbleButton>
-            ))}
+            ] as const).map(({ value, label, Icon }) => {
+              const isSystem = value === 'system';
+              const isActive = mounted && (isSystem ? systemAuto : (!systemAuto && theme === value));
+              return (
+                <GlassBubbleButton
+                  key={value}
+                  onClick={() => {
+                    if (isSystem) {
+                      // Enable system auto mode
+                      localStorage.setItem('pfc-system-auto', 'true');
+                      setSystemAuto(true);
+                      // Apply immediately
+                      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                      const darkV = localStorage.getItem('pfc-system-dark-variant') || 'dark';
+                      const lightV = localStorage.getItem('pfc-system-light-variant') || 'light';
+                      setTheme(prefersDark ? darkV : lightV);
+                      window.dispatchEvent(new CustomEvent('pfc-system-theme-update'));
+                    } else {
+                      // Disable system auto mode, apply direct theme
+                      localStorage.setItem('pfc-system-auto', 'false');
+                      setSystemAuto(false);
+                      setTheme(value);
+                    }
+                  }}
+                  active={isActive}
+                  color="ember"
+                  size="lg"
+                  fullWidth
+                  className="flex-col"
+                >
+                  <Icon style={{ height: 20, width: 20 }} />
+                  <span style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5625rem', fontWeight: 500 }}>{label}</span>
+                </GlassBubbleButton>
+              );
+            })}
           </div>
+
+          {/* System dark variant picker — shown when system auto is active */}
+          <AnimatePresence>
+            {mounted && systemAuto && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{ overflow: 'hidden' }}
+              >
+                <p className="text-xs text-muted-foreground/60 mt-3 mb-2">
+                  When your system is in dark mode, use:
+                </p>
+                <div className="grid grid-cols-5 gap-2" style={{ maxWidth: '28rem' }}>
+                  {([
+                    { value: 'dark', label: 'Ember', Icon: MoonIcon },
+                    { value: 'navy', label: 'Navy', Icon: AnchorIcon },
+                    { value: 'cosmic', label: 'Cosmic', Icon: SparklesIcon },
+                    { value: 'sunset', label: 'Sunset', Icon: ImageIcon },
+                    { value: 'oled', label: 'OLED', Icon: SmartphoneIcon },
+                  ] as const).map(({ value, label, Icon }) => (
+                    <GlassBubbleButton
+                      key={value}
+                      onClick={() => {
+                        localStorage.setItem('pfc-system-dark-variant', value);
+                        setSystemDarkVariant(value);
+                        // If system is currently in dark mode, apply immediately
+                        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        if (prefersDark) setTheme(value);
+                        window.dispatchEvent(new CustomEvent('pfc-system-theme-update'));
+                      }}
+                      active={systemDarkVariant === value}
+                      color="ember"
+                      size="sm"
+                      fullWidth
+                      className="flex-col"
+                    >
+                      <Icon style={{ height: 16, width: 16 }} />
+                      <span style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5rem', fontWeight: 500 }}>{label}</span>
+                    </GlassBubbleButton>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* System light variant picker — shown when system auto is active */}
+          <AnimatePresence>
+            {mounted && systemAuto && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                style={{ overflow: 'hidden' }}
+              >
+                <p className="text-xs text-muted-foreground/60 mt-3 mb-2">
+                  When your system is in light mode, use:
+                </p>
+                <div className="grid grid-cols-2 gap-2" style={{ maxWidth: '14rem' }}>
+                  {([
+                    { value: 'light', label: 'Light', Icon: SunIcon },
+                    { value: 'sunny', label: 'Sunny', Icon: CloudSunIcon },
+                  ] as const).map(({ value, label, Icon }) => (
+                    <GlassBubbleButton
+                      key={value}
+                      onClick={() => {
+                        localStorage.setItem('pfc-system-light-variant', value);
+                        setSystemLightVariant(value);
+                        // If system is currently in light mode, apply immediately
+                        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        if (!prefersDark) setTheme(value);
+                        window.dispatchEvent(new CustomEvent('pfc-system-theme-update'));
+                      }}
+                      active={systemLightVariant === value}
+                      color="ember"
+                      size="sm"
+                      fullWidth
+                      className="flex-col"
+                    >
+                      <Icon style={{ height: 16, width: 16 }} />
+                      <span style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5rem', fontWeight: 500 }}>{label}</span>
+                    </GlassBubbleButton>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <p className="text-xs text-muted-foreground/50 mt-3">
+            Sunny — animated sky wallpapers. Ember — warm brown tones. Navy — deep indigo. Cosmic — animated space wallpapers. Sunset — animated mountain sunset. OLED — true black.
+          </p>
+        </GlassSection>
+
+        {/* Wallpaper (Cosmic mode) */}
+        <GlassSection title="Cosmic Scene">
+          <p className="text-xs text-muted-foreground/60 mb-3">
+            Choose the starting scene for Cosmic mode. Scenes auto-cycle every 55 seconds. Both are procedurally generated pixel art.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { key: 'blue-planet', label: 'Blue Planet', desc: 'Deep space with a ringed teal planet', gradient: 'linear-gradient(135deg, #04020E 0%, #0A1530 40%, #1A4060 70%, #060318 100%)' },
+              { key: 'purple-planets', label: 'Purple Planets', desc: 'Vibrant nebula with multiple planets', gradient: 'linear-gradient(135deg, #08020F 0%, #2A1040 40%, #401060 70%, #050210 100%)' },
+            ] as const).map(({ key, label, desc, gradient }) => {
+              const stored = typeof window !== 'undefined' ? localStorage.getItem('pfc-cosmic-wallpaper') : null;
+              const isActive = stored === key || (!stored && key === 'blue-planet');
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    localStorage.setItem('pfc-cosmic-wallpaper', key);
+                    // Force re-render by switching theme briefly
+                    if (theme === 'cosmic') {
+                      setTheme('dark');
+                      setTimeout(() => setTheme('cosmic'), 50);
+                    }
+                  }}
+                  style={{
+                    position: 'relative',
+                    aspectRatio: '16/9',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    border: isActive ? '2px solid var(--pfc-accent)' : '1px solid var(--border)',
+                    cursor: 'pointer',
+                    background: gradient,
+                    padding: 0,
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  {/* Fake pixel stars overlay */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'radial-gradient(1px 1px at 20% 30%, rgba(200,210,255,0.5) 0%, transparent 100%), radial-gradient(1px 1px at 60% 15%, rgba(200,210,255,0.4) 0%, transparent 100%), radial-gradient(1px 1px at 80% 60%, rgba(200,210,255,0.3) 0%, transparent 100%), radial-gradient(2px 2px at 40% 70%, rgba(180,200,255,0.4) 0%, transparent 100%)',
+                  }} />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    padding: '6px 8px',
+                    background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                  }}>
+                    <div style={{
+                      fontSize: '0.6875rem',
+                      fontFamily: 'var(--font-heading)',
+                      color: '#E0DCD4',
+                      fontWeight: 500,
+                    }}>
+                      {label}
+                    </div>
+                    <div style={{
+                      fontSize: '0.5rem',
+                      color: 'rgba(200,200,210,0.6)',
+                      marginTop: '1px',
+                    }}>
+                      {desc}
+                    </div>
+                  </div>
+                  {isActive && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '6px',
+                      right: '6px',
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      background: 'var(--pfc-accent)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <CheckCircle2Icon style={{ width: '12px', height: '12px', color: '#fff' }} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </GlassSection>
+
+        {/* Sunny Scene section removed — single scene (fluffy-clouds) only */}
+
+        {/* Documentation */}
+        <GlassSection title="Documentation">
+          <p className="text-sm text-muted-foreground/60 mb-3">Reference guides for the PFC system — brain circuits, pipeline architecture, and features.</p>
+          <Button variant="outline" size="sm" className="gap-1.5 rounded-full" onClick={() => router.push('/docs')}>
+            <BookOpenIcon className="h-3.5 w-3.5" />
+            Open Documentation
+          </Button>
+        </GlassSection>
+
+        {/* Export Data */}
+        <GlassSection title="Export Data">
+          <p className="text-sm text-muted-foreground/60 mb-4" style={{ fontFamily: 'var(--font-secondary)', fontWeight: 400 }}>
+            Export raw data, signals, research papers, and analysis results.
+          </p>
+
+          {/* Data count badges */}
+          <div className="flex items-center gap-2 flex-wrap mb-5">
+            <Badge variant="secondary" className="text-[10px] bg-pfc-green/10 text-pfc-green border-0">
+              {signals.length} signals
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] bg-pfc-violet/10 text-pfc-violet border-0">
+              {papers.length} papers
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] bg-pfc-ember/10 text-pfc-ember border-0">
+              {messages.length} messages
+            </Badge>
+            <Badge variant="secondary" className="text-[10px] bg-pfc-cyan/10 text-pfc-cyan border-0">
+              {cortexArchive.length} snapshots
+            </Badge>
+          </div>
+
+          {/* What to export */}
+          <div className="mb-5">
+            <label className="text-xs font-semibold text-muted-foreground mb-2 block">What to Export</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: 'all' as ExportDataType, label: 'Everything', icon: PackageIcon },
+                { value: 'signals' as ExportDataType, label: 'Signals', icon: ActivityIcon },
+                { value: 'papers' as ExportDataType, label: 'Papers', icon: BookOpenIcon },
+                { value: 'chat-history' as ExportDataType, label: 'Chat', icon: MessageSquareIcon },
+                { value: 'pipeline-runs' as ExportDataType, label: 'Pipeline', icon: NetworkIcon },
+                { value: 'thought-graphs' as ExportDataType, label: 'Thoughts', icon: BrainIcon },
+              ]).map((opt) => {
+                const Icon = opt.icon;
+                return (
+                  <GlassBubbleButton
+                    key={opt.value}
+                    onClick={() => setSelectedData(opt.value)}
+                    active={selectedData === opt.value}
+                    color="violet"
+                    size="sm"
+                    fullWidth
+                    className="flex-col"
+                  >
+                    <Icon style={{ height: 14, width: 14 }} />
+                    <span style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5rem', fontWeight: 500 }}>{opt.label}</span>
+                  </GlassBubbleButton>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Format */}
+          <div className="mb-5">
+            <label className="text-xs font-semibold text-muted-foreground mb-2 block">Format</label>
+            <div className="grid grid-cols-5 gap-2">
+              {([
+                { value: 'json' as ExportFormat, label: 'JSON', icon: FileJsonIcon },
+                { value: 'csv' as ExportFormat, label: 'CSV', icon: FileSpreadsheetIcon },
+                { value: 'markdown' as ExportFormat, label: 'MD', icon: FileTextIcon },
+                { value: 'bibtex' as ExportFormat, label: 'BibTeX', icon: BookOpenIcon },
+                { value: 'ris' as ExportFormat, label: 'RIS', icon: BookOpenIcon },
+              ]).map((opt) => {
+                const Icon = opt.icon;
+                const disabled = (opt.value === 'bibtex' || opt.value === 'ris') && selectedData !== 'papers' && selectedData !== 'all';
+                return (
+                  <GlassBubbleButton
+                    key={opt.value}
+                    onClick={() => !disabled && setSelectedFormat(opt.value)}
+                    active={selectedFormat === opt.value}
+                    color="cyan"
+                    size="sm"
+                    fullWidth
+                    className="flex-col"
+                    disabled={disabled}
+                  >
+                    <Icon style={{ height: 14, width: 14 }} />
+                    <span style={{ fontFamily: 'var(--font-secondary)', fontSize: '0.5rem', fontWeight: 500 }}>{opt.label}</span>
+                  </GlassBubbleButton>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Export button */}
+          <GlassBubbleButton onClick={handleExport} color="ember" size="lg" fullWidth>
+            {exported ? (
+              <><CheckCircle2Icon className="h-4 w-4" /> Exported!</>
+            ) : (
+              <><DownloadIcon className="h-4 w-4" /> Export as {selectedFormat.toUpperCase()}</>
+            )}
+          </GlassBubbleButton>
         </GlassSection>
 
         {/* Reset */}
