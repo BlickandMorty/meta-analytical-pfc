@@ -34,6 +34,7 @@ export const message = sqliteTable('message', {
   confidence: real('confidence'),
   evidenceGrade: text('evidence_grade'),
   mode: text('mode'),
+  attachments: text('attachments'), // JSON array of FileAttachment metadata
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),

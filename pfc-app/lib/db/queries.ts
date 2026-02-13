@@ -1,6 +1,6 @@
 import { db } from './index';
-import { chat, message, chatSignals, user, pipelineRun } from './schema';
-import { desc, eq, and } from 'drizzle-orm';
+import { chat, message, chatSignals, user } from './schema';
+import { desc, eq } from 'drizzle-orm';
 import { generateUUID } from '@/lib/utils';
 
 // --- User ---
@@ -13,8 +13,10 @@ export async function getOrCreateUser(userId: string) {
   if (existing) return existing;
 
   const newUser = { id: userId, createdAt: new Date() };
-  await db.insert(user).values(newUser).run();
-  return newUser;
+  // Use onConflictDoNothing to handle concurrent insertions safely
+  await db.insert(user).values(newUser).onConflictDoNothing().run();
+  // Re-fetch to handle the case where another request inserted first
+  return await db.query.user.findFirst({ where: eq(user.id, userId) }) ?? newUser;
 }
 
 // --- Chat ---
@@ -94,6 +96,7 @@ export async function saveMessage({
   confidence: conf,
   evidenceGrade,
   mode,
+  attachments,
 }: {
   id: string;
   chatId: string;
@@ -104,6 +107,7 @@ export async function saveMessage({
   confidence?: number;
   evidenceGrade?: string;
   mode?: string;
+  attachments?: string; // JSON stringified FileAttachment[]
 }) {
   await db.insert(message)
     .values({
@@ -116,6 +120,7 @@ export async function saveMessage({
       confidence: conf ?? null,
       evidenceGrade: evidenceGrade || null,
       mode: mode || null,
+      attachments: attachments ?? null,
       createdAt: new Date(),
     })
     .run();
