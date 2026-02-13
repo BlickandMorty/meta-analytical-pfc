@@ -5,6 +5,7 @@ import type {
   SuiteTierFeatures,
 } from '@/lib/research/types';
 import { getSuiteTierFeatures } from '@/lib/research/types';
+import { writeString } from '@/lib/storage-versioning';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ---------------------------------------------------------------------------
@@ -46,19 +47,16 @@ export const createTierSlice = (set: PFCSet, get: PFCGet) => ({
       tierFeatures: features,
     });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('pfc-suite-tier', tier);
-      localStorage.setItem('pfc-suite-mode', tier);
-      localStorage.setItem(
-        'pfc-measurement-enabled',
-        String(features.pipelineVisualizer),
-      );
+      writeString('pfc-suite-tier', tier);
+      writeString('pfc-suite-mode', tier);
+      writeString('pfc-measurement-enabled', String(features.pipelineVisualizer));
     }
   },
 
   setMeasurementEnabled: (enabled: boolean) => {
     set({ measurementEnabled: enabled });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('pfc-measurement-enabled', String(enabled));
+      writeString('pfc-measurement-enabled', String(enabled));
     }
   },
 });

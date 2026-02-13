@@ -9,6 +9,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { logger } from '@/lib/debug-logger';
+import { readVersioned, writeVersioned, removeStorage } from '@/lib/storage-versioning';
 import type {
   SteeringMemory,
   SteeringExemplar,
@@ -19,6 +20,7 @@ import type {
 import { createEmptyMemory } from './types';
 
 const STORAGE_KEY = 'pfc-steering-memory';
+const STEERING_MEMORY_VERSION = 1;
 const MS_PER_DAY = 86400000;
 
 // ── Decay computation ────────────────────────────────────────────
@@ -154,42 +156,26 @@ export function updateExemplarRating(
   };
 }
 
-// ── localStorage persistence ─────────────────────────────────────
+// ── localStorage persistence (versioned) ─────────────────────────
 
 export function saveMemoryToStorage(memory: SteeringMemory): void {
-  try {
-    const json = JSON.stringify(memory);
-    localStorage.setItem(STORAGE_KEY, json);
-  } catch (e) {
-    logger.warn('steering/memory', 'Failed to save:', e);
-  }
+  writeVersioned(STORAGE_KEY, STEERING_MEMORY_VERSION, memory);
 }
 
 export function loadMemoryFromStorage(): SteeringMemory {
-  try {
-    const json = localStorage.getItem(STORAGE_KEY);
-    if (!json) return createEmptyMemory();
+  const loaded = readVersioned<SteeringMemory>(STORAGE_KEY, STEERING_MEMORY_VERSION);
+  if (!loaded) return createEmptyMemory();
 
-    const parsed = JSON.parse(json) as SteeringMemory;
-
-    // Validate version
-    if (!parsed.version || parsed.version < 1) {
-      return createEmptyMemory();
-    }
-
-    return parsed;
-  } catch (e) {
-    logger.warn('steering/memory', 'Failed to load:', e);
+  // Validate internal version field
+  if (!loaded.version || loaded.version < 1) {
     return createEmptyMemory();
   }
+
+  return loaded;
 }
 
 export function clearMemoryFromStorage(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch (e) {
-    logger.warn('steering/memory', 'Failed to clear:', e);
-  }
+  removeStorage(STORAGE_KEY);
 }
 
 // ── Export / Import (for sharing) ────────────────────────────────

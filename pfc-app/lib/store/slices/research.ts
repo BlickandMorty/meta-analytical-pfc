@@ -6,7 +6,10 @@ import type {
   RerouteInstruction,
   ResearchBook,
 } from '@/lib/research/types';
+import { writeVersioned } from '@/lib/storage-versioning';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
+
+const RESEARCH_PAPERS_VERSION = 1;
 
 // ---------------------------------------------------------------------------
 // State interface
@@ -57,12 +60,7 @@ export const createResearchSlice = (set: PFCSet, get: PFCGet) => ({
     set((s) => {
       const updated = [paper, ...s.researchPapers].slice(0, 500);
       if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(
-            'pfc-research-papers',
-            JSON.stringify(updated),
-          );
-        } catch { /* localStorage quota exceeded — ignore */ }
+        writeVersioned('pfc-research-papers', RESEARCH_PAPERS_VERSION, updated);
       }
       return { researchPapers: updated };
     }),
@@ -73,12 +71,7 @@ export const createResearchSlice = (set: PFCSet, get: PFCGet) => ({
         (p: ResearchPaper) => p.id !== id,
       );
       if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(
-            'pfc-research-papers',
-            JSON.stringify(updated),
-          );
-        } catch { /* localStorage quota exceeded — ignore */ }
+        writeVersioned('pfc-research-papers', RESEARCH_PAPERS_VERSION, updated);
       }
       return { researchPapers: updated };
     }),
@@ -89,12 +82,7 @@ export const createResearchSlice = (set: PFCSet, get: PFCGet) => ({
         p.id === id ? { ...p, ...updates } : p,
       );
       if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(
-            'pfc-research-papers',
-            JSON.stringify(updated),
-          );
-        } catch { /* localStorage quota exceeded — ignore */ }
+        writeVersioned('pfc-research-papers', RESEARCH_PAPERS_VERSION, updated);
       }
       return { researchPapers: updated };
     }),

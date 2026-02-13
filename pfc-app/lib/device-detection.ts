@@ -117,14 +117,14 @@ function fallbackProfile(): DeviceProfile {
   };
 }
 
+import { writeVersioned } from '@/lib/storage-versioning';
+
 /** Storage key for persisted device profile */
 const DEVICE_PROFILE_KEY = 'pfc-device-profile';
+const DEVICE_PROFILE_VERSION = 1;
 
 /** Cache device profile to localStorage */
 export function cacheDeviceProfile(profile: DeviceProfile): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(DEVICE_PROFILE_KEY, JSON.stringify(profile));
-  } catch { /* quota exceeded — ignore */ }
+  writeVersioned(DEVICE_PROFILE_KEY, DEVICE_PROFILE_VERSION, profile);
 }
 

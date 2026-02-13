@@ -2,6 +2,7 @@
 
 import { memo, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { writeString } from '@/lib/storage-versioning';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
   FlaskConicalIcon,
@@ -99,7 +100,7 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                 }
                 setInferenceMode(next);
                 // Persist to localStorage for reload
-                try { localStorage.setItem('pfc-inference-mode', next); } catch { /* quota exceeded in private browsing */ }
+                writeString('pfc-inference-mode', next);
               }}
               style={{
                 display: 'flex',

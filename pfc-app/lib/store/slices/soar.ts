@@ -2,28 +2,22 @@
 
 import type { SOARConfig, SOARSession } from '@/lib/engine/soar/types';
 import { DEFAULT_SOAR_CONFIG } from '@/lib/engine/soar/types';
+import { readVersioned, writeVersioned } from '@/lib/storage-versioning';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 // ── localStorage keys ──
 const STORAGE_KEY_CONFIG = 'pfc-soar-config';
+const SOAR_CONFIG_VERSION = 1;
 
 // ── Helpers ──
 function loadConfig(): SOARConfig {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_CONFIG);
-    if (!raw) return DEFAULT_SOAR_CONFIG;
-    return { ...DEFAULT_SOAR_CONFIG, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_SOAR_CONFIG;
-  }
+  const stored = readVersioned<SOARConfig>(STORAGE_KEY_CONFIG, SOAR_CONFIG_VERSION);
+  if (!stored) return DEFAULT_SOAR_CONFIG;
+  return { ...DEFAULT_SOAR_CONFIG, ...stored };
 }
 
 function saveConfig(config: SOARConfig) {
-  try {
-    localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
-  } catch {
-    // Storage unavailable
-  }
+  writeVersioned(STORAGE_KEY_CONFIG, SOAR_CONFIG_VERSION, config);
 }
 
 // ── State interface ──

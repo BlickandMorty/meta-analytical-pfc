@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
+import { readString, writeString } from '@/lib/storage-versioning';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { useTypewriter } from '@/hooks/use-typewriter';
@@ -715,12 +716,11 @@ const ToolbarStats = memo(function ToolbarStats({
 type NotesViewMode = 'notes' | 'canvas';
 
 function loadViewMode(): NotesViewMode {
-  if (typeof window === 'undefined') return 'notes';
-  return (localStorage.getItem('pfc-notes-view-mode') as NotesViewMode) || 'notes';
+  return (readString('pfc-notes-view-mode') as NotesViewMode) || 'notes';
 }
 
 function saveViewMode(mode: NotesViewMode) {
-  localStorage.setItem('pfc-notes-view-mode', mode);
+  writeString('pfc-notes-view-mode', mode);
 }
 
 // ═══════════════════════════════════════════════════════════════════

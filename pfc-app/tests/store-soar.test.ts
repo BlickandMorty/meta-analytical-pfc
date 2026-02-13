@@ -43,11 +43,12 @@ describe('SOAR slice', () => {
     expect(config.maxIterations).toBe(DEFAULT_SOAR_CONFIG.maxIterations);
   });
 
-  it('setSOARConfig persists to localStorage', () => {
+  it('setSOARConfig persists to localStorage (versioned)', () => {
     usePFCStore.getState().setSOARConfig({ enabled: true });
 
-    const stored = JSON.parse(localStorage.getItem('pfc-soar-config')!);
-    expect(stored.enabled).toBe(true);
+    const envelope = JSON.parse(localStorage.getItem('pfc-soar-config')!);
+    expect(envelope.__v).toBe(1);
+    expect(envelope.data.enabled).toBe(true);
   });
 
   it('setSOAREnabled toggles enabled flag', () => {

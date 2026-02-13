@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { readString } from '@/lib/storage-versioning';
 
 /**
  * Checks if PFC setup has been completed (localStorage).
@@ -13,7 +14,7 @@ export function useSetupGuard(): boolean {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const done = Boolean(localStorage.getItem('pfc-setup-done'));
+    const done = Boolean(readString('pfc-setup-done'));
     if (done) {
       setReady(true);
     } else {

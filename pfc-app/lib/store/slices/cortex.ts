@@ -39,24 +39,20 @@ export interface CortexSnapshot {
 }
 
 // ---------------------------------------------------------------------------
-// localStorage helpers
+// localStorage helpers (versioned)
 // ---------------------------------------------------------------------------
 
+import { readVersioned, writeVersioned } from '@/lib/storage-versioning';
+
 const CORTEX_STORAGE_KEY = 'pfc-cortex-archive';
+const CORTEX_VERSION = 1;
 
 function loadCortexArchive(): CortexSnapshot[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(CORTEX_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return readVersioned<CortexSnapshot[]>(CORTEX_STORAGE_KEY, CORTEX_VERSION) ?? [];
 }
 
 function saveCortexArchive(snapshots: CortexSnapshot[]) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(CORTEX_STORAGE_KEY, JSON.stringify(snapshots));
+  writeVersioned(CORTEX_STORAGE_KEY, CORTEX_VERSION, snapshots);
 }
 
 // ---------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 // Runs entirely outside React lifecycle via setInterval + Zustand getState()
 
 import type { NotePage, NoteBlock } from '@/lib/notes/types';
+import { readVersioned, writeVersioned, readString, writeString } from '@/lib/storage-versioning';
 
 // ── Config type ──
 export interface SchedulerConfig {
@@ -15,6 +16,7 @@ export interface SchedulerConfig {
 
 // ── localStorage keys ──
 const STORAGE_KEY_CONFIG = 'pfc-learning-scheduler';
+const SCHEDULER_CONFIG_VERSION = 1;
 const STORAGE_KEY_LAST_HASH = 'pfc-learning-last-hash';
 const STORAGE_KEY_DAILY_BRIEF_LAST = 'pfc-daily-brief-last';
 
@@ -32,26 +34,15 @@ const DEFAULT_CONFIG: SchedulerConfig = {
 let _schedulerTimer: ReturnType<typeof setInterval> | null = null;
 let _lastNoteHash: string | null = null;
 
-// ── Config persistence ──
+// ── Config persistence (versioned) ──
 export function loadSchedulerConfig(): SchedulerConfig {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_CONFIG);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_CONFIG, ...parsed };
-    }
-    return DEFAULT_CONFIG;
-  } catch {
-    return DEFAULT_CONFIG;
-  }
+  const stored = readVersioned<SchedulerConfig>(STORAGE_KEY_CONFIG, SCHEDULER_CONFIG_VERSION);
+  if (!stored) return DEFAULT_CONFIG;
+  return { ...DEFAULT_CONFIG, ...stored };
 }
 
 export function saveSchedulerConfig(config: SchedulerConfig): void {
-  try {
-    localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config));
-  } catch {
-    // Storage unavailable
-  }
+  writeVersioned(STORAGE_KEY_CONFIG, SCHEDULER_CONFIG_VERSION, config);
 }
 
 // ── Fast content hash to detect note changes ──
@@ -75,19 +66,11 @@ function computeNoteHash(pages: NotePage[], blocks: NoteBlock[]): string {
 }
 
 function loadLastHash(): string | null {
-  try {
-    return localStorage.getItem(STORAGE_KEY_LAST_HASH);
-  } catch {
-    return null;
-  }
+  return readString(STORAGE_KEY_LAST_HASH);
 }
 
 function saveLastHash(hash: string): void {
-  try {
-    localStorage.setItem(STORAGE_KEY_LAST_HASH, hash);
-  } catch {
-    // Storage unavailable
-  }
+  writeString(STORAGE_KEY_LAST_HASH, hash);
 }
 
 // ── Scheduler core ──
@@ -134,12 +117,8 @@ function checkDailyBrief(getState: GetState, config: SchedulerConfig): void {
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   // Check if already generated today (persisted across page reloads)
-  try {
-    const lastGenerated = localStorage.getItem(STORAGE_KEY_DAILY_BRIEF_LAST);
-    if (lastGenerated === today) return;
-  } catch {
-    // Storage unavailable
-  }
+  const lastGenerated = readString(STORAGE_KEY_DAILY_BRIEF_LAST);
+  if (lastGenerated === today) return;
 
   // Check if it's past the configured hour
   if (now.getHours() < config.dailyBriefHour) return;
@@ -153,11 +132,7 @@ function checkDailyBrief(getState: GetState, config: SchedulerConfig): void {
   if (!state.notePages || state.notePages.length === 0) return;
 
   // Mark as generated for today
-  try {
-    localStorage.setItem(STORAGE_KEY_DAILY_BRIEF_LAST, today);
-  } catch {
-    // Storage unavailable
-  }
+  writeString(STORAGE_KEY_DAILY_BRIEF_LAST, today);
 
   // Start daily brief
   state.startDailyBriefSession();

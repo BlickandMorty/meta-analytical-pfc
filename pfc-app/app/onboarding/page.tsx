@@ -24,6 +24,7 @@ import {
   CpuIcon,
 } from 'lucide-react';
 import type { SuiteTier } from '@/lib/research/types';
+import { readString, writeString } from '@/lib/storage-versioning';
 import { detectDevice, cacheDeviceProfile, type DeviceProfile } from '@/lib/device-detection';
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -127,7 +128,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const done = localStorage.getItem('pfc-setup-done');
+      const done = readString('pfc-setup-done');
       if (done) router.replace('/');
     }
   }, [router]);
@@ -144,23 +145,23 @@ export default function OnboardingPage() {
   }, [visibleCount, phase]);
 
   const handleSuiteSelect = useCallback(() => {
-    localStorage.setItem('pfc-suite-tier', selectedTier);
-    localStorage.setItem('pfc-suite-mode', selectedTier);
-    localStorage.setItem('pfc-measurement-enabled', selectedTier === 'full' ? 'true' : 'false');
+    writeString('pfc-suite-tier', selectedTier);
+    writeString('pfc-suite-mode', selectedTier);
+    writeString('pfc-measurement-enabled', selectedTier === 'full' ? 'true' : 'false');
     setPhase('apikey');
   }, [selectedTier]);
 
   const handleSaveKey = useCallback(() => {
     if (apiKey.trim()) {
-      localStorage.setItem('pfc-api-key', apiKey.trim());
+      writeString('pfc-api-key', apiKey.trim());
     }
-    localStorage.setItem('pfc-setup-done', 'true');
+    writeString('pfc-setup-done', 'true');
     setPhase('launching');
     setTimeout(() => router.push('/'), 1200);
   }, [apiKey, router]);
 
   const handleSkip = useCallback(() => {
-    localStorage.setItem('pfc-setup-done', 'true');
+    writeString('pfc-setup-done', 'true');
     router.push('/');
   }, [router]);
 

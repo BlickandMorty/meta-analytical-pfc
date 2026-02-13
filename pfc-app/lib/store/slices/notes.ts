@@ -1,6 +1,7 @@
 'use client';
 
 import { logger } from '@/lib/debug-logger';
+import { readVersioned, writeVersioned, readString, writeString, removeStorage } from '@/lib/storage-versioning';
 import type {
   NoteBlock, NotePage, NoteBook, PageLink,
   NoteSearchResult, NoteAIState, BlockType,
@@ -185,6 +186,8 @@ export interface NotesSliceActions {
 
 // ── Constants ──
 const STORAGE_KEY_VAULTS = 'pfc-vaults';
+const VAULTS_VERSION = 1;
+const VAULT_DATA_VERSION = 1;
 const STORAGE_KEY_ACTIVE_VAULT = 'pfc-active-vault';
 const MAX_UNDO_STACK = 64;
 const SAVE_DEBOUNCE_MS = 500;
@@ -1403,7 +1406,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
         if (hasMigrated) {
           // SQLite is the source of truth — load from server
           const dbVaults = await loadVaultsFromDb();
-          const activeVaultId = localStorage.getItem(STORAGE_KEY_ACTIVE_VAULT);
+          const activeVaultId = readString(STORAGE_KEY_ACTIVE_VAULT);
           set({
             vaults: dbVaults,
             activeVaultId: activeVaultId || (dbVaults[0]?.id ?? null),
@@ -1413,12 +1416,11 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
         }
 
         // SQLite is empty — load from localStorage (legacy path)
-        const vaultsRaw = localStorage.getItem(STORAGE_KEY_VAULTS);
-        let vaults: Vault[] = vaultsRaw ? JSON.parse(vaultsRaw) : [];
-        const activeVaultId = localStorage.getItem(STORAGE_KEY_ACTIVE_VAULT);
+        let vaults: Vault[] = readVersioned<Vault[]>(STORAGE_KEY_VAULTS, VAULTS_VERSION) ?? [];
+        const activeVaultId = readString(STORAGE_KEY_ACTIVE_VAULT);
 
         // Migrate: if old non-vault data exists, create a default vault
-        const legacyPages = localStorage.getItem('pfc-note-pages');
+        const legacyPages = readString('pfc-note-pages');
         if (legacyPages && vaults.length === 0) {
           const defaultVault: Vault = {
             id: generateVaultId(),
@@ -1428,16 +1430,16 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
             pageCount: 0,
           };
           vaults = [defaultVault];
-          const legacyBlocks = localStorage.getItem('pfc-note-blocks');
-          const legacyBooks = localStorage.getItem('pfc-note-books');
-          if (legacyPages) localStorage.setItem(vaultKey(defaultVault.id, 'pages'), legacyPages);
-          if (legacyBlocks) localStorage.setItem(vaultKey(defaultVault.id, 'blocks'), legacyBlocks);
-          if (legacyBooks) localStorage.setItem(vaultKey(defaultVault.id, 'books'), legacyBooks);
-          localStorage.removeItem('pfc-note-pages');
-          localStorage.removeItem('pfc-note-blocks');
-          localStorage.removeItem('pfc-note-books');
-          localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
-          localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, defaultVault.id);
+          const legacyBlocks = readString('pfc-note-blocks');
+          const legacyBooks = readString('pfc-note-books');
+          if (legacyPages) writeString(vaultKey(defaultVault.id, 'pages'), legacyPages);
+          if (legacyBlocks) writeString(vaultKey(defaultVault.id, 'blocks'), legacyBlocks);
+          if (legacyBooks) writeString(vaultKey(defaultVault.id, 'books'), legacyBooks);
+          removeStorage('pfc-note-pages');
+          removeStorage('pfc-note-blocks');
+          removeStorage('pfc-note-books');
+          writeVersioned(STORAGE_KEY_VAULTS, VAULTS_VERSION, vaults);
+          writeString(STORAGE_KEY_ACTIVE_VAULT, defaultVault.id);
         }
 
         set({
@@ -1452,18 +1454,13 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
         }
       } catch {
         // Fallback: load from localStorage if server is down
-        try {
-          const vaultsRaw = localStorage.getItem(STORAGE_KEY_VAULTS);
-          const vaults: Vault[] = vaultsRaw ? JSON.parse(vaultsRaw) : [];
-          const activeVaultId = localStorage.getItem(STORAGE_KEY_ACTIVE_VAULT);
-          set({
-            vaults,
-            activeVaultId: activeVaultId || (vaults[0]?.id ?? null),
-            vaultReady: true,
-          });
-        } catch {
-          set({ vaultReady: true });
-        }
+        const vaults: Vault[] = readVersioned<Vault[]>(STORAGE_KEY_VAULTS, VAULTS_VERSION) ?? [];
+        const activeVaultId = readString(STORAGE_KEY_ACTIVE_VAULT);
+        set({
+          vaults,
+          activeVaultId: activeVaultId || (vaults[0]?.id ?? null),
+          vaultReady: true,
+        });
       }
     })();
   },
@@ -1477,10 +1474,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       pageCount: 0,
     };
     set((s) => ({ vaults: [...s.vaults, vault] }));
-    try {
-      const s = get();
-      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(s.vaults));
-    } catch {}
+    writeVersioned(STORAGE_KEY_VAULTS, VAULTS_VERSION, get().vaults);
     // Async: persist to SQLite
     upsertVaultOnServer(vault).catch(() => {});
     return vault.id;
@@ -1488,21 +1482,19 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
 
   switchVault: (vaultId: string) => {
     // Save current vault to localStorage (sync) + SQLite (async) before switching
-    try {
-      const s = get();
-      const oldVid = s.activeVaultId;
-      if (oldVid) {
-        localStorage.setItem(vaultKey(oldVid, 'pages'), JSON.stringify(s.notePages));
-        localStorage.setItem(vaultKey(oldVid, 'blocks'), JSON.stringify(s.noteBlocks));
-        localStorage.setItem(vaultKey(oldVid, 'books'), JSON.stringify(s.noteBooks));
-        localStorage.setItem(vaultKey(oldVid, 'concepts'), JSON.stringify(s.concepts));
-        // Async: flush to SQLite before switch
-        const oldVault = s.vaults.find((v: Vault) => v.id === oldVid);
-        if (oldVault) {
-          syncVaultToServer(oldVid, oldVault, s.notePages, s.noteBlocks, s.noteBooks, s.concepts, s.pageLinks).catch(() => {});
-        }
+    const s = get();
+    const oldVid = s.activeVaultId;
+    if (oldVid) {
+      writeVersioned(vaultKey(oldVid, 'pages'), VAULT_DATA_VERSION, s.notePages);
+      writeVersioned(vaultKey(oldVid, 'blocks'), VAULT_DATA_VERSION, s.noteBlocks);
+      writeVersioned(vaultKey(oldVid, 'books'), VAULT_DATA_VERSION, s.noteBooks);
+      writeVersioned(vaultKey(oldVid, 'concepts'), VAULT_DATA_VERSION, s.concepts);
+      // Async: flush to SQLite before switch
+      const oldVault = s.vaults.find((v: Vault) => v.id === oldVid);
+      if (oldVault) {
+        syncVaultToServer(oldVid, oldVault, s.notePages, s.noteBlocks, s.noteBooks, s.concepts, s.pageLinks).catch(() => {});
       }
-    } catch {}
+    }
     // Clear current data and switch
     set({
       notePages: [],
@@ -1515,30 +1507,28 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       editingBlockId: null,
       activeVaultId: vaultId,
     });
-    localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, vaultId);
+    writeString(STORAGE_KEY_ACTIVE_VAULT, vaultId);
     // Load new vault's data
     get().loadNotesFromStorage();
   },
 
   deleteVault: (vaultId: string) => {
     // Remove vault data from localStorage
-    try {
-      localStorage.removeItem(vaultKey(vaultId, 'pages'));
-      localStorage.removeItem(vaultKey(vaultId, 'blocks'));
-      localStorage.removeItem(vaultKey(vaultId, 'books'));
-      localStorage.removeItem(vaultKey(vaultId, 'concepts'));
-    } catch {}
+    removeStorage(vaultKey(vaultId, 'pages'));
+    removeStorage(vaultKey(vaultId, 'blocks'));
+    removeStorage(vaultKey(vaultId, 'books'));
+    removeStorage(vaultKey(vaultId, 'concepts'));
     // Async: delete from SQLite (cascade deletes pages, blocks, etc.)
     deleteVaultOnServer(vaultId).catch(() => {});
     set((s) => {
       const vaults = s.vaults.filter((v: Vault) => v.id !== vaultId);
-      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
+      writeVersioned(STORAGE_KEY_VAULTS, VAULTS_VERSION, vaults);
       const newActiveId = s.activeVaultId === vaultId ? (vaults[0]?.id ?? null) : s.activeVaultId;
       if (newActiveId !== s.activeVaultId) {
         if (newActiveId) {
-          localStorage.setItem(STORAGE_KEY_ACTIVE_VAULT, newActiveId);
+          writeString(STORAGE_KEY_ACTIVE_VAULT, newActiveId);
         } else {
-          localStorage.removeItem(STORAGE_KEY_ACTIVE_VAULT);
+          removeStorage(STORAGE_KEY_ACTIVE_VAULT);
         }
       }
       return { vaults, activeVaultId: newActiveId };
@@ -1548,7 +1538,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   renameVault: (vaultId: string, name: string) => {
     set((s) => {
       const vaults = s.vaults.map((v: Vault) => v.id === vaultId ? { ...v, name, updatedAt: Date.now() } : v);
-      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(vaults));
+      writeVersioned(STORAGE_KEY_VAULTS, VAULTS_VERSION, vaults);
       // Async: persist renamed vault to SQLite
       const updated = vaults.find((v: Vault) => v.id === vaultId);
       if (updated) upsertVaultOnServer(updated).catch(() => {});
@@ -1731,23 +1721,14 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       }
 
       // Fallback: load from localStorage (legacy or offline)
-      try {
-        const pagesRaw = localStorage.getItem(vaultKey(activeVaultId, 'pages'));
-        const blocksRaw = localStorage.getItem(vaultKey(activeVaultId, 'blocks'));
-        const booksRaw = localStorage.getItem(vaultKey(activeVaultId, 'books'));
-        const conceptsRaw = localStorage.getItem(vaultKey(activeVaultId, 'concepts'));
+      const notePages = readVersioned<NotePage[]>(vaultKey(activeVaultId, 'pages'), VAULT_DATA_VERSION) ?? [];
+      const rawBlocks = readVersioned<NoteBlock[]>(vaultKey(activeVaultId, 'blocks'), VAULT_DATA_VERSION) ?? [];
+      const noteBlocks = rawBlocks.map(migrateBlock);
+      const noteBooks = readVersioned<NoteBook[]>(vaultKey(activeVaultId, 'books'), VAULT_DATA_VERSION) ?? [];
+      const concepts = readVersioned<Concept[]>(vaultKey(activeVaultId, 'concepts'), VAULT_DATA_VERSION) ?? [];
 
-        const notePages = pagesRaw ? JSON.parse(pagesRaw) : [];
-        const rawBlocks = blocksRaw ? JSON.parse(blocksRaw) : [];
-        const noteBlocks = rawBlocks.map(migrateBlock);
-        const noteBooks = booksRaw ? JSON.parse(booksRaw) : [];
-        const concepts = conceptsRaw ? JSON.parse(conceptsRaw) : [];
-
-        set({ notePages, noteBlocks, noteBooks, concepts });
-        get().rebuildPageLinks();
-      } catch {
-        // Ignore parse errors
-      }
+      set({ notePages, noteBlocks, noteBooks, concepts });
+      get().rebuildPageLinks();
     })();
   },
 
@@ -1757,14 +1738,10 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     if (!vid) return;
 
     // Still save to localStorage as backup
-    try {
-      localStorage.setItem(vaultKey(vid, 'pages'), JSON.stringify(s.notePages));
-      localStorage.setItem(vaultKey(vid, 'blocks'), JSON.stringify(s.noteBlocks));
-      localStorage.setItem(vaultKey(vid, 'books'), JSON.stringify(s.noteBooks));
-      localStorage.setItem(vaultKey(vid, 'concepts'), JSON.stringify(s.concepts));
-    } catch {
-      // Storage full or unavailable
-    }
+    writeVersioned(vaultKey(vid, 'pages'), VAULT_DATA_VERSION, s.notePages);
+    writeVersioned(vaultKey(vid, 'blocks'), VAULT_DATA_VERSION, s.noteBlocks);
+    writeVersioned(vaultKey(vid, 'books'), VAULT_DATA_VERSION, s.noteBooks);
+    writeVersioned(vaultKey(vid, 'concepts'), VAULT_DATA_VERSION, s.concepts);
 
     // Update vault page count
     set((st) => ({
@@ -1772,9 +1749,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
         v.id === vid ? { ...v, pageCount: s.notePages.length, updatedAt: Date.now() } : v
       ),
     }));
-    try {
-      localStorage.setItem(STORAGE_KEY_VAULTS, JSON.stringify(get().vaults));
-    } catch {}
+    writeVersioned(STORAGE_KEY_VAULTS, VAULTS_VERSION, get().vaults);
 
     // Async: write-through to SQLite
     const vault = get().vaults.find((v: Vault) => v.id === vid);
@@ -1877,16 +1852,11 @@ async function triggerMigration(vaults: Vault[], get: PFCGet) {
     }> = [];
 
     for (const vault of vaults) {
-      const pagesRaw = localStorage.getItem(vaultKey(vault.id, 'pages'));
-      const blocksRaw = localStorage.getItem(vaultKey(vault.id, 'blocks'));
-      const booksRaw = localStorage.getItem(vaultKey(vault.id, 'books'));
-      const conceptsRaw = localStorage.getItem(vaultKey(vault.id, 'concepts'));
-
-      const pages: NotePage[] = pagesRaw ? JSON.parse(pagesRaw) : [];
-      const rawBlocks: NoteBlock[] = blocksRaw ? JSON.parse(blocksRaw) : [];
+      const pages: NotePage[] = readVersioned<NotePage[]>(vaultKey(vault.id, 'pages'), VAULT_DATA_VERSION) ?? [];
+      const rawBlocks: NoteBlock[] = readVersioned<NoteBlock[]>(vaultKey(vault.id, 'blocks'), VAULT_DATA_VERSION) ?? [];
       const blocks = rawBlocks.map(migrateBlock);
-      const books: NoteBook[] = booksRaw ? JSON.parse(booksRaw) : [];
-      const concepts: Concept[] = conceptsRaw ? JSON.parse(conceptsRaw) : [];
+      const books: NoteBook[] = readVersioned<NoteBook[]>(vaultKey(vault.id, 'books'), VAULT_DATA_VERSION) ?? [];
+      const concepts: Concept[] = readVersioned<Concept[]>(vaultKey(vault.id, 'concepts'), VAULT_DATA_VERSION) ?? [];
 
       // Build page links from block content
       const pageByName = new Map<string, string>();

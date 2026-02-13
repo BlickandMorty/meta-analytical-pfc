@@ -18,6 +18,7 @@ import {
   MapIcon,
 } from 'lucide-react';
 import type { NotePage } from '@/lib/notes/types';
+import { readVersioned, writeVersioned, readString } from '@/lib/storage-versioning';
 
 // ═══════════════════════════════════════════════════════════════════
 // Obsidian × Freeform Canvas Engine
@@ -121,37 +122,42 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
+const CANVAS_VERSION = 1;
+
 function loadCanvas(vaultId: string, pageId: string): CanvasData {
-  try {
-    const raw = localStorage.getItem(`pfc-canvas-${vaultId}-${pageId}`);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const rawCards = parsed.cards || (Array.isArray(parsed) ? parsed : []);
-      const rawEdges = parsed.edges || [];
-      // Validate shape: only keep objects with required numeric fields
-      const cards = Array.isArray(rawCards)
-        ? rawCards.filter((c: unknown): c is CanvasCard =>
-            typeof c === 'object' && c !== null &&
-            typeof (c as CanvasCard).id === 'string' &&
-            typeof (c as CanvasCard).x === 'number' &&
-            typeof (c as CanvasCard).y === 'number')
-        : [];
-      const edges = Array.isArray(rawEdges)
-        ? rawEdges.filter((e: unknown): e is CanvasEdge =>
-            typeof e === 'object' && e !== null &&
-            typeof (e as CanvasEdge).id === 'string' &&
-            typeof (e as CanvasEdge).fromCardId === 'string')
-        : [];
-      return { cards, edges };
+  const key = `pfc-canvas-${vaultId}-${pageId}`;
+  const stored = readVersioned<CanvasData>(key, CANVAS_VERSION, (_oldVer, raw) => {
+    // Migrate legacy unversioned data (version 0): could be an array of cards or { cards, edges }
+    if (raw && typeof raw === 'object') {
+      const obj = raw as Record<string, unknown>;
+      const rawCards = obj.cards || (Array.isArray(raw) ? raw : []);
+      const rawEdges = obj.edges || [];
+      return { cards: rawCards, edges: rawEdges } as CanvasData;
     }
-  } catch { /* ignore corrupt data */ }
-  return { cards: [], edges: [] };
+    return null;
+  });
+  if (!stored) return { cards: [], edges: [] };
+  // Validate shape: only keep objects with required numeric fields
+  const rawCards = stored.cards || [];
+  const rawEdges = stored.edges || [];
+  const cards = Array.isArray(rawCards)
+    ? rawCards.filter((c: unknown): c is CanvasCard =>
+        typeof c === 'object' && c !== null &&
+        typeof (c as CanvasCard).id === 'string' &&
+        typeof (c as CanvasCard).x === 'number' &&
+        typeof (c as CanvasCard).y === 'number')
+    : [];
+  const edges = Array.isArray(rawEdges)
+    ? rawEdges.filter((e: unknown): e is CanvasEdge =>
+        typeof e === 'object' && e !== null &&
+        typeof (e as CanvasEdge).id === 'string' &&
+        typeof (e as CanvasEdge).fromCardId === 'string')
+    : [];
+  return { cards, edges };
 }
 
 function saveCanvas(vaultId: string, pageId: string, data: CanvasData) {
-  try {
-    localStorage.setItem(`pfc-canvas-${vaultId}-${pageId}`, JSON.stringify(data));
-  } catch { /* ignore */ }
+  writeVersioned(`pfc-canvas-${vaultId}-${pageId}`, CANVAS_VERSION, data);
 }
 
 function getAnchor(card: CanvasCard, side: 'top' | 'right' | 'bottom' | 'left') {
@@ -839,7 +845,7 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
   // ── Auto-save ──
   const saveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (cards.length === 0 && edges.length === 0 && !localStorage.getItem(`pfc-canvas-${vaultId}-${pageId}`)) return;
+    if (cards.length === 0 && edges.length === 0 && !readString(`pfc-canvas-${vaultId}-${pageId}`)) return;
     if (saveRef.current) clearTimeout(saveRef.current);
     saveRef.current = setTimeout(() => saveCanvas(vaultId, pageId, { cards, edges }), 400);
     return () => { if (saveRef.current) clearTimeout(saveRef.current); };

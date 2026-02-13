@@ -52,6 +52,7 @@ import { exportData, downloadExport, getMimeType } from '@/lib/research/export';
 import type { ExportFormat, ExportDataType } from '@/lib/research/types';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
+import { readString, writeString } from '@/lib/storage-versioning';
 import { cn } from '@/lib/utils';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { OPENAI_MODELS, ANTHROPIC_MODELS, GOOGLE_MODELS } from '@/lib/engine/llm/config';
@@ -171,24 +172,24 @@ export default function SettingsPage() {
   useEffect(() => {
     setMounted(true);
     // Load system auto-theme settings
-    setSystemAuto(localStorage.getItem('pfc-system-auto') === 'true');
-    const storedVariant = localStorage.getItem('pfc-system-dark-variant');
+    setSystemAuto(readString('pfc-system-auto') === 'true');
+    const storedVariant = readString('pfc-system-dark-variant');
     if (storedVariant && ['dark', 'navy', 'cosmic', 'sunset', 'oled'].includes(storedVariant)) {
       setSystemDarkVariant(storedVariant);
     }
-    const storedLightVariant = localStorage.getItem('pfc-system-light-variant');
+    const storedLightVariant = readString('pfc-system-light-variant');
     if (storedLightVariant && ['light', 'sunny'].includes(storedLightVariant)) {
       setSystemLightVariant(storedLightVariant);
     }
-    const storedKey = localStorage.getItem('pfc-api-key') || '';
+    const storedKey = readString('pfc-api-key') || '';
     if (storedKey && !apiKey) setApiKey(storedKey);
-    const storedMode = localStorage.getItem('pfc-inference-mode') as InferenceMode;
+    const storedMode = readString('pfc-inference-mode') as InferenceMode;
     if (storedMode && storedMode !== inferenceMode) setInferenceMode(storedMode);
-    const storedProvider = localStorage.getItem('pfc-api-provider') as ApiProvider;
+    const storedProvider = readString('pfc-api-provider') as ApiProvider;
     if (storedProvider) setApiProvider(storedProvider);
-    const storedOllamaUrl = localStorage.getItem('pfc-ollama-url');
+    const storedOllamaUrl = readString('pfc-ollama-url');
     if (storedOllamaUrl) setOllamaBaseUrl(storedOllamaUrl);
-    const storedOllamaModel = localStorage.getItem('pfc-ollama-model');
+    const storedOllamaModel = readString('pfc-ollama-model');
     if (storedOllamaModel) setOllamaModel(storedOllamaModel);
     // SAFETY: One-time mount hydration from localStorage. All setters are stable
     // Zustand actions. Re-running would overwrite user changes made after mount.
@@ -204,19 +205,19 @@ export default function SettingsPage() {
 
   const handleModeChange = (mode: InferenceMode) => {
     setInferenceMode(mode);
-    localStorage.setItem('pfc-inference-mode', mode);
+    writeString('pfc-inference-mode', mode);
     setTestStatus('idle');
   };
 
   const handleApiKeyChange = (value: string) => {
     setApiKey(value);
-    localStorage.setItem('pfc-api-key', value);
+    writeString('pfc-api-key', value);
     setTestStatus('idle');
   };
 
   const handleProviderChange = (provider: ApiProvider) => {
     setApiProvider(provider);
-    localStorage.setItem('pfc-api-provider', provider);
+    writeString('pfc-api-provider', provider);
     setTestStatus('idle');
   };
 
@@ -224,7 +225,7 @@ export default function SettingsPage() {
     // Sanitize: trim whitespace and remove trailing slash
     const cleaned = url.trim().replace(/\/+$/, '');
     setOllamaBaseUrl(cleaned);
-    localStorage.setItem('pfc-ollama-url', cleaned);
+    writeString('pfc-ollama-url', cleaned);
   };
 
   const isValidOllamaUrl = (url: string): boolean => {
@@ -239,7 +240,7 @@ export default function SettingsPage() {
 
   const handleOllamaModelChange = (model: string) => {
     setOllamaModel(model);
-    localStorage.setItem('pfc-ollama-model', model);
+    writeString('pfc-ollama-model', model);
   };
 
   const checkOllama = useCallback(async () => {
@@ -869,17 +870,17 @@ export default function SettingsPage() {
                   onClick={() => {
                     if (isSystem) {
                       // Enable system auto mode
-                      localStorage.setItem('pfc-system-auto', 'true');
+                      writeString('pfc-system-auto', 'true');
                       setSystemAuto(true);
                       // Apply immediately
                       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                      const darkV = localStorage.getItem('pfc-system-dark-variant') || 'dark';
-                      const lightV = localStorage.getItem('pfc-system-light-variant') || 'light';
+                      const darkV = readString('pfc-system-dark-variant') || 'dark';
+                      const lightV = readString('pfc-system-light-variant') || 'light';
                       setTheme(prefersDark ? darkV : lightV);
                       window.dispatchEvent(new CustomEvent('pfc-system-theme-update'));
                     } else {
                       // Disable system auto mode, apply direct theme
-                      localStorage.setItem('pfc-system-auto', 'false');
+                      writeString('pfc-system-auto', 'false');
                       setSystemAuto(false);
                       setTheme(value);
                     }
@@ -921,7 +922,7 @@ export default function SettingsPage() {
                     <GlassBubbleButton
                       key={value}
                       onClick={() => {
-                        localStorage.setItem('pfc-system-dark-variant', value);
+                        writeString('pfc-system-dark-variant', value);
                         setSystemDarkVariant(value);
                         // If system is currently in dark mode, apply immediately
                         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -964,7 +965,7 @@ export default function SettingsPage() {
                     <GlassBubbleButton
                       key={value}
                       onClick={() => {
-                        localStorage.setItem('pfc-system-light-variant', value);
+                        writeString('pfc-system-light-variant', value);
                         setSystemLightVariant(value);
                         // If system is currently in light mode, apply immediately
                         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1001,13 +1002,13 @@ export default function SettingsPage() {
               { key: 'blue-planet', label: 'Blue Planet', desc: 'Deep space with a ringed teal planet', gradient: 'linear-gradient(135deg, #04020E 0%, #0A1530 40%, #1A4060 70%, #060318 100%)' },
               { key: 'purple-planets', label: 'Purple Planets', desc: 'Vibrant nebula with multiple planets', gradient: 'linear-gradient(135deg, #08020F 0%, #2A1040 40%, #401060 70%, #050210 100%)' },
             ] as const).map(({ key, label, desc, gradient }) => {
-              const stored = typeof window !== 'undefined' ? localStorage.getItem('pfc-cosmic-wallpaper') : null;
+              const stored = readString('pfc-cosmic-wallpaper');
               const isActive = stored === key || (!stored && key === 'blue-planet');
               return (
                 <button
                   key={key}
                   onClick={() => {
-                    localStorage.setItem('pfc-cosmic-wallpaper', key);
+                    writeString('pfc-cosmic-wallpaper', key);
                     // Force re-render by switching theme briefly
                     if (theme === 'cosmic') {
                       setTheme('dark');

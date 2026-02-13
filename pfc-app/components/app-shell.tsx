@@ -17,9 +17,11 @@ import { ToastContainer } from './toast-container';
 import { MiniChat } from './mini-chat';
 import { hydrateStore } from '@/lib/store/hydrate';
 
-// Safe localStorage helper — never throws
+import { readString } from '@/lib/storage-versioning';
+
+// Safe localStorage helper — never throws (delegates to versioned wrapper)
 function ls(key: string): string | null {
-  try { return localStorage.getItem(key); } catch { return null; }
+  return readString(key);
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {

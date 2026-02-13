@@ -7,6 +7,7 @@ import type {
   LearningStep,
 } from '@/lib/notes/learning-protocol';
 import { createLearningSession } from '@/lib/notes/learning-protocol';
+import { readVersioned, writeVersioned, readString, writeString } from '@/lib/storage-versioning';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
 import type { NotePage, NoteBlock } from '@/lib/notes/types';
 import {
@@ -19,6 +20,7 @@ import {
 
 // ── localStorage keys ──
 const STORAGE_KEY_HISTORY = 'pfc-learning-history';
+const LEARNING_HISTORY_VERSION = 1;
 const STORAGE_KEY_AUTORUN = 'pfc-learning-autorun';
 
 // ── Module-scope abort controller (not in Zustand state) ──
@@ -118,30 +120,17 @@ type LearningSSEEvent =
   | { type: 'session-complete'; totalInsights: number; totalPagesCreated: number; totalBlocksCreated?: number }
   | { type: 'error'; message: string };
 
-// ── Helper: load history from localStorage ──
+// ── Helper: load history from localStorage (versioned) ──
 function loadHistory(): LearningHistoryEntry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return readVersioned<LearningHistoryEntry[]>(STORAGE_KEY_HISTORY, LEARNING_HISTORY_VERSION) ?? [];
 }
 
 function saveHistory(history: LearningHistoryEntry[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
-  } catch {
-    // Storage full or unavailable
-  }
+  writeVersioned(STORAGE_KEY_HISTORY, LEARNING_HISTORY_VERSION, history);
 }
 
 function loadAutoRun(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY_AUTORUN) === 'true';
-  } catch {
-    return false;
-  }
+  return readString(STORAGE_KEY_AUTORUN) === 'true';
 }
 
 // ── Helper: create summary note after learning completes ──
@@ -761,11 +750,7 @@ export const createLearningSlice = (set: PFCSet, get: PFCGet) => ({
 
   setLearningAutoRun: (enabled: boolean) => {
     set({ learningAutoRun: enabled });
-    try {
-      localStorage.setItem(STORAGE_KEY_AUTORUN, String(enabled));
-    } catch {
-      // Storage unavailable
-    }
+    writeString(STORAGE_KEY_AUTORUN, String(enabled));
 
     // Also update scheduler config
     const config = get().schedulerConfig;

@@ -5,6 +5,7 @@ import { ArrowUpIcon, StopCircleIcon, SlidersHorizontalIcon, SearchIcon, Papercl
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { writeString } from '@/lib/storage-versioning';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useTheme } from 'next-themes';
 import { useIsDark } from '@/hooks/use-is-dark';
@@ -195,7 +196,7 @@ function BrainButtonWithToggle({
   const handlePress = () => {
     // Disable system auto mode when manually cycling
     if (typeof window !== 'undefined') {
-      localStorage.setItem('pfc-system-auto', 'false');
+      writeString('pfc-system-auto', 'false');
     }
     // Cycle: light → sunny → dark → navy → cosmic → oled → light
     const current = theme || 'light';
