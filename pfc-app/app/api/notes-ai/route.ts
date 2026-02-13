@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import { streamText } from 'ai';
 import { logger } from '@/lib/debug-logger';
@@ -219,17 +219,11 @@ async function _POST(request: NextRequest) {
 
     const normalizedPages = normalizePages(body.pages);
     if (!normalizedPages) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid pages payload' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return NextResponse.json({ error: 'Invalid pages payload' }, { status: 400 });
     }
     const normalizedBlocks = normalizeBlocks(body.blocks);
     if (!normalizedBlocks) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid blocks payload' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return NextResponse.json({ error: 'Invalid blocks payload' }, { status: 400 });
     }
 
     pages = normalizedPages;
@@ -239,22 +233,17 @@ async function _POST(request: NextRequest) {
     inferenceConfig = body.inferenceConfig;
 
     if (!prompt || typeof prompt !== 'string') {
-      return new Response(
-        JSON.stringify({ error: 'Missing prompt' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return NextResponse.json({ error: 'Missing prompt' }, { status: 400 });
     }
 
     if (prompt.length > 50000) {
-      return new Response(
-        JSON.stringify({ error: 'Prompt too long (max 50,000 characters)' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return NextResponse.json({ error: 'Prompt too long (max 50,000 characters)' }, { status: 400 });
     }
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Invalid request body' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    logger.error('notes-ai', 'Request parsing error:', error);
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      { status: 400 },
     );
   }
 

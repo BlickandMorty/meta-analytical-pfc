@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { runPipeline, type ConversationContext } from '@/lib/engine/simulate';
@@ -138,18 +138,12 @@ async function _POST(request: NextRequest) {
     }
 
     if (!query) {
-      return new Response(
-        JSON.stringify({ error: 'Missing query' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return NextResponse.json({ error: 'Missing query' }, { status: 400 });
     }
 
     // Enforce max query length to prevent abuse
     if (query.length > 50_000) {
-      return new Response(
-        JSON.stringify({ error: 'Query too long (max 50,000 characters)' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
-      );
+      return NextResponse.json({ error: 'Query too long (max 50,000 characters)' }, { status: 400 });
     }
 
     // ── Process file attachments ─────────────────────────────
@@ -261,9 +255,9 @@ async function _POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error('chat/route', 'Setup error:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Setup failed' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
     );
   }
 

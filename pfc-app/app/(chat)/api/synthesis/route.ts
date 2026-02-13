@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { generateSynthesisReport } from '@/lib/engine/synthesizer';
@@ -19,11 +19,11 @@ async function _POST(request: NextRequest) {
     const { messages, signals } = parsedBody.data;
 
     if (!messages || !Array.isArray(messages)) {
-      return new Response('Missing messages', { status: 400 });
+      return NextResponse.json({ error: 'Missing or invalid messages' }, { status: 400 });
     }
 
     if (!signals || typeof signals !== 'object') {
-      return new Response('Missing signals', { status: 400 });
+      return NextResponse.json({ error: 'Missing or invalid signals' }, { status: 400 });
     }
 
     // Defensive defaults for all required signal fields — prevents crash
@@ -70,12 +70,12 @@ async function _POST(request: NextRequest) {
       safeSignals,
     );
 
-    return Response.json(report);
+    return NextResponse.json(report);
   } catch (error) {
     logger.error('synthesis/route', 'Error:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Synthesis failed' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
     );
   }
 }

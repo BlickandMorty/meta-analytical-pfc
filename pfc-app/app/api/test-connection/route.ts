@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import { generateText } from 'ai';
 import { resolveProvider } from '@/lib/engine/llm/provider';
@@ -36,7 +36,7 @@ async function _POST(request: NextRequest) {
 
     // SSRF guard: validate ollamaBaseUrl before passing to resolveProvider
     if (body.mode === 'local' && body.ollamaBaseUrl && !isAllowedOllamaUrl(body.ollamaBaseUrl)) {
-      return Response.json(
+      return NextResponse.json(
         { success: false, error: 'Only localhost Ollama URLs are allowed' },
         { status: 400 },
       );
@@ -59,13 +59,13 @@ async function _POST(request: NextRequest) {
       maxOutputTokens: 20,
     });
 
-    return Response.json({ success: true, response: result.text.trim() });
+    return NextResponse.json({ success: true, response: result.text.trim() });
   } catch (error) {
     // Sanitize: strip API keys or tokens that may appear in error messages
     let message = error instanceof Error ? error.message : 'Unknown error';
     message = message.replace(/(?:sk-|key-|token-|Bearer\s+)\S+/gi, '[REDACTED]');
     if (message.length > 500) message = message.slice(0, 500) + '...';
-    return Response.json({ success: false, error: message }, { status: 400 });
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }
 

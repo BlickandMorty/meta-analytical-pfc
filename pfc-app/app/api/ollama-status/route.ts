@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import {
   getOllamaRunningModels,
@@ -41,7 +41,7 @@ async function _GET(request: NextRequest) {
   const baseUrl = searchParams.get('baseUrl') || 'http://localhost:11434';
 
   if (!isAllowedOllamaUrl(baseUrl)) {
-    return Response.json(
+    return NextResponse.json(
       { error: 'Only localhost Ollama URLs are allowed' },
       { status: 400 },
     );
@@ -78,7 +78,7 @@ async function _GET(request: NextRequest) {
 
   const gpu = getGpuInfo();
 
-  return Response.json({
+  return NextResponse.json({
     running,
     gpu,
     models,

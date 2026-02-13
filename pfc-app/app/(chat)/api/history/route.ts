@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { getChatsByUserId, getMessagesByChatId } from '@/lib/db/queries';
@@ -10,10 +10,10 @@ async function _GET(request: NextRequest) {
   // Validate inputs: IDs should be reasonable alphanumeric/dash/underscore strings
   const ID_RE = /^[\w-]{1,128}$/;
   if (chatId && !ID_RE.test(chatId)) {
-    return Response.json({ error: 'Invalid chatId' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid chatId' }, { status: 400 });
   }
   if (!ID_RE.test(userId)) {
-    return Response.json({ error: 'Invalid userId' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid userId' }, { status: 400 });
   }
 
   try {
@@ -48,17 +48,17 @@ async function _GET(request: NextRequest) {
         };
       });
 
-      return Response.json({ messages: parsed });
+      return NextResponse.json({ messages: parsed });
     }
 
     // Return chat list (paginated)
     const limit = Math.min(Number(request.nextUrl.searchParams.get('limit')) || 50, 200);
     const offset = Math.max(Number(request.nextUrl.searchParams.get('offset')) || 0, 0);
     const chats = await getChatsByUserId(userId, { limit, offset });
-    return Response.json({ chats });
+    return NextResponse.json({ chats });
   } catch (error) {
     logger.error('history', 'DB error:', error);
-    return Response.json({ error: 'Failed to load history' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

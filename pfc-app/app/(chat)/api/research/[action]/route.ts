@@ -336,7 +336,7 @@ async function _POST(
     }
     logger.error('research/route', 'Error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Research operation failed' },
+      { error: 'Internal server error' },
       { status: 500 },
     );
   }

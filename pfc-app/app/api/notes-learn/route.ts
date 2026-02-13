@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import { generateText } from 'ai';
 import { logger } from '@/lib/debug-logger';
@@ -439,29 +439,29 @@ async function _POST(request: NextRequest) {
     const bodyNotes = body.notes;
     const bodySession = body.session;
     if (!bodyNotes || !bodySession || !isRecord(bodySession)) {
-      return new Response('Missing notes or session', { status: 400 });
+      return NextResponse.json({ error: 'Missing notes or session' }, { status: 400 });
     }
 
     const normalizedPages = normalizePages(bodyNotes.pages);
     if (!normalizedPages) {
-      return new Response('Invalid notes payload: pages must be an array of {id, title}', { status: 400 });
+      return NextResponse.json({ error: 'Invalid notes payload: pages must be an array of {id, title}' }, { status: 400 });
     }
     const normalizedBlocks = normalizeBlocks(
       bodyNotes.blocks,
       new Set(normalizedPages.map((p) => p.id)),
     );
     if (!normalizedBlocks) {
-      return new Response('Invalid notes payload: blocks must be an array of {id, pageId, order}', { status: 400 });
+      return NextResponse.json({ error: 'Invalid notes payload: blocks must be an array of {id, pageId, order}' }, { status: 400 });
     }
 
     if (!Array.isArray(bodySession.steps) || bodySession.steps.length === 0) {
-      return new Response('Invalid session payload: steps must be a non-empty array', { status: 400 });
+      return NextResponse.json({ error: 'Invalid session payload: steps must be a non-empty array' }, { status: 400 });
     }
     if (bodySession.depth !== 'shallow' && bodySession.depth !== 'moderate' && bodySession.depth !== 'deep') {
-      return new Response('Invalid session payload: depth must be shallow, moderate, or deep', { status: 400 });
+      return NextResponse.json({ error: 'Invalid session payload: depth must be shallow, moderate, or deep' }, { status: 400 });
     }
     if (typeof bodySession.iteration !== 'number' || typeof bodySession.maxIterations !== 'number') {
-      return new Response('Invalid session payload: iteration and maxIterations are required', { status: 400 });
+      return NextResponse.json({ error: 'Invalid session payload: iteration and maxIterations are required' }, { status: 400 });
     }
     const allowedStepTypes = new Set<LearningStepType>([
       'inventory',
@@ -474,17 +474,17 @@ async function _POST(request: NextRequest) {
     ]);
     for (const step of bodySession.steps) {
       if (!isRecord(step) || typeof step.type !== 'string' || !allowedStepTypes.has(step.type as LearningStepType)) {
-        return new Response('Invalid session payload: steps contain unsupported type', { status: 400 });
+        return NextResponse.json({ error: 'Invalid session payload: steps contain unsupported type' }, { status: 400 });
       }
     }
     if (!Number.isFinite(bodySession.iteration) || !Number.isFinite(bodySession.maxIterations) || bodySession.iteration < 1 || bodySession.maxIterations < 1) {
-      return new Response('Invalid session payload: iteration values must be >= 1', { status: 400 });
+      return NextResponse.json({ error: 'Invalid session payload: iteration values must be >= 1' }, { status: 400 });
     }
     if (bodySession.maxIterations > 20) {
-      return new Response('Invalid session payload: maxIterations cannot exceed 20', { status: 400 });
+      return NextResponse.json({ error: 'Invalid session payload: maxIterations cannot exceed 20' }, { status: 400 });
     }
     if (bodySession.iteration > bodySession.maxIterations) {
-      return new Response('Invalid session payload: iteration cannot exceed maxIterations', { status: 400 });
+      return NextResponse.json({ error: 'Invalid session payload: iteration cannot exceed maxIterations' }, { status: 400 });
     }
 
     notes = { pages: normalizedPages, blocks: normalizedBlocks };
@@ -493,9 +493,10 @@ async function _POST(request: NextRequest) {
     sessionType = body.sessionType === 'daily-brief' ? 'daily-brief' : 'full-protocol';
     recentActivity = typeof body.recentActivity === 'string' ? body.recentActivity : '';
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Invalid request body' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    logger.error('notes-learn', 'Request parsing error:', error);
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      { status: 400 },
     );
   }
 
@@ -509,9 +510,10 @@ async function _POST(request: NextRequest) {
       }
       model = resolveProvider(inferenceConfig);
     } catch (error) {
-      return new Response(
-        JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to resolve provider' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      logger.error('notes-learn', 'Provider resolution error:', error);
+      return NextResponse.json(
+        { error: 'Failed to resolve LLM provider' },
+        { status: 400 },
       );
     }
   }

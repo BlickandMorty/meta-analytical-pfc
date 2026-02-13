@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { checkOllamaAvailability } from '@/lib/engine/llm/ollama';
@@ -19,7 +19,7 @@ async function _GET(request: NextRequest) {
   const baseUrl = searchParams.get('baseUrl') || 'http://localhost:11434';
 
   if (!isAllowedOllamaUrl(baseUrl)) {
-    return Response.json(
+    return NextResponse.json(
       { error: 'Only localhost Ollama URLs are allowed' },
       { status: 400 },
     );
@@ -27,10 +27,10 @@ async function _GET(request: NextRequest) {
 
   try {
     const result = await checkOllamaAvailability(baseUrl);
-    return Response.json(result);
+    return NextResponse.json(result);
   } catch (error) {
     logger.error('ollama-check', 'Error:', error);
-    return Response.json({ available: false, error: 'Connection check failed' });
+    return NextResponse.json({ available: false, error: 'Connection check failed' });
   }
 }
 
