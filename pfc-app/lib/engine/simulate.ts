@@ -1042,6 +1042,7 @@ export async function* runPipeline(
   soarConfig?: SOARConfig,
   analyticsEngineEnabled: boolean = true,
   chatMode?: 'measurement' | 'research' | 'plain',
+  images?: Array<{ mimeType: string; base64: string }>,
 ): AsyncGenerator<PipelineEvent> {
   const qa = analyzeQuery(query, context);
   // When analytics engine is disabled, use neutral signals (no steering, no TDA computation)
@@ -1110,7 +1111,7 @@ export async function* runPipeline(
       yield { type: 'signals', data: { entropy: signals.entropy * 0.4, dissonance: signals.dissonance * 0.35 } };
       rawAnalysis = '';
       try {
-        const stream = llmStreamRawAnalysis(model, qa, signals, directives);
+        const stream = llmStreamRawAnalysis(model, qa, signals, directives, images);
         let streamTimeoutId: ReturnType<typeof setTimeout> | null = null;
         try {
           streamTimeoutId = setTimeout(() => { /* noop — just a safety net, caught below */ }, LLM_TIMEOUT);

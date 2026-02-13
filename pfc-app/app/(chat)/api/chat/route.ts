@@ -1,9 +1,17 @@
 import { NextRequest } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
 import { runPipeline, type ConversationContext } from '@/lib/engine/simulate';
 import type { PipelineControls } from '@/lib/engine/types';
 import type { SteeringBias } from '@/lib/engine/steering/types';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
 import type { SOARConfig } from '@/lib/engine/soar/types';
+import {
+  classifyFile,
+  extractTextContent,
+  readFileFromDisk,
+} from '@/lib/engine/file-processor';
+import { writeFile, mkdir } from 'fs/promises';
+import { join, extname } from 'path';
 import {
   saveMessage,
   createChat,
@@ -27,6 +35,22 @@ interface ChatRequestBody {
   steeringBias?: unknown;
   inferenceConfig?: unknown;
   soarConfig?: unknown;
+  analyticsEngineEnabled?: unknown;
+  chatMode?: unknown;
+  attachments?: unknown;
+  filePaths?: unknown;
+}
+
+/** Processed attachment ready for pipeline consumption */
+interface ProcessedAttachment {
+  id: string;
+  name: string;
+  category: 'image' | 'text' | 'data' | 'document' | 'other';
+  mimeType: string;
+  size: number;
+  savedPath: string;
+  base64?: string;
+  extractedText: string | null;
 }
 
 /**
@@ -79,7 +103,7 @@ async function buildConversationContext(chatId: string): Promise<ConversationCon
   }
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   let resolvedChatId = '';
   let query = '';
   let existingChat: Awaited<ReturnType<typeof getChatById>> | null = null;
@@ -87,10 +111,13 @@ export async function POST(request: NextRequest) {
   let steeringBias: SteeringBias | undefined;
   let inferenceConfig: InferenceConfig | undefined;
   let soarConfig: SOARConfig | undefined;
+  let analyticsEngineEnabled = true;
+  let chatMode: 'measurement' | 'research' | 'plain' | undefined;
   let conversationContext: ConversationContext | undefined;
+  let processedAttachments: ProcessedAttachment[] = [];
 
   try {
-    const parsedBody = await parseBodyWithLimit<ChatRequestBody>(request, 10 * 1024 * 1024);
+    const parsedBody = await parseBodyWithLimit<ChatRequestBody>(request, 150 * 1024 * 1024);
     if ('error' in parsedBody) {
       return parsedBody.error;
     }
@@ -103,6 +130,11 @@ export async function POST(request: NextRequest) {
     steeringBias = body.steeringBias as SteeringBias | undefined;
     inferenceConfig = body.inferenceConfig as InferenceConfig | undefined;
     soarConfig = body.soarConfig as SOARConfig | undefined;
+    analyticsEngineEnabled = body.analyticsEngineEnabled !== false; // default true
+    const rawMode = typeof body.chatMode === 'string' ? body.chatMode : undefined;
+    if (rawMode === 'measurement' || rawMode === 'research' || rawMode === 'plain') {
+      chatMode = rawMode;
+    }
 
     if (!query) {
       return new Response(
@@ -117,6 +149,74 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ error: 'Query too long (max 50,000 characters)' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } },
       );
+    }
+
+    // ── Process file attachments ─────────────────────────────
+    // 1. Base64 attachments from browser upload
+    if (Array.isArray(body.attachments)) {
+      for (const att of body.attachments as Array<{ id: string; name: string; type: string; uri: string; size: number; mimeType: string }>) {
+        try {
+          const base64Data = (att.uri || '').split(',')[1] || '';
+          const buffer = Buffer.from(base64Data, 'base64');
+          const ext = extname(att.name).toLowerCase();
+          const category = classifyFile(att.mimeType, ext);
+
+          // Save to uploads directory
+          const uploadsDir = join(process.cwd(), 'uploads');
+          await mkdir(uploadsDir, { recursive: true });
+          const savedPath = join(uploadsDir, `${att.id}${ext}`);
+          await writeFile(savedPath, buffer);
+
+          const extractedText = await extractTextContent(buffer, att.mimeType, ext);
+
+          processedAttachments.push({
+            id: att.id,
+            name: att.name,
+            category,
+            mimeType: att.mimeType,
+            size: att.size,
+            savedPath,
+            base64: category === 'image' ? att.uri : undefined,
+            extractedText,
+          });
+        } catch (attError) {
+          console.error(`[chat/route] Failed to process attachment ${att.name}:`, attError);
+        }
+      }
+    }
+
+    // 2. File paths detected in query text
+    if (Array.isArray(body.filePaths)) {
+      for (const rawPath of body.filePaths as string[]) {
+        try {
+          const fileData = await readFileFromDisk(rawPath);
+          if (!fileData) continue;
+          const category = classifyFile(fileData.mimeType, fileData.ext);
+          const extractedText = await extractTextContent(fileData.buffer, fileData.mimeType, fileData.ext);
+
+          processedAttachments.push({
+            id: `path-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name: fileData.name,
+            category,
+            mimeType: fileData.mimeType,
+            size: fileData.size,
+            savedPath: rawPath,
+            base64: category === 'image' ? `data:${fileData.mimeType};base64,${fileData.buffer.toString('base64')}` : undefined,
+            extractedText,
+          });
+        } catch (pathError) {
+          console.error(`[chat/route] Failed to process file path ${rawPath}:`, pathError);
+        }
+      }
+    }
+
+    // Augment query with extracted text from documents
+    const textAttachments = processedAttachments.filter((a) => a.extractedText);
+    if (textAttachments.length > 0) {
+      const attachmentContext = textAttachments
+        .map((a) => `--- Attached file: ${a.name} ---\n${a.extractedText}\n--- End of ${a.name} ---`)
+        .join('\n\n');
+      query = `${attachmentContext}\n\n${query}`;
     }
 
     const resolvedUserId = userId || 'local-user';
@@ -140,13 +240,23 @@ export async function POST(request: NextRequest) {
       conversationContext = await buildConversationContext(resolvedChatId);
     }
 
-    // Save user message
+    // Save user message (with attachment metadata if any)
     const userMsgId = generateUUID();
     await saveMessage({
       id: userMsgId,
       chatId: resolvedChatId,
       role: 'user',
       content: query,
+      attachments: processedAttachments.length > 0
+        ? JSON.stringify(processedAttachments.map((a) => ({
+            id: a.id,
+            name: a.name,
+            type: a.category,
+            uri: a.savedPath,
+            size: a.size,
+            mimeType: a.mimeType,
+          })))
+        : undefined,
     });
   } catch (error) {
     console.error('[chat/route] Setup error:', error);
@@ -166,6 +276,11 @@ export async function POST(request: NextRequest) {
   const capturedSteeringBias = steeringBias;
   const capturedInferenceConfig = inferenceConfig;
   const capturedSoarConfig = soarConfig;
+  const capturedAnalyticsEnabled = analyticsEngineEnabled;
+  const capturedChatMode = chatMode;
+  const capturedImages = processedAttachments
+    .filter((a) => a.category === 'image' && a.base64)
+    .map((a) => ({ mimeType: a.mimeType, base64: a.base64! }));
 
   // Use request.signal to detect client disconnect
   const clientSignal = request.signal;
@@ -189,6 +304,9 @@ export async function POST(request: NextRequest) {
           capturedSteeringBias,
           capturedInferenceConfig,
           capturedSoarConfig,
+          capturedAnalyticsEnabled,
+          capturedChatMode,
+          capturedImages.length > 0 ? capturedImages : undefined,
         )) {
           // Stop if client disconnected
           if (clientSignal.aborted || writer.isClosed()) {
@@ -260,3 +378,5 @@ export async function POST(request: NextRequest) {
     },
   });
 }
+
+export const POST = withMiddleware(_POST, { maxRequests: 30, windowMs: 60_000 });

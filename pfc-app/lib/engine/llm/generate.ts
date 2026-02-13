@@ -48,8 +48,9 @@ export async function llmGenerateRawAnalysis(
   model: LanguageModel,
   qa: QueryAnalysis,
   signals: Partial<SignalUpdate>,
+  steeringDirectives?: string,
 ): Promise<string> {
-  const prompt = buildRawAnalysisPrompt(qa, signals);
+  const prompt = buildRawAnalysisPrompt(qa, signals, steeringDirectives);
   const result = await generateText({
     model,
     system: prompt.system,
@@ -70,12 +71,32 @@ export async function* llmStreamRawAnalysis(
   model: LanguageModel,
   qa: QueryAnalysis,
   signals: Partial<SignalUpdate>,
+  steeringDirectives?: string,
+  images?: Array<{ mimeType: string; base64: string }>,
 ): AsyncGenerator<LLMStreamChunk> {
-  const prompt = buildRawAnalysisPrompt(qa, signals);
+  const prompt = buildRawAnalysisPrompt(qa, signals, steeringDirectives);
+  const hasImages = images && images.length > 0;
+
   const result = streamText({
     model,
     system: prompt.system,
-    prompt: prompt.user,
+    ...(hasImages
+      ? {
+          messages: [
+            {
+              role: 'user' as const,
+              content: [
+                ...images.map((img) => ({
+                  type: 'image' as const,
+                  image: (img.base64.includes(',') ? img.base64.split(',')[1] : img.base64) || img.base64,
+                  mimeType: img.mimeType,
+                })),
+                { type: 'text' as const, text: prompt.user },
+              ],
+            },
+          ],
+        }
+      : { prompt: prompt.user }),
     maxOutputTokens: 2048,
     temperature: 0.7,
   });
@@ -162,8 +183,9 @@ export async function llmGenerateLaymanSummary(
   qa: QueryAnalysis,
   rawAnalysis: string,
   sectionLabels: Record<string, string>,
+  steeringDirectives?: string,
 ): Promise<LaymanSummary> {
-  const prompt = buildLaymanSummaryPrompt(qa, rawAnalysis, sectionLabels);
+  const prompt = buildLaymanSummaryPrompt(qa, rawAnalysis, sectionLabels, steeringDirectives);
   const result = await generateObject({
     model,
     system: prompt.system,
@@ -184,8 +206,9 @@ export async function llmGenerateReflection(
   model: LanguageModel,
   stageResults: StageResult[],
   rawAnalysis: string,
+  steeringDirectives?: string,
 ): Promise<ReflectionResult> {
-  const prompt = buildReflectionPrompt(stageResults, rawAnalysis);
+  const prompt = buildReflectionPrompt(stageResults, rawAnalysis, steeringDirectives);
   const result = await generateObject({
     model,
     system: prompt.system,
@@ -202,8 +225,9 @@ export async function llmGenerateReflection(
 export async function llmGenerateArbitration(
   model: LanguageModel,
   stageResults: StageResult[],
+  steeringDirectives?: string,
 ): Promise<ArbitrationResult> {
-  const prompt = buildArbitrationPrompt(stageResults);
+  const prompt = buildArbitrationPrompt(stageResults, steeringDirectives);
   const result = await generateObject({
     model,
     system: prompt.system,
@@ -235,8 +259,9 @@ export async function llmGenerateTruthAssessment(
     safetyState: string;
     riskScore: number;
   },
+  steeringDirectives?: string,
 ): Promise<TruthAssessment> {
-  const prompt = buildTruthAssessmentPrompt(dualMessage, signals);
+  const prompt = buildTruthAssessmentPrompt(dualMessage, signals, steeringDirectives);
   const result = await generateObject({
     model,
     system: prompt.system,
