@@ -46,6 +46,8 @@ export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingA
         onClick={() => {
           if (!isThinking) setIsExpanded((prev) => !prev);
         }}
+        aria-expanded={effectiveExpanded}
+        aria-label={`${durationText} — ${effectiveExpanded ? 'collapse' : 'expand'} reasoning`}
         className="w-full flex items-center gap-2 px-3 py-2 text-xs
                    bg-white/[0.04] dark:bg-white/[0.02] hover:bg-white/[0.06]
                    transition-colors duration-200"

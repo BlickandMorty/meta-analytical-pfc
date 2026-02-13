@@ -14,7 +14,7 @@ export function StreamingText() {
   if (!isStreaming && !streamingText) return null;
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative' }} aria-live="polite" aria-atomic="false">
       <MarkdownContent content={streamingText.replace(/\s*\[(DATA|CONFLICT|UNCERTAIN|MODEL)\]\s*/g, ' ')} />
       {isStreaming && (
         <span

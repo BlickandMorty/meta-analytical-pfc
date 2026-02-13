@@ -486,6 +486,7 @@ const CanvasCardView = memo(function CanvasCardView({
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(card.id); }}
+          aria-label="Delete card"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 16, height: 16, borderRadius: 4,
@@ -749,20 +750,20 @@ function CanvasControls({ isDark, zoom, canUndo, canRedo, showMinimap, onZoomIn,
       border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
       boxShadow: isDark ? '0 2px 12px -2px rgba(0,0,0,0.3)' : '0 2px 16px -2px rgba(0,0,0,0.06)',
     }}>
-      <button onClick={onAddCard} style={btn()} title="Add text card"><PlusIcon style={{ width: 14, height: 14 }} /></button>
-      <button onClick={onAddGroup} style={btn()} title="Add group"><FileTextIcon style={{ width: 12, height: 12 }} /></button>
+      <button onClick={onAddCard} style={btn()} title="Add text card" aria-label="Add text card"><PlusIcon style={{ width: 14, height: 14 }} /></button>
+      <button onClick={onAddGroup} style={btn()} title="Add group" aria-label="Add group"><FileTextIcon style={{ width: 12, height: 12 }} /></button>
       <div style={sep} />
-      <button onClick={onUndo} style={btn(!canUndo)} title="Undo (Cmd+Z)" disabled={!canUndo}><Undo2Icon style={{ width: 13, height: 13 }} /></button>
-      <button onClick={onRedo} style={btn(!canRedo)} title="Redo (Cmd+Shift+Z)" disabled={!canRedo}><Redo2Icon style={{ width: 13, height: 13 }} /></button>
+      <button onClick={onUndo} style={btn(!canUndo)} title="Undo (Cmd+Z)" aria-label="Undo" disabled={!canUndo}><Undo2Icon style={{ width: 13, height: 13 }} /></button>
+      <button onClick={onRedo} style={btn(!canRedo)} title="Redo (Cmd+Shift+Z)" aria-label="Redo" disabled={!canRedo}><Redo2Icon style={{ width: 13, height: 13 }} /></button>
       <div style={sep} />
-      <button onClick={onZoomIn} style={btn()} title="Zoom in"><ZoomInIcon style={{ width: 14, height: 14 }} /></button>
+      <button onClick={onZoomIn} style={btn()} title="Zoom in" aria-label="Zoom in"><ZoomInIcon style={{ width: 14, height: 14 }} /></button>
       <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.25)', fontFamily: 'var(--font-mono, monospace)' }}>
         {Math.round(zoom * 100)}%
       </span>
-      <button onClick={onZoomOut} style={btn()} title="Zoom out"><ZoomOutIcon style={{ width: 14, height: 14 }} /></button>
+      <button onClick={onZoomOut} style={btn()} title="Zoom out" aria-label="Zoom out"><ZoomOutIcon style={{ width: 14, height: 14 }} /></button>
       <div style={sep} />
-      <button onClick={onFitView} style={btn()} title="Fit view"><MaximizeIcon style={{ width: 12, height: 12 }} /></button>
-      <button onClick={onToggleMinimap} style={{ ...btn(), background: showMinimap ? (isDark ? 'rgba(var(--pfc-accent-rgb), 0.12)' : 'rgba(var(--pfc-accent-rgb), 0.08)') : 'transparent' }} title="Toggle minimap"><MapIcon style={{ width: 12, height: 12 }} /></button>
+      <button onClick={onFitView} style={btn()} title="Fit view" aria-label="Fit view"><MaximizeIcon style={{ width: 12, height: 12 }} /></button>
+      <button onClick={onToggleMinimap} style={{ ...btn(), background: showMinimap ? (isDark ? 'rgba(var(--pfc-accent-rgb), 0.12)' : 'rgba(var(--pfc-accent-rgb), 0.08)') : 'transparent' }} title="Toggle minimap" aria-label="Toggle minimap"><MapIcon style={{ width: 12, height: 12 }} /></button>
     </div>
   );
 }

@@ -103,6 +103,7 @@ function ConceptRow({
         <div className="flex items-center gap-0.5 shrink-0">
           <button
             onClick={() => onAdjust(cw.concept, -0.2)}
+            aria-label={`Decrease weight for ${cw.concept}`}
             className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-pfc-red hover:bg-pfc-red/10 transition-colors cursor-pointer"
             disabled={cw.weight <= 0.1}
           >
@@ -120,6 +121,7 @@ function ConceptRow({
           </span>
           <button
             onClick={() => onAdjust(cw.concept, 0.2)}
+            aria-label={`Increase weight for ${cw.concept}`}
             className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-pfc-green hover:bg-pfc-green/10 transition-colors cursor-pointer"
             disabled={cw.weight >= 2.0}
           >
@@ -128,6 +130,7 @@ function ConceptRow({
           {isModified && (
             <button
               onClick={() => onReset(cw.concept)}
+              aria-label={`Reset weight for ${cw.concept}`}
               className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/30 hover:text-pfc-violet hover:bg-pfc-violet/10 transition-colors cursor-pointer"
             >
               <RotateCcwIcon className="h-3 w-3" />

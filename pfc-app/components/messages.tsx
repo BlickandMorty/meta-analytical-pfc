@@ -56,7 +56,10 @@ function MessagesInner({
           transform: 'translateZ(0)',
         }}
       >
-        <div style={{
+        <div
+          role="log"
+          aria-label="Chat messages"
+          style={{
           maxWidth: '48rem',
           margin: '0 auto',
           display: 'flex',

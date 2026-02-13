@@ -199,6 +199,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <button
           onClick={toggleMiniChat}
           title="Open Research Assistant"
+          aria-label="Open Research Assistant"
           style={{
             position: 'fixed',
             bottom: 20,

@@ -36,6 +36,7 @@ export function SteeringFeedback({ synthesisKeyId }: SteeringFeedbackProps) {
             : 'text-muted-foreground/40 hover:text-pfc-green/70',
         )}
         title="Good analysis — steer toward more like this"
+        aria-label="Good analysis — steer toward more like this"
       >
         <ThumbsUpIcon className="h-3 w-3" />
       </button>
@@ -49,6 +50,7 @@ export function SteeringFeedback({ synthesisKeyId }: SteeringFeedbackProps) {
             : 'text-muted-foreground/40 hover:text-pfc-red/70',
         )}
         title="Poor analysis — steer away from this"
+        aria-label="Poor analysis — steer away from this"
       >
         <ThumbsDownIcon className="h-3 w-3" />
       </button>

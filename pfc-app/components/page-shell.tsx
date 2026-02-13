@@ -111,6 +111,7 @@ export function PageShell({
             {showBack && (
               <button
                 onClick={() => backHref ? router.push(backHref) : router.back()}
+                aria-label="Go back"
                 style={{
                   display: 'flex',
                   alignItems: 'center',

@@ -217,6 +217,7 @@ function BrainButtonWithToggle({
       {/* PFC Brain logo — IS the theme toggle. Glowing = dark mode, dim = light mode */}
       <motion.button
         onClick={handlePress}
+        aria-label="Cycle theme"
         animate={{
           rotate: brainGlow ? [0, -10, 10, -5, 5, 0] : 0,
         }}
@@ -854,6 +855,7 @@ export function MultimodalInput({
                   size="icon"
                   className="h-8 w-8 shrink-0 rounded-full"
                   onClick={onStop}
+                  aria-label="Stop generation"
                 >
                   <StopCircleIcon className="h-4 w-4 text-destructive" />
                 </Button>
@@ -861,6 +863,7 @@ export function MultimodalInput({
                 <motion.button
                   whileTap={{ scale: 0.92 }}
                   onClick={handleSubmit}
+                  aria-label="Send message"
                   style={{
                     height: '2.25rem',
                     width: '2.25rem',
@@ -897,6 +900,7 @@ export function MultimodalInput({
                     : 'text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/40',
                 )}
                 onClick={toggleLiveControls}
+                aria-label="Toggle live controls"
               >
                 <SlidersHorizontalIcon className="h-3.5 w-3.5" />
               </Button>
@@ -941,6 +945,7 @@ export function MultimodalInput({
                 size="icon"
                 className="h-8 w-8 shrink-0 rounded-full"
                 onClick={onStop}
+                aria-label="Stop generation"
               >
                 <StopCircleIcon className="h-4 w-4 text-destructive" />
               </Button>
@@ -948,6 +953,7 @@ export function MultimodalInput({
               <motion.button
                 whileTap={{ scale: 0.92 }}
                 onClick={handleSubmit}
+                aria-label="Send message"
                 style={{
                   height: '2.5rem',
                   width: '2.5rem',

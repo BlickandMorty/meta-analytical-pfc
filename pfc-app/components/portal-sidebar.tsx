@@ -158,6 +158,9 @@ export const PortalSidebar = memo(function PortalSidebar() {
           <motion.div
             key="portal-panel"
             data-portal-panel
+            role="dialog"
+            aria-modal="true"
+            aria-label={artifact?.title || 'Code Portal'}
             initial={{ x: '100%', opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
@@ -199,6 +202,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
               {canGoBack && (
                 <button
                   onClick={goBack}
+                  aria-label="Go back"
                   style={{
                     padding: '6px',
                     borderRadius: '9999px',
@@ -314,6 +318,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
               {/* Close button */}
               <button
                 onClick={handleClosePortal}
+                aria-label="Close portal"
                 style={{
                   padding: '6px',
                   borderRadius: '9999px',
