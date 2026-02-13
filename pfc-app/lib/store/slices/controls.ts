@@ -18,11 +18,15 @@ const defaultControls: PipelineControls = {
 export interface ControlsSliceState {
   liveControlsOpen: boolean;
   controls: PipelineControls;
+  /** Whether the analytics engine (signal computation, steering, SOAR) is enabled */
+  analyticsEngineEnabled: boolean;
   userSignalOverrides: {
     confidence: number | null;
     entropy: number | null;
     dissonance: number | null;
-    healthScore: number | null;
+    // healthScore is intentionally excluded — it's a COMPUTED metric
+    // derived from entropy + dissonance + safety state. Users cannot
+    // override it because it represents the model's actual analytical health.
   };
 }
 
@@ -34,8 +38,9 @@ export interface ControlsSliceActions {
   toggleLiveControls: () => void;
   setControls: (controls: Partial<PipelineControls>) => void;
   resetControls: () => void;
+  setAnalyticsEngineEnabled: (enabled: boolean) => void;
   setSignalOverride: (
-    signal: 'confidence' | 'entropy' | 'dissonance' | 'healthScore',
+    signal: 'confidence' | 'entropy' | 'dissonance',
     value: number | null,
   ) => void;
   resetAllSignalOverrides: () => void;
@@ -49,11 +54,12 @@ export const createControlsSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   liveControlsOpen: false,
   controls: { ...defaultControls },
+  analyticsEngineEnabled: true,
   userSignalOverrides: {
     confidence: null as number | null,
     entropy: null as number | null,
     dissonance: null as number | null,
-    healthScore: null as number | null,
+    // healthScore removed — it's computed, not user-controllable
   },
 
   // --- actions ---
@@ -66,8 +72,11 @@ export const createControlsSlice = (set: PFCSet, get: PFCGet) => ({
 
   resetControls: () => set({ controls: { ...defaultControls } }),
 
+  setAnalyticsEngineEnabled: (enabled: boolean) =>
+    set({ analyticsEngineEnabled: enabled }),
+
   setSignalOverride: (
-    signal: 'confidence' | 'entropy' | 'dissonance' | 'healthScore',
+    signal: 'confidence' | 'entropy' | 'dissonance',
     value: number | null,
   ) =>
     set((s) => ({
@@ -80,7 +89,6 @@ export const createControlsSlice = (set: PFCSet, get: PFCGet) => ({
         confidence: null,
         entropy: null,
         dissonance: null,
-        healthScore: null,
       },
     }),
 });

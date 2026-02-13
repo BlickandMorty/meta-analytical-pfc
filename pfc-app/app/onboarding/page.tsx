@@ -65,7 +65,7 @@ const SUITE_OPTIONS: {
   {
     value: 'notes',
     icon: FlaskConicalIcon,
-    label: 'Notes & Research',
+    label: 'Notes & Research (Light)',
     desc: 'AI chat, research library, citation tracking, thought visualization, data export',
     color: 'var(--color-pfc-green)',
     hint: 'Optimized for phones, tablets & low-power devices',
@@ -74,8 +74,8 @@ const SUITE_OPTIONS: {
   {
     value: 'programming',
     icon: CodeIcon,
-    label: 'Programming Suite',
-    desc: 'Everything above plus code language analyzer, codebase tools, AI steering lab',
+    label: 'Deep Analysis',
+    desc: 'Everything above plus code tools, AI steering, and expanded analytics toolkit',
     color: 'var(--color-pfc-violet)',
     hint: 'For desktops & development machines',
     features: ['Code Analyzer', 'Codebase Tools', 'Steering Lab', 'Deep Research'],
@@ -83,11 +83,11 @@ const SUITE_OPTIONS: {
   {
     value: 'full',
     icon: GaugeIcon,
-    label: 'Full Measurement',
-    desc: 'All features — 10-stage pipeline, signal diagnostics, TDA topology, cortex archive',
+    label: 'Full AI & Measurement',
+    desc: 'All features — 10-stage pipeline, signal diagnostics, structural analysis, cortex archive',
     color: 'var(--color-pfc-ember)',
     hint: 'Maximum power — local GPU recommended',
-    features: ['Pipeline Analysis', 'Signal Diagnostics', 'TDA', 'Live Controls'],
+    features: ['Pipeline Analysis', 'Signal Diagnostics', 'Structural Analysis', 'Live Controls'],
   },
 ];
 
@@ -164,7 +164,7 @@ export default function OnboardingPage() {
     router.push('/');
   }, [router]);
 
-  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
+  const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled' || resolvedTheme === 'navy' || resolvedTheme === 'cosmic') : true;
 
   const bubbleGlass: React.CSSProperties = {
     background: isDark ? 'rgba(12,12,16,0.88)' : 'rgba(255,255,255,0.88)',
@@ -515,7 +515,7 @@ export default function OnboardingPage() {
                   </div>
                 </motion.div>
                 <h1 style={{ fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.02em', color: isDark ? 'rgba(237,224,212,0.95)' : 'var(--foreground)' }}>
-                  Meta-Analytical PFC Engine
+                  ResearchLab
                 </h1>
                 <p style={{ fontSize: '0.6875rem', color: textDim }}>
                   Connect an API key for AI-powered analysis, or run in simulation mode

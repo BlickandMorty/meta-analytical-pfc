@@ -1,6 +1,6 @@
 # PFC — Meta-Analytical Reasoning Engine
 
-A research-grade reasoning pipeline that processes queries through 10 cognitive stages inspired by prefrontal cortex function. Features topological data analysis, Bayesian inference, adversarial red-teaming, multi-engine arbitration, and real-time signal monitoring.
+A research-grade reasoning pipeline that processes queries through 10 cognitive stages inspired by prefrontal cortex function. Features structured prompt templates encoding statistical and Bayesian frameworks, adversarial red-teaming, multi-engine arbitration, and real-time signal monitoring.
 
 PFC doesn't just answer questions — it shows you *how* it thinks, where it's uncertain, and what might be wrong with its own analysis.
 
@@ -12,7 +12,7 @@ PFC doesn't just answer questions — it shows you *how* it thinks, where it's u
 - **Truth Assessment** — Independent evaluation of response reliability with signal interpretation
 - **Self-Reflection** — Identifies its own weakest claims and generates critical questions
 - **Multi-Engine Arbitration** — Simulates disagreement between analytical engines and resolves conflicts
-- **Activation Steering** — ML-based feedback loop that learns from your corrections over time
+- **Adaptive Steering** — 3-layer hybrid feedback loop (contrastive + Bayesian + k-NN) that learns from your corrections over time
 - **3 Inference Modes** — Simulation (built-in templates), API (OpenAI/Anthropic), Local (Ollama)
 - **Concept Atlas** — Force-directed graph of extracted concepts across conversations
 - **Cortex Archive** — Save and restore full brain state snapshots

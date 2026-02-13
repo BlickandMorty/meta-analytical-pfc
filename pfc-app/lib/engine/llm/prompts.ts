@@ -12,7 +12,7 @@ import type { StageResult, DualMessage, SignalUpdate } from '../types';
 
 // ── Shared preamble ─────────────────────────────────────────────
 
-const SYSTEM_PREAMBLE = `You are the Meta-Analytical PFC (Prefrontal Cortex), a research-grade analytical reasoning engine. You operate a 10-stage executive pipeline that processes queries through:
+const SYSTEM_PREAMBLE = `You are ResearchLab, a portable research-grade analytical reasoning engine. You operate a 10-stage analytical pipeline that processes queries through:
 
 1. Triage — Classifying query complexity and domain
 2. Memory Retrieval — Retrieving relevant context
@@ -30,7 +30,9 @@ Your analysis must be:
 - Calibrated: confidence must match evidence strength — never overclaim
 - Multi-perspectival: consider competing frameworks and interpretations
 - Self-critical: identify your own weaknesses and blind spots
-- Quantitatively grounded: reference effect sizes, Bayes factors, confidence intervals where applicable
+- Quantitatively grounded: reference effect sizes (d, r, OR), Bayes factors, confidence intervals where applicable
+- Causally rigorous: always distinguish correlation from causation; name confounders explicitly
+- Publication-aware: consider publication bias, replication status, and file-drawer effects
 - Research-grade: suitable for academic and professional decision-making`;
 
 // ── Helper: format query context ────────────────────────────────
@@ -64,7 +66,7 @@ function formatSignals(signals: Partial<SignalUpdate>): string {
   if (signals.focusDepth !== undefined) parts.push(`- Focus depth: ${signals.focusDepth.toFixed(1)}`);
   if (signals.temperatureScale !== undefined) parts.push(`- Temperature: ${signals.temperatureScale.toFixed(2)}`);
   if (signals.tda) {
-    parts.push(`- TDA: betti0=${signals.tda.betti0}, betti1=${signals.tda.betti1}, persistenceEntropy=${signals.tda.persistenceEntropy.toFixed(3)}`);
+    parts.push(`- Structural complexity: β₀=${signals.tda.betti0}, β₁=${signals.tda.betti1}, persistenceEntropy=${signals.tda.persistenceEntropy.toFixed(3)}`);
   }
   return parts.join('\n');
 }
@@ -92,10 +94,11 @@ interface PromptPair {
 export function buildRawAnalysisPrompt(
   qa: QueryAnalysis,
   signals: Partial<SignalUpdate>,
+  steeringDirectives?: string,
 ): PromptPair {
   return {
     system: `${SYSTEM_PREAMBLE}
-
+${steeringDirectives || ''}
 Generate a raw analytical output for the query below. Embed epistemic tags throughout your analysis:
 - [DATA] for claims grounded in empirical evidence or established facts
 - [MODEL] for claims based on theoretical models, frameworks, or assumptions
@@ -106,15 +109,31 @@ ${formatQueryContext(qa)}
 
 ${formatSignals(signals)}
 
-INSTRUCTIONS:
-- Write 3-6 paragraphs of dense analytical content
+RESEARCH METHODOLOGY:
+- For causal claims: Apply Bradford Hill criteria (strength, consistency, specificity, temporality, biological gradient, plausibility, coherence, experiment, analogy). Explicitly distinguish correlation from causation. Construct a causal DAG narrative and name all plausible confounders.
+- For empirical claims: Report effect sizes (Cohen's d, odds ratios, risk ratios) with 95% confidence intervals. Note whether effects cross the MCID (minimum clinically important difference). Reference specific landmark studies, sample sizes, and replication status.
+- For meta-analytical queries: Assess heterogeneity (I², τ², Q-statistic), check for publication bias (funnel plot asymmetry, Egger's test), and evaluate study quality using GRADE or RoB2 frameworks. Note number of studies, total N, and cross-cultural generalizability.
+- For cross-disciplinary claims: Identify which disciplines' evidence bases are being synthesized, note methodological incompatibilities, and flag where different fields may define constructs differently.
+- For philosophical/theoretical queries: Analyze through minimum 4 competing frameworks. Trace the genealogy of each position. Identify where frameworks genuinely conflict vs. talk past each other due to definitional differences.
+- Always identify and name potential confounders. For observational data, explicitly state what causal conclusions CANNOT be drawn.
+- Distinguish between statistical significance and practical/clinical significance. A p < 0.05 finding with negligible effect size should be flagged.
+- Name specific researchers, studies, and dates wherever possible — ground claims in the actual literature, not vague gestures toward "research shows."
+
+DEPTH REQUIREMENTS:
+- Write 6-12 paragraphs of dense, expert-level analytical content — this is the deep analysis layer
+- Each paragraph should introduce a distinct analytical angle, evidence stream, or counterargument
+- Go significantly beyond what a standard AI chat response would provide — this must feel like reading a research brief, not a summary
+- Include a historical/developmental perspective: how has understanding of this topic evolved?
+- Include a methodological critique section: what are the weaknesses of the best available evidence?
+- Include competing interpretations: present at least 2-3 genuinely different ways experts interpret the evidence
+- Include practical implications: what does this actually mean for decision-making?
+- End with open questions: what remains genuinely unknown or contested?
+
+FORMAT:
 - Do NOT use markdown headers or bullet lists — write flowing analytical prose
 - Embed [DATA], [MODEL], [UNCERTAIN], [CONFLICT] tags inline within sentences
-- If the query is philosophical, analyze through multiple frameworks (minimum 3)
-- If the query is empirical, reference effect sizes, study quality, and Bayesian factors
-- If the query is causal, construct a causal DAG and assess confounders
 - Address the query's specific domain and entities
-- Match analysis depth to the complexity score`,
+- Match analysis depth to the complexity score — higher complexity = more paragraphs and deeper engagement`,
     user: `Analyze this query through the full PFC pipeline: "${qa.coreQuestion}"`,
   };
 }
@@ -125,11 +144,12 @@ export function buildLaymanSummaryPrompt(
   qa: QueryAnalysis,
   rawAnalysis: string,
   sectionLabels: Record<string, string>,
+  steeringDirectives?: string,
 ): PromptPair {
   return {
     system: `${SYSTEM_PREAMBLE}
-
-Based on the raw analysis below, generate an accessible 5-section summary. Each section should be substantive but readable — not dumbed down, but translated for a broad educated audience.
+${steeringDirectives || ''}
+Based on the raw analysis below, generate a 5-section output. The "whatIsLikelyTrue" field is the MAIN ANSWER shown to the user — it must be a complete, direct, well-written response. The other 4 fields go into a collapsible deep analysis section.
 
 ${formatQueryContext(qa)}
 
@@ -137,13 +157,15 @@ RAW ANALYSIS:
 ${rawAnalysis}
 
 SECTION LABELS (use these exact field names in your JSON response):
-- whatWasTried: "${sectionLabels.whatWasTried || 'Analytical approach'}" — What method or framework was applied (2-4 sentences)
-- whatIsLikelyTrue: "${sectionLabels.whatIsLikelyTrue || 'Core insight'}" — The central finding. THIS IS THE MAIN OUTPUT. Write 3-6 substantive sentences.
-- confidenceExplanation: "${sectionLabels.confidenceExplanation || 'Confidence level'}" — Why confidence is where it is (2-4 sentences)
-- whatCouldChange: "${sectionLabels.whatCouldChange || 'What could shift'}" — What would change the conclusion (2-3 sentences)
-- whoShouldTrust: "${sectionLabels.whoShouldTrust || 'Audience & applicability'}" — Who benefits and caveats (2-3 sentences)
 
-IMPORTANT: The "whatIsLikelyTrue" field is the primary output that gets streamed to the user. Make it the most substantive and insightful section.`,
+- whatIsLikelyTrue: "${sectionLabels.whatIsLikelyTrue || 'Core insight'}" — THIS IS THE MAIN VISIBLE ANSWER. Write it as a direct, complete response to the user's question — as if you were a knowledgeable expert giving the best possible answer. Use markdown formatting: bullet points, bold key terms, numbered lists where appropriate. Write 6-12 sentences. It should feel like a "completified" version of a standard AI response — more thorough, better structured, with key evidence mentioned, but still readable and conversational. Do NOT use section headers inside this field. Do NOT use jargon without explanation. Think of this as "the best answer Claude/GPT would give if it took extra time."
+
+- whatWasTried: "${sectionLabels.whatWasTried || 'Analytical approach'}" — What method, framework, or evidence base was evaluated. Name specific methodologies, key studies, or analytical frameworks used. (3-5 sentences)
+- confidenceExplanation: "${sectionLabels.confidenceExplanation || 'Confidence level'}" — Why confidence is calibrated where it is. Reference evidence quality, sample sizes, replication status, and what kind of evidence is missing. (3-5 sentences)
+- whatCouldChange: "${sectionLabels.whatCouldChange || 'What could shift'}" — Specific findings, studies, or developments that would change the conclusion. Name concrete scenarios, not vague possibilities. (3-4 sentences)
+- whoShouldTrust: "${sectionLabels.whoShouldTrust || 'Audience & applicability'}" — Who this applies to, boundary conditions, and populations or contexts where this may not hold. (3-4 sentences)
+
+CRITICAL: The "whatIsLikelyTrue" field is shown as the main response — it must stand alone as a complete, satisfying answer. The other 4 fields are hidden in "deep analysis" — make them genuinely useful for someone who wants to go deeper. Avoid generic filler.`,
     user: `Create an accessible summary of the analysis for query: "${qa.coreQuestion}"`,
   };
 }
@@ -153,10 +175,11 @@ IMPORTANT: The "whatIsLikelyTrue" field is the primary output that gets streamed
 export function buildReflectionPrompt(
   stageResults: StageResult[],
   rawAnalysis: string,
+  steeringDirectives?: string,
 ): PromptPair {
   return {
     system: `${SYSTEM_PREAMBLE}
-
+${steeringDirectives || ''}
 You are now in SELF-REFLECTION mode. Your job is to critically evaluate the analysis that was just produced by the pipeline. Be genuinely critical — do not rubber-stamp.
 
 STAGE RESULTS:
@@ -167,18 +190,21 @@ ${rawAnalysis}
 
 Generate a structured self-critique with exactly these fields:
 
-1. selfCriticalQuestions (2-5 strings): Questions the system should ask about its own analysis. Examples:
-   - "Did we adequately consider reverse causation?"
-   - "Is the sample representativeness assumption justified?"
-   - "Have we confused statistical significance with practical significance?"
+1. selfCriticalQuestions (2-5 strings): Questions the system should ask about its own analysis. Target these areas:
+   - Confounders: "Did we adequately consider reverse causation or unmeasured confounders?"
+   - Generalizability: "Is the sample representativeness assumption justified across populations?"
+   - Statistical vs. practical: "Have we confused statistical significance with practical significance?"
+   - Publication bias: "Are we over-relying on published findings that may reflect positive-result bias?"
+   - Construct validity: "Are the constructs being measured actually capturing what we think they are?"
 
-2. adjustments (array of strings): Confidence adjustments. Examples:
-   - "Reduced confidence by 5% due to limited sample diversity"
-   - "Increased uncertainty around long-term projections"
+2. adjustments (array of strings): Confidence adjustments with specific reasoning. Examples:
+   - "Reduced confidence by 5% due to limited sample diversity across cultural contexts"
+   - "Increased uncertainty around long-term projections — most studies are cross-sectional"
+   - "Downgraded causal language — observational designs cannot establish directionality"
 
-3. leastDefensibleClaim (string): The single claim most vulnerable to challenge. Be specific.
+3. leastDefensibleClaim (string): The single claim most vulnerable to challenge. Name the specific logical or evidential weakness.
 
-4. precisionVsEvidenceCheck (string): Does the analysis claim more precision than the evidence warrants? Are the numbers more precise than the underlying data justifies?`,
+4. precisionVsEvidenceCheck (string): Does the analysis claim more precision than the evidence warrants? Are the numbers more precise than the underlying data justifies? Flag any spurious precision (e.g., "d = 0.437" when the original studies report d to 1 decimal).`,
     user: 'Critically reflect on the analysis above. Identify weaknesses and overconfidence.',
   };
 }
@@ -187,12 +213,13 @@ Generate a structured self-critique with exactly these fields:
 
 export function buildArbitrationPrompt(
   stageResults: StageResult[],
+  steeringDirectives?: string,
 ): PromptPair {
   const completedStages = stageResults.filter((s) => s.status === 'complete');
 
   return {
     system: `${SYSTEM_PREAMBLE}
-
+${steeringDirectives || ''}
 You are in ARBITRATION mode. Simulate a vote among the analytical engines that processed this query. Each engine evaluates whether the overall conclusion is supported by its specific perspective.
 
 STAGE RESULTS:
@@ -225,6 +252,7 @@ export function buildTruthAssessmentPrompt(
     safetyState: string;
     riskScore: number;
   },
+  steeringDirectives?: string,
 ): PromptPair {
   // Summarize the dual message components
   const reflectionSummary = dualMessage.reflection
@@ -244,7 +272,7 @@ export function buildTruthAssessmentPrompt(
 
   return {
     system: `${SYSTEM_PREAMBLE}
-
+${steeringDirectives || ''}
 You are in TRUTH ASSESSMENT mode. Evaluate the overall truth-likelihood of the analysis, interpreting the pipeline signals and meta-data.
 
 PIPELINE SIGNALS:

@@ -688,16 +688,16 @@ const D3ForceGraph = memo(function D3ForceGraph({
       id: c,
       x: dimensions.width / 2 + (Math.random() - 0.5) * 100,
       y: dimensions.height / 2 + (Math.random() - 0.5) * 100,
-      color: COLORS[i % COLORS.length],
+      color: COLORS[i % COLORS.length]!,
     }));
 
     const simLinks: ForceGraphLink[] = [];
     for (let i = 0; i < concepts.length; i++) {
       const next = (i + 1) % concepts.length;
-      simLinks.push({ source: concepts[i], target: concepts[next] });
+      simLinks.push({ source: concepts[i]!, target: concepts[next]! });
       if (concepts.length > 3) {
         const skip = (i + 2) % concepts.length;
-        simLinks.push({ source: concepts[i], target: concepts[skip] });
+        simLinks.push({ source: concepts[i]!, target: concepts[skip]! });
       }
     }
 
@@ -765,14 +765,14 @@ const D3ForceGraph = memo(function D3ForceGraph({
 // Interactive Signal Radar
 // ---------------------------------------------------------------------------
 
-const SIGNAL_KEYS = ['confidence', 'entropy', 'dissonance', 'healthScore'] as const;
+const SIGNAL_KEYS = ['confidence', 'entropy', 'dissonance'] as const;
 type SignalKey = typeof SIGNAL_KEYS[number];
 
 function InteractiveSignalRadar({
   confidence, entropy, dissonance, healthScore, overrides, onSignalChange,
 }: {
   confidence: number; entropy: number; dissonance: number; healthScore: number;
-  overrides: { confidence: number | null; entropy: number | null; dissonance: number | null; healthScore: number | null };
+  overrides: { confidence: number | null; entropy: number | null; dissonance: number | null };
   onSignalChange: (signal: SignalKey, value: number) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -781,10 +781,10 @@ function InteractiveSignalRadar({
 
   const cx = 150, cy = 150, maxR = 120;
   const axes = [
-    { label: 'Confidence', key: 'confidence' as SignalKey, value: overrides.confidence ?? confidence, autoValue: confidence, angle: 0, isOverridden: overrides.confidence !== null },
-    { label: 'Entropy', key: 'entropy' as SignalKey, value: Math.min(1, overrides.entropy ?? entropy), autoValue: Math.min(1, entropy), angle: 90, isOverridden: overrides.entropy !== null },
-    { label: 'Dissonance', key: 'dissonance' as SignalKey, value: Math.min(1, overrides.dissonance ?? dissonance), autoValue: Math.min(1, dissonance), angle: 180, isOverridden: overrides.dissonance !== null },
-    { label: 'Health', key: 'healthScore' as SignalKey, value: overrides.healthScore ?? healthScore, autoValue: healthScore, angle: 270, isOverridden: overrides.healthScore !== null },
+    { label: 'Confidence', key: 'confidence' as SignalKey, value: overrides.confidence ?? confidence, autoValue: confidence, angle: 0, isOverridden: overrides.confidence !== null, editable: true },
+    { label: 'Entropy', key: 'entropy' as SignalKey, value: Math.min(1, overrides.entropy ?? entropy), autoValue: Math.min(1, entropy), angle: 90, isOverridden: overrides.entropy !== null, editable: true },
+    { label: 'Dissonance', key: 'dissonance' as SignalKey, value: Math.min(1, overrides.dissonance ?? dissonance), autoValue: Math.min(1, dissonance), angle: 180, isOverridden: overrides.dissonance !== null, editable: true },
+    { label: 'Health', key: 'healthScore' as SignalKey | 'healthScore', value: healthScore, autoValue: healthScore, angle: 270, isOverridden: false, editable: false },
   ];
 
   const autoPoints = axes.map((a) => polar(cx, cy, valToRadius(a.autoValue, maxR), a.angle));
@@ -802,9 +802,11 @@ function InteractiveSignalRadar({
   }, []);
 
   const handlePointerDown = useCallback((index: number, e: React.PointerEvent) => {
+    if (!axes[index]?.editable) return; // Health axis is read-only
     e.preventDefault();
     (e.target as SVGElement).setPointerCapture(e.pointerId);
     setDragging(index);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -814,7 +816,8 @@ function InteractiveSignalRadar({
     const dx = pt.x - cx, dy = pt.y - cy;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const value = Math.max(0, Math.min(1, (dist - 20) / (maxR - 20)));
-    onSignalChange(axes[dragging].key, Math.round(value * 100) / 100);
+    const axis = axes[dragging]!;
+    if (axis.editable) onSignalChange(axis.key as SignalKey, Math.round(value * 100) / 100);
   };
 
   return (
@@ -827,22 +830,29 @@ function InteractiveSignalRadar({
       {axes.map((a) => { const end = polar(cx, cy, maxR + 4, a.angle); return <line key={a.label} x1={cx} y1={cy} x2={end.x} y2={end.y} stroke="currentColor" strokeOpacity={0.15} />; })}
       {hasAnyOverride && <polygon points={autoPolygon} fill="none" stroke="currentColor" strokeOpacity={0.15} strokeWidth={1.5} strokeDasharray="4 3" />}
       <polygon points={polygon} fill={EMBER} fillOpacity={0.2} stroke={EMBER} strokeWidth={2} />
-      {hasAnyOverride && autoPoints.map((p, i) => axes[i].isOverridden ? <circle key={`g${i}`} cx={p.x} cy={p.y} r={3} fill="currentColor" fillOpacity={0.2} /> : null)}
+      {hasAnyOverride && autoPoints.map((p, i) => axes[i]!.isOverridden ? <circle key={`g${i}`} cx={p.x} cy={p.y} r={3} fill="currentColor" fillOpacity={0.2} /> : null)}
       {points.map((p, i) => {
-        const isHovered = hoveredPoint === i, isDragging = dragging === i, isOverridden = axes[i].isOverridden;
+        const isHovered = hoveredPoint === i, isDragging = dragging === i, isOverridden = axes[i]!.isOverridden;
+        const canEdit = axes[i]!.editable;
         return (
           <g key={i}>
-            <circle cx={p.x} cy={p.y} r={20} fill="transparent" className="cursor-grab"
-              onPointerDown={(e) => handlePointerDown(i, e)} onPointerEnter={() => setHoveredPoint(i)} onPointerLeave={() => setHoveredPoint(null)}
-              style={{ touchAction: 'none' }} />
-            {(isHovered || isDragging) && <circle cx={p.x} cy={p.y} r={isDragging ? 10 : 8} fill={EMBER} fillOpacity={0.15} stroke={EMBER} strokeOpacity={0.3} />}
+            {canEdit && (
+              <circle cx={p.x} cy={p.y} r={20} fill="transparent" className="cursor-grab"
+                onPointerDown={(e) => handlePointerDown(i, e)} onPointerEnter={() => setHoveredPoint(i)} onPointerLeave={() => setHoveredPoint(null)}
+                style={{ touchAction: 'none' }} />
+            )}
+            {!canEdit && (
+              <circle cx={p.x} cy={p.y} r={20} fill="transparent"
+                onPointerEnter={() => setHoveredPoint(i)} onPointerLeave={() => setHoveredPoint(null)} />
+            )}
+            {(isHovered || isDragging) && canEdit && <circle cx={p.x} cy={p.y} r={isDragging ? 10 : 8} fill={EMBER} fillOpacity={0.15} stroke={EMBER} strokeOpacity={0.3} />}
             {isOverridden && <circle cx={p.x} cy={p.y} r={7} fill="none" stroke={VIOLET} strokeWidth={1.5} strokeDasharray="2 2" />}
-            <circle cx={p.x} cy={p.y} r={isDragging ? 6 : isHovered ? 5.5 : 4} fill={isOverridden ? VIOLET : EMBER} className="cursor-grab" />
+            <circle cx={p.x} cy={p.y} r={isDragging ? 6 : isHovered ? 5.5 : 4} fill={!canEdit ? 'currentColor' : isOverridden ? VIOLET : EMBER} fillOpacity={canEdit ? 1 : 0.5} className={canEdit ? 'cursor-grab' : ''} />
           </g>
         );
       })}
-      {axes.map((a) => { const pos = polar(cx, cy, maxR + 30, a.angle); return <text key={a.label} x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" fontSize={11} fontWeight={500}>{a.label}{a.isOverridden && ' \u270E'}</text>; })}
-      {axes.map((a, i) => <text key={`v${i}`} x={points[i].x} y={points[i].y - 12} textAnchor="middle" fontSize={9} fill={a.isOverridden ? VIOLET : EMBER} fontWeight={600}>{a.value.toFixed(2)}{a.isOverridden && <tspan fontSize={7} fillOpacity={0.6}>{` (auto: ${a.autoValue.toFixed(2)})`}</tspan>}</text>)}
+      {axes.map((a) => { const pos = polar(cx, cy, maxR + 30, a.angle); return <text key={a.label} x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central" className="fill-muted-foreground" fontSize={11} fontWeight={500} fillOpacity={a.editable ? 1 : 0.5}>{a.label}{a.isOverridden && ' \u270E'}{!a.editable && ' (auto)'}</text>; })}
+      {axes.map((a, i) => <text key={`v${i}`} x={points[i]!.x} y={points[i]!.y - 12} textAnchor="middle" fontSize={9} fill={a.isOverridden ? VIOLET : EMBER} fontWeight={600}>{a.value.toFixed(2)}{a.isOverridden && <tspan fontSize={7} fillOpacity={0.6}>{` (auto: ${a.autoValue.toFixed(2)})`}</tspan>}</text>)}
       <text x={cx} y={cy + maxR + 55} textAnchor="middle" fontSize={9} className="fill-muted-foreground" fillOpacity={0.5}>Drag points to manually set signals</text>
     </svg>
   );
@@ -1033,8 +1043,8 @@ const D3ParallelCoordinates = memo(function D3ParallelCoordinates({
         <g transform={`translate(${margin.left},${margin.top})`}>
           {/* Axes */}
           {dimDefs.map((dim, i) => {
-            const x = xPositions[i];
-            const yS = yScales[i];
+            const x = xPositions[i]!;
+            const yS = yScales[i]!;
             const ticks = yS.ticks(5);
             return (
               <g key={dim.key}>
@@ -1053,8 +1063,8 @@ const D3ParallelCoordinates = memo(function D3ParallelCoordinates({
           {/* Polylines */}
           {data.map((d, idx) => {
             const pts: [number, number][] = dimDefs.map((dim, i) => [
-              xPositions[i],
-              yScales[i](d.values[dim.key] ?? 0),
+              xPositions[i]!,
+              yScales[i]!(d.values[dim.key] ?? 0),
             ]);
             const isHovered = hoveredIdx === idx;
             return (
@@ -1075,9 +1085,9 @@ const D3ParallelCoordinates = memo(function D3ParallelCoordinates({
 
           {/* Hover dots on the polyline */}
           {hoveredIdx !== null && data[hoveredIdx] && dimDefs.map((dim, i) => {
-            const val = data[hoveredIdx].values[dim.key] ?? 0;
+            const val = data[hoveredIdx]!.values[dim.key] ?? 0;
             return (
-              <circle key={`dot-${i}`} cx={xPositions[i]} cy={yScales[i](val)} r={4} fill={data[hoveredIdx].color} stroke="white" strokeWidth={1.5} />
+              <circle key={`dot-${i}`} cx={xPositions[i]!} cy={yScales[i]!(val)} r={4} fill={data[hoveredIdx]!.color} stroke="white" strokeWidth={1.5} />
             );
           })}
         </g>
@@ -1086,11 +1096,11 @@ const D3ParallelCoordinates = memo(function D3ParallelCoordinates({
       {hoveredIdx !== null && data[hoveredIdx] && (
         <div className="absolute pointer-events-none bg-card/90 backdrop-blur-sm border border-border/40 rounded-lg px-3 py-2 text-xs shadow-lg"
           style={{ right: 12, top: margin.top, transform: 'translateZ(0)' }}>
-          <div className="font-medium mb-1" style={{ color: data[hoveredIdx].color }}>{data[hoveredIdx].label}</div>
+          <div className="font-medium mb-1" style={{ color: data[hoveredIdx]!.color }}>{data[hoveredIdx]!.label}</div>
           {dimDefs.map((dim) => (
             <div key={dim.key} className="flex items-center gap-2 text-muted-foreground">
               <span>{dim.label}:</span>
-              <span className="font-mono ml-auto">{(data[hoveredIdx].values[dim.key] ?? 0).toFixed(3)}</span>
+              <span className="font-mono ml-auto">{(data[hoveredIdx]!.values[dim.key] ?? 0).toFixed(3)}</span>
             </div>
           ))}
         </div>
@@ -1205,7 +1215,7 @@ const TAB_DEFS = [
   { value: 'radar', label: 'Signal Radar', icon: RadarIcon },
   { value: 'pipeline', label: 'Pipeline', icon: NetworkIcon },
   { value: 'concepts', label: 'Force Graph', icon: BrainIcon },
-  { value: 'tda', label: 'TDA', icon: ActivityIcon },
+  { value: 'tda', label: 'Structure', icon: ActivityIcon },
   { value: 'risk', label: 'Risk Matrix', icon: TargetIcon },
 ] as const;
 
@@ -1231,8 +1241,7 @@ export default function VisualizerPage() {
 
   const hasOverrides = userSignalOverrides.confidence !== null ||
     userSignalOverrides.entropy !== null ||
-    userSignalOverrides.dissonance !== null ||
-    userSignalOverrides.healthScore !== null;
+    userSignalOverrides.dissonance !== null;
 
   const handleSignalChange = useCallback((signal: SignalKey, value: number) => {
     setSignalOverride(signal, value);
@@ -1293,7 +1302,7 @@ export default function VisualizerPage() {
       const jitter = () => (Math.random() - 0.5) * 0.15;
       runs.push({
         label: `Run ${i + 1}`,
-        color: COLORS[i % COLORS.length],
+        color: COLORS[i % COLORS.length]!,
         values: {
           confidence: Math.max(0, Math.min(1, confidence + jitter())),
           entropy: Math.max(0, Math.min(1, entropy + jitter())),
@@ -1324,7 +1333,7 @@ export default function VisualizerPage() {
     ];
     for (const s of signals) pts.push({ ...s, r: 8 });
     for (let i = 0; i < 20; i++) {
-      const base = signals[i % signals.length];
+      const base = signals[i % signals.length]!;
       pts.push({
         label: `Run ${i + 1}`,
         x: base.x + (Math.random() - 0.5) * 0.3,
@@ -1398,7 +1407,7 @@ export default function VisualizerPage() {
                     ))}
                   </div>
                 </DashCard>
-                <DashCard title="TDA Landscape" icon={ActivityIcon} iconColor={VIOLET}>
+                <DashCard title="Structural Complexity" icon={ActivityIcon} iconColor={VIOLET}>
                   <TDALandscape betti0={tda.betti0} betti1={tda.betti1} persistenceEntropy={tda.persistenceEntropy} maxPersistence={tda.maxPersistence} />
                 </DashCard>
                 <DashCard title="Harmony Spectrum" icon={ActivityIcon} iconColor={GREEN}>
@@ -1501,11 +1510,11 @@ export default function VisualizerPage() {
                     {SIGNAL_KEYS.map((key) => {
                       const override = userSignalOverrides[key];
                       if (override === null) return null;
-                      const autoVal = key === 'entropy' ? Math.min(1, entropy) : key === 'dissonance' ? Math.min(1, dissonance) : key === 'confidence' ? confidence : healthScore;
+                      const autoVal = key === 'entropy' ? Math.min(1, entropy) : key === 'dissonance' ? Math.min(1, dissonance) : confidence;
                       return (
                         <button key={key} onClick={() => setSignalOverride(key, null)}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border border-pfc-violet/30 bg-pfc-violet/5 text-pfc-violet hover:bg-pfc-violet/15 transition-colors cursor-pointer">
-                          <span className="font-medium capitalize">{key === 'healthScore' ? 'Health' : key}</span>
+                          <span className="font-medium capitalize">{key}</span>
                           <span className="font-mono">{override.toFixed(2)}</span>
                           <span className="text-[9px] opacity-60">(auto: {autoVal.toFixed(2)})</span>
                           <span className="ml-0.5 text-pfc-violet/60">{'\u2715'}</span>
@@ -1553,8 +1562,8 @@ export default function VisualizerPage() {
           <TabsContent value="tda">
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
               <div className="space-y-4">
-                <div className="flex items-center gap-2"><ActivityIcon className="h-4 w-4 text-pfc-violet" /><h3 className="text-base font-semibold">TDA Landscape</h3></div>
-                <p className="text-sm text-muted-foreground">Topological Data Analysis snapshot. Betti numbers indicate connected components and loops.</p>
+                <div className="flex items-center gap-2"><ActivityIcon className="h-4 w-4 text-pfc-violet" /><h3 className="text-base font-semibold">Structural Complexity</h3></div>
+                <p className="text-sm text-muted-foreground">Structural complexity metrics (β₀, β₁). Heuristic estimates derived from query entity count and complexity — higher values indicate more complex analytical structure.</p>
                 <TDALandscape betti0={tda.betti0} betti1={tda.betti1} persistenceEntropy={tda.persistenceEntropy} maxPersistence={tda.maxPersistence} />
               </div>
             </motion.div>

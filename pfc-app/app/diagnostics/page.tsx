@@ -362,12 +362,13 @@ export default function DiagnosticsPage() {
         </motion.div>
       </GlassSection>
 
-      {/* TDA Topology */}
-      <GlassSection title="TDA Topology">
+      {/* Structural Complexity */}
+      <GlassSection title="Structural Complexity">
+        <p className="text-xs text-muted-foreground/50 mb-3">Heuristic structural metrics derived from query properties. Higher values indicate more complex analytical structure.</p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {([
-            { label: 'Betti-0', value: tda.betti0 },
-            { label: 'Betti-1', value: tda.betti1 },
+            { label: 'β₀ (Fragmentation)', value: tda.betti0 },
+            { label: 'β₁ (Cyclical)', value: tda.betti1 },
             { label: 'Persistence Entropy', value: tda.persistenceEntropy },
             { label: 'Max Persistence', value: tda.maxPersistence },
           ] as const).map((item, i) => (
@@ -436,13 +437,13 @@ export default function DiagnosticsPage() {
 
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div>
-              <p className="text-xs text-muted-foreground">Chord Product</p>
+              <p className="text-xs text-muted-foreground">Chord Product <span className="text-muted-foreground/40">(decorative)</span></p>
               <p className="text-xl font-bold tabular-nums text-pfc-cyan">
                 {activeChordProduct.toFixed(3)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Harmony Distance</p>
+              <p className="text-xs text-muted-foreground">Dissonance Alias</p>
               <p className="text-xl font-bold tabular-nums text-pfc-cyan">
                 {harmonyKeyDistance.toFixed(3)}
               </p>

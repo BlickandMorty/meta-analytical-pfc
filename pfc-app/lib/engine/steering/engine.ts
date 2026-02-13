@@ -2,13 +2,13 @@
 // ██ ADAPTIVE STEERING ENGINE — 3-Layer Hybrid Computation
 // ══════════════════════════════════════════════════════════════════
 //
-// Layer 1: Contrastive Vector (from steering_engine.py)
+// Layer 1: Contrastive Vector
 //   mean(positive_keys) - mean(negative_keys) → steering direction
 //
-// Layer 2: Bayesian Prior Adaptation (from bayesian.py)
+// Layer 2: Bayesian Prior Adaptation
 //   Per-dimension Beta(α,β) priors updated on each outcome
 //
-// Layer 3: Contextual k-NN Recall (from memory.py + entropy.py)
+// Layer 3: Contextual k-NN Recall
 //   Find nearest successful analyses by query features, steer toward centroid
 //
 // Hybrid combination: w1·contrastive + w2·bayesian + w3·contextual
@@ -44,9 +44,9 @@ import {
 // LAYER 1: CONTRASTIVE VECTOR
 // ═══════════════════════════════════════════════════════════════════
 //
-// Directly from steering_engine.py:
-//   vector = torch.stack(pos_acts).mean(0) - torch.stack(neg_acts).mean(0)
-//   vector = vector / vector.norm()
+// Contrastive steering:
+//   vector = mean(positive_activations) - mean(negative_activations)
+//   vector = normalize(vector)
 
 function computeContrastiveVector(
   memory: SteeringMemory,
@@ -93,7 +93,7 @@ function computeContrastiveVector(
 // LAYER 2: BAYESIAN PRIOR ADAPTATION
 // ═══════════════════════════════════════════════════════════════════
 //
-// From bayesian.py: update_belief(prior, P(evidence|H), P(evidence|¬H))
+// Bayesian belief update: update_belief(prior, P(evidence|H), P(evidence|¬H))
 // Implemented as Beta distribution updates per dimension.
 //
 // For [0,1] bounded dimensions:
@@ -154,14 +154,14 @@ export function updatePriors(
 ): SteeringPriors {
   const updatedDims: Record<string, DimensionPrior> = { ...priors.dimensions };
 
-  // Only update the first 14 continuous dimensions (signals + TDA + focus + harmony + complexity)
+  // Only update the first 14 continuous dimensions (signals + structural + focus + harmony + complexity)
   // Skip one-hot and binary dimensions (they don't benefit from Beta priors)
   const continuousDimCount = 14;
 
   for (let i = 0; i < continuousDimCount; i++) {
-    const label = DIMENSION_LABELS[i];
+    const label = DIMENSION_LABELS[i]!;
     const existing = updatedDims[label] ?? initPrior();
-    updatedDims[label] = updatePrior(existing, vector[i], isPositive);
+    updatedDims[label] = updatePrior(existing, vector[i]!, isPositive);
   }
 
   return {
@@ -178,7 +178,7 @@ function computeBayesianBias(priors: SteeringPriors): SteeringVector | null {
   let dimCount = 0;
 
   for (let i = 0; i < 14; i++) {
-    const label = DIMENSION_LABELS[i];
+    const label = DIMENSION_LABELS[i]!;
     const prior = priors.dimensions[label];
     if (!prior || prior.sampleCount < 2) continue;
 
@@ -211,7 +211,7 @@ function computeBayesianBias(priors: SteeringPriors): SteeringVector | null {
 // LAYER 3: CONTEXTUAL k-NN RECALL
 // ═══════════════════════════════════════════════════════════════════
 //
-// From memory.py + entropy.py:
+// Memory recall + entropy-weighted context:
 //   Find k nearest positive exemplars by query feature similarity
 //   Compute centroid of their signal vectors
 //   Context bias = (centroid - globalMean) × contextMatchScore
@@ -453,13 +453,13 @@ function powerIteration(
     const newV = new Array(dim).fill(0);
     for (const row of centered) {
       const proj = dotProduct(row, v);
-      for (let i = 0; i < dim; i++) newV[i] += row[i] * proj;
+      for (let i = 0; i < dim; i++) newV[i]! += row[i]! * proj;
     }
 
     // Deflate if finding second component
     if (deflateBy) {
       const overlap = dotProduct(newV, deflateBy);
-      for (let i = 0; i < dim; i++) newV[i] -= overlap * deflateBy[i];
+      for (let i = 0; i < dim; i++) newV[i]! -= overlap * deflateBy[i]!;
     }
 
     // Normalize
@@ -473,6 +473,6 @@ function powerIteration(
 
 function dotProduct(a: number[], b: number[]): number {
   let sum = 0;
-  for (let i = 0; i < a.length; i++) sum += a[i] * (b[i] ?? 0);
+  for (let i = 0; i < a.length; i++) sum += a[i]! * (b[i] ?? 0);
   return sum;
 }

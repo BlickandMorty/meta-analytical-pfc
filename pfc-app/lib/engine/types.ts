@@ -104,7 +104,20 @@ export interface TruthAssessment {
   recommendedActions: string[];
 }
 
-// --- TDA Snapshot ---
+// --- Structural Complexity Metrics ---
+//
+// Heuristic structural complexity signals derived from query properties
+// (entity count, complexity, domain flags). They provide useful RELATIVE
+// rankings (higher complexity → higher values) for the steering engine
+// and UI display.
+//
+// - betti0: fragmentation estimate — entity count and complexity based
+// - betti1: cyclical complexity — complexity × adversarial intensity + entity factor
+// - persistenceEntropy: structural noise — linear combo of complexity + entity factor
+// - maxPersistence: dominant pattern strength — 0.1 + complexity × 0.5 + entity factor × 0.15
+//
+// In API mode, the prompt composer translates these into behavioral directives,
+// so the exact values matter less than their relative magnitudes.
 
 export interface TDASnapshot {
   betti0: number;
@@ -112,6 +125,14 @@ export interface TDASnapshot {
   persistenceEntropy: number;
   maxPersistence: number;
 }
+
+// --- Evidence Grade ---
+
+export type EvidenceGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+
+// --- Analysis Mode ---
+
+export type AnalysisMode = 'meta-analytical' | 'philosophical-analytical' | 'executive' | 'moderate';
 
 // --- Safety State ---
 
@@ -125,21 +146,30 @@ export type PipelineEvent =
   | { type: 'text-delta'; text: string }
   | { type: 'reasoning'; text: string }
   | { type: 'soar'; event: string; data: Record<string, unknown> }
-  | { type: 'complete'; dualMessage: DualMessage; truthAssessment: TruthAssessment; confidence: number; grade: string; mode: string; signals: SignalUpdate; simulated?: boolean }
+  | { type: 'complete'; dualMessage: DualMessage; truthAssessment: TruthAssessment; confidence: number; grade: EvidenceGrade; mode: AnalysisMode; signals: SignalUpdate; simulated?: boolean }
   | { type: 'error'; message: string };
 
+// HONEST ASSESSMENT: All signals are heuristic functions of query properties
+// (complexity, entity count, domain flags) plus user-controllable steering bias.
+// They are NOT derived from real statistical analysis or information theory.
+// They provide useful relative rankings but should
+// not be interpreted as calibrated probabilities or information-theoretic measures.
+// In API mode, these signals are translated into behavioral LLM directives by
+// the prompt-composer, so they influence output quality via prompt engineering.
 export interface SignalUpdate {
-  confidence: number;
-  entropy: number;
-  dissonance: number;
-  healthScore: number;
-  safetyState: SafetyState;
-  riskScore: number;
-  tda: TDASnapshot;
-  focusDepth: number;
-  temperatureScale: number;
-  activeConcepts: string[];
+  confidence: number;          // heuristic: domain-weighted complexity + entity factor
+  entropy: number;             // heuristic: philosophical=high base, empirical=low base + complexity
+  dissonance: number;          // heuristic: normative claims flag × adversarial intensity
+  healthScore: number;         // computed: 1 - entropy×0.45 - dissonance×0.35 - safetyPenalty
+  safetyState: SafetyState;    // threshold-based: riskScore >= 0.55 → red, >= 0.35 → yellow
+  riskScore: number;           // heuristic: safety keywords → 0.4 base, normative → 0.15 base
+  tda: TDASnapshot;            // heuristic structural complexity (see TDASnapshot doc)
+  focusDepth: number;          // user-controllable + steering bias
+  temperatureScale: number;    // user-controllable + steering bias
+  activeConcepts: string[];    // domain-based concept pool, sorted by concept weights
+  /** @deprecated Decorative metric — product of prime numbers by concept index. No semantic meaning. */
   activeChordProduct: number;
+  /** @deprecated Alias for dissonance capped at 0.95. Retained for UI compatibility. */
   harmonyKeyDistance: number;
 }
 
@@ -162,8 +192,8 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
   confidence?: number;
-  evidenceGrade?: string;
-  mode?: string;
+  evidenceGrade?: EvidenceGrade;
+  mode?: AnalysisMode;
   dualMessage?: DualMessage;
   attachments?: FileAttachment[];
   truthAssessment?: TruthAssessment;

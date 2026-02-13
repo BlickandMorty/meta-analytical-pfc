@@ -2,8 +2,8 @@
 // ██ STEERING MEMORY — Persistent Exemplar Store with Decay
 // ══════════════════════════════════════════════════════════════════
 //
-// Adapted from adaptive-immune-ai/src/core/memory.py:
-//   - Exponential decay weighted history (decay_rate = 0.95 per day)
+// Exponential decay weighted exemplar history:
+//   - Decay rate = 0.95 per day
 //   - Pruning of low-weight exemplars
 //   - localStorage persistence (follows Cortex Archive pattern)
 // ═══════════════════════════════════════════════════════════════════
@@ -21,8 +21,7 @@ const STORAGE_KEY = 'pfc-steering-memory';
 const MS_PER_DAY = 86400000;
 
 // ── Decay computation ────────────────────────────────────────────
-// Mirrors ImmuneMemory.get_decayed_history():
-//   weight = decay_rate ^ (days_since_creation)
+// Exponential decay: weight = decay_rate ^ (days_since_creation)
 
 function computeDecayWeight(
   timestamp: number,
@@ -269,7 +268,7 @@ export function getMemoryStats(memory: SteeringMemory, decayRate = 0.95): Memory
       'social_science', 'economics', 'psychology', 'ethics', 'general',
     ];
     if (domIdx >= 0 && domIdx < domainNames.length) {
-      domains.add(domainNames[domIdx]);
+      domains.add(domainNames[domIdx]!);
     }
   }
 

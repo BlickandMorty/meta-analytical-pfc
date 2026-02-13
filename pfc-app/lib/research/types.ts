@@ -13,8 +13,8 @@ import type { InferenceMode } from '@/lib/engine/llm/config';
  * 'programming'  → Desktops, dev machines. Adds code analysis, language tools,
  *                   codebase suggestions, steering lab.
  *
- * 'full'         → GPU machines, power users. Adds pipeline measurement, TDA,
- *                   signal diagnostics, cortex archive, live controls.
+ * 'full'         → GPU machines, power users. Adds pipeline measurement, structural
+ *                   analysis, signal diagnostics, cortex archive, live controls.
  */
 export type SuiteTier = 'notes' | 'programming' | 'full';
 
@@ -236,7 +236,7 @@ export function getSuiteTierFeatures(tier: SuiteTier): SuiteTierFeatures {
         cortexArchive: false,
         conceptHierarchy: false,
         signalOverrides: false,
-        tierLabel: 'Notes & Research',
+        tierLabel: 'Notes & Research (Light)',
         tierDescription: 'AI chat, research library, notes, and citations. Optimized for mobile and low-power devices.',
         tierColor: 'pfc-green',
       };
@@ -258,8 +258,8 @@ export function getSuiteTierFeatures(tier: SuiteTier): SuiteTierFeatures {
         cortexArchive: false,
         conceptHierarchy: false,
         signalOverrides: false,
-        tierLabel: 'Programming Suite',
-        tierDescription: 'Research + code analysis, language tools, codebase suggestions, and AI steering.',
+        tierLabel: 'Deep Analysis',
+        tierDescription: 'Research + code tools, steering lab, expanded analytics, and deep research.',
         tierColor: 'pfc-violet',
       };
     case 'full':
@@ -281,8 +281,8 @@ export function getSuiteTierFeatures(tier: SuiteTier): SuiteTierFeatures {
         cortexArchive: true,
         conceptHierarchy: true,
         signalOverrides: true,
-        tierLabel: 'Full Measurement',
-        tierDescription: 'Everything — pipeline analysis, signal diagnostics, TDA topology, cortex archive.',
+        tierLabel: 'Full AI & Measurement',
+        tierDescription: 'Everything — pipeline analysis, signal diagnostics, structural complexity, cortex archive.',
         tierColor: 'pfc-ember',
       };
   }

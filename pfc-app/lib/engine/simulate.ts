@@ -928,7 +928,7 @@ function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steerin
     : 0.02 + c * 0.2 + ef * 0.08;
 
   // ── Apply steering bias (activation steering injection point) ──
-  // Pattern from interceptor.py: activations + coeff * vector
+  // Pattern: base_signal + bias_coefficient * steering_vector
   const sb = steeringBias;
   const steeredConf = sb ? baseConf + sb.confidence * sb.steeringStrength : baseConf;
   const steeredEntropy = sb ? entropy + sb.entropy * sb.steeringStrength : entropy;

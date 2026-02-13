@@ -171,9 +171,9 @@ function SnapshotCard({
                   </div>
                 </div>
 
-                {/* TDA */}
+                {/* Structural Complexity */}
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-1.5">TDA Topology</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground/50 mb-1.5">Structural Complexity</p>
                   <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-pfc-violet">
                     <span>B0: {snapshot.tda.betti0}</span>
                     <span>B1: {snapshot.tda.betti1}</span>

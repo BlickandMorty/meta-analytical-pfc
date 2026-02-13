@@ -31,6 +31,8 @@ function DocSection({
   defaultOpen = false,
   children,
   isDark,
+  isOled = false,
+  isCosmic = false,
 }: {
   icon: LucideIcon;
   iconColor: string;
@@ -38,16 +40,28 @@ function DocSection({
   defaultOpen?: boolean;
   children: React.ReactNode;
   isDark: boolean;
+  isOled?: boolean;
+  isCosmic?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const useBlur = isCosmic || isOled;
 
   return (
     <div
       style={{
         borderRadius: '1rem',
         overflow: 'hidden',
-        background: isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)',
-        border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+        background: isCosmic
+          ? 'rgba(10,8,25,0.6)'
+          : isOled
+            ? 'rgba(8,8,8,0.6)'
+            : isDark ? 'rgba(244,189,111,0.03)' : 'rgba(0,0,0,0.02)',
+        border: isCosmic
+          ? '1px solid rgba(100,120,180,0.2)'
+          : isOled
+            ? '1px solid rgba(40,40,40,0.4)'
+            : isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
+        ...(useBlur ? { backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } as React.CSSProperties : {}),
       }}
     >
       <button
@@ -194,24 +208,24 @@ function CodeBlock({ children }: { children: string }) {
    ═══════════════════════════════════════════════════════════ */
 
 export default function DocsPage() {
-  const { isDark } = useIsDark();
+  const { isDark, isOled, isCosmic } = useIsDark();
 
   return (
     <PageShell
       icon={BookOpenIcon}
       iconColor="#8B7CF6"
       title="Documentation"
-      subtitle="Everything you need to know about PFC"
+      subtitle="Everything you need to know about ResearchLab"
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} className="docs-content">
 
-        {/* ── About PFC ── */}
-        <DocSection icon={BrainCircuitIcon} iconColor="#8B7CF6" title="About PFC" defaultOpen isDark={isDark}>
+        {/* ── About ResearchLab ── */}
+        <DocSection icon={BrainCircuitIcon} iconColor="#8B7CF6" title="About ResearchLab" defaultOpen isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <p>
-            <strong>PFC (Prefrontal Cortex)</strong> is a meta-analytical reasoning engine that stress-tests
-            claims through a rigorous 10-stage pipeline. It draws inspiration from how the human prefrontal
-            cortex evaluates information — weighing evidence, detecting contradictions, calibrating confidence,
-            and synthesizing conclusions.
+            <strong>ResearchLab</strong> is a portable research laboratory — a meta-analytical reasoning engine that stress-tests
+            claims through a rigorous 10-stage pipeline. It combines AI-powered analysis, autonomous agents, and
+            a rich notes system into a single tool for researchers, students, and anyone who wants to deeply
+            understand complex topics with epistemic rigor.
           </p>
           <Heading>The Problem</Heading>
           <p>
@@ -232,7 +246,7 @@ export default function DocsPage() {
             PFC offers three distinct chat modes that control the depth of analysis:
           </p>
           <Ul>
-            <Li><strong>Measurement Mode</strong> — Full pipeline with live signal controls, TDA topology, cortex archive, concept hierarchy, and all analytical stages active. Best for rigorous research and claim analysis.</Li>
+            <Li><strong>Measurement Mode</strong> — Full pipeline with live signal controls, structural analysis, cortex archive, concept hierarchy, and all analytical stages active. Best for rigorous research and claim analysis.</Li>
             <Li><strong>Research Mode</strong> — Truth assessments, visualizations, citations, and research tools enabled. The live pipeline controls and advanced diagnostics are streamlined away for a cleaner research experience.</Li>
             <Li><strong>Plain Chat</strong> — All research features disabled. A clean, fast conversational interface for general questions and quick exchanges.</Li>
           </Ul>
@@ -242,7 +256,7 @@ export default function DocsPage() {
         </DocSection>
 
         {/* ── The 10-Stage Pipeline ── */}
-        <DocSection icon={NetworkIcon} iconColor="#C15F3C" title="The 10-Stage Pipeline" isDark={isDark}>
+        <DocSection icon={NetworkIcon} iconColor="#C15F3C" title="The 10-Stage Pipeline" isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <p>
             Every query passes through a 10-stage executive reasoning protocol. Each stage has a specific
             analytical purpose and produces measurable outputs.
@@ -270,26 +284,26 @@ export default function DocsPage() {
         </DocSection>
 
         {/* ── Mathematical Foundations ── */}
-        <DocSection icon={CalculatorIcon} iconColor="#22D3EE" title="Mathematical Foundations" isDark={isDark}>
+        <DocSection icon={CalculatorIcon} iconColor="#22D3EE" title="Mathematical Foundations" isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <Heading>Signal System</Heading>
-          <p>PFC tracks five core signals in real time:</p>
+          <p>ResearchLab tracks five core signals in real time. All signals are <strong>heuristic functions</strong> of query properties (domain, complexity, entity count) plus user-controllable steering settings. In API mode, the prompt-composer translates signals into behavioral LLM directives, so they influence actual output quality.</p>
           <Ul>
-            <Li><strong>Confidence</strong> (0–1): How certain the engine is in the current synthesis. Computed from evidence strength, replication, and calibration.</Li>
-            <Li><strong>Entropy</strong> (0–1): Information-theoretic measure of disagreement across analytical stages. High entropy = stages disagree.</Li>
-            <Li><strong>Dissonance</strong> (0–1): Degree of internal contradiction in the evidence. Different from entropy — dissonance means evidence actively conflicts.</Li>
-            <Li><strong>Health Score</strong> (0–1): Overall system health combining signal stability, concept coherence, and pipeline completion.</Li>
-            <Li><strong>Safety State</strong> (green/yellow/orange/red): Traffic light indicator derived from all signals.</Li>
+            <Li><strong>Confidence</strong> (0–1): Analytical certainty estimate. Philosophical queries start lower (~0.2), empirical queries higher (~0.45). Modified by complexity, entity count, and steering bias.</Li>
+            <Li><strong>Entropy</strong> (0–1): Reasoning uncertainty. Philosophical queries have higher base (~0.5) reflecting genuine ambiguity. Increases with query complexity. Not a true Shannon entropy computation.</Li>
+            <Li><strong>Dissonance</strong> (0–1): Estimated framework conflict. Normative/philosophical queries score higher. Scaled by adversarial intensity control.</Li>
+            <Li><strong>Health Score</strong> (0–1): Computed metric: <code>1 - entropy×0.45 - dissonance×0.35 - safetyPenalty</code>. Not user-editable.</Li>
+            <Li><strong>Safety State</strong> (green/yellow/red): Threshold-based on risk score. Risk ≥ 0.55 → red, ≥ 0.35 → yellow.</Li>
           </Ul>
 
-          <Heading>Topological Data Analysis (TDA)</Heading>
+          <Heading>Structural Complexity</Heading>
           <p>
-            PFC uses persistent homology to analyze the shape of the concept space:
+            These metrics use mathematical notation (β₀, β₁, persistence) to describe structural properties of the reasoning space. They are computed as <strong>heuristic estimates</strong> from query properties:
           </p>
           <Ul>
-            <Li><strong>Betti-0 (B0)</strong>: Number of connected components. High B0 means fragmented reasoning.</Li>
-            <Li><strong>Betti-1 (B1)</strong>: Number of loops/cycles in the concept graph. Indicates circular reasoning or feedback loops.</Li>
-            <Li><strong>Persistence Entropy</strong>: How spread out the topological features are. Low = dominated by one structure. High = many features of similar importance.</Li>
-            <Li><strong>Max Persistence</strong>: The longest-lived topological feature. Indicates the most robust structural pattern.</Li>
+            <Li><strong>β₀ (Fragmentation)</strong>: Entity-count-based estimate of analytical threads. More entities/complexity → more components.</Li>
+            <Li><strong>β₁ (Cyclical)</strong>: Complexity × adversarial intensity + entity factor. Higher = more expected reasoning loops.</Li>
+            <Li><strong>Persistence Entropy</strong>: Linear combination of complexity + entity factor. Indicates structural noise.</Li>
+            <Li><strong>Max Persistence</strong>: 0.1 + complexity × 0.5 + entity factor × 0.15. Dominant pattern strength.</Li>
           </Ul>
 
           <Heading>Bayesian Updating</Heading>
@@ -302,11 +316,12 @@ Each dimension tracks:
   - variance (uncertainty)
   - sampleCount (evidence accumulation)`}</CodeBlock>
 
-          <Heading>Concept Chord Harmony</Heading>
+          <Heading>Concept System</Heading>
           <p>
-            Concepts are assigned weights and their product forms a &quot;chord&quot; — analogous to musical
-            harmony. The chord product and key distance measure how well the active concepts fit together.
-            Low key distance = harmonious, coherent reasoning.
+            Active concepts are selected from domain-specific pools based on query analysis. Concepts can be
+            weighted via the concept weights control. The &quot;chord product&quot; (product of primes by concept index)
+            and &quot;harmony distance&quot; (alias for dissonance) are decorative metrics retained for UI display but
+            do not carry meaningful semantic information.
           </p>
 
           <Heading>Steering Engine</Heading>
@@ -318,7 +333,7 @@ Each dimension tracks:
         </DocSection>
 
         {/* ── The Stack ── */}
-        <DocSection icon={LayersIcon} iconColor="#4ADE80" title="The Stack" isDark={isDark}>
+        <DocSection icon={LayersIcon} iconColor="#4ADE80" title="The Stack" isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <Heading>Frontend</Heading>
           <Ul>
             <Li><strong>Next.js 16</strong> — App Router with Turbopack, server components, API routes</Li>
@@ -338,9 +353,9 @@ Each dimension tracks:
 
           <Heading>Inference</Heading>
           <Ul>
-            <Li><strong>Simulation Mode</strong> — Built-in engine that simulates all 10 pipeline stages locally</Li>
-            <Li><strong>API Mode</strong> — Connect to OpenAI (GPT-4o) or Anthropic (Claude) for real LLM inference</Li>
-            <Li><strong>Local Mode</strong> — Ollama integration for fully local, private inference</Li>
+            <Li><strong>Simulation Mode</strong> — Template-based engine that generates illustrative analysis text using query properties. Statistics (effect sizes, sample counts, CIs) are heuristic — not from real literature. Marked with [SIMULATED] tag.</Li>
+            <Li><strong>API Mode</strong> — Connect to OpenAI (GPT-4o) or Anthropic (Claude) for real LLM inference. Steering directives injected into system prompt. Genuine analytical reasoning.</Li>
+            <Li><strong>Local Mode</strong> — Ollama integration for fully local, private inference. Same real reasoning as API mode but running locally.</Li>
           </Ul>
 
           <Heading>Design System</Heading>
@@ -363,7 +378,7 @@ Each dimension tracks:
         </DocSection>
 
         {/* ── What Makes It Novel ── */}
-        <DocSection icon={SparklesIcon} iconColor="#FACC15" title="What Makes PFC Novel" isDark={isDark}>
+        <DocSection icon={SparklesIcon} iconColor="#FACC15" title="What Makes PFC Novel" isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <p>PFC is fundamentally different from standard AI chat wrappers:</p>
           <Heading>Transparent Reasoning Pipeline</Heading>
           <p>
@@ -385,9 +400,9 @@ Each dimension tracks:
             The engine learns from your feedback. Rate analyses with thumbs up/down, and the Bayesian
             steering memory adapts future analyses to your preferences and quality standards.
           </p>
-          <Heading>Topological Concept Mapping</Heading>
+          <Heading>Concept Mapping</Heading>
           <p>
-            Active concepts form a force-directed graph with TDA-computed topological features. You can
+            Active concepts form a force-directed graph with structural complexity features. You can
             see how ideas connect, where clusters form, and when reasoning becomes fragmented.
           </p>
           <Heading>Cortex Snapshots</Heading>
@@ -409,7 +424,7 @@ Each dimension tracks:
         </DocSection>
 
         {/* ── Getting Started ── */}
-        <DocSection icon={RocketIcon} iconColor="#E07850" title="Getting Started" isDark={isDark}>
+        <DocSection icon={RocketIcon} iconColor="#E07850" title="Getting Started" isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <Heading>Prerequisites</Heading>
           <Ul>
             <Li><strong>Node.js 18+</strong> — Required for Next.js</Li>
@@ -444,7 +459,7 @@ open http://localhost:3000`}</CodeBlock>
         </DocSection>
 
         {/* ── Scripts & Commands ── */}
-        <DocSection icon={TerminalIcon} iconColor="#8B7CF6" title="Scripts & Commands" isDark={isDark}>
+        <DocSection icon={TerminalIcon} iconColor="#8B7CF6" title="Scripts & Commands" isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <Heading>Development</Heading>
           <CodeBlock>{`npm run dev          # Start dev server (port 3000)
 npm run build        # Production build
@@ -471,7 +486,7 @@ curl http://localhost:11434/api/tags`}</CodeBlock>
         </DocSection>
 
         {/* ── Troubleshooting ── */}
-        <DocSection icon={AlertTriangleIcon} iconColor="#EF4444" title="Troubleshooting" isDark={isDark}>
+        <DocSection icon={AlertTriangleIcon} iconColor="#EF4444" title="Troubleshooting" isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <Heading>Build Errors</Heading>
           <Ul>
             <Li><strong>&quot;Module not found&quot;</strong> — Run <Code>npm install</Code> to ensure all dependencies are installed</Li>
@@ -510,7 +525,7 @@ location.reload();`}</CodeBlock>
         </DocSection>
 
         {/* ── Architecture Deep Dive ── */}
-        <DocSection icon={WrenchIcon} iconColor="#06B6D4" title="Architecture Deep Dive" isDark={isDark}>
+        <DocSection icon={WrenchIcon} iconColor="#06B6D4" title="Architecture Deep Dive" isDark={isDark} isOled={isOled} isCosmic={isCosmic}>
           <Heading>Project Structure</Heading>
           <CodeBlock>{`pfc-app/
 ├── app/                  # Next.js App Router pages
