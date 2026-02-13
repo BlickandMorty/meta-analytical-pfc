@@ -1,14 +1,23 @@
 /**
- * Query-aware simulation engine for the 10-stage executive pipeline.
- * Refactored as an async generator that yields SSE-compatible events.
+ * Query-aware engine for the 10-stage analytical pipeline.
+ * Async generator that yields SSE-compatible PipelineEvent objects.
  *
- * Frontend-only — replace with real API calls when connected to the PFC backend.
+ * Supports three inference modes:
+ *   - Simulation: template-generated responses (no API keys needed)
+ *   - API: cloud LLM calls with structured prompt templates (see lib/engine/prompts/)
+ *   - Local: Ollama-compatible models with the same prompt templates
+ *
+ * Analytical stages use structured prompts encoding mathematical frameworks
+ * (Bradford Hill criteria, Cohen's d, DerSimonian-Laird, Bayesian updating)
+ * to guide LLM reasoning with research-grade rigor.
  */
 
 import { STAGES, type PipelineStage } from '@/lib/constants';
 import type { SteeringBias } from '@/lib/engine/steering/types';
 import type {
+  AnalysisMode,
   DualMessage,
+  EvidenceGrade,
   LaymanSummary,
   PipelineEvent,
   PipelineControls,
@@ -32,6 +41,7 @@ import {
 import { runSOAR, quickProbe } from './soar';
 import type { SOARConfig, SOARSession } from './soar/types';
 import { DEFAULT_SOAR_CONFIG } from './soar/types';
+import { composeSteeringDirectives } from './steering/prompt-composer';
 
 // ═════════════════════════════════════════════════════════════════════
 // ██ CONVERSATION CONTEXT — follow-up query detection
@@ -353,10 +363,24 @@ function generateStageDetail(stage: PipelineStage, qa: QueryAnalysis): string {
 // ██ DYNAMIC RAW ANALYSIS — generated from query content
 // ═════════════════════════════════════════════════════════════════════
 
+/**
+ * SIMULATION-MODE RAW ANALYSIS (template-generated, no real evidence)
+ *
+ * Generates analytically-structured prose using query properties to produce
+ * plausible-sounding analysis text. ALL statistics in this output are
+ * heuristic functions of query complexity and entity count — they do NOT
+ * represent real literature searches, meta-analyses, or empirical data.
+ *
+ * In API mode, this function is NOT called — the LLM generates real analysis
+ * via `llmStreamRawAnalysis()` or `llmGenerateRawAnalysis()`.
+ */
 function generateRawAnalysis(qa: QueryAnalysis): string {
   const topic = qa.entities.slice(0, 3).join(', ') || 'the subject';
   const focusAspect = qa.followUpFocus;
   const segments: string[] = [];
+
+  // Prefix simulation output so it's never mistaken for real evidence
+  segments.push('[SIMULATED ANALYSIS — template-generated, not derived from real literature or data]');
 
   // For follow-ups, add a context-continuation marker
   if (qa.isFollowUp) {
@@ -606,9 +630,9 @@ function generateLaymanSummary(qa: QueryAnalysis, rawAnalysis: string): LaymanSu
   // ── Empirical / meta-analytical queries ────────────────────────────
   if (qa.isEmpirical || qa.isMetaAnalytical) {
     const dMatch = rawAnalysis.match(/d = (\d+\.\d+)/);
-    const effectSize = dMatch ? parseFloat(dMatch[1]) : 0.5;
+    const effectSize = dMatch ? parseFloat(dMatch[1]!) : 0.5;
     const bfMatch = rawAnalysis.match(/BF₁₀ = (\d+\.?\d*)/);
-    const bayesFactor = bfMatch ? parseFloat(bfMatch[1]) : 3;
+    const bayesFactor = bfMatch ? parseFloat(bfMatch[1]!) : 3;
 
     return {
       whatWasTried: `The system ran a ${qa.isMetaAnalytical ? 'meta-analytical synthesis, pooling multiple studies' : 'comprehensive evidence review'} to evaluate ${topic}. It applied statistical, causal, Bayesian, and adversarial analysis to stress-test the evidence.`,
@@ -708,10 +732,151 @@ function generateLaymanSummary(qa: QueryAnalysis, rawAnalysis: string): LaymanSu
 
 
 // ═════════════════════════════════════════════════════════════════════
+// ██ CONCEPT EXTRACTION — derive concepts from LLM analysis text
+// ═════════════════════════════════════════════════════════════════════
+
+/**
+ * Extract meaningful research concepts from LLM-generated analysis text.
+ *
+ * Rather than using hardcoded concept pools, this function identifies
+ * domain-specific terms that the LLM actually discussed. It filters out
+ * trivial/generic words to produce robust concept lists.
+ *
+ * @param rawAnalysis - The LLM-generated analytical text
+ * @param qa - Query analysis for domain context
+ * @returns Array of 3-8 meaningful concept strings
+ */
+const CONCEPT_STOPWORDS = new Set([
+  // Generic words that should never be concepts
+  'the', 'and', 'for', 'that', 'this', 'with', 'from', 'are', 'was', 'were',
+  'been', 'being', 'have', 'has', 'had', 'will', 'would', 'could', 'should',
+  'may', 'might', 'can', 'not', 'but', 'also', 'more', 'most', 'some', 'any',
+  'than', 'other', 'such', 'very', 'just', 'about', 'into', 'over', 'after',
+  'before', 'between', 'through', 'during', 'each', 'these', 'those', 'which',
+  // Common verbs
+  'make', 'made', 'take', 'give', 'find', 'know', 'want', 'tell', 'become',
+  'show', 'think', 'look', 'use', 'used', 'work', 'call', 'need', 'try',
+  // Generic analytical terms too vague for concepts
+  'analysis', 'result', 'study', 'evidence', 'research', 'data', 'finding',
+  'approach', 'method', 'question', 'answer', 'effect', 'factor', 'level',
+  'point', 'case', 'example', 'way', 'type', 'form', 'part', 'number',
+  'time', 'year', 'group', 'area', 'word', 'test', 'note', 'deep', 'write',
+  'thing', 'fact', 'idea', 'view', 'issue', 'high', 'low', 'new', 'old',
+  'good', 'bad', 'long', 'short', 'large', 'small', 'first', 'last',
+]);
+
+// Multi-word domain concepts the extractor should recognize as single concepts
+const DOMAIN_PHRASES: [RegExp, string][] = [
+  [/\beffect\s+size/gi, 'effect_size'],
+  [/\bconfidence\s+interval/gi, 'confidence_interval'],
+  [/\bpublication\s+bias/gi, 'publication_bias'],
+  [/\breverse\s+causation/gi, 'reverse_causation'],
+  [/\brandomized\s+controlled?\s+trial/gi, 'RCT'],
+  [/\bmeta[-\s]analy/gi, 'meta_analysis'],
+  [/\bcausal\s+inference/gi, 'causal_inference'],
+  [/\bBradford\s+Hill/gi, 'Bradford_Hill_criteria'],
+  [/\bBayes(?:ian)?\s+factor/gi, 'Bayes_factor'],
+  [/\bcognitive\s+bias/gi, 'cognitive_bias'],
+  [/\bselection\s+bias/gi, 'selection_bias'],
+  [/\bsample\s+size/gi, 'sample_size'],
+  [/\bstatistical\s+significance/gi, 'statistical_significance'],
+  [/\bpractical\s+significance/gi, 'practical_significance'],
+  [/\bdose[-\s]response/gi, 'dose_response'],
+  [/\bcross[-\s]disciplinary/gi, 'cross_disciplinary'],
+  [/\bsystematic\s+review/gi, 'systematic_review'],
+  [/\bfunnel\s+plot/gi, 'funnel_plot'],
+  [/\bheterogeneity/gi, 'heterogeneity'],
+  [/\bconfound(?:er|ing)/gi, 'confounding'],
+  [/\breplication/gi, 'replication'],
+  [/\bepistemic/gi, 'epistemic_humility'],
+  [/\bpsychoneuroimmunol/gi, 'psychoneuroimmunology'],
+  [/\bneuroplasticity/gi, 'neuroplasticity'],
+  [/\bepigenetic/gi, 'epigenetics'],
+  [/\ballostatic/gi, 'allostatic_load'],
+  [/\bplacebo/gi, 'placebo_effect'],
+  [/\bnocebo/gi, 'nocebo_effect'],
+];
+
+export function extractConceptsFromAnalysis(rawAnalysis: string, qa: QueryAnalysis): string[] {
+  if (!rawAnalysis || rawAnalysis.length < 50) return [];
+
+  const concepts = new Set<string>();
+
+  // 1. Extract multi-word domain phrases first
+  for (const [pattern, concept] of DOMAIN_PHRASES) {
+    if (pattern.test(rawAnalysis)) {
+      concepts.add(concept);
+      // Reset regex lastIndex since we use /g flag
+      pattern.lastIndex = 0;
+    }
+  }
+
+  // 2. Extract capitalized terms (likely domain-specific proper nouns / frameworks)
+  const capitalizedTerms = rawAnalysis.match(/\b[A-Z][a-z]{3,}(?:\s+[A-Z][a-z]{3,}){0,2}/g) || [];
+  for (const term of capitalizedTerms) {
+    const normalized = term.toLowerCase().replace(/\s+/g, '_');
+    if (!CONCEPT_STOPWORDS.has(normalized) && normalized.length > 3) {
+      concepts.add(normalized);
+    }
+  }
+
+  // 3. Extract terms from epistemic tags — these are the LLM's own identified claims
+  const taggedClaims = rawAnalysis.match(/\[(DATA|MODEL|UNCERTAIN|CONFLICT)\]\s*([^[.]{10,80})/g) || [];
+  for (const claim of taggedClaims) {
+    // Extract key nouns from tagged claims (words 4+ chars, not stopwords)
+    const words = claim.replace(/\[(DATA|MODEL|UNCERTAIN|CONFLICT)\]\s*/, '')
+      .split(/\s+/)
+      .filter(w => w.length >= 4 && !CONCEPT_STOPWORDS.has(w.toLowerCase()))
+      .map(w => w.toLowerCase().replace(/[^a-z]/g, ''))
+      .filter(w => w.length >= 4);
+    // Take the most specific word (longest) from each tagged claim
+    if (words.length > 0) {
+      const best = words.sort((a, b) => b.length - a.length)[0]!;
+      concepts.add(best);
+    }
+  }
+
+  // 4. Add query entities that actually appear in the analysis (validation)
+  for (const entity of qa.entities) {
+    if (entity.length > 3
+      && !CONCEPT_STOPWORDS.has(entity.toLowerCase())
+      && rawAnalysis.toLowerCase().includes(entity.toLowerCase())
+    ) {
+      concepts.add(entity.toLowerCase().replace(/\s+/g, '_'));
+    }
+  }
+
+  // 5. Deduplicate and limit to 3-8 meaningful concepts
+  const result = [...concepts]
+    .filter(c => c.length > 2 && !CONCEPT_STOPWORDS.has(c))
+    .slice(0, 8);
+
+  return result;
+}
+
+
+// ═════════════════════════════════════════════════════════════════════
 // ██ SIGNAL GENERATION — correlated with query properties
 // ═════════════════════════════════════════════════════════════════════
 
-function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steeringBias?: SteeringBias): SignalUpdate & { grade: string; mode: string } {
+/**
+ * Generate pipeline signals from query analysis.
+ *
+ * COMPUTATION METHOD: All signals are deterministic heuristic functions of:
+ *   - c: clamped(qa.complexity + complexityBias)     [0-1]
+ *   - ef: min(1, qa.entities.length / 8)             [0-1]
+ *   - advInt: adversarialIntensity control            [default 1.0]
+ *   - bayStr: bayesianPriorStrength control           [default 1.0]
+ *   - domain flags: isPhilosophical, isEmpirical, hasNormativeClaims, hasSafetyKeywords
+ *
+ * These are NOT derived from real statistical analysis or information theory.
+ * They provide useful relative rankings that respond to query properties and
+ * user-controllable steering settings. In API/Local mode, the prompt-composer
+ * translates these into behavioral LLM directives, and the analytical stages
+ * use structured prompt templates (see lib/engine/prompts/) encoding mathematical
+ * frameworks like Bradford Hill criteria, Cohen's d, and Bayesian updating.
+ */
+function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steeringBias?: SteeringBias, llmConcepts?: string[]): SignalUpdate & { grade: EvidenceGrade; mode: AnalysisMode } {
   // Apply complexity bias from controls
   const c = Math.max(0, Math.min(1, qa.complexity + (controls?.complexityBias ?? 0)));
   const advInt = controls?.adversarialIntensity ?? 1.0;
@@ -719,6 +884,12 @@ function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steerin
   // Deterministic entity-based factor (replaces Math.random())
   const ef = Math.min(1, qa.entities.length / 8);
 
+  // Structural complexity heuristics — simple functions of query properties that
+  // produce useful relative rankings for steering and display:
+  // - betti0: fragmentation estimate — more entities/complexity → more "components"
+  // - betti1: cyclical complexity — adversarial intensity × complexity + entities
+  // - persistenceEntropy: structural noise — linear combo of complexity + entity factor
+  // - maxPersistence: dominant pattern strength — 0.1 + complexity × 0.5 + ef × 0.15
   const betti0 = qa.isPhilosophical
     ? Math.floor(2 + qa.entities.length * 0.5)
     : Math.max(1, Math.floor(1 + c * 4));
@@ -773,24 +944,34 @@ function generateSignals(qa: QueryAnalysis, controls?: PipelineControls, steerin
   const depth = sb ? baseDepth + sb.focusDepth * sb.steeringStrength : baseDepth;
   const temp = sb ? baseTemp + sb.temperatureScale * sb.steeringStrength : baseTemp;
 
-  const conceptPool = qa.isPhilosophical
-    ? ['free_will', 'determinism', 'moral_responsibility', 'compatibilism', 'retribution',
-       'consequentialism', 'agency', 'desert', 'justice', ...qa.entities]
-    : qa.isEmpirical
-    ? ['effect_size', 'power', 'confounding', 'heterogeneity', 'causality', 'bias',
-       'replication', 'bayesian_prior', ...qa.entities]
-    : ['coherence', 'framework', 'evidence', 'inference', ...qa.entities];
+  // Concept generation: use LLM-extracted concepts if available, otherwise
+  // fall back to domain pool (simulation mode only).
+  // In simulation mode, concepts are generic domain pools — these are scaffolding.
+  // In API/local mode, concepts are extracted from the actual LLM analysis text
+  // by extractConceptsFromAnalysis() and passed in via llmConcepts.
+  let concepts: string[];
+  if (llmConcepts && llmConcepts.length > 0) {
+    // API/local mode: use real concepts from LLM analysis
+    concepts = llmConcepts;
+  } else {
+    // Simulation mode fallback: generic domain pools
+    const conceptPool = qa.isPhilosophical
+      ? ['free_will', 'determinism', 'moral_responsibility', 'compatibilism', 'retribution',
+         'consequentialism', 'agency', 'desert', 'justice', ...qa.entities]
+      : qa.isEmpirical
+      ? ['effect_size', 'power', 'confounding', 'heterogeneity', 'causality', 'bias',
+         'replication', 'bayesian_prior', ...qa.entities]
+      : ['coherence', 'framework', 'evidence', 'inference', ...qa.entities];
 
-  const uniqueConcepts = [...new Set(conceptPool)];
-  // If concept weights provided, bias selection toward higher-weighted concepts
-  const cw = controls?.conceptWeights ?? {};
-  const sortedConcepts = uniqueConcepts.sort((a, b) => {
-    const wa = cw[a] ?? 1.0;
-    const wb = cw[b] ?? 1.0;
-    // Higher weight = more likely to be selected (sort descending), deterministic by name length
-    return (wb + a.length * 0.02) - (wa + b.length * 0.02);
-  });
-  const concepts = sortedConcepts.slice(0, Math.floor(3 + c * 4));
+    const uniqueConcepts = [...new Set(conceptPool)];
+    const cw = controls?.conceptWeights ?? {};
+    const sortedConcepts = uniqueConcepts.sort((a, b) => {
+      const wa = cw[a] ?? 1.0;
+      const wb = cw[b] ?? 1.0;
+      return (wb + a.length * 0.02) - (wa + b.length * 0.02);
+    });
+    concepts = sortedConcepts.slice(0, Math.floor(3 + c * 4));
+  }
   const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
   const chord = concepts.reduce((p, _, i) => p * (primes[i] || 41), 1);
 
@@ -859,9 +1040,14 @@ export async function* runPipeline(
   steeringBias?: SteeringBias,
   inferenceConfig?: InferenceConfig,
   soarConfig?: SOARConfig,
+  analyticsEngineEnabled: boolean = true,
+  chatMode?: 'measurement' | 'research' | 'plain',
 ): AsyncGenerator<PipelineEvent> {
   const qa = analyzeQuery(query, context);
-  const signals = generateSignals(qa, controls, steeringBias);
+  // When analytics engine is disabled, use neutral signals (no steering, no TDA computation)
+  const signals = analyticsEngineEnabled
+    ? generateSignals(qa, controls, steeringBias)
+    : generateSignals(qa); // no controls or steering = baseline only
 
   // Track stage results for reflection/arbitration
   const stageResults: StageResult[] = STAGES.map((s) => ({
@@ -884,6 +1070,16 @@ export async function* runPipeline(
 
     try {
       const model = resolveProvider(inferenceConfig);
+
+      // Compose steering directives for API-mode prompt injection
+      // When analytics engine is disabled, directives are empty (no steering)
+      const directives = composeSteeringDirectives({
+        controls,
+        steeringBias,
+        soarConfig: soarConfig ?? DEFAULT_SOAR_CONFIG,
+        analyticsEngineEnabled,
+        chatMode,
+      });
 
       // ── Stage 1: Triage — query analysis ──
       yield stageEvent('triage', 'active', 'Analyzing query structure...');
@@ -914,7 +1110,7 @@ export async function* runPipeline(
       yield { type: 'signals', data: { entropy: signals.entropy * 0.4, dissonance: signals.dissonance * 0.35 } };
       rawAnalysis = '';
       try {
-        const stream = llmStreamRawAnalysis(model, qa, signals);
+        const stream = llmStreamRawAnalysis(model, qa, signals, directives);
         let streamTimeoutId: ReturnType<typeof setTimeout> | null = null;
         try {
           streamTimeoutId = setTimeout(() => { /* noop — just a safety net, caught below */ }, LLM_TIMEOUT);
@@ -932,7 +1128,7 @@ export async function* runPipeline(
         // Fallback to non-streaming if stream fails
         console.warn('[runPipeline] Stream failed, falling back to non-streaming:', streamError);
         if (!rawAnalysis) {
-          rawAnalysis = await withTimeout(llmGenerateRawAnalysis(model, qa, signals), LLM_TIMEOUT, 'Raw analysis');
+          rawAnalysis = await withTimeout(llmGenerateRawAnalysis(model, qa, signals, directives), LLM_TIMEOUT, 'Raw analysis');
         }
       }
       stageResults[3] = { stage: 'statistical', status: 'complete', summary: 'statistical', detail: 'Statistical analysis complete', value: 1 };
@@ -945,6 +1141,14 @@ export async function* runPipeline(
       await sleep(100);
       yield stageEvent('causal', 'complete', stageResults[4].detail, 1);
 
+      // Extract real concepts from LLM analysis (replaces hardcoded pools)
+      if (rawAnalysis) {
+        const llmConcepts = extractConceptsFromAnalysis(rawAnalysis, qa);
+        if (llmConcepts.length > 0) {
+          signals.activeConcepts = llmConcepts;
+        }
+      }
+
       // Emit mid-pipeline TDA and concept signals
       yield { type: 'signals', data: { tda: signals.tda, focusDepth: signals.focusDepth, temperatureScale: signals.temperatureScale, activeConcepts: signals.activeConcepts, activeChordProduct: signals.activeChordProduct, harmonyKeyDistance: signals.harmonyKeyDistance } };
 
@@ -956,9 +1160,10 @@ export async function* runPipeline(
       yield stageEvent('meta_analysis', 'complete', stageResults[5].detail, 1);
 
       // ── SOAR: Meta-Reasoning Loop (if enabled and at edge of learnability) ──
+      // Skip SOAR entirely when analytics engine is disabled
       const effectiveSoarConfig = soarConfig ?? DEFAULT_SOAR_CONFIG;
       let soarSession: SOARSession | null = null;
-      if (effectiveSoarConfig.enabled) {
+      if (analyticsEngineEnabled && effectiveSoarConfig.enabled) {
         const probe = quickProbe(qa, {
           confidence: signals.confidence,
           entropy: signals.entropy,
@@ -1022,9 +1227,9 @@ export async function* runPipeline(
       const sectionLabels = getSectionLabels(qa);
       const [laymanResult, reflectionResult, arbitrationResult] = await withTimeout(
         Promise.allSettled([
-          llmGenerateLaymanSummary(model, qa, rawAnalysis, sectionLabels),
-          llmGenerateReflection(model, stageResults, rawAnalysis),
-          llmGenerateArbitration(model, stageResults),
+          llmGenerateLaymanSummary(model, qa, rawAnalysis, sectionLabels, directives),
+          llmGenerateReflection(model, stageResults, rawAnalysis, directives),
+          llmGenerateArbitration(model, stageResults, directives),
         ]),
         LLM_TIMEOUT,
         'Parallel LLM calls',
@@ -1093,7 +1298,7 @@ export async function* runPipeline(
             healthScore: signals.healthScore,
             safetyState: signals.safetyState,
             riskScore: signals.riskScore,
-          }),
+          }, directives),
           LLM_TIMEOUT,
           'Truth assessment',
         );
@@ -1157,7 +1362,7 @@ export async function* runPipeline(
   const stageDelay = qa.isMetaAnalytical ? 350 : qa.isPhilosophical ? 300 : 200;
 
   for (let i = 0; i < STAGES.length; i++) {
-    const stage = STAGES[i];
+    const stage = STAGES[i]!;
     const detail = generateStageDetail(stage, qa);
     const value = 0.3 + Math.random() * 0.7;
 
@@ -1184,12 +1389,12 @@ export async function* runPipeline(
     };
 
     if (i > 0) {
-      stageResults[i - 1] = { ...stageResults[i - 1], status: 'complete' };
+      stageResults[i - 1] = { ...stageResults[i - 1]!, status: 'complete' };
       yield {
         type: 'stage',
-        stage: STAGES[i - 1],
-        detail: stageResults[i - 1].detail ?? '',
-        value: stageResults[i - 1].value ?? 1,
+        stage: STAGES[i - 1]!,
+        detail: stageResults[i - 1]!.detail ?? '',
+        value: stageResults[i - 1]!.value ?? 1,
         status: 'complete',
       };
     }
@@ -1211,11 +1416,11 @@ export async function* runPipeline(
     await sleep(stageDelay + Math.random() * 150);
   }
 
-  stageResults[STAGES.length - 1] = { ...stageResults[STAGES.length - 1], status: 'complete' };
+  stageResults[STAGES.length - 1] = { ...stageResults[STAGES.length - 1]!, status: 'complete' };
   yield {
     type: 'stage',
-    stage: STAGES[STAGES.length - 1],
-    detail: stageResults[STAGES.length - 1].detail ?? '',
+    stage: STAGES[STAGES.length - 1]!,
+    detail: stageResults[STAGES.length - 1]!.detail ?? '',
     value: 1,
     status: 'complete',
   };
