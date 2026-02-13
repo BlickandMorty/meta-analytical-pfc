@@ -50,7 +50,7 @@ function MessagesInner({
           position: 'relative',
           height: '100%',
           overflowY: 'auto',
-          padding: '3.5rem 1rem 1.5rem',
+          padding: '5.5rem 1rem 6rem',
           willChange: 'scroll-position',
           overscrollBehavior: 'contain',
           transform: 'translateZ(0)',
@@ -61,7 +61,7 @@ function MessagesInner({
           margin: '0 auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1rem',
+          gap: '2rem',
           contain: 'layout style',
           contentVisibility: 'auto',
         }}>
@@ -71,7 +71,7 @@ function MessagesInner({
             ))}
           </AnimatePresence>
 
-          {/* Thinking / streaming — seamless assistant bubble */}
+          {/* Thinking / streaming — Gemini-style: avatar + clean text, no bubble */}
           {(isStreaming || isProcessing) && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -86,24 +86,22 @@ function MessagesInner({
               }}
             >
               {/* Avatar */}
-              <div style={{ flexShrink: 0, marginTop: '0.25rem' }}>
+              <div style={{ flexShrink: 0, marginTop: '0.125rem' }}>
                 <PixelSun size={26} />
               </div>
 
-              {/* Bubble — matches assistant Message styling */}
-              <div
-                style={{
-                  maxWidth: '88%',
-                  borderRadius: 'var(--shape-xl) var(--shape-xl) var(--shape-xl) var(--shape-sm)',
-                  padding: '0.875rem 1.125rem',
-                  background: isDark ? 'var(--m3-surface-container)' : 'var(--m3-surface-container)',
-                  color: 'var(--foreground)',
-                  border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)'}`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                }}
-              >
+              {/* Content — clean text, no bubble */}
+              <div style={{
+                flex: 1,
+                minWidth: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                fontSize: 'var(--type-chat-stream)',
+                lineHeight: 1.8,
+                color: isDark ? '#FFFFFF' : 'var(--foreground)',
+                fontFamily: 'var(--font-secondary)',
+              }}>
                 {/* Reasoning accordion */}
                 {(isReasoning || reasoningText) && (
                   <ThinkingAccordion
@@ -119,7 +117,7 @@ function MessagesInner({
                     <PixelBook size={24} />
                     <span style={{
                       color: 'var(--m3-primary)',
-                      fontSize: '0.875rem',
+                      fontSize: 'var(--type-body-md)',
                       fontWeight: 500,
                     }}>
                       {isReasoning ? 'Reasoning...' : 'Thinking...'}
@@ -142,9 +140,10 @@ function MessagesInner({
             transition={HARMONOID_SPRING}
             style={{
               position: 'absolute',
-              bottom: '1rem',
+              bottom: '2rem',
               left: '50%',
               transform: 'translateX(-50%)',
+              zIndex: 10,
             }}
           >
             <button

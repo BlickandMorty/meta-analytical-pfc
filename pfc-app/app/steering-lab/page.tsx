@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { PageShell, GlassSection } from '@/components/page-shell';
+import { useSetupGuard } from '@/hooks/use-setup-guard';
+import { PixelBook } from '@/components/pixel-book';
 import {
   CompassIcon,
   DownloadIcon,
@@ -23,6 +25,7 @@ import {
 } from 'lucide-react';
 
 export default function SteeringLabPage() {
+  const ready = useSetupGuard();
   const memory = useSteeringStore((s) => s.memory);
   const config = useSteeringStore((s) => s.config);
   const currentBias = useSteeringStore((s) => s.currentBias);
@@ -94,6 +97,15 @@ export default function SteeringLabPage() {
   };
 
   const strengthPct = Math.round(currentBias.steeringStrength * 100);
+
+  // Show loading state until setup guard + steering store are both ready
+  if (!ready || !isLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
+        <PixelBook size={40} />
+      </div>
+    );
+  }
 
   return (
     <PageShell

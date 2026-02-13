@@ -32,11 +32,11 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import type { LearningSession } from '@/lib/notes/learning-protocol';
 
 /* ═══════════════════════════════════════════════════════════════════
-   NoteAIChat — docked AI assistant panel for the notes editor
+   NoteAIChat — Izmi's thought bubble AI assistant
 
-   A Notion AI / Cursor-inspired inline chat that floats at the
-   bottom-right of the notes area. Manages UI state via Zustand
-   store actions — actual LLM calls are handled elsewhere.
+   A speech-bubble-styled, draggable AI panel that spawns next to the
+   floating Izmi character. Features an animated greeting on first open,
+   staggered option reveal, and the full Ask AI / Learn workflow.
    ═══════════════════════════════════════════════════════════════════ */
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -44,10 +44,10 @@ import type { LearningSession } from '@/lib/notes/learning-protocol';
 interface NoteAIChatProps {
   pageId: string;
   activeBlockId?: string | null;
-  /** When true, panel is expanded (controlled by parent toolbar) */
   isOpen?: boolean;
-  /** Called when the panel wants to close itself */
   onClose?: () => void;
+  /** Position of the Izmi character so bubble spawns next to it */
+  charPos?: { x: number; y: number };
 }
 
 type QuickAction = {
@@ -93,41 +93,26 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
-const PANEL_WIDTH = 300;
-const PANEL_HEIGHT = 200;
+const BUBBLE_WIDTH = 310;
+const BUBBLE_OFFSET_X = 60; // pixels to the right of character
+const BUBBLE_OFFSET_Y = -20; // slightly above character center
 
 // ── Animations ─────────────────────────────────────────────────────
 
-const pillVariants = {
-  initial: { opacity: 0, scale: 0.85, y: 8 },
-  animate: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: CUPERTINO_EASE },
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.85,
-    y: 8,
-    transition: { duration: 0.2, ease: CUPERTINO_EASE },
-  },
-};
-
-const panelVariants = {
-  initial: { opacity: 0, scale: 0.92, y: 12, filter: 'blur(8px)' },
+const bubbleVariants = {
+  initial: { opacity: 0, scale: 0.6, y: 10, filter: 'blur(8px)' },
   animate: {
     opacity: 1,
     scale: 1,
     y: 0,
     filter: 'blur(0px)',
-    transition: { duration: 0.4, ease: CUPERTINO_EASE },
+    transition: { duration: 0.45, ease: CUPERTINO_EASE },
   },
   exit: {
     opacity: 0,
-    scale: 0.92,
-    y: 12,
-    filter: 'blur(8px)',
+    scale: 0.7,
+    y: 10,
+    filter: 'blur(6px)',
     transition: { duration: 0.25, ease: CUPERTINO_EASE },
   },
 };
@@ -147,6 +132,87 @@ const responseVariants = {
     transition: { duration: 0.2, ease: CUPERTINO_EASE },
   },
 };
+
+// ── Greeting typewriter ────────────────────────────────────────────
+// Izmi (dark): 3 lines — greeting → joke → transition
+// Sunny (light): 2 lines — greeting → question
+
+const IZMI_LINES = [
+  'hello...Izmi get it....',
+  'cuz my name is Izmi? 😂',
+  'anyways.....',
+];
+const SUNNY_LINES = [
+  'whats up wit it? ☀️',
+  'anything in mind?',
+];
+const TYPE_SPEED = 35; // ms per char
+
+function useGreetingTypewriter(shouldAnimate: boolean, isDark: boolean) {
+  const lines = isDark ? IZMI_LINES : SUNNY_LINES;
+  const characterKey = isDark ? 'izmi' : 'sunny';
+  const [typedLines, setTypedLines] = useState<string[]>(() => lines.map(() => ''));
+  const [showOptions, setShowOptions] = useState(false);
+  const [done, setDone] = useState(false);
+  // Track which character has played — keyed per character so switching resets
+  const hasPlayedRef = useRef<Record<string, boolean>>({});
+  const lastCharRef = useRef(characterKey);
+
+  useEffect(() => {
+    // Detect character switch → reset state for fresh typewriter
+    if (lastCharRef.current !== characterKey) {
+      lastCharRef.current = characterKey;
+      setTypedLines(lines.map(() => ''));
+      setShowOptions(false);
+      setDone(false);
+    }
+
+    if (!shouldAnimate) return;
+
+    if (hasPlayedRef.current[characterKey]) {
+      // Already played for this character → show full text immediately
+      setTypedLines(lines.map((l) => l));
+      setShowOptions(true);
+      setDone(true);
+      return;
+    }
+    hasPlayedRef.current[characterKey] = true;
+
+    let cancelled = false;
+    let lineIdx = 0;
+    let charIdx = 0;
+
+    const typeNext = () => {
+      if (cancelled) return;
+      if (lineIdx >= lines.length) {
+        setDone(true);
+        setTimeout(() => { if (!cancelled) setShowOptions(true); }, 300);
+        return;
+      }
+      if (charIdx <= lines[lineIdx]!.length) {
+        setTypedLines((prev) => {
+          const next = [...prev];
+          next[lineIdx] = lines[lineIdx]!.slice(0, charIdx);
+          return next;
+        });
+        charIdx++;
+        setTimeout(typeNext, TYPE_SPEED);
+      } else {
+        // Move to next line with a pause
+        lineIdx++;
+        charIdx = 0;
+        setTimeout(typeNext, 400);
+      }
+    };
+
+    // Start after a short delay
+    setTimeout(typeNext, 200);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAnimate, characterKey]);
+
+  return { typedLines, showOptions, done };
+}
 
 // ── AI Learn types & helpers ─────────────────────────────────────
 
@@ -173,8 +239,17 @@ const PROTOCOL_STEP_TITLES = [
 const DEPTH_LABELS: Record<LearningDepth, { label: string; passes: number }> = {
   shallow:  { label: 'Shallow',  passes: 1 },
   moderate: { label: 'Moderate', passes: 2 },
-  deep:     { label: 'Deep',     passes: 3 },
+  deep:     { label: 'Deep',     passes: 5 },
 };
+
+const INTERVAL_OPTIONS = [
+  { value: 15, label: '15m' },
+  { value: 30, label: '30m' },
+  { value: 60, label: '1h' },
+  { value: 120, label: '2h' },
+  { value: 240, label: '4h' },
+  { value: 480, label: '8h' },
+];
 
 function deriveSteps(session: LearningSession | null): ProtocolStep[] {
   if (!session) {
@@ -206,11 +281,52 @@ type AITab = 'ask' | 'learn';
 
 // ── Component ──────────────────────────────────────────────────────
 
-export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAIChatProps) {
+export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose, charPos }: NoteAIChatProps) {
   const { isDark } = useIsDark();
 
-  // ── Local UI state ──
-  // Controlled via parent toolbar props; fallback to internal state
+  // ── Greeting animation (only on very first open, resets per character) ──
+  const [greetingMode, setGreetingMode] = useState(true);
+  const hasEverInteracted = useRef(false);
+  const prevCharRef = useRef(isDark ? 'izmi' : 'sunny');
+  const { typedLines, showOptions, done: greetingDone } = useGreetingTypewriter(isOpen ?? false, isDark);
+  const charName = isDark ? 'Izmi' : 'Sunny';
+
+  // Reset greeting when character changes (theme switch)
+  useEffect(() => {
+    const currentChar = isDark ? 'izmi' : 'sunny';
+    if (prevCharRef.current !== currentChar) {
+      prevCharRef.current = currentChar;
+      // Re-enter greeting mode so the new character introduces itself
+      if (!hasEverInteracted.current) {
+        setGreetingMode(true);
+      }
+    }
+  }, [isDark]);
+
+  // ── Bubble position — always attached to the character GIF ──
+  // The bubble derives its position from charPos (the GIF), not independently draggable.
+  // When the user drags the GIF, the bubble follows automatically.
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  const currentPos = (() => {
+    if (!charPos) {
+      return { x: typeof window !== 'undefined' ? window.innerWidth - 340 : 800, y: 200 };
+    }
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    // Position bubble to the right of the GIF, clamped to viewport
+    let x = charPos.x + BUBBLE_OFFSET_X;
+    let y = charPos.y + BUBBLE_OFFSET_Y;
+    // If bubble would overflow right edge, flip to left side
+    if (x + BUBBLE_WIDTH + 16 > vw) {
+      x = charPos.x - BUBBLE_WIDTH - 12;
+    }
+    x = Math.max(8, Math.min(vw - BUBBLE_WIDTH - 8, x));
+    y = Math.max(48, Math.min(vh - 200, y));
+    return { x, y };
+  })();
+
+  // ── Controlled vs internal expansion ──
   const [internalExpanded, setInternalExpanded] = useState(false);
   const isExpanded = isOpen ?? internalExpanded;
   const setIsExpanded = onClose
@@ -228,6 +344,9 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
 
   const inputRef = useRef<HTMLInputElement>(null);
   const responseRef = useRef<HTMLDivElement>(null);
+  const miscTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  // Clear any pending misc timers on unmount (copy feedback, focus delay)
+  useEffect(() => () => { if (miscTimerRef.current) clearTimeout(miscTimerRef.current); }, []);
 
   // ── Store state — Ask AI ──
   const noteAI = usePFCStore((s) => s.noteAI);
@@ -235,6 +354,8 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
   const stopNoteAIGeneration = usePFCStore((s) => s.stopNoteAIGeneration);
   const createBlock = usePFCStore((s) => s.createBlock);
   const updateBlockContent = usePFCStore((s) => s.updateBlockContent);
+  const pushTransaction = usePFCStore((s) => s.pushTransaction);
+  const noteBlocks = usePFCStore((s) => s.noteBlocks);
 
   // ── Store state — AI Learn ──
   const learningSession = usePFCStore((s) => s.learningSession);
@@ -245,6 +366,8 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
   const resumeLearningSession = usePFCStore((s) => s.resumeLearningSession);
   const stopLearningSession = usePFCStore((s) => s.stopLearningSession);
   const setLearningAutoRun = usePFCStore((s) => s.setLearningAutoRun);
+  const schedulerConfig = usePFCStore((s) => s.schedulerConfig);
+  const updateSchedulerConfig = usePFCStore((s) => s.updateSchedulerConfig);
   const [learnDepth, setLearnDepth] = useState<LearningDepth>('moderate');
 
   // ── Derived learning state ──
@@ -274,18 +397,15 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
   useEffect(() => {
     if (learnIsActive || learnIsCompleted) {
       setActiveTab('learn');
-      if (!isExpanded) {
-        // If controlled externally, we can't set expanded directly
-        // The parent toolbar will handle showing us
-        setInternalExpanded(true);
-      }
+      setGreetingMode(false);
+      if (!isExpanded) setInternalExpanded(true);
     }
   }, [learnIsActive, learnIsCompleted, isExpanded]);
 
   const isGenerating = noteAI?.isGenerating ?? false;
   const generatedText = noteAI?.generatedText ?? '';
 
-  // ── Sync generated text to local response state ──
+  // Sync generated text to local response state
   useEffect(() => {
     if (generatedText) {
       setResponseText(generatedText);
@@ -293,22 +413,22 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
     }
   }, [generatedText]);
 
-  // ── Auto-scroll response area during streaming ──
+  // Auto-scroll response area during streaming
   useEffect(() => {
     if (isGenerating && responseRef.current) {
       responseRef.current.scrollTop = responseRef.current.scrollHeight;
     }
   }, [isGenerating, responseText]);
 
-  // ── Focus input on expand ──
+  // Focus input on expand (when not in greeting mode)
   useEffect(() => {
-    if (isExpanded) {
+    if (isExpanded && !greetingMode) {
       const timer = setTimeout(() => inputRef.current?.focus(), 100);
       return () => clearTimeout(timer);
     }
-  }, [isExpanded]);
+  }, [isExpanded, greetingMode]);
 
-  // ── Keyboard shortcut: Escape to close ──
+  // Keyboard shortcut: Escape to close
   useEffect(() => {
     function handleKeyDown(e: globalThis.KeyboardEvent) {
       if (e.key === 'Escape' && isExpanded) {
@@ -330,6 +450,8 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
   const handleSend = useCallback(() => {
     const prompt = inputValue.trim();
     if (!prompt || isGenerating) return;
+    setGreetingMode(false);
+    hasEverInteracted.current = true;
     setHasResponse(false);
     setResponseText('');
     startNoteAIGeneration(pageId, activeBlockId ?? null, prompt);
@@ -340,6 +462,8 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
     (action: QuickAction) => {
       if (isGenerating) return;
       if (action.requiresBlock && !activeBlockId) return;
+      setGreetingMode(false);
+      hasEverInteracted.current = true;
       setHasResponse(false);
       setResponseText('');
       startNoteAIGeneration(
@@ -364,20 +488,27 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
 
   const handleReplace = useCallback(() => {
     if (!responseText || !activeBlockId) return;
+    // Push undo transaction so Cmd+Z can revert the AI replacement
+    const oldBlock = noteBlocks.find((b: { id: string }) => b.id === activeBlockId);
+    if (oldBlock) {
+      pushTransaction(
+        [{ action: 'update' as const, blockId: activeBlockId, pageId: pageId, data: { content: responseText } }],
+        [{ action: 'update' as const, blockId: activeBlockId, pageId: pageId, previousData: { content: oldBlock.content } }],
+      );
+    }
     updateBlockContent(activeBlockId, responseText);
     setHasResponse(false);
     setResponseText('');
-  }, [responseText, activeBlockId, updateBlockContent]);
+  }, [responseText, activeBlockId, updateBlockContent, noteBlocks, pushTransaction, pageId]);
 
   const handleCopy = useCallback(async () => {
     if (!responseText) return;
     try {
       await navigator.clipboard.writeText(responseText);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API may fail in some contexts
-    }
+      if (miscTimerRef.current) clearTimeout(miscTimerRef.current);
+      miscTimerRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch { /* Clipboard API may fail */ }
   }, [responseText]);
 
   const handleInputKeyDown = useCallback(
@@ -391,143 +522,302 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
   );
 
   const handleClose = useCallback(() => {
-    if (isGenerating) {
-      stopNoteAIGeneration();
-    }
-    if (onClose) {
-      onClose();
-    } else {
-      setInternalExpanded(false);
-    }
+    if (isGenerating) stopNoteAIGeneration();
+    if (onClose) onClose();
+    else setInternalExpanded(false);
   }, [isGenerating, stopNoteAIGeneration, onClose]);
 
-  // ── Styles ──
+  // ── Transition from greeting → full panel ──
+  const enterFullMode = useCallback(() => {
+    setGreetingMode(false);
+    hasEverInteracted.current = true;
+    if (miscTimerRef.current) clearTimeout(miscTimerRef.current);
+    miscTimerRef.current = setTimeout(() => inputRef.current?.focus(), 100);
+  }, []);
+
+  // ── Styles — distinct designs per character ──
+  // Izmi (dark): deep midnight glass with amber accents
+  // Sunny (light): warm sky-blue glass with golden accents
 
   const glassBackground = isDark
-    ? 'rgba(20, 20, 28, 0.82)'
-    : 'rgba(255, 255, 255, 0.78)';
+    ? 'rgba(20, 20, 28, 0.88)'
+    : 'rgba(235, 245, 255, 0.92)';
 
   const glassBorder = isDark
-    ? 'rgba(255, 255, 255, 0.04)'
-    : 'rgba(0, 0, 0, 0.05)';
+    ? 'rgba(255, 255, 255, 0.06)'
+    : 'rgba(130, 180, 220, 0.22)';
 
   const subtleText = isDark
     ? 'rgba(255, 255, 255, 0.45)'
-    : 'rgba(0, 0, 0, 0.4)';
+    : 'rgba(60, 90, 120, 0.55)';
 
   const bodyText = isDark
     ? 'rgba(255, 255, 255, 0.8)'
-    : 'rgba(0, 0, 0, 0.75)';
+    : 'rgba(30, 55, 85, 0.85)';
 
   const inputBg = isDark
     ? 'rgba(255, 255, 255, 0.05)'
-    : 'rgba(0, 0, 0, 0.03)';
+    : 'rgba(100, 160, 220, 0.06)';
 
   const inputBorder = isDark
     ? 'rgba(255, 255, 255, 0.08)'
-    : 'rgba(0, 0, 0, 0.08)';
+    : 'rgba(100, 160, 220, 0.14)';
 
   const hoverBg = isDark
     ? 'rgba(255, 255, 255, 0.06)'
-    : 'rgba(0, 0, 0, 0.04)';
+    : 'rgba(100, 160, 220, 0.1)';
 
-  // ── Collapsed state: render nothing (toolbar button handles this) ──
+  // Determine tail direction (point toward Izmi)
+  const tailOnLeft = charPos ? currentPos.x > charPos.x + 24 : false;
 
-  if (!isExpanded) {
-    return null;
-  }
+  // ── Collapsed → render nothing ──
+  if (!isExpanded) return null;
 
-  // ── Expanded panel with tabs ──
-
+  // ── Main bubble render ──
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key="panel"
-        variants={panelVariants}
+        key={isDark ? 'izmi-bubble' : 'sunny-bubble'}
+        variants={bubbleVariants}
         initial="initial"
         animate="animate"
         exit="exit"
         style={{
           position: 'fixed',
-          bottom: 20,
-          right: 20,
-          width: 340,
-          maxHeight: 420,
+          left: currentPos.x,
+          top: currentPos.y,
+          width: BUBBLE_WIDTH,
+          maxHeight: greetingMode ? 300 : 440,
           display: 'flex',
           flexDirection: 'column',
           background: glassBackground,
           border: `1px solid ${glassBorder}`,
-          borderRadius: '1rem',
-          backdropFilter: 'blur(10px) saturate(1.2)',
-          WebkitBackdropFilter: 'blur(10px) saturate(1.2)',
-          boxShadow: 'none',
-          overflow: 'hidden',
+          borderRadius: isDark ? '1.125rem' : '1.25rem',
+          backdropFilter: isDark ? 'blur(14px) saturate(1.3)' : 'blur(16px) saturate(1.2)',
+          WebkitBackdropFilter: isDark ? 'blur(14px) saturate(1.3)' : 'blur(16px) saturate(1.2)',
+          boxShadow: isDark
+            ? '0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)'
+            : '0 8px 32px rgba(100,160,220,0.15), 0 2px 8px rgba(100,160,220,0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
+          overflow: 'visible',
           zIndex: 'calc(var(--z-modal) + 1)',
+          touchAction: 'none',
         }}
       >
-        {/* ── Header with tabs ── */}
+        {/* ── Speech bubble tail ── */}
         <div
+          style={{
+            position: 'absolute',
+            bottom: tailOnLeft ? undefined : undefined,
+            top: 18,
+            [tailOnLeft ? 'left' : 'right']: undefined,
+            // Position the tail on the side closer to Izmi
+            ...(tailOnLeft
+              ? { left: -8 }
+              : { left: -8 }),
+            width: 0,
+            height: 0,
+            borderTop: '6px solid transparent',
+            borderBottom: '6px solid transparent',
+            borderRight: `8px solid ${glassBackground}`,
+            filter: isDark ? 'drop-shadow(-2px 0 2px rgba(0,0,0,0.3))' : 'drop-shadow(-2px 0 2px rgba(100,160,220,0.1))',
+            zIndex: 1,
+          }}
+        />
+
+        {/* ── Header (no drag — bubble follows the GIF) ── */}
+        <div
+          ref={headerRef}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0.5rem 0.625rem 0.375rem 0.5rem',
-            borderBottom: `1px solid ${glassBorder}`,
+            padding: '0.5rem 0.625rem 0.375rem 0.625rem',
+            borderBottom: greetingMode ? 'none' : `1px solid ${glassBorder}`,
+            cursor: 'default',
+            userSelect: 'none',
             flexShrink: 0,
           }}
         >
-          {/* Tab switcher */}
-          <div style={{ display: 'flex', gap: '0.2rem', background: inputBg, borderRadius: '9999px', padding: '0.15rem' }}>
-            <button
-              onClick={() => setActiveTab('ask')}
+          {/* Character name badge — theme-aware */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <img
+              src={isDark ? '/pixel-robot.gif' : '/pixel-sun.gif'}
+              alt=""
+              draggable={false}
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                padding: '0.25rem 0.625rem', fontSize: '0.6875rem', fontWeight: activeTab === 'ask' ? 650 : 450,
-                borderRadius: '9999px', border: 'none', cursor: 'pointer',
-                background: activeTab === 'ask' ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)') : 'transparent',
-                color: activeTab === 'ask' ? 'var(--pfc-accent)' : subtleText,
-                transition: 'background 0.15s, color 0.15s',
+                width: 20,
+                height: 20,
+                imageRendering: 'pixelated',
+                borderRadius: '50%',
+                pointerEvents: 'none',
               }}
-            >
-              <Sparkles style={{ width: 11, height: 11 }} />
-              Ask AI
-            </button>
-            <button
-              onClick={() => setActiveTab('learn')}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                padding: '0.25rem 0.625rem', fontSize: '0.6875rem', fontWeight: activeTab === 'learn' ? 650 : 450,
-                borderRadius: '9999px', border: 'none', cursor: 'pointer',
-                background: activeTab === 'learn' ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)') : 'transparent',
-                color: activeTab === 'learn' ? 'var(--pfc-accent)' : subtleText,
-                transition: 'background 0.15s, color 0.15s',
-              }}
-            >
-              <Brain style={{ width: 11, height: 11 }} />
-              Learn
-              {learnIsRunning && (
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34D399', animation: 'pulse 1.5s ease-in-out infinite' }} />
-              )}
-            </button>
+            />
+            <span style={{
+              fontSize: '0.6875rem',
+              fontWeight: 500,
+              fontFamily: 'var(--font-secondary)',
+              color: bodyText,
+              letterSpacing: '-0.01em',
+            }}>
+              {charName}
+            </span>
+            <span style={{
+              width: 5,
+              height: 5,
+              borderRadius: '50%',
+              background: isDark ? '#34D399' : '#F4B860',
+              flexShrink: 0,
+            }} />
           </div>
 
-          <motion.button
-            onClick={handleClose}
-            whileTap={{ scale: 0.92 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 22, height: 22, borderRadius: '50%',
-              background: 'transparent', border: 'none', cursor: 'pointer', color: subtleText,
-            }}
-            aria-label="Close AI panel"
-          >
-            <X style={{ width: 13, height: 13 }} />
-          </motion.button>
+          {/* Tab pills (hidden during greeting) + close */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            {!greetingMode && (
+              <div style={{
+                display: 'flex', gap: '0.15rem', background: inputBg,
+                borderRadius: '9999px', padding: '0.125rem',
+              }}>
+                <TabPill
+                  active={activeTab === 'ask'}
+                  onClick={() => setActiveTab('ask')}
+                  isDark={isDark}
+                  subtleText={subtleText}
+                >
+                  <Sparkles style={{ width: 9, height: 9 }} />Ask
+                </TabPill>
+                <TabPill
+                  active={activeTab === 'learn'}
+                  onClick={() => setActiveTab('learn')}
+                  isDark={isDark}
+                  subtleText={subtleText}
+                >
+                  <Brain style={{ width: 9, height: 9 }} />Learn
+                  {learnIsRunning && (
+                    <span style={{
+                      width: 4, height: 4, borderRadius: '50%',
+                      background: '#34D399', animation: 'izmi-pulse 1.5s ease-in-out infinite',
+                    }} />
+                  )}
+                </TabPill>
+              </div>
+            )}
+            <motion.button
+              onClick={handleClose}
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 20, height: 20, borderRadius: '50%',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: subtleText,
+              }}
+              aria-label="Close"
+            >
+              <X style={{ width: 12, height: 12 }} />
+            </motion.button>
+          </div>
         </div>
 
-        {/* ═══ ASK AI TAB ═══ */}
-        {activeTab === 'ask' && (
+        {/* ═══ GREETING MODE ═══ */}
+        {greetingMode && (
+          <div style={{ padding: '0.5rem 0.75rem 0.625rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {/* Typewriter greeting — dynamic lines for Izmi (3) or Sunny (2) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              {typedLines.map((text, idx) => {
+                const isFirst = idx === 0;
+                const isLast = idx === typedLines.length - 1;
+                // Show cursor on the line currently being typed (non-empty, and next line hasn't started)
+                const isActivelyTyping = !greetingDone && text.length > 0 &&
+                  (idx === typedLines.length - 1 || typedLines[idx + 1]!.length === 0);
+                if (text.length === 0 && !isFirst) return null;
+                return (
+                  <span key={idx} style={{
+                    fontSize: isFirst ? '0.8125rem' : '0.75rem',
+                    fontWeight: isFirst ? 500 : 400,
+                    fontFamily: 'var(--font-secondary)',
+                    color: isFirst ? bodyText : (isLast && !isFirst) ? subtleText : bodyText,
+                    letterSpacing: isFirst ? '-0.01em' : undefined,
+                    minHeight: '1.2em',
+                  }}>
+                    {text}
+                    {isActivelyTyping && (
+                      <span className="izmi-cursor" style={{
+                        display: 'inline-block', width: 2, height: '0.85em',
+                        marginLeft: 1, background: 'var(--pfc-accent)',
+                        verticalAlign: 'text-bottom', borderRadius: 1,
+                      }} />
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* Animated option buttons */}
+            <AnimatePresence>
+              {showOptions && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginTop: '0.25rem' }}
+                >
+                  {[
+                    { label: '✍️ Help me write', action: () => { enterFullMode(); setActiveTab('ask'); } },
+                    { label: '📝 Summarize this page', action: () => handleQuickAction(QUICK_ACTIONS[1]!) },
+                    { label: '🧠 Learn from my notes', action: () => { enterFullMode(); setActiveTab('learn'); } },
+                    { label: '💬 Ask something else', action: () => { enterFullMode(); setActiveTab('ask'); } },
+                  ].map((opt, i) => (
+                    <motion.button
+                      key={opt.label}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{
+                        delay: i * 0.08,
+                        duration: 0.3,
+                        ease: CUPERTINO_EASE,
+                      }}
+                      onClick={opt.action}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.97 }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.625rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: 400,
+                        fontFamily: 'var(--font-secondary)',
+                        color: bodyText,
+                        background: inputBg,
+                        border: `1px solid ${inputBorder}`,
+                        borderRadius: '0.625rem',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'background 0.15s, border-color 0.15s',
+                        letterSpacing: '-0.005em',
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = hoverBg;
+                        (e.currentTarget as HTMLElement).style.borderColor = isDark
+                          ? 'rgba(var(--pfc-accent-rgb), 0.25)'
+                          : 'rgba(100, 160, 220, 0.35)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.background = inputBg;
+                        (e.currentTarget as HTMLElement).style.borderColor = inputBorder;
+                      }}
+                    >
+                      {opt.label}
+                    </motion.button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* ═══ FULL PANEL — ASK AI TAB ═══ */}
+        {!greetingMode && activeTab === 'ask' && (
           <>
             {/* Quick actions */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', padding: '0.5rem 0.625rem 0.375rem', flexShrink: 0 }}>
@@ -611,14 +901,14 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleInputKeyDown}
                 disabled={isGenerating}
-                placeholder="Ask about this note..."
+                placeholder={`Ask ${charName} anything...`}
                 style={{
-                  flex: 1, height: 28, padding: '0 0.5rem', fontSize: '0.6875rem',
+                  flex: 1, height: 28, padding: '0 0.5rem', fontSize: '0.6875rem', fontFamily: 'var(--font-secondary)',
                   color: bodyText, background: inputBg, border: `1px solid ${inputBorder}`,
                   borderRadius: '0.5rem', outline: 'none',
                   opacity: isGenerating ? 0.5 : 1, transition: 'border-color 0.15s, opacity 0.15s',
                 }}
-                onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(196,149,106,0.4)'; }}
+                onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = isDark ? 'rgba(196,149,106,0.4)' : 'rgba(100,160,220,0.4)'; }}
                 onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = inputBorder; }}
               />
               {isGenerating ? (
@@ -639,8 +929,12 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 28, height: 28, borderRadius: '50%',
-                    background: inputValue.trim() ? 'rgba(196,149,106,0.15)' : inputBg,
-                    border: `1px solid ${inputValue.trim() ? 'rgba(196,149,106,0.3)' : inputBorder}`,
+                    background: inputValue.trim()
+                      ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(91,143,199,0.12)')
+                      : inputBg,
+                    border: `1px solid ${inputValue.trim()
+                      ? (isDark ? 'rgba(196,149,106,0.3)' : 'rgba(91,143,199,0.25)')
+                      : inputBorder}`,
                     cursor: inputValue.trim() ? 'pointer' : 'default',
                     color: inputValue.trim() ? 'var(--pfc-accent)' : subtleText,
                     flexShrink: 0, opacity: inputValue.trim() ? 1 : 0.5,
@@ -656,8 +950,8 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
           </>
         )}
 
-        {/* ═══ AI LEARN TAB ═══ */}
-        {activeTab === 'learn' && (
+        {/* ═══ FULL PANEL — AI LEARN TAB ═══ */}
+        {!greetingMode && activeTab === 'learn' && (
           <>
             {(learnIsActive || learnIsCompleted) ? (
               <>
@@ -682,7 +976,7 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
                       color: learnIsRunning ? '#34D399' : learnIsPaused ? '#FBBF24' : '#34D399',
                       border: `1px solid ${learnIsRunning ? 'rgba(52,211,153,0.2)' : learnIsPaused ? 'rgba(251,191,36,0.2)' : 'rgba(52,211,153,0.2)'}`,
                     }}>
-                      {learnIsRunning && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34D399', animation: 'pulse 1.5s ease-in-out infinite' }} />}
+                      {learnIsRunning && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34D399', animation: 'izmi-pulse 1.5s ease-in-out infinite' }} />}
                       {learnIsRunning ? 'Running' : learnIsPaused ? 'Paused' : 'Done'}
                       {learnIsCompleted && <Check style={{ width: 8, height: 8 }} />}
                     </span>
@@ -769,7 +1063,7 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
               /* Idle learn state — depth selector + start */
               <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 <p style={{ fontSize: '0.625rem', lineHeight: 1.5, color: subtleText, margin: 0 }}>
-                  AI will recursively analyze and deepen your notes
+                  {charName} will recursively analyze and deepen your notes
                 </p>
 
                 {/* Depth selector */}
@@ -791,19 +1085,94 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
                   ))}
                 </div>
 
-                {/* Auto-learn toggle */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 450, color: bodyText }}>Auto-learn</span>
-                  <motion.button onClick={() => setLearningAutoRun(!learningAutoRun)}
-                    whileTap={{ scale: 0.92 }} transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                    style={{
-                      width: 32, height: 18, borderRadius: 9, padding: 2,
-                      background: learningAutoRun ? 'rgba(196,149,106,0.5)' : (isDark ? 'rgba(244,189,111,0.1)' : 'rgba(0,0,0,0.1)'),
-                      border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'background 0.2s',
-                    }} role="switch" aria-checked={learningAutoRun}>
-                    <motion.span animate={{ x: learningAutoRun ? 14 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                      style={{ width: 14, height: 14, borderRadius: 7, background: learningAutoRun ? '#D4B896' : (isDark ? 'rgba(237,224,212,0.4)' : 'rgba(0,0,0,0.3)') }} />
-                  </motion.button>
+                {/* Auto-learn toggle + config */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.6875rem', fontWeight: 450, color: bodyText }}>Auto-learn</span>
+                    <motion.button onClick={() => setLearningAutoRun(!learningAutoRun)}
+                      whileTap={{ scale: 0.92 }} transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                      style={{
+                        width: 32, height: 18, borderRadius: 9, padding: 2,
+                        background: learningAutoRun ? 'rgba(196,149,106,0.5)' : (isDark ? 'rgba(244,189,111,0.1)' : 'rgba(0,0,0,0.1)'),
+                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'background 0.2s',
+                      }} role="switch" aria-checked={learningAutoRun}>
+                      <motion.span animate={{ x: learningAutoRun ? 14 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                        style={{ width: 14, height: 14, borderRadius: 7, background: learningAutoRun ? '#D4B896' : (isDark ? 'rgba(237,224,212,0.4)' : 'rgba(0,0,0,0.3)') }} />
+                    </motion.button>
+                  </div>
+
+                  {/* Expanded auto-learn settings when enabled */}
+                  <AnimatePresence>
+                    {learningAutoRun && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2, ease: CUPERTINO_EASE }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', paddingTop: '0.25rem' }}>
+                          {/* Interval selector */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '0.5625rem', color: subtleText }}>Interval</span>
+                            <div style={{ display: 'flex', gap: '0.125rem' }}>
+                              {INTERVAL_OPTIONS.map(opt => (
+                                <button key={opt.value} onClick={() => updateSchedulerConfig({ intervalMinutes: opt.value })}
+                                  style={{
+                                    padding: '0.15rem 0.375rem', fontSize: '0.5rem', fontWeight: schedulerConfig.intervalMinutes === opt.value ? 600 : 400,
+                                    color: schedulerConfig.intervalMinutes === opt.value ? '#D4B896' : subtleText,
+                                    background: schedulerConfig.intervalMinutes === opt.value ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.1)') : 'transparent',
+                                    border: schedulerConfig.intervalMinutes === opt.value ? '1px solid rgba(196,149,106,0.2)' : '1px solid transparent',
+                                    borderRadius: '9999px', cursor: 'pointer', transition: 'all 0.15s',
+                                  }}>
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Auto depth selector */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '0.5625rem', color: subtleText }}>Auto depth</span>
+                            <div style={{ display: 'flex', gap: '0.125rem' }}>
+                              {(['shallow', 'moderate', 'deep'] as const).map(d => (
+                                <button key={d} onClick={() => updateSchedulerConfig({ depth: d })}
+                                  style={{
+                                    padding: '0.15rem 0.375rem', fontSize: '0.5rem', fontWeight: schedulerConfig.depth === d ? 600 : 400,
+                                    color: schedulerConfig.depth === d ? '#D4B896' : subtleText,
+                                    background: schedulerConfig.depth === d ? (isDark ? 'rgba(196,149,106,0.12)' : 'rgba(196,149,106,0.1)') : 'transparent',
+                                    border: schedulerConfig.depth === d ? '1px solid rgba(196,149,106,0.2)' : '1px solid transparent',
+                                    borderRadius: '9999px', cursor: 'pointer', transition: 'all 0.15s',
+                                  }}>
+                                  {d[0]!.toUpperCase() + d.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Daily brief toggle */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '0.5625rem', color: subtleText }}>Daily brief</span>
+                            <motion.button onClick={() => updateSchedulerConfig({ enableDailyBrief: !schedulerConfig.enableDailyBrief })}
+                              whileTap={{ scale: 0.92 }} transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                              style={{
+                                width: 28, height: 16, borderRadius: 8, padding: 2,
+                                background: schedulerConfig.enableDailyBrief ? 'rgba(52,211,153,0.5)' : (isDark ? 'rgba(244,189,111,0.1)' : 'rgba(0,0,0,0.1)'),
+                                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'background 0.2s',
+                              }} role="switch" aria-checked={schedulerConfig.enableDailyBrief}>
+                              <motion.span animate={{ x: schedulerConfig.enableDailyBrief ? 12 : 0 }} transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                style={{ width: 12, height: 12, borderRadius: 6, background: schedulerConfig.enableDailyBrief ? '#34D399' : (isDark ? 'rgba(237,224,212,0.4)' : 'rgba(0,0,0,0.3)') }} />
+                            </motion.button>
+                          </div>
+
+                          {/* Status line */}
+                          <p style={{ fontSize: '0.5rem', color: subtleText, margin: 0, lineHeight: 1.3 }}>
+                            Runs every {schedulerConfig.intervalMinutes < 60 ? `${schedulerConfig.intervalMinutes}min` : `${schedulerConfig.intervalMinutes / 60}h`} when notes change{schedulerConfig.enableDailyBrief ? ` · daily brief at ${schedulerConfig.dailyBriefHour}:00` : ''}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Start button */}
@@ -825,10 +1194,54 @@ export function NoteAIChat({ pageId, activeBlockId, isOpen, onClose }: NoteAICha
 
         {/* Keyframes */}
         <style>{`
-          @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+          @keyframes izmi-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+          @keyframes izmi-cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+          .izmi-cursor { animation: izmi-cursor-blink 0.6s step-end infinite; }
         `}</style>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TabPill — tiny tab button for header
+   ═══════════════════════════════════════════════════════════════════ */
+
+function TabPill({
+  active,
+  onClick,
+  isDark,
+  subtleText,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  isDark: boolean;
+  subtleText: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.2rem',
+        padding: '0.2rem 0.5rem',
+        fontSize: '0.625rem',
+        fontWeight: active ? 650 : 450,
+        borderRadius: '9999px',
+        border: 'none',
+        cursor: 'pointer',
+        background: active
+          ? (isDark ? 'rgba(196,149,106,0.15)' : 'rgba(196,149,106,0.12)')
+          : 'transparent',
+        color: active ? 'var(--pfc-accent)' : subtleText,
+        transition: 'background 0.15s, color 0.15s',
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -844,7 +1257,7 @@ function LearnStepIcon({ status, isDark }: { status: StepStatus; isDark: boolean
     </div>
   );
   if (status === 'running') return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: 'rgba(196,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite' }}>
+    <div style={{ width: size, height: size, borderRadius: '50%', background: 'rgba(196,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: 'izmi-pulse 1.5s ease-in-out infinite' }}>
       <CircleDot style={{ width: 8, height: 8, color: '#D4B896' }} />
     </div>
   );

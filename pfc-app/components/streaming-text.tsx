@@ -11,7 +11,7 @@ export function StreamingText() {
 
   return (
     <div style={{ position: 'relative' }}>
-      <MarkdownContent content={streamingText} />
+      <MarkdownContent content={streamingText.replace(/\s*\[(DATA|CONFLICT|UNCERTAIN|MODEL)\]\s*/g, ' ')} />
       {isStreaming && (
         <span
           className="animate-blink"

@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
 import { streamText } from 'ai';
+import { logger } from '@/lib/debug-logger';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
 import {
@@ -201,7 +203,7 @@ function getNotesAIGenerationBudget(action: string, mode: InferenceConfig['mode'
 }
 
 // ── POST handler ──
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   let pages: NotesAIPageInput[];
   let blocks: NotesAIBlockInput[];
   let prompt: string;
@@ -355,7 +357,7 @@ export async function POST(request: NextRequest) {
           return;
         }
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[notes-ai] Error:', message);
+        logger.error('notes-ai', 'Error:', message);
         emit({ type: 'error', message });
       } finally {
         writer.done();
@@ -372,3 +374,5 @@ export async function POST(request: NextRequest) {
     },
   });
 }
+
+export const POST = withMiddleware(_POST, { maxRequests: 30, windowMs: 60_000 });

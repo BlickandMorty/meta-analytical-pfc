@@ -332,7 +332,7 @@ function parseFrontmatter(raw: string): { frontmatter: Record<string, unknown>; 
   if (!fmMatch) return { frontmatter: {}, body: raw };
 
   const fm: Record<string, unknown> = {};
-  const lines = fmMatch[1].split('\n');
+  const lines = fmMatch[1]!.split('\n');
 
   for (const line of lines) {
     const colonIdx = line.indexOf(':');
@@ -361,7 +361,7 @@ function parseFrontmatter(raw: string): { frontmatter: Record<string, unknown>; 
     fm[key] = value;
   }
 
-  return { frontmatter: fm, body: fmMatch[2] };
+  return { frontmatter: fm, body: fmMatch[2]! };
 }
 
 function mergeIntoBlocks(lines: string[]): string[] {

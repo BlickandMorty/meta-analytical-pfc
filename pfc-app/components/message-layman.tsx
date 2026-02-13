@@ -1,7 +1,6 @@
 'use client';
 
 import type { LaymanSummary } from '@/lib/engine/types';
-import { cn } from '@/lib/utils';
 
 const DEFAULT_LABELS: Record<string, string> = {
   whatWasTried: 'What was tried',
@@ -37,7 +36,7 @@ export function MessageLayman({ layman }: MessageLaymanProps) {
     const section = activeSections[0];
     if (!section) return null;
     return (
-      <p className="text-[13.5px] leading-[1.7] text-foreground/90">
+      <p style={{ fontSize: 'var(--type-meta)', lineHeight: 1.7 }} className="text-foreground/90">
         {section.text}
       </p>
     );
@@ -51,10 +50,16 @@ export function MessageLayman({ layman }: MessageLaymanProps) {
           key={section.key}
           className="border-l-2 border-pfc-ember/15 pl-3"
         >
-          <p className="text-[9.5px] font-medium text-muted-foreground/50 tracking-wide mb-0.5">
+          <p
+            style={{ fontSize: 'var(--type-section-label)' }}
+            className="font-medium text-muted-foreground/50 tracking-wide mb-0.5"
+          >
             {section.label}
           </p>
-          <p className="text-[13.5px] leading-[1.65] text-foreground/90">
+          <p
+            style={{ fontSize: 'var(--type-meta)', lineHeight: 1.65 }}
+            className="text-foreground/90"
+          >
             {section.text}
           </p>
         </div>

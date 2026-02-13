@@ -5,9 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
   FlaskConicalIcon,
-  EyeIcon,
-  NetworkIcon,
-  MessageSquareIcon,
   BookOpenIcon,
   SparklesIcon,
   SettingsIcon,
@@ -15,7 +12,6 @@ import {
   CloudIcon,
   MonitorIcon,
 } from 'lucide-react';
-import type { ChatViewMode } from '@/lib/research/types';
 import { getInferenceModeFeatures } from '@/lib/research/types';
 
 interface ResearchModeBarProps {
@@ -29,13 +25,10 @@ const MODE_ICON: Record<string, typeof CpuIcon> = {
 };
 
 export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: ResearchModeBarProps) {
-  const researchChatMode = usePFCStore((s) => s.researchChatMode);
-  const toggleResearchChatMode = usePFCStore((s) => s.toggleResearchChatMode);
-  const chatViewMode = usePFCStore((s) => s.chatViewMode);
-  const setChatViewMode = usePFCStore((s) => s.setChatViewMode);
-  const researchModeControls = usePFCStore((s) => s.researchModeControls);
-  const setResearchModeControls = usePFCStore((s) => s.setResearchModeControls);
   const inferenceMode = usePFCStore((s) => s.inferenceMode);
+  const setInferenceMode = usePFCStore((s) => s.setInferenceMode);
+  const apiKey = usePFCStore((s) => s.apiKey);
+  const ollamaAvailable = usePFCStore((s) => s.ollamaAvailable);
   const [showControls, setShowControls] = useState(false);
 
   const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
@@ -56,101 +49,66 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
         border: isDark ? '1px solid rgba(79,69,57,0.3)' : '1px solid rgba(0,0,0,0.06)',
       }}
     >
-      {/* Research Mode Toggle */}
-      <button
-        onClick={toggleResearchChatMode}
+      {/* Research mode indicator */}
+      <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '0.375rem',
           padding: '0.25rem 0.5rem',
           borderRadius: '9999px',
-          border: 'none',
-          cursor: 'pointer',
           fontSize: '0.6875rem',
-          fontWeight: researchChatMode ? 600 : 500,
-          background: researchChatMode ? activeBg : 'transparent',
-          color: researchChatMode
-            ? 'var(--color-pfc-green)'
-            : (isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.45)'),
-          transition: 'all 0.2s',
+          fontWeight: 600,
+          background: activeBg,
+          color: 'var(--color-pfc-green)',
         }}
       >
         <FlaskConicalIcon style={{ height: '0.75rem', width: '0.75rem' }} />
-        Research Mode
-      </button>
+        Research
+      </div>
 
       {/* Divider */}
-      {researchChatMode && (
-        <div
-          style={{
-            width: '1px',
-            height: '1rem',
-            background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)',
-          }}
-        />
-      )}
+      <div
+        style={{
+          width: '1px',
+          height: '1rem',
+          background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)',
+        }}
+      />
 
-      {/* View Mode Toggle (only in research mode) */}
-      <AnimatePresence>
-        {researchChatMode && (
-          <motion.div
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: 'auto' }}
-            exit={{ opacity: 0, width: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.125rem', overflow: 'hidden' }}
-          >
-            {([
-              { mode: 'chat' as ChatViewMode, icon: MessageSquareIcon, label: 'Chat' },
-              { mode: 'visualize-thought' as ChatViewMode, icon: NetworkIcon, label: 'Visualize' },
-            ]).map((opt) => {
-              const Icon = opt.icon;
-              const isActive = chatViewMode === opt.mode;
-              return (
-                <button
-                  key={opt.mode}
-                  onClick={() => setChatViewMode(opt.mode)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    padding: '0.25rem 0.375rem',
-                    borderRadius: '9999px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '0.625rem',
-                    fontWeight: isActive ? 600 : 400,
-                    background: isActive ? (isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.10)') : 'transparent',
-                    color: isActive
-                      ? 'var(--pfc-accent)'
-                      : (isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.3)'),
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <Icon style={{ height: '0.6875rem', width: '0.6875rem' }} />
-                  {opt.label}
-                </button>
-              );
-            })}
-
-            {/* Divider */}
-            <div
-              style={{
-                width: '1px',
-                height: '1rem',
-                background: isDark ? 'rgba(79,69,57,0.3)' : 'rgba(0,0,0,0.06)',
-                margin: '0 0.125rem',
+      {/* Inference Mode Switcher — clickable to cycle modes */}
+            <button
+              onClick={() => {
+                const modes = ['simulation', 'api', 'local'] as const;
+                const idx = modes.indexOf(inferenceMode as typeof modes[number]);
+                const next = modes[(idx + 1) % modes.length]!;
+                // Validate before switching
+                if (next === 'api' && !apiKey) {
+                  usePFCStore.getState().addToast({
+                    message: 'Set an API key in Settings first',
+                    type: 'error',
+                  });
+                  return;
+                }
+                if (next === 'local' && !ollamaAvailable) {
+                  usePFCStore.getState().addToast({
+                    message: 'Ollama not detected — make sure it\'s running',
+                    type: 'error',
+                  });
+                  return;
+                }
+                setInferenceMode(next);
+                // Persist to localStorage for reload
+                try { localStorage.setItem('pfc-inference-mode', next); } catch { /* quota exceeded in private browsing */ }
               }}
-            />
-
-            {/* Inference Mode Badge */}
-            <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.1875rem',
                 padding: '0.125rem 0.3rem',
                 borderRadius: '9999px',
+                border: 'none',
+                cursor: 'pointer',
                 background: inferenceMode === 'local'
                   ? (isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)')
                   : inferenceMode === 'api'
@@ -165,12 +123,13 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
                   : inferenceMode === 'api'
                     ? 'var(--pfc-accent)'
                     : (isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)'),
+                transition: 'all 0.15s',
               }}
-              title={features.modeHint}
+              title={`${features.modeHint} — Click to switch mode`}
             >
               <ModeIcon style={{ height: '0.5rem', width: '0.5rem' }} />
               {features.modeLabel}
-            </div>
+            </button>
 
             {/* Divider */}
             <div
@@ -201,13 +160,10 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
             >
               <SettingsIcon style={{ height: '0.625rem', width: '0.625rem' }} />
             </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Research Controls Popover */}
       <AnimatePresence>
-        {showControls && researchChatMode && (
+        {showControls && (
           <motion.div
             initial={{ opacity: 0, y: 4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -240,159 +196,33 @@ export const ResearchModeBar = memo(function ResearchModeBar({ isDark }: Researc
               Research Controls
             </p>
 
-            {/* Auto-extract citations — always available */}
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.5rem',
-              cursor: 'pointer',
-            }}>
+            {/* Active features — all always-on */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                 <BookOpenIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--color-pfc-green)' }} />
                 <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.55)' }}>
                   Auto-extract citations
                 </span>
+                <span style={{
+                  fontSize: '0.5rem', fontWeight: 600, color: 'var(--color-pfc-green)',
+                  padding: '0.0625rem 0.3rem', borderRadius: '9999px',
+                  background: isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)',
+                  marginLeft: 'auto',
+                }}>ON</span>
               </div>
-              <div
-                onClick={() =>
-                  setResearchModeControls({
-                    autoExtractCitations: !researchModeControls.autoExtractCitations,
-                  })
-                }
-                style={{
-                  width: '2rem',
-                  height: '1.125rem',
-                  borderRadius: '9999px',
-                  background: researchModeControls.autoExtractCitations
-                    ? 'var(--color-pfc-green)'
-                    : (isDark ? 'rgba(156,143,128,0.2)' : 'rgba(0,0,0,0.15)'),
-                  position: 'relative',
-                  transition: 'background 0.2s',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{
-                  position: 'absolute',
-                  top: '0.125rem',
-                  left: '0.125rem',
-                  width: '0.875rem',
-                  height: '0.875rem',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transform: researchModeControls.autoExtractCitations ? 'translateX(0.875rem) translateZ(0)' : 'translateX(0) translateZ(0)',
-                  transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                }} />
-              </div>
-            </label>
-
-            {/* Preview visualizations — always available */}
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.5rem',
-              cursor: 'pointer',
-            }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <EyeIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--pfc-accent)' }} />
+                <SparklesIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--pfc-accent)' }} />
                 <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.55)' }}>
-                  Preview visualizations
+                  Deep analysis
                 </span>
+                <span style={{
+                  fontSize: '0.5rem', fontWeight: 600, color: 'var(--pfc-accent)',
+                  padding: '0.0625rem 0.3rem', borderRadius: '9999px',
+                  background: isDark ? 'rgba(244,189,111,0.1)' : 'rgba(244,189,111,0.08)',
+                  marginLeft: 'auto',
+                }}>ON</span>
               </div>
-              <div
-                onClick={() =>
-                  setResearchModeControls({
-                    showVisualizationPreview: !researchModeControls.showVisualizationPreview,
-                  })
-                }
-                style={{
-                  width: '2rem',
-                  height: '1.125rem',
-                  borderRadius: '9999px',
-                  background: researchModeControls.showVisualizationPreview
-                    ? 'var(--pfc-accent)'
-                    : (isDark ? 'rgba(156,143,128,0.2)' : 'rgba(0,0,0,0.15)'),
-                  position: 'relative',
-                  transition: 'background 0.2s',
-                  cursor: 'pointer',
-                }}
-              >
-                <div style={{
-                  position: 'absolute',
-                  top: '0.125rem',
-                  left: '0.125rem',
-                  width: '0.875rem',
-                  height: '0.875rem',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transform: researchModeControls.showVisualizationPreview ? 'translateX(0.875rem) translateZ(0)' : 'translateX(0) translateZ(0)',
-                  transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                }} />
-              </div>
-            </label>
-
-            {/* Deep research — gated by inference mode */}
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.5rem',
-              cursor: features.deepResearch ? 'pointer' : 'not-allowed',
-              opacity: features.deepResearch ? 1 : 0.4,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <SparklesIcon style={{ height: '0.75rem', width: '0.75rem', color: 'var(--color-pfc-ember)' }} />
-                <div>
-                  <span style={{ fontSize: '0.6875rem', color: isDark ? 'rgba(237,224,212,0.8)' : 'rgba(0,0,0,0.55)' }}>
-                    Deep research mode
-                  </span>
-                  {!features.deepResearch && (
-                    <p style={{
-                      fontSize: '0.5rem',
-                      color: isDark ? 'rgba(156,143,128,0.4)' : 'rgba(0,0,0,0.2)',
-                      marginTop: '0.0625rem',
-                    }}>
-                      Requires API or local model
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div
-                onClick={() => {
-                  if (!features.deepResearch) return;
-                  setResearchModeControls({
-                    deepResearchEnabled: !researchModeControls.deepResearchEnabled,
-                  });
-                }}
-                style={{
-                  width: '2rem',
-                  height: '1.125rem',
-                  borderRadius: '9999px',
-                  background: researchModeControls.deepResearchEnabled && features.deepResearch
-                    ? 'var(--color-pfc-ember)'
-                    : (isDark ? 'rgba(156,143,128,0.2)' : 'rgba(0,0,0,0.15)'),
-                  position: 'relative',
-                  transition: 'background 0.2s',
-                  cursor: features.deepResearch ? 'pointer' : 'not-allowed',
-                }}
-              >
-                <div style={{
-                  position: 'absolute',
-                  top: '0.125rem',
-                  left: '0.125rem',
-                  width: '0.875rem',
-                  height: '0.875rem',
-                  borderRadius: '50%',
-                  background: 'white',
-                  transform: researchModeControls.deepResearchEnabled && features.deepResearch ? 'translateX(0.875rem) translateZ(0)' : 'translateX(0) translateZ(0)',
-                  transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                }} />
-              </div>
-            </label>
+            </div>
 
             {/* Mode hint at bottom */}
             <div style={{

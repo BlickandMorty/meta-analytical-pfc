@@ -136,8 +136,8 @@ function RecentChatsBase({ isDark, isOled, onShowAll }: RecentChatsProps) {
               gap: '0.25rem',
               padding: '0.25rem 0.625rem',
               borderRadius: '9999px',
-              border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
-              background: isDark ? (isOled ? 'rgba(10,10,10,0.9)' : 'rgba(22,21,19,0.85)') : 'rgba(237,232,222,0.85)',
+              border: `1px solid ${isDark ? 'var(--border)' : 'rgba(190,183,170,0.3)'}`,
+              background: isDark ? 'var(--pfc-surface-dark)' : 'rgba(237,232,222,0.85)',
               cursor: 'pointer',
               fontSize: '0.625rem',
               fontWeight: 600,
@@ -186,13 +186,9 @@ function RecentChatsBase({ isDark, isOled, onShowAll }: RecentChatsProps) {
                 width: '100%',
                 minHeight: '3.25rem',
                 background: isDark
-                  ? (isOled
-                    ? (isHovered ? 'rgba(35,35,35,0.8)' : 'rgba(14,14,14,0.8)')
-                    : (isHovered ? 'rgba(45,42,38,0.6)' : 'rgba(28,27,25,0.5)'))
+                  ? (isHovered ? 'var(--glass-hover)' : 'var(--pfc-surface-dark)')
                   : (isHovered ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.6)'),
-                border: `1px solid ${
-                  isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.2)'
-                }`,
+                border: `1px solid ${isDark ? 'var(--border)' : 'rgba(190,183,170,0.2)'}`,
                 transition: 'background 0.15s ease',
               }}
             >

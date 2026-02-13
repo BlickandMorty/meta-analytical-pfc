@@ -29,6 +29,7 @@ import {
   DownloadIcon,
   LockIcon,
   UnlockIcon,
+  SlidersHorizontalIcon,
 } from 'lucide-react';
 
 import { PageShell, GlassSection } from '@/components/page-shell';
@@ -908,20 +909,191 @@ export default function DaemonPage() {
         )}
       </GlassSection>
 
-      {/* ── How it works ── */}
-      <GlassSection title="How It Works">
-        <div className="rounded-xl border border-border/20 bg-muted/20 px-4 py-3 text-sm text-muted-foreground space-y-2">
-          <p>
-            The PFC Daemon is a standalone Node.js process that runs alongside the web app.
-            It accesses your notes directly via SQLite, calls your local LLM (Ollama), and
-            writes results back — all without keeping a browser tab open.
+      {/* ── Agent Behavior Controls ── */}
+      <GlassSection
+        title="Agent Behavior"
+        badge={
+          isRunning ? (
+            <Badge variant="outline" className="text-[10px] font-mono text-pfc-violet border-pfc-violet/30">
+              live
+            </Badge>
+          ) : null
+        }
+      >
+        <p className="text-xs text-muted-foreground/60 mb-4">
+          Control how the daemon&apos;s agents analyze your notes. These settings affect the analytical depth, adversarial review intensity, and reasoning style used by all agent tasks.
+        </p>
+
+        {!isRunning && !loading ? (
+          <div className="rounded-xl border border-border/20 bg-muted/20 px-4 py-6 text-center">
+            <SlidersHorizontalIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground/50">Start the daemon to configure agent behavior</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <AgentSlider
+              label="Complexity Bias"
+              description="How complex should the agents treat your content? Higher values dig deeper into second-order effects and hidden assumptions."
+              configKey="agent.complexityBias"
+              min={-1}
+              max={1}
+              step={0.1}
+              defaultValue={0}
+              config={config}
+              onSave={handleConfigUpdate}
+              formatValue={(v) => v === 0 ? 'Neutral' : v > 0 ? `+${v.toFixed(1)} (deeper)` : `${v.toFixed(1)} (simpler)`}
+            />
+            <AgentSlider
+              label="Adversarial Intensity"
+              description="How aggressively should agents challenge findings? Higher values stress-test assumptions and find counterarguments."
+              configKey="agent.adversarialIntensity"
+              min={0.2}
+              max={3}
+              step={0.1}
+              defaultValue={1}
+              config={config}
+              onSave={handleConfigUpdate}
+              formatValue={(v) => v <= 0.5 ? `${v.toFixed(1)}× (gentle)` : v >= 2 ? `${v.toFixed(1)}× (aggressive)` : `${v.toFixed(1)}×`}
+            />
+            <AgentSlider
+              label="Bayesian Prior Strength"
+              description="How much should agents weight prior knowledge? Higher values favor established findings over novel claims."
+              configKey="agent.bayesianPriorStrength"
+              min={0.2}
+              max={3}
+              step={0.1}
+              defaultValue={1}
+              config={config}
+              onSave={handleConfigUpdate}
+              formatValue={(v) => v <= 0.5 ? `${v.toFixed(1)}× (open-minded)` : v >= 2 ? `${v.toFixed(1)}× (conservative)` : `${v.toFixed(1)}×`}
+            />
+            <AgentSlider
+              label="Focus Depth"
+              description="Analysis depth per topic. Higher values explore through more analytical lenses."
+              configKey="agent.focusDepth"
+              min={1}
+              max={10}
+              step={0.5}
+              defaultValue={5}
+              config={config}
+              onSave={handleConfigUpdate}
+              formatValue={(v) => v <= 3 ? `${v.toFixed(1)} (broad)` : v >= 7 ? `${v.toFixed(1)} (very deep)` : `${v.toFixed(1)}`}
+            />
+            <AgentSlider
+              label="Exploration Temperature"
+              description="Creative vs. precise reasoning. Higher values explore unconventional perspectives."
+              configKey="agent.temperature"
+              min={0.1}
+              max={1.0}
+              step={0.05}
+              defaultValue={0.6}
+              config={config}
+              onSave={handleConfigUpdate}
+              formatValue={(v) => v <= 0.3 ? `${v.toFixed(2)} (precise)` : v >= 0.8 ? `${v.toFixed(2)} (creative)` : `${v.toFixed(2)}`}
+            />
+
+            <div className="pt-3 border-t border-border/20">
+              <p className="text-[11px] text-muted-foreground/40">
+                These controls map to behavioral directives injected into agent prompts. When an agent task runs, it reads these values and adapts its analytical style accordingly.
+              </p>
+            </div>
+          </div>
+        )}
+      </GlassSection>
+
+      {/* ── Guide & Explanation ── */}
+      <GlassSection title="What is the Daemon?">
+        <div className="space-y-5">
+          <p className="text-sm text-muted-foreground/60" style={{ fontFamily: 'var(--font-secondary)', fontWeight: 400 }}>
+            The ResearchLab Daemon is an autonomous agent that runs alongside the web app. It works in the background — analyzing your notes, discovering connections, running learning protocols, and organizing your knowledge — without you needing to keep a browser tab open.
           </p>
-          <ol className="list-decimal list-inside space-y-1 text-xs text-muted-foreground/60">
-            <li>Tasks run one at a time (your GPU handles one LLM call at a time)</li>
-            <li>The scheduler checks every 60 seconds for due tasks</li>
-            <li>All generated content is tagged <code className="font-mono bg-muted px-1 rounded">autoGenerated</code></li>
-            <li>Stop the daemon anytime — your notes are never modified destructively</li>
-          </ol>
+
+          {/* Architecture */}
+          <div className="rounded-xl border border-border/20 bg-muted/20 px-4 py-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <BrainCircuitIcon className="h-4 w-4 text-pfc-cyan" />
+              <span className="text-sm font-semibold">How it works</span>
+            </div>
+            <div className="grid grid-cols-1 gap-2 text-xs text-muted-foreground/60">
+              <div className="flex items-start gap-2">
+                <span className="text-pfc-cyan font-mono font-bold mt-px">1.</span>
+                <span>A standalone Node.js process runs on your machine, accessing your notes database (SQLite) directly.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-pfc-cyan font-mono font-bold mt-px">2.</span>
+                <span>A scheduler checks every 60 seconds for tasks that are due to run. Tasks execute one at a time so your GPU handles one LLM call at a time.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-pfc-cyan font-mono font-bold mt-px">3.</span>
+                <span>Each task reads from your notes, calls your local LLM (Ollama), and writes results back as new notes or tags — all tagged <code className="font-mono bg-muted px-1 rounded">autoGenerated</code>.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-pfc-cyan font-mono font-bold mt-px">4.</span>
+                <span>Stop the daemon anytime. Notes are never modified destructively — the daemon only creates new content and adds metadata.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Setup guide */}
+          <div className="rounded-xl border border-pfc-green/20 bg-pfc-green/5 px-4 py-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <GraduationCapIcon className="h-4 w-4 text-pfc-green" />
+              <span className="text-sm font-semibold text-pfc-green">Setup Guide</span>
+            </div>
+            <div className="space-y-3 text-xs text-muted-foreground/70">
+              <div>
+                <p className="font-semibold text-foreground/70 mb-1">Step 1 — Start Ollama</p>
+                <p>The daemon needs a local LLM. Make sure Ollama is running with a model pulled:</p>
+                <code className="block mt-1 font-mono bg-muted/50 px-2 py-1 rounded text-[11px]">ollama serve && ollama pull llama3.1</code>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground/70 mb-1">Step 2 — Start the Daemon</p>
+                <p>Click the green <strong>Start</strong> button above. The daemon will boot and begin its task schedule.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground/70 mb-1">Step 3 — Choose your agents</p>
+                <p>Toggle which tasks run in the <strong>Agent Tasks</strong> section. Each agent has a different purpose:</p>
+                <ul className="list-disc list-inside mt-1 space-y-0.5 text-muted-foreground/60">
+                  <li><strong>Connection Finder</strong> — Scans your notes for cross-references and creates <code className="font-mono bg-muted px-0.5 rounded">[[links]]</code> between related pages.</li>
+                  <li><strong>Daily Brief</strong> — Generates a morning summary of what changed, key insights, and suggested focus areas.</li>
+                  <li><strong>Auto-Organizer</strong> — Tags untagged pages, clusters notes by topic similarity, and suggests folder structure.</li>
+                  <li><strong>Research Assistant</strong> — Reads your notes for implicit questions and drafts research answers backed by your existing knowledge.</li>
+                  <li><strong>Learning Protocol</strong> — Runs the 7-step recursive learning engine: inventory, gap-analysis, deep-dive, cross-reference, synthesis, questions, iterate.</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground/70 mb-1">Step 4 — Configure intervals</p>
+                <p>Open the <strong>Configuration</strong> panel to adjust how often each task runs. Default intervals are conservative — bump them up once you trust the output quality.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground/70 mb-1">Step 5 — Set permissions (optional)</p>
+                <p>By default the daemon is sandboxed (SQLite + LLM only). For filesystem sync (exporting notes as markdown), grant <strong>File Access</strong> and set a base directory.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground/50 uppercase tracking-wider">FAQ</p>
+            <div className="space-y-2 text-xs text-muted-foreground/60">
+              <div>
+                <p className="font-semibold text-foreground/60">Does it use my API keys?</p>
+                <p>No. The daemon uses your local Ollama instance. Configure the model in the Configuration panel (default: llama3.1).</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground/60">Can it delete my notes?</p>
+                <p>Never. The daemon only creates new pages, adds tags, and creates links. It never modifies or deletes existing content.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground/60">What about resource usage?</p>
+                <p>Tasks run sequentially (not in parallel), so GPU usage stays within a single inference at a time. CPU and memory impact is minimal.</p>
+              </div>
+              <div>
+                <p className="font-semibold text-foreground/60">It says an agent is running but I didn't start one?</p>
+                <p>The daemon auto-starts previously enabled tasks from its last session. Open Agent Tasks and disable any you don't want. If you never started the daemon, this is a stale status — click Stop then Start to reset.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </GlassSection>
     </PageShell>
@@ -1004,6 +1176,75 @@ function ConfigRow({
           {value}
         </button>
       )}
+    </div>
+  );
+}
+
+// ── Agent Behavior Slider ─────────────────────────────────────────
+
+function AgentSlider({
+  label,
+  description,
+  configKey,
+  min,
+  max,
+  step,
+  defaultValue,
+  config,
+  onSave,
+  formatValue,
+}: {
+  label: string;
+  description: string;
+  configKey: string;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+  config: Record<string, string>;
+  onSave: (key: string, value: string) => void;
+  formatValue: (v: number) => string;
+}) {
+  const currentValue = config[configKey] != null ? parseFloat(config[configKey]) : defaultValue;
+  const displayValue = isNaN(currentValue) ? defaultValue : currentValue;
+  const isDefault = Math.abs(displayValue - defaultValue) < step * 0.5;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold text-foreground/80">{label}</p>
+          <p className="text-[10px] text-muted-foreground/40">{description}</p>
+        </div>
+        <span className={cn(
+          'text-[11px] font-mono whitespace-nowrap ml-3',
+          isDefault ? 'text-muted-foreground/40' : 'text-pfc-violet',
+        )}>
+          {formatValue(displayValue)}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={displayValue}
+          onChange={(e) => onSave(configKey, e.target.value)}
+          className="flex-1 h-1.5 appearance-none bg-muted/40 rounded-full cursor-pointer
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5
+            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-pfc-violet [&::-webkit-slider-thumb]:shadow-sm
+            [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background"
+        />
+        {!isDefault && (
+          <button
+            onClick={() => onSave(configKey, String(defaultValue))}
+            className="text-[9px] text-muted-foreground/40 hover:text-foreground/60 transition-colors"
+          >
+            reset
+          </button>
+        )}
+      </div>
     </div>
   );
 }

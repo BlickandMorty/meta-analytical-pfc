@@ -13,6 +13,7 @@
  */
 
 import { STAGES, type PipelineStage } from '@/lib/constants';
+import { logger } from '@/lib/debug-logger';
 import type { SteeringBias } from '@/lib/engine/steering/types';
 import type {
   AnalysisMode,
@@ -1127,7 +1128,7 @@ export async function* runPipeline(
         }
       } catch (streamError) {
         // Fallback to non-streaming if stream fails
-        console.warn('[runPipeline] Stream failed, falling back to non-streaming:', streamError);
+        logger.warn('runPipeline', 'Stream failed, falling back to non-streaming:', streamError);
         if (!rawAnalysis) {
           rawAnalysis = await withTimeout(llmGenerateRawAnalysis(model, qa, signals, directives), LLM_TIMEOUT, 'Raw analysis');
         }
@@ -1304,7 +1305,7 @@ export async function* runPipeline(
           'Truth assessment',
         );
       } catch (truthError) {
-        console.error('[runPipeline] Truth assessment LLM call failed, using computed fallback:', truthError);
+        logger.error('runPipeline', 'Truth assessment LLM call failed, using computed fallback:', truthError);
         yield {
           type: 'error',
           message: `Truth assessment LLM call failed — using signal-based computation instead: ${truthError instanceof Error ? truthError.message : 'timeout'}`,
@@ -1348,7 +1349,7 @@ export async function* runPipeline(
       return; // Done — skip simulation path
     } catch (llmError) {
       // Inform user clearly that LLM failed — do NOT silently fall back
-      console.error('[runPipeline] LLM error, falling back to simulation:', llmError);
+      logger.error('runPipeline', 'LLM error, falling back to simulation:', llmError);
       yield {
         type: 'error',
         message: `LLM inference failed: ${llmError instanceof Error ? llmError.message : 'Unknown error'}. Falling back to simulation mode — results below are template-generated, not from your configured model.`,

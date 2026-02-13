@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
+import { logger } from '@/lib/debug-logger';
+import { parseBodyWithLimit } from '@/lib/api-utils';
 import {
   syncVaultToDb,
   loadVaultFromDb,
@@ -20,7 +23,7 @@ import type {
 //   (no params)         → list all vaults
 // ═══════════════════════════════════════════════════════════════════
 
-export async function GET(req: NextRequest) {
+async function _GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const check = searchParams.get('check');
@@ -45,7 +48,7 @@ export async function GET(req: NextRequest) {
     const vaults = await getVaults();
     return NextResponse.json({ vaults });
   } catch (err) {
-    console.error('[notes/sync] GET error:', err);
+    logger.error('notes/sync', 'GET error:', err);
     return NextResponse.json(
       { error: 'Failed to read notes from database' },
       { status: 500 },
@@ -100,21 +103,17 @@ interface DeleteVaultPayload {
 
 type PostPayload = SyncPayload | MigratePayload | UpsertVaultPayload | DeleteVaultPayload;
 
-// Limit body to ~50MB (notes with lots of content can be large)
-const MAX_BODY_SIZE = 50 * 1024 * 1024;
+// Limit body to ~10MB (notes shouldn't need more; prevents abuse)
+const MAX_BODY_SIZE = 10 * 1024 * 1024;
 
-export async function POST(req: NextRequest) {
+async function _POST(req: NextRequest) {
   try {
-    // Check content-length header as early guard
-    const contentLength = req.headers.get('content-length');
-    if (contentLength && parseInt(contentLength, 10) > MAX_BODY_SIZE) {
-      return NextResponse.json(
-        { error: 'Request body too large' },
-        { status: 413 },
-      );
+    // Use parseBodyWithLimit for actual stream-level size enforcement (not just header check)
+    const parsedBody = await parseBodyWithLimit<PostPayload>(req, MAX_BODY_SIZE);
+    if ('error' in parsedBody) {
+      return parsedBody.error;
     }
-
-    const body: PostPayload = await req.json();
+    const body = parsedBody.data;
 
     switch (body.action) {
       // ── Full vault sync (write-through) ──
@@ -174,10 +173,13 @@ export async function POST(req: NextRequest) {
         );
     }
   } catch (err) {
-    console.error('[notes/sync] POST error:', err);
+    logger.error('notes/sync', 'POST error:', err);
     return NextResponse.json(
       { error: 'Failed to sync notes to database' },
       { status: 500 },
     );
   }
 }
+
+export const GET = withMiddleware(_GET, { maxRequests: 20, windowMs: 60_000 });
+export const POST = withMiddleware(_POST, { maxRequests: 20, windowMs: 60_000 });

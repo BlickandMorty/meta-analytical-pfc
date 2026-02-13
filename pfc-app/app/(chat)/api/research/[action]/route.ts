@@ -20,6 +20,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
+import { logger } from '@/lib/debug-logger';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
 import { ApiClientError, parseBodyWithLimit } from '@/lib/api-utils';
@@ -61,6 +63,12 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+/** Cap string length to prevent oversized LLM prompts */
+function capStr(value: unknown, maxLen: number): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  return value.slice(0, maxLen);
 }
 
 interface ResearchRequestBody {
@@ -119,7 +127,7 @@ function resolveModel(body: ResearchRequestBody) {
 // Route Handler
 // ═══════════════════════════════════════════════════════════════════
 
-export async function POST(
+async function _POST(
   request: NextRequest,
   { params }: { params: Promise<{ action: string }> },
 ) {
@@ -179,7 +187,10 @@ export async function POST(
 
       case 'check-novelty': {
         const model = resolveModel(body);
-        const { title, description, hypothesis, keywords } = body;
+        const title = capStr(body.title, 500);
+        const description = capStr(body.description, 5000);
+        const hypothesis = capStr(body.hypothesis, 2000);
+        const keywords = body.keywords;
         if (!title || !description) {
           return errorResponse('Missing required fields: title, description', 400);
         }
@@ -201,7 +212,10 @@ export async function POST(
 
       case 'review-paper': {
         const model = resolveModel(body);
-        const { title, abstract, fullText, sectionSummaries } = body;
+        const title = capStr(body.title, 500);
+        const abstract = capStr(body.abstract, 5000);
+        const fullText = capStr(body.fullText, 50000);
+        const sectionSummaries = body.sectionSummaries;
         if (!title || !abstract) {
           return errorResponse('Missing required fields: title, abstract', 400);
         }
@@ -211,7 +225,10 @@ export async function POST(
 
       case 'ensemble-review': {
         const model = resolveModel(body);
-        const { title, abstract, fullText, sectionSummaries } = body;
+        const title = capStr(body.title, 500);
+        const abstract = capStr(body.abstract, 5000);
+        const fullText = capStr(body.fullText, 50000);
+        const sectionSummaries = body.sectionSummaries;
         if (!title || !abstract) {
           return errorResponse('Missing required fields: title, abstract', 400);
         }
@@ -229,7 +246,9 @@ export async function POST(
 
       case 'search-citations': {
         const model = resolveModel(body);
-        const { text, existingBibtex, context } = body;
+        const text = capStr(body.text, 20000);
+        const existingBibtex = capStr(body.existingBibtex, 10000);
+        const context = capStr(body.context, 5000);
         if (!text) {
           return errorResponse('Missing required field: text', 400);
         }
@@ -247,7 +266,7 @@ export async function POST(
 
       case 'find-citation': {
         const model = resolveModel(body);
-        const { claim } = body;
+        const claim = capStr(body.claim, 2000);
         if (!claim) {
           return errorResponse('Missing required field: claim', 400);
         }
@@ -264,10 +283,10 @@ export async function POST(
 
       case 'generate-ideas': {
         const model = resolveModel(body);
-        const {
-          topic, context, constraints, seedIdeas, existingIdeas,
-          checkNoveltyEnabled, deduplicateEnabled,
-        } = body;
+        const topic = capStr(body.topic, 2000);
+        const context = capStr(body.context, 5000);
+        const constraints = capStr(body.constraints, 2000);
+        const { seedIdeas, existingIdeas, checkNoveltyEnabled, deduplicateEnabled } = body;
         if (!topic) {
           return errorResponse('Missing required field: topic', 400);
         }
@@ -287,7 +306,8 @@ export async function POST(
 
       case 'quick-idea': {
         const model = resolveModel(body);
-        const { topic, context } = body;
+        const topic = capStr(body.topic, 2000);
+        const context = capStr(body.context, 5000);
         if (!topic) {
           return errorResponse('Missing required field: topic', 400);
         }
@@ -307,16 +327,18 @@ export async function POST(
 
       // ─────────────────────────────────────────────────────
       default:
-        return errorResponse(`Unknown research action: ${action}`, 404);
+        return errorResponse('Unknown research action', 404);
     }
   } catch (error) {
     if (error instanceof ApiClientError) {
       return errorResponse(error.message, error.status);
     }
-    console.error('[research/route] Error:', error);
+    logger.error('research/route', 'Error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Research operation failed' },
       { status: 500 },
     );
   }
 }
+
+export const POST = withMiddleware(_POST as any, { maxRequests: 30, windowMs: 60_000 });

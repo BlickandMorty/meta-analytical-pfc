@@ -45,7 +45,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
   const portalStack = usePFCStore((s) => s.portalStack);
   const displayMode = usePFCStore((s) => s.portalDisplayMode);
   const closePortal = usePFCStore((s) => s.closePortal);
-  const goBack = usePFCStore((s) => s.goBack);
+  const goBack = usePFCStore((s) => s.portalGoBack);
   const setPortalDisplayMode = usePFCStore((s) => s.setPortalDisplayMode);
   const { isDark, isOled } = useIsDark();
 
@@ -157,6 +157,7 @@ export const PortalSidebar = memo(function PortalSidebar() {
           {/* Main panel */}
           <motion.div
             key="portal-panel"
+            data-portal-panel
             initial={{ x: '100%', opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
@@ -481,14 +482,20 @@ const ArtifactEditor = memo<ArtifactEditorProps>(function ArtifactEditor({
   const notesDropdownRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll in preview/code modes during streaming
+  const scrollRafRef = useRef<number | null>(null);
   useEffect(() => {
     if (mode !== 'edit' && scrollRef.current) {
-      requestAnimationFrame(() => {
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
       });
     }
+    return () => {
+      if (scrollRafRef.current) { cancelAnimationFrame(scrollRafRef.current); scrollRafRef.current = null; }
+    };
   }, [artifact.content, mode]);
 
   // Close dropdown on outside click

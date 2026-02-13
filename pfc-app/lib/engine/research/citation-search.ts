@@ -19,6 +19,7 @@
 import { generateObject } from 'ai';
 import type { LanguageModel } from 'ai';
 import { z } from 'zod';
+import { logger } from '@/lib/debug-logger';
 import {
   searchPapers,
   generateBibtex,
@@ -257,7 +258,7 @@ export async function searchCitations(
           });
           return results.data;
         } catch (err) {
-          console.warn(`[citation-search] Search failed for "${claim.searchQuery}":`, err);
+          logger.warn('citation-search', `Search failed for "${claim.searchQuery}":`, err);
           return [];
         }
       }),
@@ -282,8 +283,8 @@ export async function searchCitations(
       const papers = candidatePapers[sel.claimIndex] ?? [];
       if (sel.paperIndex < 0 || sel.paperIndex >= papers.length) continue;
 
-      const paper = papers[sel.paperIndex];
-      const claim = claims[sel.claimIndex];
+      const paper = papers[sel.paperIndex]!;
+      const claim = claims[sel.claimIndex]!;
 
       // Get or generate BibTeX
       const bibtex = paper.citationStyles?.bibtex
@@ -332,7 +333,7 @@ export async function searchCitations(
       });
       annotatedText = annotationResult.annotatedText;
     } catch (err) {
-      console.warn('[citation-search] Annotation failed, returning unannotated text:', err);
+      logger.warn('citation-search', 'Annotation failed, returning unannotated text:', err);
     }
   }
 

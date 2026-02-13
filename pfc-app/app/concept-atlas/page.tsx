@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BrainIcon,
   ZapIcon,
   ExpandIcon,
   ShrinkIcon,
+  BookOpenIcon,
+  RefreshCwIcon,
 } from 'lucide-react';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
@@ -16,6 +18,7 @@ import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/page-shell';
 import { PixelBook } from '@/components/pixel-book';
+import { useIsDark } from '@/hooks/use-is-dark';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -75,14 +78,15 @@ function buildGraph(concepts: string[], confidence: number, entropy: number): { 
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
 
+  // Center node — small anchor dot
   nodes.push({
     id: '__center__',
-    label: 'PFC Core',
+    label: 'Core',
     x: 0,
     y: 0,
     vx: 0,
     vy: 0,
-    radius: 26,
+    radius: 5,
     color: CENTER_COLOR,
     isCenter: true,
     orbitAngle: 0,
@@ -92,30 +96,53 @@ function buildGraph(concepts: string[], confidence: number, entropy: number): { 
   concepts.forEach((concept, i) => {
     const rand = seededRandom(concept);
     const angle = (Math.PI * 2 * i) / Math.max(concepts.length, 1);
-    const dist = 110 + rand() * 70;
+    // Scale orbit distance based on concept count so the graph breathes
+    const baseDist = concepts.length > 12 ? 120 : concepts.length > 6 ? 100 : 80;
+    const dist = baseDist + rand() * 50;
+    // Format label: underscores to spaces, proper casing
+    const label = concept.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
     nodes.push({
       id: concept,
-      label: concept,
-      x: Math.cos(angle) * dist + (rand() - 0.5) * 30,
-      y: Math.sin(angle) * dist + (rand() - 0.5) * 30,
+      label,
+      x: Math.cos(angle) * dist + (rand() - 0.5) * 20,
+      y: Math.sin(angle) * dist + (rand() - 0.5) * 20,
       vx: 0,
       vy: 0,
-      radius: 14 + rand() * 10,
-      color: PALETTE[i % PALETTE.length],
+      radius: 3.5 + rand() * 3,
+      color: PALETTE[i % PALETTE.length]!,
       isCenter: false,
       orbitAngle: angle,
-      orbitSpeed: 0.0003 + rand() * 0.0005,
+      orbitSpeed: 0.0002 + rand() * 0.0003,
     });
 
-    edges.push({ source: '__center__', target: concept, strength: 0.4 + confidence * 0.6 });
-
-    if (i > 0) {
-      edges.push({ source: concepts[i - 1], target: concept, strength: 0.2 + entropy * 0.4 });
-    }
+    // Connect every concept to center
+    edges.push({ source: '__center__', target: concept, strength: 0.3 + confidence * 0.4 });
   });
 
-  if (concepts.length > 2) {
-    edges.push({ source: concepts[concepts.length - 1], target: concepts[0], strength: 0.15 });
+  // Cross-connections: use seeded hash to create a deterministic web
+  // Each concept connects to 1-3 neighbors based on string similarity
+  for (let i = 0; i < concepts.length; i++) {
+    const rand = seededRandom(concepts[i]! + '__edges');
+    const connectionCount = Math.min(1 + Math.floor(rand() * 2.5), concepts.length - 1);
+    for (let c = 0; c < connectionCount; c++) {
+      // Pick a target that's not self, using seeded offset
+      const offset = 1 + Math.floor(rand() * (concepts.length - 1));
+      const j = (i + offset) % concepts.length;
+      if (j === i) continue;
+      // Avoid duplicate edges (check both directions)
+      const exists = edges.some(
+        (e) =>
+          (e.source === concepts[i] && e.target === concepts[j]) ||
+          (e.source === concepts[j] && e.target === concepts[i]),
+      );
+      if (!exists) {
+        edges.push({
+          source: concepts[i]!,
+          target: concepts[j]!,
+          strength: 0.15 + rand() * 0.25 + entropy * 0.15,
+        });
+      }
+    }
   }
 
   return { nodes, edges };
@@ -129,14 +156,12 @@ function ConceptCanvas({
   concepts,
   confidence,
   entropy,
-  harmonyKeyDistance,
   isProcessing,
   expanded,
 }: {
   concepts: string[];
   confidence: number;
   entropy: number;
-  harmonyKeyDistance: number;
   isProcessing: boolean;
   expanded: boolean;
 }) {
@@ -197,20 +222,22 @@ function ConceptCanvas({
     const nodeMap = new Map<string, GraphNode>();
     for (const n of nodes) nodeMap.set(n.id, n);
 
-    // ── Force simulation step ──
-    const repulsion = 3500;
-    const attraction = 0.004;
-    const damping = 0.9;
-    const centerGravity = 0.008;
+    // ── Force simulation step (tuned for Obsidian-style tight web) ──
+    const repulsion = 2200;
+    const attraction = 0.006;
+    const damping = 0.88;
+    const centerGravity = 0.01;
 
     for (let i = 0; i < nodes.length; i++) {
-      if (nodes[i].isCenter) continue;
+      const ni = nodes[i]!;
+      if (ni.isCenter) continue;
       let fx = 0, fy = 0;
 
       for (let j = 0; j < nodes.length; j++) {
         if (i === j) continue;
-        const dx = nodes[i].x - nodes[j].x;
-        const dy = nodes[i].y - nodes[j].y;
+        const nj = nodes[j]!;
+        const dx = ni.x - nj.x;
+        const dy = ni.y - nj.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
         const force = repulsion / (dist * dist);
         fx += (dx / dist) * force;
@@ -221,63 +248,40 @@ function ConceptCanvas({
         const a = nodeMap.get(edge.source);
         const b = nodeMap.get(edge.target);
         if (!a || !b) continue;
-        if (a.id !== nodes[i].id && b.id !== nodes[i].id) continue;
-        const other = a.id === nodes[i].id ? b : a;
-        const dx = other.x - nodes[i].x;
-        const dy = other.y - nodes[i].y;
+        if (a.id !== ni.id && b.id !== ni.id) continue;
+        const other = a.id === ni.id ? b : a;
+        const dx = other.x - ni.x;
+        const dy = other.y - ni.y;
         fx += dx * attraction * edge.strength;
         fy += dy * attraction * edge.strength;
       }
 
-      fx -= nodes[i].x * centerGravity;
-      fy -= nodes[i].y * centerGravity;
+      fx -= ni.x * centerGravity;
+      fy -= ni.y * centerGravity;
 
-      // Ambient orbital drift
-      nodes[i].orbitAngle += nodes[i].orbitSpeed;
-      fx += Math.cos(nodes[i].orbitAngle + t * 0.1) * 0.08;
-      fy += Math.sin(nodes[i].orbitAngle + t * 0.1) * 0.08;
+      // Gentle ambient drift (barely perceptible — Obsidian-style calm)
+      ni.orbitAngle += ni.orbitSpeed;
+      fx += Math.cos(ni.orbitAngle + t * 0.05) * 0.03;
+      fy += Math.sin(ni.orbitAngle + t * 0.05) * 0.03;
 
       if (isProcessing) {
-        fx += Math.sin(t * 2.5 + i) * 0.5;
-        fy += Math.cos(t * 2.5 + i * 0.7) * 0.5;
+        fx += Math.sin(t * 2 + i) * 0.2;
+        fy += Math.cos(t * 2 + i * 0.7) * 0.2;
       }
 
-      nodes[i].vx = (nodes[i].vx + fx) * damping;
-      nodes[i].vy = (nodes[i].vy + fy) * damping;
-      nodes[i].x += nodes[i].vx;
-      nodes[i].y += nodes[i].vy;
+      ni.vx = (ni.vx + fx) * damping;
+      ni.vy = (ni.vy + fy) * damping;
+      ni.x += ni.vx;
+      ni.y += ni.vy;
     }
 
     // ══════════════════════════════════════════════════════════
-    // RENDER
+    // RENDER — Obsidian-style clean graph
     // ══════════════════════════════════════════════════════════
 
     ctx.clearRect(0, 0, W, H);
 
-    // ── Layer 0: Subtle dot grid ──
-    const gridSize = 32;
-    ctx.fillStyle = 'rgba(128,128,128,0.04)';
-    for (let gx = gridSize / 2; gx < W; gx += gridSize) {
-      for (let gy = gridSize / 2; gy < H; gy += gridSize) {
-        ctx.beginPath();
-        ctx.arc(gx, gy, 0.6, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // ── Concentric guide rings ──
-    for (let ring = 1; ring <= 3; ring++) {
-      const ringR = ring * 80 + nodes.length * 8;
-      ctx.beginPath();
-      ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(128,128,128,0.03)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-
-    // Ambient radial glow removed for performance
-
-    // ── Layer 1: Edges (quadratic bezier with gradient + particles) ──
+    // ── Layer 1: Edges — thin, slightly curved lines ──
     for (const edge of edges) {
       const a = nodeMap.get(edge.source);
       const b = nodeMap.get(edge.target);
@@ -286,124 +290,81 @@ function ConceptCanvas({
       const ax = cx + a.x, ay = cy + a.y;
       const bx = cx + b.x, by = cy + b.y;
 
-      // Control point for curve
+      // Subtle curve via offset control point
       const mx = (ax + bx) / 2;
       const my = (ay + by) / 2;
-      const perpX = -(by - ay) * 0.08;
-      const perpY = (bx - ax) * 0.08;
+      const perpX = -(by - ay) * 0.06;
+      const perpY = (bx - ax) * 0.06;
       const cpx = mx + perpX;
       const cpy = my + perpY;
 
-      // Edge line with gradient
-      const edgeGrad = ctx.createLinearGradient(ax, ay, bx, by);
-      edgeGrad.addColorStop(0, a.color + '30');
-      edgeGrad.addColorStop(1, b.color + '30');
+      // Center-to-concept edges slightly brighter
+      const isRadial = a.isCenter || b.isCenter;
+      const alpha = isRadial
+        ? 0.12 + edge.strength * 0.15
+        : 0.06 + edge.strength * 0.12;
 
       ctx.beginPath();
       ctx.moveTo(ax, ay);
       ctx.quadraticCurveTo(cpx, cpy, bx, by);
-      ctx.strokeStyle = edgeGrad;
-      ctx.lineWidth = 0.8 + edge.strength * 1.5;
+      ctx.strokeStyle = `rgba(160,160,180,${alpha})`;
+      ctx.lineWidth = isRadial ? 0.8 : 0.5;
       ctx.stroke();
 
-      // Flowing particles along edge
-      const particleCount = isProcessing ? 3 : 2;
-      const speed = isProcessing ? 0.4 : 0.25;
-      for (let pi = 0; pi < particleCount; pi++) {
-        const phase = ((t * speed + edge.strength * 2 + pi * (1 / particleCount)) % 1);
+      // Processing mode: single subtle pulse dot per edge
+      if (isProcessing) {
+        const phase = ((t * 0.3 + edge.strength * 2) % 1);
         const pt = phase;
         const px = (1 - pt) * (1 - pt) * ax + 2 * (1 - pt) * pt * cpx + pt * pt * bx;
         const py = (1 - pt) * (1 - pt) * ay + 2 * (1 - pt) * pt * cpy + pt * pt * by;
-
-        const particleR = 1.5 + edge.strength * 0.8;
         ctx.beginPath();
-        ctx.arc(px, py, particleR, 0, Math.PI * 2);
-        ctx.fillStyle = a.color + 'CC';
+        ctx.arc(px, py, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(160,160,180,${alpha + 0.2})`;
         ctx.fill();
       }
     }
 
-    // ── Layer 2: Nodes (gradient fill + glow halo + label) ──
+    // ── Layer 2: Nodes — small colored dots + clean labels ──
     for (const node of nodes) {
       const nx = cx + node.x;
       const ny = cy + node.y;
-      const pulse = node.isCenter ? Math.sin(t * 2) * 3 : Math.sin(t * 1.5 + node.x * 0.01) * 1.5;
+      const pulse = node.isCenter
+        ? Math.sin(t * 1.5) * 1
+        : Math.sin(t * 1.2 + node.x * 0.01) * 0.5;
       const r = node.radius + pulse;
 
-      // Node body (solid fill — avoids per-frame gradient creation)
+      // Subtle outer glow (1px halo)
       ctx.beginPath();
-      ctx.arc(nx, ny, r, 0, Math.PI * 2);
-      ctx.fillStyle = node.color + (node.isCenter ? 'DD' : '99');
+      ctx.arc(nx, ny, r + 2, 0, Math.PI * 2);
+      ctx.fillStyle = node.color + '15';
       ctx.fill();
 
-      // Border ring
-      ctx.strokeStyle = node.color + '90';
-      ctx.lineWidth = node.isCenter ? 2 : 1.2;
-      ctx.stroke();
-
-      // Center node orbital ring
-      if (node.isCenter) {
-        ctx.beginPath();
-        ctx.arc(nx, ny, r + 8, 0, Math.PI * 2);
-        ctx.strokeStyle = CENTER_COLOR + '25';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 5]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      // Label
-      const label = node.label.length > 18 ? node.label.slice(0, 17) + '\u2026' : node.label;
-      const fontSize = node.isCenter ? 10 : 8.5;
-      ctx.font = `${node.isCenter ? 600 : 500} ${fontSize}px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      // Draw label inside node for center, below for others
-      if (node.isCenter) {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(label, nx, ny);
-      } else {
-        const labelY = ny + r + 10;
-        const tw = ctx.measureText(label).width;
-        const pillW = tw + 10;
-        const pillH = 14;
-
-        // Pill background
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.beginPath();
-        const pLeft = nx - pillW / 2;
-        const pTop = labelY - pillH / 2;
-        const pR = pillH / 2;
-        ctx.moveTo(pLeft + pR, pTop);
-        ctx.arcTo(pLeft + pillW, pTop, pLeft + pillW, pTop + pillH, pR);
-        ctx.arcTo(pLeft + pillW, pTop + pillH, pLeft, pTop + pillH, pR);
-        ctx.arcTo(pLeft, pTop + pillH, pLeft, pTop, pR);
-        ctx.arcTo(pLeft, pTop, pLeft + pillW, pTop, pR);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.globalAlpha = 0.9;
-        ctx.fillText(label, nx, labelY);
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    // ── Harmony aura ring ──
-    if (harmonyKeyDistance > 0) {
-      const auraR = 70 + nodes.length * 14;
+      // Node dot
       ctx.beginPath();
-      ctx.arc(cx, cy, auraR, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(34,197,94,${0.06 + (1 - harmonyKeyDistance) * 0.1})`;
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 8]);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.arc(nx, ny, r, 0, Math.PI * 2);
+      ctx.fillStyle = node.color + (node.isCenter ? 'EE' : 'CC');
+      ctx.fill();
+
+      // Label — clean text, no pill background
+      const label = node.label.length > 22 ? node.label.slice(0, 21) + '\u2026' : node.label;
+      const fontSize = node.isCenter ? 9 : 8;
+      ctx.font = `${node.isCenter ? 600 : 400} ${fontSize}px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+
+      const labelY = ny + r + 4;
+
+      // Faint text shadow for readability
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillText(label, nx + 0.5, labelY + 0.5);
+
+      // Label text
+      ctx.fillStyle = node.isCenter ? '#FFFFFF' : node.color + 'DD';
+      ctx.fillText(label, nx, labelY);
     }
 
     queueNextFrame();
-  }, [isProcessing, harmonyKeyDistance]);
+  }, [isProcessing]);
 
   useEffect(() => {
     drawRef.current = draw;
@@ -415,7 +376,7 @@ function ConceptCanvas({
     // Cache canvas dimensions via ResizeObserver — avoids getBoundingClientRect per frame
     const resizeObs = canvas
       ? new ResizeObserver(([entry]) => {
-          const { width, height } = entry.contentRect;
+          const { width, height } = entry!.contentRect;
           atlasSizeRef.current = { w: width, h: height };
         })
       : null;
@@ -440,8 +401,8 @@ function ConceptCanvas({
       ref={canvasRef}
       className="w-full rounded-xl"
       style={{
-        height: expanded ? 'calc(100vh - 120px)' : '520px',
-        background: 'rgba(0,0,0,0.02)',
+        height: expanded ? 'calc(100vh - 120px)' : '460px',
+        background: 'rgba(0,0,0,0.04)',
       }}
     />
   );
@@ -453,13 +414,82 @@ function ConceptCanvas({
 
 export default function ConceptAtlasPage() {
   const ready = useSetupGuard();
+  const { isDark } = useIsDark();
   const activeConcepts = usePFCStore((s) => s.activeConcepts);
   const confidence = usePFCStore((s) => s.confidence);
   const entropy = usePFCStore((s) => s.entropy);
   const harmonyKeyDistance = usePFCStore((s) => s.harmonyKeyDistance);
   const activeChordProduct = usePFCStore((s) => s.activeChordProduct);
   const isProcessing = usePFCStore((s) => s.isProcessing);
+  const noteConcepts = usePFCStore((s) => s.concepts);
+  const notePages = usePFCStore((s) => s.notePages);
+  const extractConcepts = usePFCStore((s) => s.extractConcepts);
+  const researchPapers = usePFCStore((s) => s.researchPapers);
   const [expanded, setExpanded] = useState(false);
+  const [showNotes, setShowNotes] = useState(true);
+
+  // Merge pipeline concepts with note-derived concepts (deduplicated)
+  const mergedConcepts = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    // Pipeline concepts first (they're the "live" ones)
+    for (const c of activeConcepts) {
+      const key = c.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(c);
+      }
+    }
+
+    // Add note-derived concepts (headings, bold terms, linked entities)
+    if (showNotes && noteConcepts.length > 0) {
+      for (const nc of noteConcepts) {
+        const key = nc.name.toLowerCase();
+        if (!seen.has(key) && nc.name.length > 2) {
+          seen.add(key);
+          result.push(nc.name);
+        }
+      }
+    }
+
+    // Add research paper topics (from titles — extract key terms)
+    if (showNotes && researchPapers.length > 0) {
+      const stopWords = new Set(['the', 'a', 'an', 'of', 'in', 'and', 'for', 'to', 'on', 'with', 'from', 'by', 'is', 'are', 'was', 'were', 'that', 'this', 'at', 'as', 'or', 'not', 'its', 'has', 'have', 'be', 'been', 'but', 'which', 'their', 'they', 'will', 'can', 'may', 'about']);
+      for (const paper of researchPapers.slice(0, 20)) {
+        const words = paper.title.split(/\s+/)
+          .map(w => w.replace(/[^a-zA-Z-]/g, ''))
+          .filter(w => w.length > 4 && !stopWords.has(w.toLowerCase()));
+        for (const word of words.slice(0, 3)) {
+          const key = word.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            result.push(word);
+          }
+        }
+      }
+    }
+
+    return result;
+  }, [activeConcepts, noteConcepts, researchPapers, showNotes]);
+
+  // Extract concepts from all note pages on first load (seed the atlas)
+  const hasExtracted = useRef(false);
+  useEffect(() => {
+    if (hasExtracted.current || notePages.length === 0) return;
+    hasExtracted.current = true;
+    // Extract from up to 20 most recent pages
+    const pages = [...notePages]
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .slice(0, 20);
+    for (const page of pages) {
+      extractConcepts(page.id);
+    }
+  }, [notePages, extractConcepts]);
+
+  // Count where concepts come from
+  const pipelineCount = activeConcepts.length;
+  const noteCount = mergedConcepts.length - pipelineCount;
 
   if (!ready) {
     return (
@@ -470,40 +500,80 @@ export default function ConceptAtlasPage() {
   }
 
   return (
-    <PageShell icon={BrainIcon} iconColor="var(--color-pfc-violet)" title="Concept Atlas" subtitle="Live force-directed concept mapping">
+    <PageShell icon={BrainIcon} iconColor="var(--color-pfc-violet)" title="Concept Atlas" subtitle="Live force-directed concept mapping — from your chat, notes & research" backHref="/library?tab=tools">
       <GlassSection title="Force Graph" className={cn('mb-6', expanded ? 'max-w-full' : '')}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-[10px] font-mono gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-pfc-violet inline-block" />
-              {activeConcepts.length} concepts
+              {mergedConcepts.length} concepts
             </Badge>
+            {pipelineCount > 0 && (
+              <Badge variant="outline" className="text-[10px] font-mono gap-1" style={{ color: 'var(--color-pfc-ember)' }}>
+                <ZapIcon className="h-2.5 w-2.5" /> {pipelineCount} from chat
+              </Badge>
+            )}
+            {noteCount > 0 && (
+              <Badge variant="outline" className="text-[10px] font-mono gap-1" style={{ color: 'var(--color-pfc-green)' }}>
+                <BookOpenIcon className="h-2.5 w-2.5" /> {noteCount} from notes
+              </Badge>
+            )}
             <Badge variant="outline" className="text-[10px] font-mono">
               Harmony {(1 - harmonyKeyDistance).toFixed(2)}
             </Badge>
           </div>
-          <GlassBubbleButton
-            color="violet"
-            size="sm"
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? <ShrinkIcon className="h-3.5 w-3.5" /> : <ExpandIcon className="h-3.5 w-3.5" />}
-          </GlassBubbleButton>
+          <div className="flex items-center gap-1.5">
+            {/* Toggle note concepts */}
+            <div title={showNotes ? 'Hide note concepts' : 'Show note concepts'}>
+              <GlassBubbleButton
+                color={showNotes ? 'green' : 'violet'}
+                size="sm"
+                onClick={() => setShowNotes(!showNotes)}
+              >
+                <BookOpenIcon className="h-3.5 w-3.5" />
+              </GlassBubbleButton>
+            </div>
+            {/* Re-extract from notes */}
+            <div title="Re-extract concepts from notes">
+              <GlassBubbleButton
+                color="violet"
+                size="sm"
+                onClick={() => {
+                  const pages = [...notePages]
+                    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+                    .slice(0, 20);
+                  for (const page of pages) {
+                    extractConcepts(page.id);
+                  }
+                }}
+              >
+                <RefreshCwIcon className="h-3.5 w-3.5" />
+              </GlassBubbleButton>
+            </div>
+            <GlassBubbleButton
+              color="violet"
+              size="sm"
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? <ShrinkIcon className="h-3.5 w-3.5" /> : <ExpandIcon className="h-3.5 w-3.5" />}
+            </GlassBubbleButton>
+          </div>
         </div>
 
         <div className="relative rounded-xl overflow-hidden">
-          {activeConcepts.length === 0 ? (
+          {mergedConcepts.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[400px] text-center">
               <BrainIcon className="h-10 w-10 text-muted-foreground/20 mb-4" />
               <p className="text-sm text-muted-foreground/50">No active concepts yet</p>
-              <p className="text-xs text-muted-foreground/30 mt-1">Ask a research question to see concepts map out in real time</p>
+              <p className="text-xs text-muted-foreground/30 mt-1">
+                Ask a research question or add notes about your topics to see concepts map out
+              </p>
             </div>
           ) : (
             <ConceptCanvas
-              concepts={activeConcepts}
+              concepts={mergedConcepts}
               confidence={confidence}
               entropy={entropy}
-              harmonyKeyDistance={harmonyKeyDistance}
               isProcessing={isProcessing}
               expanded={expanded}
             />
@@ -525,7 +595,7 @@ export default function ConceptAtlasPage() {
         </div>
       </GlassSection>
 
-      {activeConcepts.length > 0 && (
+      {mergedConcepts.length > 0 && (
         <GlassSection title="Active Concepts" className="">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -533,18 +603,34 @@ export default function ConceptAtlasPage() {
             transition={{ delay: 0.2, duration: 0.3 }}
             className="flex flex-wrap gap-2"
           >
-            {activeConcepts.map((concept) => (
-              <Badge
-                key={concept}
-                variant="secondary"
-                className="bg-pfc-violet/10 text-pfc-violet border-pfc-violet/20 text-xs"
-              >
-                {concept}
+            {mergedConcepts.map((concept, i) => {
+              const isFromPipeline = i < pipelineCount;
+              return (
+                <Badge
+                  key={concept}
+                  variant="secondary"
+                  className="text-xs"
+                  style={{
+                    background: isFromPipeline
+                      ? 'rgba(139,124,246,0.1)'
+                      : (isDark ? 'rgba(52,211,153,0.08)' : 'rgba(52,211,153,0.1)'),
+                    color: isFromPipeline
+                      ? 'var(--color-pfc-violet)'
+                      : 'var(--color-pfc-green)',
+                    borderColor: isFromPipeline
+                      ? 'rgba(139,124,246,0.2)'
+                      : 'rgba(52,211,153,0.2)',
+                  }}
+                >
+                  {concept}
+                </Badge>
+              );
+            })}
+            {activeChordProduct > 0 && (
+              <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
+                Chord: {activeChordProduct.toFixed(3)}
               </Badge>
-            ))}
-            <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
-              Chord: {activeChordProduct.toFixed(3)}
-            </Badge>
+            )}
           </motion.div>
         </GlassSection>
       )}

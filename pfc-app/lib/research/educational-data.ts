@@ -47,52 +47,52 @@ export const PIPELINE_TOOLTIPS: Record<string, EducationalTooltip> = {
     id: 'statistical',
     title: 'Statistical Analysis',
     description:
-      "Computes effect sizes (Cohen's d), statistical power, minimal clinically important differences (MCID), and heterogeneity metrics. This stage quantifies the strength and reliability of evidence.",
+      "The main LLM generation stage. In API mode, the LLM produces dense analytical prose with effect sizes, confidence intervals, and epistemic tags. In simulation mode, generates template-based text with heuristic statistics derived from query properties.",
     useCases: [
       'Evaluating whether a treatment effect is practically meaningful',
       'Detecting underpowered studies that may produce unreliable results',
       'Quantifying variability across multiple studies',
     ],
-    learnMore: 'Core methodology from evidence-based medicine and the Cochrane Collaboration\'s systematic review standards.',
+    learnMore: 'In API mode: Real LLM reasoning about statistical evidence. In simulation mode: Template text where statistics (d, CI, I², BF) are computed from query complexity × entity count, not from actual literature.',
     difficulty: 'advanced',
   },
   causal: {
     id: 'causal',
     title: 'Causal Inference Engine',
     description:
-      'Constructs directed acyclic graphs (DAGs) and applies Bradford Hill criteria to evaluate causal relationships. Distinguishes correlation from causation using structured causal reasoning.',
+      'Evaluates causal relationships using Bradford Hill criteria scoring. In API mode, the LLM performs genuine causal reasoning. In simulation mode, generates a heuristic Hill score from query complexity.',
     useCases: [
       'Determining if a relationship is truly causal vs. merely correlational',
       'Identifying confounding variables and mediating pathways',
       'Evaluating strength, consistency, and plausibility of causal claims',
     ],
-    learnMore: 'Based on Judea Pearl\'s causal inference framework and Sir Austin Bradford Hill\'s 1965 criteria for causal assessment.',
+    learnMore: 'Based on Judea Pearl\'s causal inference framework and Sir Austin Bradford Hill\'s 1965 criteria. API mode: real LLM analysis. Simulation mode: heuristic Hill score = 0.4 + complexity × 0.3 + entity factor × 0.2.',
     difficulty: 'advanced',
   },
   meta_analysis: {
     id: 'meta_analysis',
     title: 'Meta-Analysis Engine',
     description:
-      'Pools evidence across multiple studies using DerSimonian-Laird random-effects modeling. Quantifies between-study heterogeneity (I\u00B2, Q-statistic) to assess evidence consistency.',
+      'Aggregates multi-study evidence. In API mode, the LLM synthesizes evidence across frameworks. In simulation mode, generates template text with heuristic statistics (pooled N, I², effect sizes) derived from query properties.',
     useCases: [
       'Synthesizing findings from multiple studies into a single estimate',
       'Detecting publication bias through funnel plot asymmetry',
       'Calculating pooled effect sizes with proper uncertainty bounds',
     ],
-    learnMore: 'The gold standard of evidence synthesis — used by the Cochrane Collaboration, WHO, and regulatory agencies worldwide.',
+    learnMore: 'In API mode: LLM-driven evidence synthesis. In simulation mode: Study count = 3 + complexity × 10 + entities × 5, sample N = 500 + complexity × 30000. These are illustrative, not from real literature.',
     difficulty: 'advanced',
   },
   bayesian: {
     id: 'bayesian',
     title: 'Bayesian Updating',
     description:
-      'Applies conjugate normal prior-to-posterior updating, computing Bayes factors to quantify how much the evidence should shift our beliefs. Integrates prior knowledge with new data.',
+      'Generates the layman summary, reflection, and arbitration outputs. In API mode, uses LLM for genuine probabilistic reasoning. In simulation mode, uses template-based heuristics.',
     useCases: [
       'Incorporating domain expertise as informative priors',
       'Computing Bayes factors to compare competing hypotheses',
       'Tracking how confidence evolves as evidence accumulates',
     ],
-    learnMore: 'Reverend Thomas Bayes\' theorem (1763) — the mathematical foundation for updating beliefs in light of evidence.',
+    learnMore: 'The Bayesian Prior Strength control adjusts how strongly prior evidence weights against new findings. In the steering engine, actual Beta(α,β) distributions track priors over time.',
     difficulty: 'advanced',
   },
   synthesis: {
@@ -140,73 +140,78 @@ export const SIGNAL_TOOLTIPS: Record<string, EducationalTooltip> = {
     id: 'confidence',
     title: 'Confidence Score',
     description:
-      'A calibrated probability estimate (0-1) reflecting how strongly the evidence supports the conclusion. Higher values indicate stronger, more consistent evidence from multiple analytical stages.',
+      'Reflects how strongly the analysis supports its conclusion (0-1). Varies by domain: philosophical queries start lower (~0.2), empirical queries start higher (~0.45). Modified by complexity, entity count, and steering controls.',
     useCases: [
       'Gauging how much to trust the analysis output',
       'Comparing evidence strength across different queries',
       'Triggering deeper analysis when confidence is low',
     ],
+    learnMore: 'Computed as a heuristic function of query properties (domain, complexity, entity count) plus user steering bias. In API mode, also influences the LLM behavioral directives via the prompt-composer.',
     difficulty: 'beginner',
   },
   entropy: {
     id: 'entropy',
     title: 'Information Entropy',
     description:
-      'Measures the uncertainty or disorder in the reasoning process (0-1). High entropy signals that the evidence is ambiguous, conflicting, or insufficient — the system is "confused" about the answer.',
+      'Estimates reasoning uncertainty (0-1). Philosophical queries have higher base entropy (~0.5) reflecting genuine ambiguity. Empirical queries start low (~0.05). Increases with query complexity.',
     useCases: [
-      'Detecting when the model is uncertain about its reasoning',
+      'Detecting when the query space has many valid answers',
       'Identifying topics that need more evidence before conclusions',
-      'Monitoring reasoning stability over time',
+      'Monitoring reasoning divergence as focus depth increases',
     ],
-    learnMore: 'From Claude Shannon\'s information theory (1948) — entropy quantifies the average surprise or unpredictability of information.',
+    learnMore: 'Inspired by Shannon entropy but computed as a heuristic: base value by domain + complexity scaling + entity factor. Not a true information-theoretic computation.',
     difficulty: 'intermediate',
   },
   dissonance: {
     id: 'dissonance',
-    title: 'Cognitive Dissonance',
+    title: 'Evidential Dissonance',
     description:
-      'Measures contradictions between different analytical stages (0-1). High dissonance means the statistical analysis says one thing while causal or Bayesian analysis says another — internal disagreement.',
+      'Estimates conflict between analytical perspectives (0-1). Queries with normative claims get a higher base (~0.3) reflecting genuine framework disagreement. Scaled by adversarial intensity control.',
     useCases: [
       'Detecting when evidence points in conflicting directions',
       'Identifying nuanced topics where simple answers are inadequate',
       'Flagging cases requiring human expert review',
     ],
+    learnMore: 'Computed heuristically based on normative claims, philosophical flags, complexity, and the adversarial intensity setting. In API mode, the LLM also surfaces real analytical tensions.',
     difficulty: 'intermediate',
   },
   healthScore: {
     id: 'healthScore',
     title: 'System Health Score',
     description:
-      'An aggregate metric (0-1) combining confidence, entropy, dissonance, and risk assessment. Provides a single "vital sign" for the reasoning system\'s overall performance on the current query.',
+      'Derived metric: 1 - entropy×0.45 - dissonance×0.35 - safetyPenalty (if safety keywords detected). Provides a single "vital sign" summarizing analytical coherence. Not user-editable.',
     useCases: [
       'Quick system status check — is the engine performing well?',
-      'Monitoring degradation over extended analysis sessions',
+      'Monitoring degradation on difficult queries',
       'Setting thresholds for automated quality gates',
     ],
+    learnMore: 'A computed composite of other signals, not an independent measurement. The formula weights entropy slightly more than dissonance, with a 0.15 penalty for safety-flagged content.',
     difficulty: 'beginner',
   },
   riskScore: {
     id: 'riskScore',
     title: 'Risk Score',
     description:
-      'Evaluates potential safety or reliability risks in the analysis (0-1). High risk triggers additional scrutiny and may elevate the safety state to orange or red.',
+      'Safety-related risk level (0-1). Queries with safety keywords start at 0.4, normative claims at 0.15, others at 0.02. Modified by complexity and entity count.',
     useCases: [
       'Automatic safety checks for sensitive topics',
       'Escalating potentially harmful outputs for review',
       'Maintaining responsible AI practices in research contexts',
     ],
+    learnMore: 'Computed from keyword detection (safety terms, normative claims) plus complexity scaling. Risk ≥ 0.55 triggers red safety state, ≥ 0.35 triggers yellow.',
     difficulty: 'beginner',
   },
   safetyState: {
     id: 'safetyState',
     title: 'Safety State',
     description:
-      'A traffic-light system (GREEN/YELLOW/ORANGE/RED) indicating the overall safety assessment of the current analysis. Transitions are based on risk scores, content flags, and safety keyword detection.',
+      'A traffic-light system (GREEN/YELLOW/RED) derived from the risk score. Green = risk < 0.35, Yellow = risk 0.35-0.55, Red = risk ≥ 0.55. Affects pipeline behavior and UI warnings.',
     useCases: [
       'Visual indicator for content safety at a glance',
       'Triggering additional guardrails at elevated states',
       'Compliance monitoring for institutional use',
     ],
+    learnMore: 'Purely threshold-based on the risk score. In API mode, elevated safety states cause the prompt-composer to inject caution directives into the LLM system prompt.',
     difficulty: 'beginner',
   },
 };

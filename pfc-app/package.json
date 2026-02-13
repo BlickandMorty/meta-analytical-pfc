@@ -4,7 +4,8 @@
   "description": "Meta-Analytical Reasoning Engine — 10-stage cognitive pipeline with real-time signals, multi-engine arbitration, and 3 inference modes",
   "license": "MIT",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
+    "dev:prod": "next build && next start",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -13,7 +14,10 @@
     "daemon:start": "npx tsx daemon/index.ts",
     "daemon:dev": "npx tsx watch daemon/index.ts",
     "daemon:status": "npx tsx daemon/index.ts --status",
-    "daemon:stop": "npx tsx daemon/index.ts --stop"
+    "daemon:stop": "npx tsx daemon/index.ts --stop",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "knip": {
     "ignoreDependencies": [
@@ -28,6 +32,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.37",
+    "@ai-sdk/google": "^3.0.27",
     "@ai-sdk/openai": "^3.0.25",
     "@ai-sdk/openai-compatible": "^2.0.27",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -57,8 +62,10 @@
     "drizzle-orm": "^0.45.1",
     "framer-motion": "^12.33.0",
     "lucide-react": "^0.563.0",
+    "mammoth": "^1.11.0",
     "next": "16.1.6",
     "next-themes": "^0.4.6",
+    "pdf-parse": "^1.1.1",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -70,6 +77,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -77,9 +86,11 @@
     "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "happy-dom": "^20.6.1",
     "playwright": "^1.58.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^4",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.0.18"
   }
 }

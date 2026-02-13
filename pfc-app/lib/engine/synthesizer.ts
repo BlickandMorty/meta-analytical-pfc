@@ -60,7 +60,7 @@ function generatePlainSummary(
 
   summary += `WHAT THE SYSTEM FOUND\n`;
   if (sysMsgs.length > 0) {
-    const lastMsg = sysMsgs[sysMsgs.length - 1];
+    const lastMsg = sysMsgs[sysMsgs.length - 1]!;
     const layman = lastMsg.dualMessage?.laymanSummary;
     if (layman) {
       summary += `${layman.whatIsLikelyTrue}\n\n`;

@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
+import { logger } from '@/lib/debug-logger';
 import { checkOllamaAvailability } from '@/lib/engine/llm/ollama';
 
 // Only allow localhost/127.0.0.1 to prevent SSRF
@@ -12,7 +14,7 @@ function isAllowedOllamaUrl(url: string): boolean {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const baseUrl = searchParams.get('baseUrl') || 'http://localhost:11434';
 
@@ -23,6 +25,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const result = await checkOllamaAvailability(baseUrl);
-  return Response.json(result);
+  try {
+    const result = await checkOllamaAvailability(baseUrl);
+    return Response.json(result);
+  } catch (error) {
+    logger.error('ollama-check', 'Error:', error);
+    return Response.json({ available: false, error: 'Connection check failed' });
+  }
 }
+
+export const GET = withMiddleware(_GET, { maxRequests: 60, windowMs: 60_000, skipAuth: true });

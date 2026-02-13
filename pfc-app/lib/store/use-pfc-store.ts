@@ -6,6 +6,9 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { onStoreEvent } from './events';
+import { STAGES, STAGE_LABELS } from '@/lib/constants';
+import type { StageResult, StageStatus, TruthAssessment } from '@/lib/engine/types';
 
 // Slice creators
 import { createMessageSlice } from './slices/message';
@@ -28,12 +31,12 @@ import type { MessageSliceState, MessageSliceActions } from './slices/message';
 import type { PipelineSliceState, PipelineSliceActions, SignalHistoryEntry } from './slices/pipeline';
 import type { InferenceSliceState, InferenceSliceActions } from './slices/inference';
 import type { ControlsSliceState, ControlsSliceActions } from './slices/controls';
-import type { PipelineControls } from '@/lib/engine/types';
+
 import type { CortexSliceState, CortexSliceActions, CortexSnapshot } from './slices/cortex';
-import type { ConceptsSliceState, ConceptsSliceActions, ConceptWeight, QueryConceptEntry } from './slices/concepts';
+import type { ConceptsSliceState, ConceptsSliceActions, ConceptWeight } from './slices/concepts';
 import type { TierSliceState, TierSliceActions } from './slices/tier';
 import type { ResearchSliceState, ResearchSliceActions } from './slices/research';
-import type { PortalSliceState, PortalSliceActions, PortalViewData, PortalArtifact, PortalViewType } from './slices/portal';
+import type { PortalSliceState, PortalSliceActions } from './slices/portal';
 import type { UISliceState, UISliceActions } from './slices/ui';
 import type { NotesSliceState, NotesSliceActions } from './slices/notes';
 import type { LearningSliceState, LearningSliceActions } from './slices/learning';
@@ -44,7 +47,7 @@ import type { ToastSliceState, ToastSliceActions } from './slices/toast';
 export type { SignalHistoryEntry } from './slices/pipeline';
 export type { CortexSnapshot } from './slices/cortex';
 export type { ConceptWeight } from './slices/concepts';
-export type { ChatMode } from './slices/ui';
+export type { ChatMode, MiniChatTab } from './slices/ui';
 
 // ═══════════════════════════════════════════════════════════════════
 // Slice creator helpers — typed set/get for all slices
@@ -166,18 +169,22 @@ export const usePFCStore = create<PFCState>()(
         // Reset research
         researchPapers: [],
         currentCitations: [],
-        currentThoughtGraph: null,
         pendingReroute: null,
         researchChatMode: freshResearch.researchChatMode,
-        chatViewMode: freshResearch.chatViewMode,
 
         // Reset portal
         portalStack: freshPortal.portalStack,
         showPortal: freshPortal.showPortal,
 
         // Reset UI
-        synthesisReport: freshUI.synthesisReport,
-        showSynthesis: freshUI.showSynthesis,
+        chatMinimized: false,
+        miniChatOpen: false,
+        miniChatTab: freshUI.miniChatTab,
+        chatThreads: freshUI.chatThreads,
+        activeThreadId: freshUI.activeThreadId,
+        toolsDrawerOpen: false,
+        threadStreamingText: {},
+        threadIsStreaming: {},
 
         // Preserve tier and cortex
         // (suiteTier, measurementEnabled, tierFeatures stay)
@@ -196,3 +203,63 @@ export const usePFCStore = create<PFCState>()(
     },
   })),
 );
+
+// ═══════════════════════════════════════════════════════════════════
+// Event bus subscriptions — slices handle their own state mutations
+// ═══════════════════════════════════════════════════════════════════
+
+function freshPipeline(): StageResult[] {
+  return STAGES.map((s) => ({
+    stage: s,
+    status: 'idle' as StageStatus,
+    summary: STAGE_LABELS[s],
+  }));
+}
+
+// Pipeline slice reacts to query lifecycle events
+onStoreEvent('query:submitted', () => {
+  usePFCStore.setState({
+    isProcessing: true,
+    pipelineStages: freshPipeline(),
+    activeStage: 'triage' as const,
+  });
+});
+
+onStoreEvent('query:completed', ({ confidence, truthAssessment }) => {
+  const s = usePFCStore.getState();
+  const MAX_SIGNAL_HISTORY = 50;
+  const historyEntry = {
+    timestamp: Date.now(),
+    confidence,
+    entropy: s.entropy,
+    dissonance: s.dissonance,
+    healthScore: s.healthScore,
+    riskScore: s.riskScore,
+  };
+
+  usePFCStore.setState({
+    isProcessing: false,
+    activeStage: null,
+    confidence,
+    queriesProcessed: s.queriesProcessed + 1,
+    totalTraces: s.totalTraces + 1,
+    latestTruthAssessment: (truthAssessment as TruthAssessment) ?? null,
+    signalHistory: [...s.signalHistory, historyEntry].slice(-MAX_SIGNAL_HISTORY),
+    pipelineStages: s.pipelineStages.map((sr: StageResult) => ({
+      ...sr,
+      status: 'complete' as StageStatus,
+    })),
+  });
+});
+
+// UI + Pipeline slices react to chat clear
+onStoreEvent('chat:cleared', () => {
+  usePFCStore.setState({
+    // Pipeline state reset
+    isProcessing: false,
+    pipelineStages: freshPipeline(),
+    activeStage: null,
+    // UI state reset
+    chatMinimized: false,
+  });
+});

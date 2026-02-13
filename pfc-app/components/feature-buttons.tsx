@@ -67,11 +67,11 @@ function FeatureChip({ feat, index, isDark, onClick }: {
         borderRadius: 'var(--shape-full)',
         border: `1px solid ${
           hovered
-            ? (isDark ? 'rgba(196,149,106,0.2)' : 'rgba(196,149,106,0.25)')
-            : (isDark ? 'rgba(50,49,45,0.3)' : 'rgba(190,183,170,0.25)')
+            ? 'rgba(var(--pfc-accent-rgb), 0.2)'
+            : (isDark ? 'var(--border)' : 'rgba(190,183,170,0.25)')
         }`,
         background: isDark
-          ? (hovered ? 'rgba(44,43,41,0.8)' : 'rgba(28,27,25,0.5)')
+          ? (hovered ? 'var(--glass-hover)' : 'var(--pfc-surface-dark)')
           : (hovered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.6)'),
         color: hovered
           ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(43,42,39,0.85)')
@@ -109,7 +109,7 @@ export const FeatureButtons = memo(function FeatureButtons({ isDark, onSubmit }:
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0];
+    const file = files[0]!;
     const reader = new FileReader();
 
     reader.onload = () => {

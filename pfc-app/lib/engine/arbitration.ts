@@ -1,6 +1,24 @@
 import type { PipelineStage } from '@/lib/constants';
 import type { StageResult, ArbitrationResult, EngineVote } from './types';
 
+/**
+ * SIMULATION-MODE ARBITRATION (keyword heuristic)
+ *
+ * This module provides a deterministic fallback for multi-engine arbitration
+ * when no LLM is available (simulation mode). It scans stage result text for
+ * predefined keyword patterns to simulate engine "voting" on conclusions.
+ *
+ * COMPUTATION METHOD: Keyword matching → position (supports/opposes/neutral)
+ *   - Each analytical stage has supportKeywords and opposeKeywords
+ *   - The stage result text is scanned for keyword presence
+ *   - More support keywords hit → "supports"; more oppose → "opposes"
+ *   - Confidence derived from match ratio (0.25–0.95)
+ *
+ * LIMITATIONS: This is NOT real analytical reasoning. It pattern-matches on
+ * text strings without understanding what they mean. In API mode, the LLM
+ * performs genuine multi-perspective analysis via `llmGenerateArbitration()`.
+ */
+
 interface VoteConfig {
   stage: PipelineStage;
   supportKeywords: string[];

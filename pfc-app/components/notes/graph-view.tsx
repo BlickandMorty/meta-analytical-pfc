@@ -71,7 +71,7 @@ export const GraphView = memo(function GraphView() {
   const setActivePage = usePFCStore((s) => s.setActivePage);
 
   const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'oled';
+  const isDark = resolvedTheme === 'dark' || resolvedTheme === 'oled' || resolvedTheme === 'navy' || resolvedTheme === 'cosmic';
 
   // ── Build graph data ──
 
@@ -117,7 +117,7 @@ export const GraphView = memo(function GraphView() {
 
       // Check nodes in reverse order (top-most first)
       for (let i = nodes.length - 1; i >= 0; i--) {
-        const node = nodes[i];
+        const node = nodes[i]!;
         const dx = simX - (node.x ?? 0);
         const dy = simY - (node.y ?? 0);
         const hitRadius = node.radius + 4; // slight padding for easier clicking

@@ -1,5 +1,24 @@
 import type { DualMessage, TruthAssessment, TDASnapshot, SafetyState } from './types';
 
+/**
+ * SIMULATION-MODE TRUTH ASSESSMENT (signal-based narrative generation)
+ *
+ * Constructs a TruthAssessment from pipeline signals and the DualMessage output.
+ * This is used as a fallback when no LLM is available; in API mode, the LLM
+ * generates the truth assessment via `llmGenerateTruthAssessment()`.
+ *
+ * COMPUTATION METHOD:
+ *   - overallTruthLikelihood = confidence × (1 - entropy×0.3) × (1 - dissonance×0.4)
+ *     ± arbitration consensus bonus/disagreement penalties, clamped to [0.05, 0.95]
+ *   - All narrative sections (signalInterpretation, weaknesses, improvements, etc.)
+ *     are generated from threshold-based templates that interpret signal values.
+ *
+ * LIMITATIONS: The truth likelihood is a heuristic combination of heuristic signals.
+ * It should be interpreted as "analytical coherence score" not as a calibrated
+ * probability of factual correctness. The narrative sections provide useful
+ * structured self-assessment but are not genuine epistemological analysis.
+ */
+
 // --- Helpers ---
 
 function clamp(value: number, min: number, max: number): number {
@@ -160,7 +179,7 @@ function buildWeaknesses(
   // Ensure at least 2 weaknesses
   if (weaknesses.length < 2) {
     weaknesses.push(
-      'As with all AI-generated analysis, the system cannot access real-world data in real-time and relies on patterns within its training distribution.',
+      'As with all automated analysis, the system cannot access real-world data in real-time and relies on its existing knowledge base, which has boundaries.',
     );
   }
   if (weaknesses.length < 2) {
@@ -246,7 +265,7 @@ function buildBlindSpots(
 
   if (totalFlags > 0 && modelAssumptions / totalFlags > 0.5) {
     spots.push(
-      'Heavy reliance on model assumptions rather than empirical data — conclusions may not generalize beyond the model\'s training distribution.',
+      'Heavy reliance on model assumptions rather than empirical data — conclusions may not generalize beyond the available evidence base.',
     );
   }
 
@@ -296,7 +315,7 @@ function buildBlindSpots(
   // Ensure at least 1 blind spot
   if (spots.length === 0) {
     spots.push(
-      'The system cannot assess what it does not know — domains outside its training data represent irreducible blind spots that cannot be detected internally.',
+      'The system cannot assess what it does not know — domains outside its knowledge base represent irreducible blind spots that cannot be detected internally.',
     );
   }
 

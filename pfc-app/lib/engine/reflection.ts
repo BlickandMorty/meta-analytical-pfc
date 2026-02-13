@@ -1,5 +1,23 @@
 import type { StageResult, ReflectionResult } from './types';
 
+/**
+ * SIMULATION-MODE REFLECTION (template-based self-critique)
+ *
+ * This module provides deterministic self-critical feedback when no LLM is
+ * available (simulation mode). It selects pre-written critical questions
+ * based on which pipeline stages ran and what keywords appear in the analysis.
+ *
+ * COMPUTATION METHOD: Template lookup + keyword trigger
+ *   - Each stage has 2 pre-written critical questions
+ *   - Selection is deterministic: detail.length % questions.length
+ *   - Least defensible claim selected by keyword trigger ("pooled", "causal", "BF", etc.)
+ *   - Precision check based on "p <" presence
+ *
+ * LIMITATIONS: This is NOT genuine self-reflection or meta-cognition. It is
+ * a curated set of domain-appropriate critiques selected by text pattern matching.
+ * In API mode, the LLM performs genuine self-reflection via `llmGenerateReflection()`.
+ */
+
 const CRITICAL_QUESTIONS: Record<string, string[]> = {
   statistical: [
     'If the sample sizes are small, the effect size estimates may be unreliable — are we mistaking noise for signal?',
@@ -37,7 +55,7 @@ export function generateReflection(
       // Pick question based on detail content length (deterministic) — first if short detail, second if longer
       const detail = stageData.detail ?? '';
       const idx = detail.length % CRITICAL_QUESTIONS[stage].length;
-      questions.push(CRITICAL_QUESTIONS[stage][idx]);
+      questions.push(CRITICAL_QUESTIONS[stage]![idx]!);
     }
   }
 

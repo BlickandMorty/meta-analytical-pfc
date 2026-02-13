@@ -2,7 +2,7 @@
 @import "tailwindcss/theme" theme(reference);
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:is(.dark *, .oled *));
+@custom-variant dark (&:is(.dark *, .oled *, .navy *, .cosmic *, .sunset *));
 
 /* ── Geist — primary app font ── */
 @font-face {
@@ -114,6 +114,36 @@
   font-display: swap;
 }
 
+/* ── Space Grotesk — secondary UI font (between retro & SN Pro) ── */
+@font-face {
+  font-family: 'SpaceGrotesk';
+  src: url('/fonts/space-grotesk/SpaceGrotesk-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SpaceGrotesk';
+  src: url('/fonts/space-grotesk/SpaceGrotesk-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SpaceGrotesk';
+  src: url('/fonts/space-grotesk/SpaceGrotesk-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'SpaceGrotesk';
+  src: url('/fonts/space-grotesk/SpaceGrotesk-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── RetroGaming — legacy pixel display font ── */
 @font-face {
   font-family: 'RetroGaming';
@@ -191,6 +221,7 @@
   --font-sans: 'SNPro', 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
   --font-display: 'SNPro', 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
   --font-heading: 'RetroGaming', 'SNPro', 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --font-secondary: 'SpaceGrotesk', 'SNPro', 'Geist', -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   --font-mono: 'GeistMono', "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   --radius-lg: var(--radius);
@@ -305,6 +336,16 @@
   --type-label-lg: 0.875rem;       /* 14px */
   --type-label-md: 0.75rem;        /* 12px */
   --type-label-sm: 0.6875rem;      /* 11px */
+
+  /* Extended scale — chat-specific sizes */
+  --type-chat-response: 1.25rem;   /* 20px — AI response wrapper + user bubbles */
+  --type-chat-heading: 1.625rem;   /* 26px — AI response topic heading */
+  --type-chat-stream: 1.125rem;    /* 18px — streaming text container */
+  --type-prose-body: 0.8125rem;    /* 13px — markdown paragraph/list text */
+  --type-meta: 0.8125rem;          /* 13px — deep analysis body text */
+  --type-tag: 0.625rem;            /* 10px — tag summary badges */
+  --type-tag-inline: 0.5625rem;    /* 9px  — inline epistemic tags */
+  --type-section-label: 0.5938rem; /* 9.5px — section header labels */
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -397,21 +438,21 @@
    ───────────────────────────────────────────────────────── */
 .dark {
   --background: #1A1816;
-  --foreground: #E8E4DE;
+  --foreground: #FFFFFF;
   --card: rgba(30, 28, 26, 0.88);
-  --card-foreground: #E8E4DE;
+  --card-foreground: #FFFFFF;
   --popover: rgba(30, 28, 26, 0.96);
-  --popover-foreground: #E8E4DE;
+  --popover-foreground: #FFFFFF;
   --primary: #C4956A;
   --primary-foreground: #1A1816;
   --secondary: #221F1D;
-  --secondary-foreground: #E8E4DE;
+  --secondary-foreground: #FFFFFF;
   --muted: #221F1D;
   --muted-foreground: #9B9689;
   --accent: #C4956A;
   --accent-foreground: #1A1816;
   --destructive: #C75E5E;
-  --destructive-foreground: #E8E4DE;
+  --destructive-foreground: #FFFFFF;
   --border: rgba(60, 55, 48, 0.45);
   --input: rgba(55, 50, 44, 0.45);
   --ring: #C4956A;
@@ -446,10 +487,10 @@
 
   /* Sidebar — slightly lighter warm gray for contrast */
   --sidebar: rgba(36, 33, 30, 0.92);
-  --sidebar-foreground: #E8E4DE;
+  --sidebar-foreground: #FFFFFF;
   --sidebar-border: rgba(60, 55, 48, 0.3);
   --sidebar-accent: rgba(44, 40, 36, 0.65);
-  --sidebar-accent-foreground: #E8E4DE;
+  --sidebar-accent-foreground: #FFFFFF;
   --sidebar-ring: #C4956A;
 
   /* Theme-specific overrides */
@@ -485,21 +526,21 @@
    ───────────────────────────────────────────────────────── */
 .oled {
   --background: #000000;
-  --foreground: #E0DDD8;
+  --foreground: #FFFFFF;
   --card: rgba(18, 18, 18, 0.92);
-  --card-foreground: #E0DDD8;
+  --card-foreground: #FFFFFF;
   --popover: rgba(14, 14, 14, 0.97);
-  --popover-foreground: #E0DDD8;
+  --popover-foreground: #FFFFFF;
   --primary: #FFFFFF;
   --primary-foreground: #000000;
   --secondary: #141414;
-  --secondary-foreground: #E0DDD8;
+  --secondary-foreground: #FFFFFF;
   --muted: #141414;
   --muted-foreground: #8A8A8A;
   --accent: #FFFFFF;
   --accent-foreground: #000000;
   --destructive: #C75E5E;
-  --destructive-foreground: #E0DDD8;
+  --destructive-foreground: #FFFFFF;
   --border: rgba(48, 48, 48, 0.55);
   --input: rgba(40, 40, 40, 0.55);
   --ring: #FFFFFF;
@@ -534,10 +575,10 @@
 
   /* Sidebar — dark gray for contrast against pure black */
   --sidebar: rgba(16, 16, 16, 0.96);
-  --sidebar-foreground: #E0DDD8;
+  --sidebar-foreground: #FFFFFF;
   --sidebar-border: rgba(48, 48, 48, 0.4);
   --sidebar-accent: rgba(26, 26, 26, 0.7);
-  --sidebar-accent-foreground: #E0DDD8;
+  --sidebar-accent-foreground: #FFFFFF;
   --sidebar-ring: #FFFFFF;
 
   /* Theme-specific overrides — white accent, no brown */
@@ -567,6 +608,376 @@
   /* Surface helpers for OLED */
   --pfc-surface-dark: rgba(10, 10, 10, 0.65);
   --pfc-border-dark: rgba(48, 48, 48, 0.25);
+}
+
+/* ─────────────────────────────────────────────────────────
+   Navy mode — dark variant with deep blue/indigo tint.
+   Warm brown accent + navy surfaces. Unique color identity.
+   ───────────────────────────────────────────────────────── */
+.navy {
+  --background: #0C0B14;
+  --foreground: #FFFFFF;
+  --card: rgba(18, 17, 26, 0.88);
+  --card-foreground: #FFFFFF;
+  --popover: rgba(18, 17, 26, 0.96);
+  --popover-foreground: #FFFFFF;
+  --primary: #C4956A;
+  --primary-foreground: #0C0B14;
+  --secondary: #1A1828;
+  --secondary-foreground: #FFFFFF;
+  --muted: #1A1828;
+  --muted-foreground: #9B96A9;
+  --accent: #C4956A;
+  --accent-foreground: #0C0B14;
+  --destructive: #C75E5E;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(50, 48, 68, 0.45);
+  --input: rgba(45, 43, 62, 0.45);
+  --ring: #C4956A;
+
+  /* Chat surface */
+  --chat-surface: #0C0B14;
+
+  /* M3 Surface container hierarchy — cosmic dark tones */
+  --m3-surface: #0C0B14;
+  --m3-surface-dim: #08070E;
+  --m3-surface-bright: #2A283A;
+  --m3-surface-container-lowest: #06050C;
+  --m3-surface-container: #16152A;
+  --m3-surface-container-high: #201F32;
+  --m3-surface-container-highest: #2A2840;
+
+  /* M3 Color roles — warm brown on indigo */
+  --m3-primary: #E0B896;
+  --m3-on-primary: #442A14;
+  --m3-primary-container: #5E4028;
+  --m3-on-primary-container: #F0DCC8;
+  --m3-secondary: #DDC1A8;
+  --m3-on-secondary: #3E2D1C;
+  --m3-secondary-container: #574434;
+  --m3-on-secondary-container: #FAE1C8;
+  --m3-tertiary: #B6CFB6;
+  --m3-on-tertiary: #223625;
+  --m3-tertiary-container: #384E3A;
+  --m3-on-tertiary-container: #D2EBD1;
+  --m3-outline: #8F8D9F;
+  --m3-outline-variant: #403E50;
+
+  /* Sidebar */
+  --sidebar: rgba(20, 18, 32, 0.92);
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-border: rgba(50, 48, 68, 0.3);
+  --sidebar-accent: rgba(30, 28, 44, 0.65);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-ring: #C4956A;
+
+  /* Theme-specific overrides */
+  --pfc-accent: #C4956A;
+  --pfc-accent-rgb: 196, 149, 106;
+  --pfc-font-accent: #7B9EC7;
+  --pfc-ui-accent: #FFFFFF;
+  --pfc-accent-light: rgba(196, 149, 106, 0.1);
+  --pfc-accent-light-hover: rgba(196, 149, 106, 0.16);
+  --pfc-accent-border: rgba(196, 149, 106, 0.15);
+
+  /* Flat shadows */
+  --liquid-glass-background: rgba(18, 17, 26, 0.78);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
+
+  /* Glass tokens — cosmic dark */
+  --glass-bg: var(--liquid-glass-background);
+  --glass-border: rgba(50, 48, 68, 0.28);
+  --glass-hover: rgba(30, 28, 44, 0.55);
+  --glass-blur: 20px;
+  --glass-blur-heavy: 14px;
+
+  /* Surface helpers */
+  --pfc-surface-dark: rgba(12, 11, 20, 0.65);
+  --pfc-border-dark: rgba(50, 48, 68, 0.25);
+}
+
+/* ─────────────────────────────────────────────────────────
+   Cosmic mode — animated space wallpaper background.
+   Deep indigo-blue palette with semi-transparent surfaces
+   so animated wallpaper shows through. Blues, purples, and
+   soft green accents inspired by pixel art space scenes.
+   ───────────────────────────────────────────────────────── */
+.cosmic {
+  --background: #060510;
+  --foreground: #FFFFFF;
+  --card: rgba(10, 14, 28, 0.82);
+  --card-foreground: #FFFFFF;
+  --popover: rgba(10, 14, 28, 0.94);
+  --popover-foreground: #FFFFFF;
+  --primary: #8BB4D6;
+  --primary-foreground: #0A0E1C;
+  --secondary: rgba(18, 24, 44, 0.8);
+  --secondary-foreground: #FFFFFF;
+  --muted: rgba(18, 24, 44, 0.8);
+  --muted-foreground: #7B9EC7;
+  --accent: #8BB4D6;
+  --accent-foreground: #0A0E1C;
+  --destructive: #C75E5E;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(40, 56, 90, 0.45);
+  --input: rgba(35, 48, 78, 0.45);
+  --ring: #8BB4D6;
+
+  /* Chat surface — semi-transparent for wallpaper bleed */
+  --chat-surface: rgba(6, 10, 22, 0.78);
+
+  /* M3 Surface container hierarchy — semi-transparent */
+  --m3-surface: rgba(8, 12, 24, 0.6);
+  --m3-surface-dim: rgba(6, 8, 18, 0.7);
+  --m3-surface-bright: rgba(30, 40, 62, 0.7);
+  --m3-surface-container-lowest: rgba(4, 6, 14, 0.8);
+  --m3-surface-container: rgba(14, 22, 44, 0.75);
+  --m3-surface-container-high: rgba(22, 32, 56, 0.75);
+  --m3-surface-container-highest: rgba(30, 42, 68, 0.75);
+
+  /* M3 Color roles — blue-purple with green tertiary */
+  --m3-primary: #8BB4D6;
+  --m3-on-primary: #14283E;
+  --m3-primary-container: rgba(40, 70, 110, 0.8);
+  --m3-on-primary-container: #C0D8EC;
+  --m3-secondary: #B0A8C8;
+  --m3-on-secondary: #2A2440;
+  --m3-secondary-container: rgba(58, 50, 80, 0.8);
+  --m3-on-secondary-container: #D0C8E8;
+  --m3-tertiary: #7DD8A8;
+  --m3-on-tertiary: #1A3626;
+  --m3-tertiary-container: rgba(40, 80, 58, 0.8);
+  --m3-on-tertiary-container: #B0F0D0;
+  --m3-outline: #6E88A8;
+  --m3-outline-variant: #2E3E58;
+
+  /* Sidebar — semi-transparent */
+  --sidebar: rgba(8, 12, 24, 0.88);
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-border: rgba(40, 56, 90, 0.3);
+  --sidebar-accent: rgba(18, 26, 44, 0.65);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-ring: #8BB4D6;
+
+  /* Theme-specific overrides — blue accent */
+  --pfc-accent: #8BB4D6;
+  --pfc-accent-rgb: 139, 180, 214;
+  --pfc-font-accent: #7DD8A8;
+  --pfc-ui-accent: #FFFFFF;
+
+  /* Flat shadows */
+  --liquid-glass-background: rgba(8, 12, 24, 0.72);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
+
+  /* Glass tokens — translucent cosmic */
+  --glass-bg: var(--liquid-glass-background);
+  --glass-border: rgba(40, 56, 90, 0.28);
+  --glass-hover: rgba(18, 28, 50, 0.55);
+  --glass-blur: 20px;
+  --glass-blur-heavy: 14px;
+
+  /* Surface helpers */
+  --pfc-surface-dark: rgba(6, 10, 22, 0.55);
+  --pfc-border-dark: rgba(40, 56, 90, 0.25);
+
+  /* Accent light helper */
+  --pfc-accent-light: rgba(139, 180, 214, 0.12);
+}
+
+/* ─────────────────────────────────────────────────────────
+   Sunny mode — animated sky wallpaper background.
+   Light sky-blue palette with semi-transparent surfaces
+   so animated cloud wallpaper shows through. Blues, whites,
+   and warm yellow accents inspired by pixel art sky scenes.
+   ───────────────────────────────────────────────────────── */
+.sunny {
+  --background: #E8F4FB;
+  --foreground: #1A2634;
+  --card: rgba(235, 245, 252, 0.78);
+  --card-foreground: #1A2634;
+  --popover: rgba(235, 245, 252, 0.94);
+  --popover-foreground: #1A2634;
+  --primary: #5B8FC7;
+  --primary-foreground: #FFFFFF;
+  --secondary: rgba(210, 230, 245, 0.75);
+  --secondary-foreground: #1A2634;
+  --muted: rgba(210, 230, 245, 0.75);
+  --muted-foreground: #5A7A94;
+  --accent: #5B8FC7;
+  --accent-foreground: #FFFFFF;
+  --destructive: #C75E5E;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(130, 170, 210, 0.28);
+  --input: rgba(130, 170, 210, 0.28);
+  --ring: #5B8FC7;
+
+  /* Chat surface — semi-transparent for wallpaper bleed */
+  --chat-surface: rgba(235, 245, 252, 0.72);
+
+  /* M3 Surface container hierarchy — semi-transparent sky */
+  --m3-surface: rgba(232, 244, 251, 0.65);
+  --m3-surface-dim: rgba(218, 236, 248, 0.7);
+  --m3-surface-bright: rgba(245, 250, 255, 0.75);
+  --m3-surface-container-lowest: rgba(248, 252, 255, 0.8);
+  --m3-surface-container: rgba(228, 240, 250, 0.72);
+  --m3-surface-container-high: rgba(218, 234, 248, 0.75);
+  --m3-surface-container-highest: rgba(208, 228, 244, 0.78);
+
+  /* M3 Color roles — sky blue primary, warm yellow tertiary */
+  --m3-primary: #3D7AB8;
+  --m3-on-primary: #FFFFFF;
+  --m3-primary-container: rgba(180, 215, 245, 0.7);
+  --m3-on-primary-container: #0A2840;
+  --m3-secondary: #6A8EA8;
+  --m3-on-secondary: #FFFFFF;
+  --m3-secondary-container: rgba(190, 220, 240, 0.65);
+  --m3-on-secondary-container: #142838;
+  --m3-tertiary: #B8943D;
+  --m3-on-tertiary: #FFFFFF;
+  --m3-tertiary-container: rgba(245, 230, 180, 0.6);
+  --m3-on-tertiary-container: #3A2A08;
+  --m3-outline: #7A9AB8;
+  --m3-outline-variant: rgba(160, 195, 225, 0.5);
+
+  /* Sidebar — semi-transparent sky */
+  --sidebar: rgba(215, 235, 250, 0.88);
+  --sidebar-foreground: #1A2634;
+  --sidebar-border: rgba(130, 170, 210, 0.25);
+  --sidebar-accent: rgba(200, 225, 245, 0.7);
+  --sidebar-accent-foreground: #1A2634;
+  --sidebar-ring: #5B8FC7;
+
+  /* Theme-specific overrides — sky blue accent */
+  --pfc-accent: #5B8FC7;
+  --pfc-accent-rgb: 91, 143, 199;
+  --pfc-font-accent: #D4A843;
+  --pfc-ui-accent: #1A2634;
+  --pfc-accent-light: rgba(91, 143, 199, 0.1);
+  --pfc-accent-light-hover: rgba(91, 143, 199, 0.16);
+  --pfc-accent-border: rgba(91, 143, 199, 0.15);
+
+  /* Liquid Glass — light sky glass */
+  --liquid-glass-background: rgba(235, 245, 252, 0.75);
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
+
+  /* Glass tokens — translucent sky */
+  --glass-bg: var(--liquid-glass-background);
+  --glass-border: rgba(130, 170, 210, 0.22);
+  --glass-hover: rgba(225, 240, 252, 0.65);
+  --glass-blur: 20px;
+  --glass-blur-heavy: 14px;
+
+  /* Surface helpers */
+  --pfc-surface-dark: rgba(215, 235, 250, 0.55);
+  --pfc-border-dark: rgba(130, 170, 210, 0.2);
+}
+
+/* ─────────────────────────────────────────────────────────
+   Sunset mode — animated mountain sunset wallpaper background.
+   Warm amber/purple palette with semi-transparent surfaces
+   so animated mountain sunset wallpaper shows through.
+   Deep plums, warm ambers, and orange accents.
+   ───────────────────────────────────────────────────────── */
+.sunset {
+  --background: #1E1220;
+  --foreground: #FFFFFF;
+  --card: #241828;
+  --card-foreground: #FFFFFF;
+  --popover: #221626;
+  --popover-foreground: #FFFFFF;
+  --primary: #D4862B;
+  --primary-foreground: #1E1220;
+  --secondary: #2D1A2C;
+  --secondary-foreground: #FFFFFF;
+  --muted: #322030;
+  --muted-foreground: #B09888;
+  --accent: #D4862B;
+  --accent-foreground: #1E1220;
+  --destructive: #D35050;
+  --destructive-foreground: #FFFFFF;
+  --border: #3D2838;
+  --input: #3D2838;
+  --ring: #D4862B;
+
+  /* Chat surface — opaque (no wallpaper) */
+  --chat-surface: #1E1220;
+
+  /* M3 Surface container hierarchy — opaque warm browns */
+  --m3-surface: #221626;
+  --m3-surface-dim: #1C1020;
+  --m3-surface-bright: #2C1C2C;
+  --m3-surface-container-lowest: #180E1A;
+  --m3-surface-container: #261A2A;
+  --m3-surface-container-high: #2C1E2E;
+  --m3-surface-container-highest: #342434;
+
+  /* M3 Color roles — warm amber primary, purple tertiary */
+  --m3-primary: #D4862B;
+  --m3-on-primary: #FFFFFF;
+  --m3-primary-container: #3E2818;
+  --m3-on-primary-container: #FFD4A0;
+  --m3-secondary: #B88060;
+  --m3-on-secondary: #FFFFFF;
+  --m3-secondary-container: #382218;
+  --m3-on-secondary-container: #FFD0B0;
+  --m3-tertiary: #A060B8;
+  --m3-on-tertiary: #FFFFFF;
+  --m3-tertiary-container: #30183A;
+  --m3-on-tertiary-container: #E0B0F0;
+  --m3-outline: #8A6858;
+  --m3-outline-variant: #4A3430;
+
+  /* Sidebar — opaque warm */
+  --sidebar: #1C1022;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-border: #3A2434;
+  --sidebar-accent: #3C2434;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-ring: #D4862B;
+
+  /* Theme-specific overrides — warm amber accent */
+  --pfc-accent: #D4862B;
+  --pfc-accent-rgb: 212, 134, 43;
+  --pfc-font-accent: #F5B84A;
+  --pfc-ui-accent: #FFFFFF;
+  --pfc-accent-light: #2E1E16;
+  --pfc-accent-light-hover: #3A2618;
+  --pfc-accent-border: #3A2418;
+
+  /* Liquid Glass — warm sunset glass */
+  --liquid-glass-background: #241828;
+  --shadow-base: none;
+  --shadow-border: none;
+  --shadow-xs: none;
+  --shadow-s: none;
+  --shadow-l: none;
+  --shadow-tactile: none;
+
+  /* Glass tokens — opaque warm */
+  --glass-bg: var(--liquid-glass-background);
+  --glass-border: #3A2434;
+  --glass-hover: #342030;
+  --glass-blur: 20px;
+  --glass-blur-heavy: 14px;
+
+  /* Surface helpers */
+  --pfc-surface-dark: #221626;
+  --pfc-border-dark: #3A2434;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -749,6 +1160,35 @@ button {
   @apply prose prose-zinc dark:prose-invert max-w-none;
   font-family: var(--font-sans);
   --tw-prose-headings: var(--foreground);
+  --tw-prose-body: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-counters: var(--foreground);
+  --tw-prose-bullets: var(--foreground);
+  --tw-prose-invert-body: #FFFFFF;
+  --tw-prose-invert-headings: #FFFFFF;
+  --tw-prose-invert-bold: #FFFFFF;
+  --tw-prose-invert-quotes: #FFFFFF;
+  color: var(--foreground);
+}
+
+.prose-pfc h1,
+.prose-pfc h2,
+.prose-pfc h3,
+.prose-pfc h4,
+.prose-pfc h5,
+.prose-pfc h6 {
+  color: var(--foreground) !important;
+  font-family: 'RetroGaming', var(--font-display) !important;
+}
+
+.prose-pfc p,
+.prose-pfc li,
+.prose-pfc td,
+.prose-pfc th,
+.prose-pfc blockquote,
+.prose-pfc strong {
+  color: var(--foreground);
 }
 
 .prose-pfc h1 {
@@ -795,14 +1235,14 @@ button {
 }
 
 .prose-pfc p {
-  font-size: var(--type-body-md);
+  font-size: var(--type-prose-body);
   line-height: 1.75;
   letter-spacing: -0.006em;
   margin-bottom: 0.75rem;
 }
 
 .prose-pfc ul, .prose-pfc ol {
-  font-size: var(--type-body-md);
+  font-size: var(--type-prose-body);
   line-height: 1.7;
   padding-left: 1.25rem;
   margin-bottom: 0.75rem;
@@ -834,7 +1274,7 @@ button {
 .prose-pfc code {
   @apply px-1.5 py-0.5 rounded text-sm font-mono;
   background: var(--m3-surface-container-high);
-  font-size: 0.8125em;
+  font-size: var(--type-prose-body);
 }
 
 .prose-pfc pre {
@@ -846,7 +1286,7 @@ button {
 
 .prose-pfc pre code {
   @apply bg-transparent px-0 py-0;
-  font-size: 0.8125rem;
+  font-size: var(--type-prose-body);
 }
 
 .prose-pfc hr {
@@ -948,4 +1388,21 @@ select:focus-visible {
 @keyframes shimmer {
   0%, 100% { background-position: 200% center; }
   50% { background-position: 0% center; }
+}
+
+/* ─── Thematic wallpaper animations ─── */
+@keyframes wallpaper-drift {
+  0%   { transform: scale(1.06) translate(0%, 0%); }
+  25%  { transform: scale(1.08) translate(-1.5%, -1%); }
+  50%  { transform: scale(1.06) translate(-0.5%, -1.5%); }
+  75%  { transform: scale(1.08) translate(1%, -0.5%); }
+  100% { transform: scale(1.06) translate(0%, 0%); }
+}
+
+@keyframes wallpaper-drift-alt {
+  0%   { transform: scale(1.08) translate(0.5%, -0.5%); }
+  25%  { transform: scale(1.06) translate(1%, 0.5%); }
+  50%  { transform: scale(1.08) translate(-1%, 1%); }
+  75%  { transform: scale(1.06) translate(-0.5%, -1%); }
+  100% { transform: scale(1.08) translate(0.5%, -0.5%); }
 }

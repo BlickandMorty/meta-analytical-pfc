@@ -14,7 +14,7 @@ export function smoothEMA(data: [number, number][], factor: number): [number, nu
   if (data.length === 0 || factor <= 0) return data;
   const weight = Math.min(1, Math.max(0, factor));
   const result: [number, number][] = [];
-  let prev = data[0][1];
+  let prev = data[0]![1];
   for (const [x, y] of data) {
     prev = weight * y + (1 - weight) * prev;
     result.push([x, prev]);
@@ -30,7 +30,7 @@ function smoothCMA(data: [number, number][], windowSize: number): [number, numbe
     const lo = Math.max(0, i - half);
     const hi = Math.min(data.length - 1, i + half);
     let sum = 0;
-    for (let j = lo; j <= hi; j++) sum += data[j][1];
+    for (let j = lo; j <= hi; j++) sum += data[j]![1];
     return [x, sum / (hi - lo + 1)] as [number, number];
   });
 }
@@ -45,7 +45,7 @@ type AggAreaMethod = 'none' | 'minmax' | 'stddev' | 'stderr' | 'ci95';
 function median(arr: number[]): number {
   const sorted = [...arr].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted.length % 2 !== 0 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
 function stdDev(arr: number[], mean: number): number {
@@ -60,16 +60,16 @@ function aggregateSeries(
   areaMethod: AggAreaMethod = 'stddev',
 ): { line: [number, number][]; upper: [number, number][]; lower: [number, number][] } {
   if (allSeries.length === 0) return { line: [], upper: [], lower: [] };
-  if (allSeries.length === 1) return { line: allSeries[0], upper: allSeries[0], lower: allSeries[0] };
+  if (allSeries.length === 1) return { line: allSeries[0]!, upper: allSeries[0]!, lower: allSeries[0]! };
 
   // Align on x positions from the first series
-  const xs = allSeries[0].map((d) => d[0]);
+  const xs = allSeries[0]!.map((d) => d[0]);
   const line: [number, number][] = [];
   const upper: [number, number][] = [];
   const lower: [number, number][] = [];
 
   for (let i = 0; i < xs.length; i++) {
-    const x = xs[i];
+    const x = xs[i]!;
     const values = allSeries.map((s) => s[Math.min(i, s.length - 1)]?.[1] ?? 0);
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
 
@@ -119,8 +119,8 @@ function removeOutliers(data: [number, number][], threshold = 2): [number, numbe
   if (data.length < 4) return data;
   const ys = data.map((d) => d[1]);
   const sorted = [...ys].sort((a, b) => a - b);
-  const q1 = sorted[Math.floor(sorted.length * 0.25)];
-  const q3 = sorted[Math.floor(sorted.length * 0.75)];
+  const q1 = sorted[Math.floor(sorted.length * 0.25)]!;
+  const q3 = sorted[Math.floor(sorted.length * 0.75)]!;
   const iqr = q3 - q1;
   const mean = ys.reduce((a, b) => a + b, 0) / ys.length;
   return data.filter((d) => Math.abs(d[1] - mean) <= threshold * iqr);
@@ -158,7 +158,7 @@ export function linearRegression(points: { x: number; y: number }[]): {
   const r2 = ssTot === 0 ? 1 : 1 - ssRes / ssTot;
 
   const xs = points.map((p) => p.x).sort((a, b) => a - b);
-  const xMin = xs[0], xMax = xs[xs.length - 1];
+  const xMin = xs[0]!, xMax = xs[xs.length - 1]!;
   const line: [number, number][] = [
     [xMin, slope * xMin + intercept],
     [xMax, slope * xMax + intercept],
@@ -180,7 +180,7 @@ export function loess(
   if (n < 3) return points.map((p) => [p.x, p.y]);
 
   const sorted = [...points].sort((a, b) => a.x - b.x);
-  const xMin = sorted[0].x, xMax = sorted[n - 1].x;
+  const xMin = sorted[0]!.x, xMax = sorted[n - 1]!.x;
   const result: [number, number][] = [];
 
   for (let i = 0; i <= steps; i++) {
@@ -226,11 +226,11 @@ export function computeConfidenceBand(
     const lo = Math.max(0, i - half);
     const hi = Math.min(data.length - 1, i + half);
     const vals: number[] = [];
-    for (let j = lo; j <= hi; j++) vals.push(data[j][1]);
+    for (let j = lo; j <= hi; j++) vals.push(data[j]![1]);
     const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
     const sd = Math.sqrt(vals.reduce((a, v) => a + (v - mean) ** 2, 0) / Math.max(1, vals.length - 1));
-    upper.push([data[i][0], data[i][1] + sd * multiplier]);
-    lower.push([data[i][0], data[i][1] - sd * multiplier]);
+    upper.push([data[i]![0], data[i]![1] + sd * multiplier]);
+    lower.push([data[i]![0], data[i]![1] - sd * multiplier]);
   }
 
   return { upper, lower };
@@ -249,20 +249,20 @@ export function computeCorrelationMatrix(
 
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
-      if (i === j) { matrix[i][j] = 1; continue; }
-      const a = series[i].data.map((d) => d[1]);
-      const b = series[j].data.map((d) => d[1]);
+      if (i === j) { matrix[i]![j] = 1; continue; }
+      const a = series[i]!.data.map((d) => d[1]);
+      const b = series[j]!.data.map((d) => d[1]);
       const len = Math.min(a.length, b.length);
       const ma = a.slice(0, len).reduce((s, v) => s + v, 0) / len;
       const mb = b.slice(0, len).reduce((s, v) => s + v, 0) / len;
       let cov = 0, va = 0, vb = 0;
       for (let k = 0; k < len; k++) {
-        cov += (a[k] - ma) * (b[k] - mb);
-        va += (a[k] - ma) ** 2;
-        vb += (b[k] - mb) ** 2;
+        cov += (a[k]! - ma) * (b[k]! - mb);
+        va += (a[k]! - ma) ** 2;
+        vb += (b[k]! - mb) ** 2;
       }
       const denom = Math.sqrt(va * vb);
-      matrix[i][j] = denom === 0 ? 0 : cov / denom;
+      matrix[i]![j] = denom === 0 ? 0 : cov / denom;
     }
   }
 

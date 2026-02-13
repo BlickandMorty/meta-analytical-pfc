@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
+import { logger } from '@/lib/debug-logger';
 import { runPipeline, type ConversationContext } from '@/lib/engine/simulate';
 import type { PipelineControls } from '@/lib/engine/types';
 import type { SteeringBias } from '@/lib/engine/steering/types';
@@ -180,7 +181,7 @@ async function _POST(request: NextRequest) {
             extractedText,
           });
         } catch (attError) {
-          console.error(`[chat/route] Failed to process attachment ${att.name}:`, attError);
+          logger.error('chat/route', `Failed to process attachment ${att.name}:`, attError);
         }
       }
     }
@@ -205,7 +206,7 @@ async function _POST(request: NextRequest) {
             extractedText,
           });
         } catch (pathError) {
-          console.error(`[chat/route] Failed to process file path ${rawPath}:`, pathError);
+          logger.error('chat/route', `Failed to process file path ${rawPath}:`, pathError);
         }
       }
     }
@@ -259,7 +260,7 @@ async function _POST(request: NextRequest) {
         : undefined,
     });
   } catch (error) {
-    console.error('[chat/route] Setup error:', error);
+    logger.error('chat/route', 'Setup error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Setup failed' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -344,7 +345,7 @@ async function _POST(request: NextRequest) {
                 await updateChatTitle(capturedChatId, title);
               }
             } catch (dbError) {
-              console.error('[chat/route] DB save error:', dbError);
+              logger.error('chat/route', 'DB save error:', dbError);
               // Notify client that DB save failed (non-fatal)
               writer.event({
                 type: 'error',
@@ -362,7 +363,7 @@ async function _POST(request: NextRequest) {
           writer.close();
           return;
         }
-        console.error('[chat/route] Pipeline error:', error);
+        logger.error('chat/route', 'Pipeline error:', error);
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         writer.event({ type: 'error', message: errorMsg });
         writer.close();

@@ -295,7 +295,7 @@ function MessageInner({ message }: MessageProps) {
           color: 'var(--m3-on-primary)',
         }}>
           <p style={{
-            fontSize: '1.25rem',
+            fontSize: 'var(--type-chat-response)',
             lineHeight: 1.7,
             margin: 0,
           }}>
@@ -336,7 +336,7 @@ function MessageInner({ message }: MessageProps) {
                       padding: '0.125rem 0.5rem',
                       borderRadius: '999px',
                       background: 'rgba(255,255,255,0.15)',
-                      fontSize: '0.7rem',
+                      fontSize: 'var(--type-label-sm)',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -416,7 +416,7 @@ function MessageInner({ message }: MessageProps) {
         {responseHeading && (
           <h3 style={{
             margin: '0 0 0.5rem 0',
-            fontSize: '1.625rem',
+            fontSize: 'var(--type-chat-heading)',
             fontWeight: 700,
             lineHeight: 1.35,
             color: isDark ? '#FFFFFF' : 'var(--foreground)',
@@ -430,7 +430,7 @@ function MessageInner({ message }: MessageProps) {
         {/* Main text — rendered markdown */}
         <div
           style={{
-            fontSize: '1.375rem',
+            fontSize: 'var(--type-chat-response)',
             lineHeight: 1.8,
             color: isDark ? '#FFFFFF' : 'var(--foreground)',
             fontFamily: 'var(--font-secondary)',
@@ -510,7 +510,7 @@ function MessageInner({ message }: MessageProps) {
                       borderRadius: 'var(--shape-full)',
                       border: isDark ? '1px solid rgba(79,69,57,0.25)' : '1px solid rgba(0,0,0,0.08)',
                       cursor: 'pointer',
-                      fontSize: '0.75rem',
+                      fontSize: 'var(--type-label-md)',
                       fontWeight: 500,
                       color: deepOpen
                         ? 'var(--pfc-accent)'
@@ -641,7 +641,7 @@ function MessageInner({ message }: MessageProps) {
                   borderRadius: 'var(--shape-full)',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '0.6875rem',
+                  fontSize: 'var(--type-label-sm)',
                   fontWeight: 500,
                   color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)',
                   background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
@@ -672,7 +672,7 @@ function MessageInner({ message }: MessageProps) {
                   borderRadius: 'var(--shape-full)',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '0.6875rem',
+                  fontSize: 'var(--type-label-sm)',
                   fontWeight: 500,
                   color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)',
                   background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
@@ -703,7 +703,7 @@ function MessageInner({ message }: MessageProps) {
                   borderRadius: 'var(--shape-full)',
                   border: 'none',
                   cursor: 'pointer',
-                  fontSize: '0.6875rem',
+                  fontSize: 'var(--type-label-sm)',
                   fontWeight: 500,
                   color: isDark ? 'rgba(155,150,137,0.6)' : 'rgba(0,0,0,0.35)',
                   background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',

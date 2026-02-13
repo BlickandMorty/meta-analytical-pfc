@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/debug-logger';
 import type {
   NotePage, NoteBlock, NoteBook, Vault, Concept, PageLink,
 } from './types';
@@ -23,7 +24,7 @@ export async function checkMigrationStatus(): Promise<boolean> {
     const data = await res.json();
     return data.hasMigrated === true;
   } catch {
-    console.warn('[sync-client] Failed to check migration status');
+    logger.warn('sync-client', 'Failed to check migration status');
     return false;
   }
 }
@@ -37,7 +38,7 @@ export async function loadVaultsFromDb(): Promise<Vault[]> {
     const data = await res.json();
     return data.vaults ?? [];
   } catch {
-    console.warn('[sync-client] Failed to load vaults');
+    logger.warn('sync-client', 'Failed to load vaults');
     return [];
   }
 }
@@ -56,7 +57,7 @@ export async function loadVaultDataFromDb(vaultId: string): Promise<{
     if (!res.ok) return null;
     return await res.json();
   } catch {
-    console.warn('[sync-client] Failed to load vault data:', vaultId);
+    logger.warn('sync-client', 'Failed to load vault data:', vaultId);
     return null;
   }
 }
@@ -89,7 +90,7 @@ export async function syncVaultToServer(
     });
     return res.ok;
   } catch {
-    console.warn('[sync-client] Failed to sync vault:', vaultId);
+    logger.warn('sync-client', 'Failed to sync vault:', vaultId);
     return false;
   }
 }
@@ -115,7 +116,7 @@ export async function migrateToSqlite(
     if (!res.ok) return { ok: false };
     return await res.json();
   } catch {
-    console.warn('[sync-client] Migration failed');
+    logger.warn('sync-client', 'Migration failed');
     return { ok: false };
   }
 }
@@ -131,7 +132,7 @@ export async function upsertVaultOnServer(vault: Vault): Promise<boolean> {
     });
     return res.ok;
   } catch {
-    console.warn('[sync-client] Failed to upsert vault:', vault.id);
+    logger.warn('sync-client', 'Failed to upsert vault:', vault.id);
     return false;
   }
 }
@@ -147,7 +148,7 @@ export async function deleteVaultOnServer(vaultId: string): Promise<boolean> {
     });
     return res.ok;
   } catch {
-    console.warn('[sync-client] Failed to delete vault:', vaultId);
+    logger.warn('sync-client', 'Failed to delete vault:', vaultId);
     return false;
   }
 }

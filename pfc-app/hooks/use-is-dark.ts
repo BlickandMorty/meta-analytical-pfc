@@ -11,7 +11,8 @@ import { useTheme } from 'next-themes';
  *   useEffect(() => { setMounted(true); }, []);
  *   const isDark = mounted ? (resolvedTheme === 'dark' || resolvedTheme === 'oled') : true;
  *
- * Returns { isDark, isOled, mounted } so components can gate hydration-sensitive rendering.
+ * Returns { isDark, isOled, isNavy, isCosmic, mounted } so components can gate
+ * hydration-sensitive rendering.
  *
  * Uses useState(false) + useEffect to guarantee `mounted` is `false` during SSR
  * and the first client render, preventing hydration mismatches.
@@ -26,8 +27,13 @@ export function useIsDark() {
 
   // Before mount, default to dark to avoid flash — matches most users' preference
   const effectiveTheme = mounted ? (resolvedTheme ?? 'dark') : 'dark';
-  const isDark = effectiveTheme === 'dark' || effectiveTheme === 'oled';
+  const isDark = effectiveTheme === 'dark' || effectiveTheme === 'oled' || effectiveTheme === 'navy' || effectiveTheme === 'cosmic' || effectiveTheme === 'sunset';
   const isOled = effectiveTheme === 'oled';
+  const isNavy = effectiveTheme === 'navy';
+  const isCosmic = effectiveTheme === 'cosmic';
+  const isSunny = effectiveTheme === 'sunny';
+  const isSunset = effectiveTheme === 'sunset';
+  const isThematic = isCosmic || isSunny; // themes with animated wallpapers (sunset uses plain CSS bg)
 
-  return { isDark, isOled, mounted };
+  return { isDark, isOled, isNavy, isCosmic, isSunny, isSunset, isThematic, mounted };
 }

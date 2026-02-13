@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 /**
@@ -10,13 +10,16 @@ import { useRouter } from 'next/navigation';
  */
 export function useSetupGuard(): boolean {
   const router = useRouter();
-  const ready = typeof window !== 'undefined' && Boolean(localStorage.getItem('pfc-setup-done'));
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!ready) {
+    const done = Boolean(localStorage.getItem('pfc-setup-done'));
+    if (done) {
+      setReady(true);
+    } else {
       router.replace('/onboarding');
     }
-  }, [ready, router]);
+  }, [router]);
 
   return ready;
 }

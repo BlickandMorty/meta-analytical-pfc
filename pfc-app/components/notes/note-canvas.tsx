@@ -126,9 +126,25 @@ function loadCanvas(vaultId: string, pageId: string): CanvasData {
     const raw = localStorage.getItem(`pfc-canvas-${vaultId}-${pageId}`);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { cards: parsed.cards || parsed || [], edges: parsed.edges || [] };
+      const rawCards = parsed.cards || (Array.isArray(parsed) ? parsed : []);
+      const rawEdges = parsed.edges || [];
+      // Validate shape: only keep objects with required numeric fields
+      const cards = Array.isArray(rawCards)
+        ? rawCards.filter((c: unknown): c is CanvasCard =>
+            typeof c === 'object' && c !== null &&
+            typeof (c as CanvasCard).id === 'string' &&
+            typeof (c as CanvasCard).x === 'number' &&
+            typeof (c as CanvasCard).y === 'number')
+        : [];
+      const edges = Array.isArray(rawEdges)
+        ? rawEdges.filter((e: unknown): e is CanvasEdge =>
+            typeof e === 'object' && e !== null &&
+            typeof (e as CanvasEdge).id === 'string' &&
+            typeof (e as CanvasEdge).fromCardId === 'string')
+        : [];
+      return { cards, edges };
     }
-  } catch { /* ignore */ }
+  } catch { /* ignore corrupt data */ }
   return { cards: [], edges: [] };
 }
 
@@ -291,6 +307,16 @@ const CanvasCardView = memo(function CanvasCardView({
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  // Track active window listener cleanup for unmount safety (resize handles)
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+
+  // Cleanup any active resize window listeners on unmount
+  useEffect(() => {
+    return () => {
+      resizeCleanupRef.current?.();
+      resizeCleanupRef.current = null;
+    };
+  }, []);
 
   // ── Auto-grow: expand card height when content overflows ──
   const autoGrow = useCallback(() => {
@@ -352,20 +378,27 @@ const CanvasCardView = memo(function CanvasCardView({
           overflow: 'hidden',
         }}
       >
-        <div style={{ padding: '6px 10px', fontSize: '0.75rem', fontWeight: 600, color: textColor, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+        <div style={{ padding: '6px 10px', fontSize: '0.75rem', fontWeight: 600, color: textColor, overflow: 'hidden', wordBreak: 'break-word', lineHeight: 1.3 }}>
           {card.header || (isGroup ? (card.label || 'Group') : 'Untitled')}
         </div>
       </div>
     );
   }
 
-  // ── Resize ──
-  const onResizeStart = (e: React.MouseEvent, handle: string) => {
+  // ── Resize (pointer capture — no window listeners needed) ──
+  // Uses setPointerCapture so pointermove/pointerup are always delivered to the
+  // capturing element, even if the pointer leaves the window. On unmount the
+  // browser automatically releases capture, preventing leaked listeners.
+  const onResizeStart = (e: React.PointerEvent, handle: string) => {
     e.preventDefault();
     e.stopPropagation();
     setResizing(handle);
     dragStart.current = { x: e.clientX, y: e.clientY, cx: card.x, cy: card.y, w: card.width, h: card.height };
-    const onMove = (ev: MouseEvent) => {
+
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+
+    const onMove = (ev: PointerEvent) => {
       const dx = (ev.clientX - dragStart.current.x) / zoom;
       const dy = (ev.clientY - dragStart.current.y) / zoom;
       const u: Partial<CanvasCard> = {};
@@ -375,9 +408,23 @@ const CanvasCardView = memo(function CanvasCardView({
       if (handle.includes('n')) { const nh = snap(Math.max(60, dragStart.current.h - dy)); u.height = nh; u.y = snap(dragStart.current.cy + dragStart.current.h - nh); }
       onUpdate(card.id, u);
     };
-    const onUp = () => { setResizing(null); window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    const cleanup = () => {
+      target.removeEventListener('pointermove', onMove);
+      target.removeEventListener('pointerup', onUp);
+      target.removeEventListener('lostpointercapture', onUp);
+      resizeCleanupRef.current = null;
+    };
+    const onUp = () => {
+      setResizing(null);
+      cleanup();
+    };
+    target.addEventListener('pointermove', onMove);
+    target.addEventListener('pointerup', onUp);
+    // lostpointercapture fires if capture is released unexpectedly (e.g. element removed)
+    target.addEventListener('lostpointercapture', onUp);
+    // Store cleanup for unmount safety
+    resizeCleanupRef.current?.();
+    resizeCleanupRef.current = cleanup;
   };
 
   const showAnchors = hovered && !resizing;
@@ -497,7 +544,7 @@ const CanvasCardView = memo(function CanvasCardView({
         if (h.includes('w')) { s.left = -(hitSize / 2); s.width = hitSize; s.cursor = corner ? `${h}-resize` : 'w-resize'; }
         if (!corner) { if (h === 'n' || h === 's') { s.left = 0; s.width = '100%'; } else { s.top = 0; s.height = '100%'; } }
         if (corner) { s.width = hitSize; s.height = hitSize; }
-        return <div key={h} style={s} onMouseDown={(e) => onResizeStart(e, h)} />;
+        return <div key={h} style={s} onPointerDown={(e) => onResizeStart(e, h)} />;
       })}
 
       {/* Edge anchor dots */}
@@ -751,10 +798,20 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
   const lastPanPos = useRef({ x: 0, y: 0, t: 0 });
   const prevPanPos = useRef({ x: 0, y: 0, t: 0 }); // previous move sample for velocity
   const isDraggingCards = useRef(false);
+  // Track active window listeners for cleanup on unmount (pan, resize, marquee, drag, edge)
+  const activeWindowCleanups = useRef<Array<() => void>>([]);
   // Refs to avoid stale closures in undo/redo and pan callbacks
   const cardsRef = useRef(cards);
   const edgesRef = useRef(edges);
   const cameraRef = useRef(camera);
+
+  // Cleanup all active window listeners on unmount (pan, drag, marquee, edge, resize)
+  useEffect(() => {
+    return () => {
+      activeWindowCleanups.current.forEach((fn) => fn());
+      activeWindowCleanups.current = [];
+    };
+  }, []);
 
   useEffect(() => {
     cardsRef.current = cards;
@@ -773,7 +830,7 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
     const el = canvasRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      setViewSize({ w: entry.contentRect.width, h: entry.contentRect.height });
+      setViewSize({ w: entry!.contentRect.width, h: entry!.contentRect.height });
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -952,10 +1009,14 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
         gridEl.style.backgroundPosition = `${nx % gridSize}px ${ny % gridSize}px`;
       }
     };
-    const onUp = () => {
-      setIsPanning(false);
+    const cleanup = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      activeWindowCleanups.current = activeWindowCleanups.current.filter((fn) => fn !== cleanup);
+    };
+    const onUp = () => {
+      setIsPanning(false);
+      cleanup();
       // Sync React state with final DOM position
       const final = cameraRef.current;
       setCamera({ x: final.x, y: final.y, zoom: final.zoom });
@@ -963,6 +1024,7 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    activeWindowCleanups.current.push(cleanup);
   }, [stopInertia, startInertia]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -991,9 +1053,13 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
           const ewy = (ev.clientY - rect.top - c.y) / c.zoom;
           setMarquee((m) => m ? { ...m, x1: ewx, y1: ewy } : null);
         };
-        const onUp = () => {
+        const marqueeCleanup = () => {
           window.removeEventListener('mousemove', onMove);
           window.removeEventListener('mouseup', onUp);
+          activeWindowCleanups.current = activeWindowCleanups.current.filter((fn) => fn !== marqueeCleanup);
+        };
+        const onUp = () => {
+          marqueeCleanup();
           setMarquee((m) => {
             if (!m) return null;
             const sx = Math.min(m.x0, m.x1), sy = Math.min(m.y0, m.y1);
@@ -1013,6 +1079,7 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
         };
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
+        activeWindowCleanups.current.push(marqueeCleanup);
         return;
       }
 
@@ -1107,14 +1174,19 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
       }));
     };
 
+    const dragCleanup = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      activeWindowCleanups.current = activeWindowCleanups.current.filter((fn) => fn !== dragCleanup);
+    };
     const onUp = () => {
       isDraggingCards.current = false;
       setSnapGuides([]);
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      dragCleanup();
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    activeWindowCleanups.current.push(dragCleanup);
   }, [pushUndo]);
 
   // ── Edge creation ──
@@ -1125,9 +1197,13 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
       if (!rect) return;
       setEdgeDraft((d) => d ? { ...d, mx: ev.clientX - rect.left, my: ev.clientY - rect.top } : null);
     };
-    const onUp = (ev: MouseEvent) => {
+    const edgeCleanup = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      activeWindowCleanups.current = activeWindowCleanups.current.filter((fn) => fn !== edgeCleanup);
+    };
+    const onUp = (ev: MouseEvent) => {
+      edgeCleanup();
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) { setEdgeDraft(null); return; }
       const cam = cameraRef.current;
@@ -1142,6 +1218,7 @@ export const NoteCanvas = memo(function NoteCanvas({ pageId, vaultId }: NoteCanv
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    activeWindowCleanups.current.push(edgeCleanup);
   }, [pushUndo]);
 
   // ── Keyboard shortcuts ──

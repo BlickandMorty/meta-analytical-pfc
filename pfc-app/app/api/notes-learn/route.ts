@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
 import { generateText } from 'ai';
+import { logger } from '@/lib/debug-logger';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
 import type { LearningSession, LearningStepType } from '@/lib/notes/learning-protocol';
@@ -420,7 +422,7 @@ function generateSimulatedResponse(stepType: LearningStepType, noteContent: stri
 }
 
 // ── POST handler ──
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   let notes: NotesLearnInput;
   let session: LearningSession;
   let inferenceConfig: InferenceConfig | undefined;
@@ -477,6 +479,9 @@ export async function POST(request: NextRequest) {
     }
     if (!Number.isFinite(bodySession.iteration) || !Number.isFinite(bodySession.maxIterations) || bodySession.iteration < 1 || bodySession.maxIterations < 1) {
       return new Response('Invalid session payload: iteration values must be >= 1', { status: 400 });
+    }
+    if (bodySession.maxIterations > 20) {
+      return new Response('Invalid session payload: maxIterations cannot exceed 20', { status: 400 });
     }
     if (bodySession.iteration > bodySession.maxIterations) {
       return new Response('Invalid session payload: iteration cannot exceed maxIterations', { status: 400 });
@@ -642,7 +647,7 @@ export async function POST(request: NextRequest) {
             writer.close(); return;
           }
           const message = error instanceof Error ? error.message : 'Daily brief error';
-          console.error('[notes-learn] Daily brief error:', message);
+          logger.error('notes-learn', 'Daily brief error:', message);
           emit({ type: 'error', message });
         } finally {
           writer.done();
@@ -698,7 +703,7 @@ export async function POST(request: NextRequest) {
               return;
             }
 
-            const step = capturedSession.steps[stepIndex];
+            const step = capturedSession.steps[stepIndex]!;
 
             // Emit step-start
             emit({ type: 'step-start', stepIndex, stepType: step.type });
@@ -818,7 +823,7 @@ export async function POST(request: NextRequest) {
                 return;
               }
               const message = stepError instanceof Error ? stepError.message : 'Unknown step error';
-              console.error(`[notes-learn] Step ${step.type} error:`, message);
+              logger.error('notes-learn', `Step ${step.type} error:`, message);
 
               emit({
                 type: 'step-complete',
@@ -847,7 +852,7 @@ export async function POST(request: NextRequest) {
           return;
         }
         const message = error instanceof Error ? error.message : 'Unknown error';
-        console.error('[notes-learn] Session error:', message);
+        logger.error('notes-learn', 'Session error:', message);
         emit({ type: 'error', message });
       } finally {
         writer.done();
@@ -864,3 +869,5 @@ export async function POST(request: NextRequest) {
     },
   });
 }
+
+export const POST = withMiddleware(_POST, { maxRequests: 5, windowMs: 60_000 });

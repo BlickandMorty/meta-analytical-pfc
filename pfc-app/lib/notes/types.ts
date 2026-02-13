@@ -317,7 +317,7 @@ export function extractPageLinks(content: string): string[] {
   const links: string[] = [];
   let match;
   while ((match = regex.exec(text)) !== null) {
-    links.push(match[1]);
+    links.push(match[1]!);
   }
   return links;
 }

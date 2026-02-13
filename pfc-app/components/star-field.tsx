@@ -89,7 +89,7 @@ export function StarField({ theme = 'oled' }: { theme?: 'light' | 'dark' | 'oled
     // Mostly diagonal angles (20-70 degrees or 200-250 degrees)
     const angleBase = Math.random() > 0.5 ? 20 : 200;
     const angle = (angleBase + Math.random() * 50) * (Math.PI / 180);
-    const speed = config.speed[0] + Math.random() * config.speed[1];
+    const speed = config.speed[0]! + Math.random() * config.speed[1]!;
 
     // Start from random edge position
     const edge = Math.random();
@@ -102,16 +102,16 @@ export function StarField({ theme = 'oled' }: { theme?: 'light' | 'dark' | 'oled
       sy = Math.random() * h * 0.6;
     }
 
-    const life = config.life[0] + Math.floor(Math.random() * config.life[1]);
+    const life = config.life[0]! + Math.floor(Math.random() * config.life[1]!);
 
     shootingRef.current.push({
       x: sx,
       y: sy,
       dx: Math.cos(angle) * speed,
       dy: Math.sin(angle) * speed,
-      trailLen: config.trail[0] + Math.floor(Math.random() * config.trail[1]),
+      trailLen: config.trail[0]! + Math.floor(Math.random() * config.trail[1]!),
       headSize: config.head,
-      alpha: config.alpha[0] + Math.random() * config.alpha[1],
+      alpha: config.alpha[0]! + Math.random() * config.alpha[1]!,
       life,
       maxLife: life,
       warm: Math.random() > 0.3,
@@ -130,7 +130,7 @@ export function StarField({ theme = 'oled' }: { theme?: 'light' | 'dark' | 'oled
 
     // ResizeObserver for cached dimensions
     const ro = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
+      const { width, height } = entry!.contentRect;
       const dpr = window.devicePixelRatio || 1;
       sizeRef.current = { w: width, h: height };
       canvas.width = Math.round(width * dpr);
@@ -202,7 +202,7 @@ export function StarField({ theme = 'oled' }: { theme?: 'light' | 'dark' | 'oled
       ctx.imageSmoothingEnabled = true; // Smooth trails
       const shooting = shootingRef.current;
       for (let i = shooting.length - 1; i >= 0; i--) {
-        const s = shooting[i];
+        const s = shooting[i]!;
         s.life--;
 
         if (s.life <= 0 || s.x > w + 80 || s.y > h + 80) {

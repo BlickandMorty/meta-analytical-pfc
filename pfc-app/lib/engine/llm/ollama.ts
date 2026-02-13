@@ -72,7 +72,7 @@ function parseParamSize(paramSize: string): number {
   const cleaned = paramSize.toUpperCase().replace(/\s/g, '');
   const match = cleaned.match(/([\d.]+)\s*([BMK])?/);
   if (!match) return 0;
-  const num = parseFloat(match[1]);
+  const num = parseFloat(match[1]!);
   const unit = match[2] || 'B';
   if (unit === 'K') return num * 1_000;
   if (unit === 'M') return num * 1_000_000;

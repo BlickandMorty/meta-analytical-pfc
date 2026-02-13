@@ -215,96 +215,6 @@ function PageLinkPopup({
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Floating Formatting Toolbar (appears on text selection)
-// SiYuan-style: bold, italic, underline, strikethrough, code, highlight, link
-// ═══════════════════════════════════════════════════════════════════
-
-function FloatingToolbar({
-  position,
-  isDark,
-  onFormat,
-}: {
-  position: { top: number; left: number } | null;
-  isDark: boolean;
-  onFormat: (command: string, value?: string) => void;
-}) {
-  if (!position) return null;
-
-  const buttons: { cmd: string; icon: LucideIcon; label: string; shortcut: string }[] = [
-    { cmd: 'bold', icon: BoldIcon, label: 'Bold', shortcut: 'Ctrl+B' },
-    { cmd: 'italic', icon: ItalicIcon, label: 'Italic', shortcut: 'Ctrl+I' },
-    { cmd: 'underline', icon: UnderlineIcon, label: 'Underline', shortcut: 'Ctrl+U' },
-    { cmd: 'strikethrough', icon: StrikethroughIcon, label: 'Strikethrough', shortcut: 'Ctrl+Shift+S' },
-    { cmd: 'inlineCode', icon: CodeXmlIcon, label: 'Code', shortcut: 'Ctrl+E' },
-    { cmd: 'highlight', icon: HighlighterIcon, label: 'Highlight', shortcut: 'Ctrl+Shift+H' },
-  ];
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: position.top - 44,
-        left: position.left,
-        transform: 'translateX(-50%)',
-        zIndex: 'var(--z-popover)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '2px',
-        padding: '4px',
-        borderRadius: '10px',
-        background: isDark ? 'rgba(40,36,30,0.95)' : 'rgba(255,255,255,0.97)',
-        border: `1px solid ${isDark ? 'rgba(79,69,57,0.5)' : 'rgba(190,183,170,0.3)'}`,
-        boxShadow: isDark
-          ? '0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3)'
-          : '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
-        backdropFilter: 'blur(20px) saturate(1.5)',
-        animation: 'toolbar-in 0.12s cubic-bezier(0.32, 0.72, 0, 1)',
-      }}
-    >
-      <style>{`
-        @keyframes toolbar-in {
-          from { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.96); }
-          to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-        }
-      `}</style>
-      {buttons.map(({ cmd, icon: Icon, label, shortcut }) => (
-        <button
-          key={cmd}
-          title={`${label} (${shortcut})`}
-          onMouseDown={(e) => {
-            e.preventDefault(); // Keep selection alive
-            onFormat(cmd);
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '28px',
-            height: '28px',
-            borderRadius: '6px',
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            color: isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.6)',
-            transition: `background 0.1s ${CUP}, color 0.1s`,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = isDark ? 'rgba(var(--pfc-accent-rgb), 0.15)' : 'rgba(0,0,0,0.06)';
-            e.currentTarget.style.color = 'var(--pfc-accent)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = isDark ? 'rgba(232,228,222,0.8)' : 'rgba(0,0,0,0.6)';
-          }}
-        >
-          <Icon style={{ width: '14px', height: '14px' }} />
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // BlockContextMenu — Craft/Obsidian-style right-click menu
 // Replaces the floating toolbar with a full context menu system
 // ═══════════════════════════════════════════════════════════════════
@@ -904,17 +814,25 @@ const BlockItem = memo(function BlockItem({
   // ── Typewriter mode sync: stream store content → DOM while AI writes ──
   // Normal sync skips isEditing=true, but typewriter blocks ARE editing.
   // This effect pushes each SSE token into the contentEditable div.
-  // Note: block.content is authored by the local AI engine, same trust
-  // model as the existing innerHTML sync paths above.
+  // Note: block.content is authored by the local note-AI engine (same
+  // trust model as the existing content sync paths above).
+  const wasTypewriterRef = useRef(false);
   useEffect(() => {
     if (isTypewriterTarget && contentRef.current) {
-      const current = contentRef.current.innerHTML;
-      if (current !== block.content) {
+      wasTypewriterRef.current = true;
+      const current = contentRef.current.textContent ?? '';
+      const expected = block.content;
+      if (current !== expected) {
         suppressInputRef.current = true;
-        contentRef.current.innerHTML = block.content;
-        // Keep the growing block visible
+        // Content is locally-generated AI text (same trust as other sync paths)
+        contentRef.current.innerHTML = expected; // eslint-disable-line -- trusted local content
         contentRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
+    } else if (wasTypewriterRef.current && !isTypewriterTarget) {
+      // Typewriter just ended — sync lastSyncedContentRef so the main
+      // sync effect doesn't fight with user edits after AI finishes
+      wasTypewriterRef.current = false;
+      lastSyncedContentRef.current = block.content;
     }
   }, [isTypewriterTarget, block.content]);
 
@@ -1948,7 +1866,7 @@ const BlockItem = memo(function BlockItem({
 
 export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: boolean }) {
   const { resolvedTheme } = useTheme();
-  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled');
+  const isDark = (resolvedTheme === 'dark' || resolvedTheme === 'oled' || resolvedTheme === 'navy' || resolvedTheme === 'cosmic');
 
   const noteBlocks = usePFCStore((s) => s.noteBlocks);
   const notePages = usePFCStore((s) => s.notePages);
@@ -2134,9 +2052,9 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
   const handleNavigate = useCallback((direction: 'up' | 'down', currentBlockId: string) => {
     const idx = pageBlocks.findIndex((b: NoteBlock) => b.id === currentBlockId);
     if (direction === 'up' && idx > 0) {
-      setEditingBlock(pageBlocks[idx - 1].id);
+      setEditingBlock(pageBlocks[idx - 1]!.id);
     } else if (direction === 'down' && idx < pageBlocks.length - 1) {
-      setEditingBlock(pageBlocks[idx + 1].id);
+      setEditingBlock(pageBlocks[idx + 1]!.id);
     }
   }, [pageBlocks, setEditingBlock]);
 
@@ -2160,7 +2078,7 @@ export function BlockEditor({ pageId, readOnly }: { pageId: string; readOnly?: b
       const newId = createBlock(pageId);
       requestAnimationFrame(() => setEditingBlock(newId));
     } else {
-      const lastBlock = pageBlocks[pageBlocks.length - 1];
+      const lastBlock = pageBlocks[pageBlocks.length - 1]!;
       if (stripHtml(lastBlock.content) !== '' || (lastBlock.type ?? 'paragraph') !== 'paragraph') {
         const newId = createBlock(pageId, null, lastBlock.id);
         requestAnimationFrame(() => setEditingBlock(newId));

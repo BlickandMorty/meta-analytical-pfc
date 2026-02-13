@@ -37,12 +37,13 @@ export interface SOARSliceActions {
   setSOARConfig: (patch: Partial<SOARConfig>) => void;
   setSOAREnabled: (enabled: boolean) => void;
   setSOARSession: (session: SOARSession | null) => void;
+  hydrateSOAR: () => void;
 }
 
 // ── Slice creator ──
 export const createSOARSlice = (set: PFCSet, get: PFCGet) => ({
-  // ── Initial state ──
-  soarConfig: loadConfig(),
+  // ── Initial state (hydrated from localStorage in hydrateSOAR) ──
+  soarConfig: DEFAULT_SOAR_CONFIG,
   soarSession: null as SOARSession | null,
 
   // ── Actions ──
@@ -65,5 +66,9 @@ export const createSOARSlice = (set: PFCSet, get: PFCGet) => ({
 
   setSOARSession: (session: SOARSession | null) => {
     set({ soarSession: session });
+  },
+
+  hydrateSOAR: () => {
+    set({ soarConfig: loadConfig() });
   },
 });

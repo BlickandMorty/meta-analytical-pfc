@@ -304,7 +304,7 @@ export async function runSOAR(
   if (config.contradictionDetection && session.finalAttempts.length > 0) {
     emit(onEvent, 'contradiction-scan-start', sessionId, session.iterationsCompleted, {});
 
-    const lastAttempt = session.finalAttempts[session.finalAttempts.length - 1];
+    const lastAttempt = session.finalAttempts[session.finalAttempts.length - 1]!;
     const scan = await scanForContradictions(
       model,
       lastAttempt.analysis,
@@ -321,7 +321,7 @@ export async function runSOAR(
 
     // Adjust final dissonance with contradiction-grounded signal
     if (scan.computedDissonance > 0 && session.finalAttempts.length > 0) {
-      const last = session.finalAttempts[session.finalAttempts.length - 1];
+      const last = session.finalAttempts[session.finalAttempts.length - 1]!;
       // Blend pipeline dissonance with contradiction-measured dissonance
       last.dissonance = last.dissonance * 0.6 + scan.computedDissonance * 0.4;
     }
@@ -332,7 +332,7 @@ export async function runSOAR(
   // ---------------------------------------------------------------------------
   const bestFinal = session.finalAttempts.length > 0
     ? session.finalAttempts.reduce((best, a) =>
-        a.confidence > best.confidence ? a : best, session.finalAttempts[0])
+        a.confidence > best.confidence ? a : best, session.finalAttempts[0]!)
     : null;
 
   if (bestFinal) {

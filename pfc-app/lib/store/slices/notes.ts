@@ -1,5 +1,6 @@
 'use client';
 
+import { logger } from '@/lib/debug-logger';
 import type {
   NoteBlock, NotePage, NoteBook, PageLink,
   NoteSearchResult, NoteAIState, BlockType,
@@ -80,6 +81,9 @@ export interface NotesSliceState {
   // Tabs — ordered list of open page tabs (like browser tabs)
   openTabIds: string[];
 
+  // Navigation history — tracks page visits for Back button (like browser history)
+  navigationHistory: string[];
+
   // Undo/redo (SiYuan-inspired transaction system)
   undoStack: Transaction[];
   redoStack: Transaction[];
@@ -98,6 +102,7 @@ export interface NotesSliceActions {
   deletePage: (pageId: string) => void;
   renamePage: (pageId: string, newTitle: string) => void;
   setActivePage: (pageId: string | null) => void;
+  goBack: () => void;
   ensurePage: (title: string) => string;
   togglePageFavorite: (pageId: string) => void;
   togglePagePin: (pageId: string) => void;
@@ -114,6 +119,11 @@ export interface NotesSliceActions {
   changeBlockType: (blockId: string, type: BlockType, props?: Record<string, string>) => void;
   mergeBlockUp: (blockId: string) => string | null;
   splitBlock: (blockId: string, htmlBefore: string, htmlAfter: string) => string;
+
+  // Property tagging (used by learning slice via store actions, not direct state mutation)
+  tagPageProperties: (pageId: string, props: Record<string, string>) => void;
+  tagBlockProperties: (blockId: string, props: Record<string, string>) => void;
+  removeBlockProperty: (blockId: string, key: string) => void;
 
   // Undo/redo
   undo: () => void;
@@ -205,6 +215,15 @@ function connectNoteAISSE(set: PFCSet, get: PFCGet) {
 
   const controller = new AbortController();
   _noteAIAbortController = controller;
+
+  // ── Undo snapshot: capture pre-AI block content for typewriter mode ──
+  // This lets Cmd+Z revert the entire AI insertion in one step
+  let _typewriterPreContent: string | null = null;
+  let _typewriterBlockId: string | null = noteAI.typewriterBlockId ?? null;
+  if (noteAI.writeToNote && _typewriterBlockId) {
+    const targetBlock = state.noteBlocks.find((b: NoteBlock) => b.id === _typewriterBlockId);
+    _typewriterPreContent = targetBlock ? targetBlock.content : null;
+  }
 
   // Gather note data
   const notePages = state.notePages ?? [];
@@ -310,6 +329,21 @@ function connectNoteAISSE(set: PFCSet, get: PFCGet) {
               case 'done': {
                 const doneState = get();
                 const wasTypewriting = doneState.noteAI.writeToNote;
+
+                // ── Push undo transaction for typewriter AI insertion ──
+                if (wasTypewriting && _typewriterBlockId && _typewriterPreContent !== null) {
+                  const finalBlock = doneState.noteBlocks.find(
+                    (b: NoteBlock) => b.id === _typewriterBlockId
+                  );
+                  if (finalBlock && finalBlock.content !== _typewriterPreContent) {
+                    const pid = finalBlock.pageId ?? '';
+                    doneState.pushTransaction(
+                      [{ action: 'update', blockId: _typewriterBlockId, pageId: pid, data: { content: finalBlock.content } }],
+                      [{ action: 'update', blockId: _typewriterBlockId, pageId: pid, previousData: { content: _typewriterPreContent } }],
+                    );
+                  }
+                }
+
                 set((s) => ({
                   noteAI: { ...s.noteAI, isGenerating: false, writeToNote: false, typewriterBlockId: null },
                   // Exit editing mode for the typewriter block so it renders in view mode
@@ -319,12 +353,27 @@ function connectNoteAISSE(set: PFCSet, get: PFCGet) {
               }
               case 'error': {
                 if (typeof event.message === 'string' && event.message.includes('Local model produced no output')) {
-                  console.warn('[note-ai] SSE warning:', event.message);
+                  logger.warn('note-ai', 'SSE warning:', event.message);
                 } else {
-                  console.error('[note-ai] SSE error:', event.message);
+                  logger.error('note-ai', 'SSE error:', event.message);
                 }
                 const errState = get();
                 const wasTypewritingOnErr = errState.noteAI.writeToNote;
+
+                // ── Push undo transaction for partial AI content on error ──
+                if (wasTypewritingOnErr && _typewriterBlockId && _typewriterPreContent !== null) {
+                  const errBlock = errState.noteBlocks.find(
+                    (b: NoteBlock) => b.id === _typewriterBlockId
+                  );
+                  if (errBlock && errBlock.content !== _typewriterPreContent) {
+                    const pid = errBlock.pageId ?? '';
+                    errState.pushTransaction(
+                      [{ action: 'update', blockId: _typewriterBlockId, pageId: pid, data: { content: errBlock.content } }],
+                      [{ action: 'update', blockId: _typewriterBlockId, pageId: pid, previousData: { content: _typewriterPreContent } }],
+                    );
+                  }
+                }
+
                 set((s) => ({
                   noteAI: { ...s.noteAI, isGenerating: false, writeToNote: false, typewriterBlockId: null },
                   ...(wasTypewritingOnErr ? { editingBlockId: null } : {}),
@@ -339,9 +388,24 @@ function connectNoteAISSE(set: PFCSet, get: PFCGet) {
       }
     } catch (error) {
       if (!isExpectedStreamInterruption(error)) {
-        console.error('[note-ai] Stream error:', error);
+        logger.error('note-ai', 'Stream error:', error);
         const catchState = get();
         const wasTypewritingOnCatch = catchState.noteAI.writeToNote;
+
+        // ── Push undo transaction for partial AI content on stream error ──
+        if (wasTypewritingOnCatch && _typewriterBlockId && _typewriterPreContent !== null) {
+          const catchBlock = catchState.noteBlocks.find(
+            (b: NoteBlock) => b.id === _typewriterBlockId
+          );
+          if (catchBlock && catchBlock.content !== _typewriterPreContent) {
+            const pid = catchBlock.pageId ?? '';
+            catchState.pushTransaction(
+              [{ action: 'update', blockId: _typewriterBlockId, pageId: pid, data: { content: catchBlock.content } }],
+              [{ action: 'update', blockId: _typewriterBlockId, pageId: pid, previousData: { content: _typewriterPreContent } }],
+            );
+          }
+        }
+
         set((s) => ({
           noteAI: { ...s.noteAI, isGenerating: false, writeToNote: false, typewriterBlockId: null },
           ...(wasTypewritingOnCatch ? { editingBlockId: null } : {}),
@@ -380,6 +444,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   notesSidebarView: 'pages' as 'pages' | 'journals' | 'books' | 'graph',
   notesSearchQuery: '',
   openTabIds: [] as string[],
+  navigationHistory: [] as string[],
 
   undoStack: [] as Transaction[],
   redoStack: [] as Transaction[],
@@ -416,7 +481,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     const s = get();
     if (s.undoStack.length === 0) return;
 
-    const txn = s.undoStack[s.undoStack.length - 1];
+    const txn = s.undoStack[s.undoStack.length - 1]!;
     let blocks = [...s.noteBlocks];
 
     // Apply undo operations
@@ -463,7 +528,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     set((s) => ({
       noteBlocks: blocks,
       undoStack: s.undoStack.slice(0, -1),
-      redoStack: [...s.redoStack, txn],
+      redoStack: [...s.redoStack, txn] as Transaction[],
     }));
 
     debouncedSave(get);
@@ -473,7 +538,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     const s = get();
     if (s.redoStack.length === 0) return;
 
-    const txn = s.redoStack[s.redoStack.length - 1];
+    const txn = s.redoStack[s.redoStack.length - 1]!;
     let blocks = [...s.noteBlocks];
 
     // Apply do operations
@@ -518,7 +583,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     set((s) => ({
       noteBlocks: blocks,
       redoStack: s.redoStack.slice(0, -1),
-      undoStack: [...s.undoStack, txn],
+      undoStack: [...s.undoStack, txn] as Transaction[],
     }));
 
     debouncedSave(get);
@@ -551,7 +616,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       let newActive = s.activePageId;
       if (s.activePageId === pageId) {
         const idx = s.openTabIds.indexOf(pageId);
-        newActive = newTabs.length > 0 ? newTabs[Math.min(idx, newTabs.length - 1)] : null;
+        newActive = newTabs.length > 0 ? newTabs[Math.min(idx, newTabs.length - 1)]! : null;
       }
       return {
         notePages: s.notePages.filter((p: NotePage) => p.id !== pageId),
@@ -597,6 +662,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   },
 
   setActivePage: (pageId: string | null) => {
+    const prev = get().activePageId;
     set((s) => ({
       activePageId: pageId,
       editingBlockId: null,
@@ -604,7 +670,26 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       openTabIds: pageId && !s.openTabIds.includes(pageId)
         ? [...s.openTabIds, pageId]
         : s.openTabIds,
+      // Push previous page to navigation history (for Back button)
+      navigationHistory: prev && prev !== pageId
+        ? [...s.navigationHistory.slice(-49), prev]  // cap at 50 entries
+        : s.navigationHistory,
     }));
+  },
+
+  goBack: () => {
+    const s = get();
+    if (s.navigationHistory.length === 0) return;
+    const prevPageId = s.navigationHistory[s.navigationHistory.length - 1];
+    // Pop last entry WITHOUT pushing current to history (avoid infinite loop)
+    set({
+      activePageId: prevPageId,
+      editingBlockId: null,
+      navigationHistory: s.navigationHistory.slice(0, -1),
+      openTabIds: prevPageId && !s.openTabIds.includes(prevPageId)
+        ? [...s.openTabIds, prevPageId]
+        : s.openTabIds,
+    });
   },
 
   ensurePage: (title: string): string => {
@@ -686,7 +771,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       [{ action: 'insert', blockId: block.id, pageId }],
     );
 
-    if (block.refs.length > 0) get().rebuildPageLinks();
+    if (block.refs.length > 0) updateBlockLinks(block.id, set, get);
     debouncedSave(get);
     return block.id;
   },
@@ -708,7 +793,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     if (_notesContentTimer) clearTimeout(_notesContentTimer);
     _notesContentTimer = setTimeout(() => {
       _notesContentTimer = null;
-      get().rebuildPageLinks();
+      updateBlockLinks(blockId, set, get);
       get().saveNotesToStorage();
     }, SAVE_DEBOUNCE_MS);
   },
@@ -742,7 +827,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       let prevBlock: NoteBlock | null = null;
       let nextBlock: NoteBlock | null = null;
       for (let i = deletedIdx - 1; i >= 0; i--) {
-        const b = s.noteBlocks[i];
+        const b = s.noteBlocks[i]!;
         if (b.pageId === block.pageId && !toDelete.has(b.id)) {
           prevBlock = b;
           break;
@@ -750,7 +835,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       }
       if (!prevBlock) {
         for (let i = deletedIdx + 1; i < s.noteBlocks.length; i++) {
-          const b = s.noteBlocks[i];
+          const b = s.noteBlocks[i]!;
           if (b.pageId === block.pageId && !toDelete.has(b.id)) {
             nextBlock = b;
             break;
@@ -798,6 +883,59 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     debouncedSave(get);
   },
 
+  // ── Property tagging (cross-slice safe) ──────────────────────────
+
+  /** Merge properties into a page. No undo (page properties are metadata, not user content). */
+  tagPageProperties: (pageId: string, props: Record<string, string>) => {
+    set((s) => ({
+      notePages: s.notePages.map((p: NotePage) =>
+        p.id === pageId
+          ? { ...p, properties: { ...p.properties, ...props }, updatedAt: Date.now() }
+          : p,
+      ),
+    }));
+    debouncedSave(get);
+  },
+
+  /** Merge properties into a block, tracked via undo/redo transaction. */
+  tagBlockProperties: (blockId: string, props: Record<string, string>) => {
+    const block = get().noteBlocks.find((b: NoteBlock) => b.id === blockId);
+    if (!block) return;
+    const oldProps = { ...block.properties };
+    set((s) => ({
+      noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
+        b.id === blockId
+          ? { ...b, properties: { ...b.properties, ...props }, updatedAt: Date.now() }
+          : b,
+      ),
+    }));
+    get().pushTransaction(
+      [{ action: 'setBlockProps', blockId, pageId: block.pageId, data: { properties: { ...block.properties, ...props } } }],
+      [{ action: 'setBlockProps', blockId, pageId: block.pageId, previousData: { properties: oldProps } }],
+    );
+    debouncedSave(get);
+  },
+
+  /** Remove a single property key from a block, tracked via undo/redo transaction. */
+  removeBlockProperty: (blockId: string, key: string) => {
+    const block = get().noteBlocks.find((b: NoteBlock) => b.id === blockId);
+    if (!block || !(key in block.properties)) return;
+    const oldProps = { ...block.properties };
+    const { [key]: _, ...restProps } = block.properties;
+    set((s) => ({
+      noteBlocks: s.noteBlocks.map((b: NoteBlock) =>
+        b.id === blockId
+          ? { ...b, properties: restProps, updatedAt: Date.now() }
+          : b,
+      ),
+    }));
+    get().pushTransaction(
+      [{ action: 'setBlockProps', blockId, pageId: block.pageId, data: { properties: restProps } }],
+      [{ action: 'setBlockProps', blockId, pageId: block.pageId, previousData: { properties: oldProps } }],
+    );
+    debouncedSave(get);
+  },
+
   /** Merge block content into the previous block, returns the target block ID or null */
   mergeBlockUp: (blockId: string): string | null => {
     const s = get();
@@ -812,7 +950,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     const idx = siblings.findIndex((b: NoteBlock) => b.id === blockId);
     if (idx <= 0) return null;
 
-    const prevBlock = siblings[idx - 1];
+    const prevBlock = siblings[idx - 1]!;
     if (prevBlock.type === 'divider' || prevBlock.type === 'page-break') return null;
 
     const mergedContent = prevBlock.content + block.content;
@@ -906,7 +1044,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     const idx = siblings.findIndex((b: NoteBlock) => b.id === blockId);
     if (idx <= 0) return;
 
-    const newParent = siblings[idx - 1];
+    const newParent = siblings[idx - 1]!;
     const oldParentId = block.parentId;
     const oldOrder = block.order;
     const oldIndent = block.indent;
@@ -1099,7 +1237,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
     if (s.activePageId === pageId) {
       const idx = s.openTabIds.indexOf(pageId);
       if (newTabs.length > 0) {
-        newActivePageId = newTabs[Math.min(idx, newTabs.length - 1)];
+        newActivePageId = newTabs[Math.min(idx, newTabs.length - 1)] ?? null;
       } else {
         newActivePageId = null;
       }
@@ -1110,7 +1248,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   reorderTabs: (fromIndex: number, toIndex: number) => set((s) => {
     const newTabs = [...s.openTabIds];
     const [moved] = newTabs.splice(fromIndex, 1);
-    newTabs.splice(toIndex, 0, moved);
+    newTabs.splice(toIndex, 0, moved!);
     return { openTabIds: newTabs };
   }),
 
@@ -1447,7 +1585,7 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       // Extract bold/strong terms as key concepts
       const boldMatches = block.content.matchAll(/<(?:strong|b)>([^<]+)<\/(?:strong|b)>/gi);
       for (const match of boldMatches) {
-        const term = match[1].trim();
+        const term = match[1]!.trim();
         if (term.length > 2 && term.length < 100) {
           newConcepts.push({
             id: `concept-bold-${block.id}-${term.slice(0, 20)}`,
@@ -1465,8 +1603,8 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
       const linkMatches = text.matchAll(/\[\[([^\]]+)\]\]/g);
       for (const match of linkMatches) {
         newConcepts.push({
-          id: `concept-link-${block.id}-${match[1].slice(0, 20)}`,
-          name: match[1],
+          id: `concept-link-${block.id}-${match[1]!.slice(0, 20)}`,
+          name: match[1]!,
           sourcePageId: pageId,
           sourceBlockId: block.id,
           type: 'entity',
@@ -1678,6 +1816,43 @@ export const createNotesSlice = (set: PFCSet, get: PFCGet) => ({
   },
 });
 
+// ── Incremental page-link update for a single block ──
+// Removes existing links where sourceBlockId === blockId, then re-extracts
+// links from that block's current content and appends them.
+// O(L + R) where L = existing links and R = refs in the block, vs O(N*R)
+// for the full rebuildPageLinks over all N blocks.
+function updateBlockLinks(blockId: string, set: PFCSet, get: PFCGet) {
+  const s = get();
+  const block = s.noteBlocks.find((b: NoteBlock) => b.id === blockId);
+  if (!block) return;
+
+  // Build page name → id lookup
+  const pageByName = new Map<string, string>();
+  for (const p of s.notePages) {
+    pageByName.set(normalizePageName(p.name), p.id);
+  }
+
+  // Remove old links from this block
+  const filtered = s.pageLinks.filter((l: PageLink) => l.sourceBlockId !== blockId);
+
+  // Extract new links from the block's current content
+  const pageRefs = extractPageLinks(block.content);
+  const newLinks: PageLink[] = [];
+  for (const ref of pageRefs) {
+    const targetPageId = pageByName.get(normalizePageName(ref));
+    if (targetPageId) {
+      newLinks.push({
+        sourcePageId: block.pageId,
+        targetPageId,
+        sourceBlockId: block.id,
+        context: stripHtml(block.content).slice(0, 100),
+      });
+    }
+  }
+
+  set({ pageLinks: [...filtered, ...newLinks] });
+}
+
 // ── Debounced save helper ──
 function debouncedSave(get: PFCGet) {
   if (_notesSaveTimer) clearTimeout(_notesSaveTimer);
@@ -1736,9 +1911,9 @@ async function triggerMigration(vaults: Vault[], get: PFCGet) {
 
     const result = await migrateToSqlite(migrationPayload);
     if (result.ok && !result.skipped) {
-      console.log('[notes] Migration to SQLite complete:', migrationPayload.length, 'vaults');
+      logger.info('notes', 'Migration to SQLite complete:', migrationPayload.length, 'vaults');
     }
   } catch (err) {
-    console.warn('[notes] Migration to SQLite failed (will retry next load):', err);
+    logger.warn('notes', 'Migration to SQLite failed (will retry next load):', err);
   }
 }

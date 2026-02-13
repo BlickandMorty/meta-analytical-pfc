@@ -6,6 +6,7 @@ import type {
   ApiProvider,
   OpenAIModel,
   AnthropicModel,
+  GoogleModel,
 } from '@/lib/engine/llm/config';
 import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
@@ -20,6 +21,7 @@ export interface InferenceSliceState {
   apiKey: string;
   openaiModel: OpenAIModel;
   anthropicModel: AnthropicModel;
+  googleModel: GoogleModel;
   ollamaBaseUrl: string;
   ollamaModel: string;
   ollamaAvailable: boolean;
@@ -37,6 +39,7 @@ export interface InferenceSliceActions {
   setApiKey: (key: string) => void;
   setOpenAIModel: (model: OpenAIModel) => void;
   setAnthropicModel: (model: AnthropicModel) => void;
+  setGoogleModel: (model: GoogleModel) => void;
   setOllamaBaseUrl: (url: string) => void;
   setOllamaModel: (model: string) => void;
   setOllamaStatus: (available: boolean, models: string[]) => void;
@@ -55,6 +58,7 @@ export const createInferenceSlice = (set: PFCSet, get: PFCGet) => ({
   apiKey: '',
   openaiModel: 'gpt-4o' as OpenAIModel,
   anthropicModel: 'claude-sonnet-4-20250514' as AnthropicModel,
+  googleModel: 'gemini-2.5-flash' as GoogleModel,
   ollamaBaseUrl: 'http://localhost:11434',
   ollamaModel: 'llama3.1',
   ollamaAvailable: false,
@@ -74,6 +78,8 @@ export const createInferenceSlice = (set: PFCSet, get: PFCGet) => ({
   setAnthropicModel: (model: AnthropicModel) =>
     set({ anthropicModel: model }),
 
+  setGoogleModel: (model: GoogleModel) => set({ googleModel: model }),
+
   setOllamaBaseUrl: (url: string) => set({ ollamaBaseUrl: url }),
 
   setOllamaModel: (model: string) => set({ ollamaModel: model }),
@@ -92,6 +98,7 @@ export const createInferenceSlice = (set: PFCSet, get: PFCGet) => ({
       apiKey: s.apiKey,
       openaiModel: s.openaiModel,
       anthropicModel: s.anthropicModel,
+      googleModel: s.googleModel,
       ollamaBaseUrl: s.ollamaBaseUrl,
       ollamaModel: s.ollamaModel,
     };

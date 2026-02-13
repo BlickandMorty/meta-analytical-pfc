@@ -132,9 +132,9 @@ export default function ExportPage() {
                 >
                   <div className="flex items-center gap-2 w-full">
                     <Icon style={{ height: 14, width: 14, flexShrink: 0, color: isActive ? 'var(--pfc-accent)' : 'inherit', transition: 'color 0.15s' }} />
-                    <span style={{ fontSize: '0.625rem', fontWeight: 400, fontFamily: 'var(--font-heading)' }}>{opt.label}</span>
+                    <span style={{ fontSize: '0.625rem', fontWeight: 500, fontFamily: 'var(--font-secondary)' }}>{opt.label}</span>
                   </div>
-                  <span style={{ fontSize: '0.5625rem', opacity: 0.5, fontWeight: 400, whiteSpace: 'normal', lineHeight: 1.4, marginTop: '0.125rem' }}>{opt.desc}</span>
+                  <span style={{ fontSize: '0.5625rem', opacity: 0.5, fontWeight: 400, fontFamily: 'var(--font-secondary)', whiteSpace: 'normal', lineHeight: 1.4, marginTop: '0.125rem' }}>{opt.desc}</span>
                 </GlassBubbleButton>
               );
             })}
@@ -168,8 +168,8 @@ export default function ExportPage() {
                   disabled={disabled}
                 >
                   <Icon style={{ height: 16, width: 16, color: isActive ? '#22D3EE' : 'inherit', transition: 'color 0.15s' }} />
-                  <span style={{ fontSize: '0.625rem', fontWeight: 400, fontFamily: 'var(--font-heading)', marginTop: '0.25rem' }}>{opt.label}</span>
-                  <span style={{ fontSize: '0.5rem', opacity: 0.5, fontWeight: 400, whiteSpace: 'normal', lineHeight: 1.3 }}>{opt.desc}</span>
+                  <span style={{ fontSize: '0.625rem', fontWeight: 500, fontFamily: 'var(--font-secondary)', marginTop: '0.25rem' }}>{opt.label}</span>
+                  <span style={{ fontSize: '0.5rem', opacity: 0.5, fontWeight: 400, fontFamily: 'var(--font-secondary)', whiteSpace: 'normal', lineHeight: 1.3 }}>{opt.desc}</span>
                 </GlassBubbleButton>
               );
             })}

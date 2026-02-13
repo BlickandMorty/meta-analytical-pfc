@@ -173,7 +173,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
       // Determine parent
       let parentId = 0; // default: root
       if (nodes.length > 1) {
-        const lastNode = nodes[nodes.length - 1];
+        const lastNode = nodes[nodes.length - 1]!;
         if (shouldBranch(seg, lastNode.type)) {
           // Branch from grandparent or root
           parentId = lastNode.parentId ?? 0;
@@ -442,7 +442,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
 
       // ── Draw light pulses ──
       for (let i = pulses.length - 1; i >= 0; i--) {
-        const pulse = pulses[i];
+        const pulse = pulses[i]!;
         pulse.progress += pulse.speed;
 
         if (pulse.progress >= 1) {
@@ -545,7 +545,7 @@ export const ThoughtVisualizer = memo(function ThoughtVisualizer({ isDark }: Tho
       // ── "Thinking..." indicator when actively reasoning ──
       const isReasoning = usePFCStore.getState().isReasoning;
       if (isReasoning && nodes.length > 0) {
-        const lastNode = nodes[nodes.length - 1];
+        const lastNode = nodes[nodes.length - 1]!;
         const lx = lastNode.x;
         const ly = lastNode.y - scrollY;
 
@@ -637,7 +637,7 @@ function layoutTree(nodes: TreeNode[]) {
   const nodeDepths: Map<number, number> = new Map();
 
   // BFS to assign depths
-  const root = nodes[0];
+  const root = nodes[0]!;
   nodeDepths.set(root.id, 0);
   depths.set(0, [root]);
 
@@ -698,9 +698,9 @@ function layoutTree(nodes: TreeNode[]) {
     // Resolve overlaps at this depth
     nodesAtDepth.sort((a, b) => a.targetX - b.targetX);
     for (let i = 1; i < nodesAtDepth.length; i++) {
-      const gap = nodesAtDepth[i].targetX - nodesAtDepth[i - 1].targetX;
+      const gap = nodesAtDepth[i]!.targetX - nodesAtDepth[i - 1]!.targetX;
       if (gap < MIN_SIBLING_GAP) {
-        nodesAtDepth[i].targetX = nodesAtDepth[i - 1].targetX + MIN_SIBLING_GAP;
+        nodesAtDepth[i]!.targetX = nodesAtDepth[i - 1]!.targetX + MIN_SIBLING_GAP;
       }
     }
   }

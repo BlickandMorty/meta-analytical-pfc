@@ -88,19 +88,29 @@ async function fetchWithBackoff(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetch(url, { headers, next: { revalidate: 300 } });
+      const res = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(15_000), // 15s hard timeout per attempt
+        cache: 'no-store', // avoid ISR/stale caching in route context
+      });
 
       if (res.ok) return res;
 
-      // Rate limited — back off
+      // Rate limited — use longer backoff (S2 public tier: 100 req/5min)
       if (res.status === 429) {
-        const delay = baseDelayMs * Math.pow(2, attempt);
+        if (attempt >= maxRetries) {
+          throw new Error('Semantic Scholar rate limit exceeded — please wait a moment and try again');
+        }
+        const delay = Math.max(2000, baseDelayMs * Math.pow(2, attempt + 1));
         await new Promise((r) => setTimeout(r, delay));
         continue;
       }
 
       // Server error — retry
       if (res.status >= 500) {
+        if (attempt >= maxRetries) {
+          throw new Error(`Semantic Scholar server error: ${res.status}`);
+        }
         const delay = baseDelayMs * Math.pow(2, attempt);
         await new Promise((r) => setTimeout(r, delay));
         continue;
@@ -323,7 +333,7 @@ function normalizePaper(raw: RawS2Paper): S2Paper {
  */
 export function extractBibtexKey(bibtex: string): string | null {
   const match = bibtex.match(/@\w+\{([^,]+)/);
-  return match ? match[1].trim() : null;
+  return match ? match[1]!.trim() : null;
 }
 
 /**

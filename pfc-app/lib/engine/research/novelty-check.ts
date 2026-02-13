@@ -17,6 +17,7 @@
 import { generateObject } from 'ai';
 import type { LanguageModel } from 'ai';
 import { z } from 'zod';
+import { logger } from '@/lib/debug-logger';
 import { searchPapers, type S2Paper, type SemanticScholarConfig } from './semantic-scholar';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -197,7 +198,7 @@ export async function checkNovelty(
       papers = results.data;
     } catch (err) {
       // Search failed — continue with empty results
-      console.warn(`[novelty-check] Search failed for query "${searchQuery}":`, err);
+      logger.warn('novelty-check', `Search failed for query "${searchQuery}":`, err);
     }
 
     allPapersFound.push(...papers);

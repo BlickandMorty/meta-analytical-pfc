@@ -287,8 +287,8 @@ export async function scanForContradictions(
   // O(n²) pairwise comparison
   for (let i = 0; i < claims.length; i++) {
     for (let j = i + 1; j < claims.length; j++) {
-      const claimA = claims[i];
-      const claimB = claims[j];
+      const claimA = claims[i]!;
+      const claimB = claims[j]!;
 
       // Always run heuristic first (fast pre-filter)
       const heuristic = heuristicContradictionScore(claimA, claimB);

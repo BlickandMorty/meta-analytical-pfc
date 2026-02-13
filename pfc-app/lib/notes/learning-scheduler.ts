@@ -119,7 +119,12 @@ function tick(getState: GetState, config: SchedulerConfig): void {
   // Notes changed — start a background learning session
   _lastNoteHash = currentHash;
   saveLastHash(currentHash);
-  state.startLearningSession(config.depth, config.maxIterations);
+  // Resolve iterations from depth if maxIterations is default (2)
+  const depthIterations: Record<string, number> = { shallow: 1, moderate: 2, deep: 5 };
+  const iterations = config.maxIterations === 2
+    ? (depthIterations[config.depth] ?? config.maxIterations)
+    : config.maxIterations;
+  state.startLearningSession(config.depth, iterations);
 }
 
 function checkDailyBrief(getState: GetState, config: SchedulerConfig): void {

@@ -8,6 +8,7 @@
 //   - localStorage persistence (follows Cortex Archive pattern)
 // ═══════════════════════════════════════════════════════════════════
 
+import { logger } from '@/lib/debug-logger';
 import type {
   SteeringMemory,
   SteeringExemplar,
@@ -160,7 +161,7 @@ export function saveMemoryToStorage(memory: SteeringMemory): void {
     const json = JSON.stringify(memory);
     localStorage.setItem(STORAGE_KEY, json);
   } catch (e) {
-    console.warn('[steering/memory] Failed to save:', e);
+    logger.warn('steering/memory', 'Failed to save:', e);
   }
 }
 
@@ -178,7 +179,7 @@ export function loadMemoryFromStorage(): SteeringMemory {
 
     return parsed;
   } catch (e) {
-    console.warn('[steering/memory] Failed to load:', e);
+    logger.warn('steering/memory', 'Failed to load:', e);
     return createEmptyMemory();
   }
 }
@@ -187,7 +188,7 @@ export function clearMemoryFromStorage(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (e) {
-    console.warn('[steering/memory] Failed to clear:', e);
+    logger.warn('steering/memory', 'Failed to clear:', e);
   }
 }
 

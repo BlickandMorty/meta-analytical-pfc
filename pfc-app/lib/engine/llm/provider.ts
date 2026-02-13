@@ -3,11 +3,12 @@
 // ═══════════════════════════════════════════════════════════════════
 //
 // Given an InferenceConfig, resolves to the correct AI SDK LanguageModel.
-// Supports: OpenAI, Anthropic (API mode), Ollama (Local mode).
+// Supports: OpenAI, Anthropic, Google (API mode), Ollama (Local mode).
 // ═══════════════════════════════════════════════════════════════════
 
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { LanguageModel } from 'ai';
 import type { InferenceConfig } from './config';
@@ -21,6 +22,11 @@ export function resolveProvider(config: InferenceConfig): LanguageModel {
     if (config.apiProvider === 'anthropic') {
       const anthropic = createAnthropic({ apiKey: config.apiKey });
       return anthropic(config.anthropicModel || 'claude-sonnet-4-20250514');
+    }
+
+    if (config.apiProvider === 'google') {
+      const google = createGoogleGenerativeAI({ apiKey: config.apiKey });
+      return google(config.googleModel || 'gemini-2.5-flash');
     }
 
     // Default: OpenAI

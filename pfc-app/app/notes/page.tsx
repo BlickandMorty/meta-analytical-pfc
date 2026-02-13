@@ -32,6 +32,10 @@ import {
   MousePointerClickIcon,
   SparklesIcon,
   WrenchIcon,
+  BotIcon,
+  MessageSquareIcon,
+  AlertCircleIcon,
+  ArrowLeftIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
 import { PixelBook } from '@/components/pixel-book';
@@ -46,10 +50,6 @@ const NotesSidebar = dynamic(
 );
 const BlockEditor = dynamic(
   () => import('@/components/notes/block-editor').then((m) => ({ default: m.BlockEditor })),
-  { ssr: false },
-);
-const NoteAIChat = dynamic(
-  () => import('@/components/notes/note-ai-chat').then((m) => ({ default: m.NoteAIChat })),
   { ssr: false },
 );
 const VaultPicker = dynamic(
@@ -72,7 +72,7 @@ const CUP_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
 // Theme helper — consistent with sidebar
 // ═══════════════════════════════════════════════════════════════════
 
-function th(isDark: boolean, isOled = false) {
+function th(isDark: boolean, isOled = false, isNavy = false, isCosmic = false) {
   if (isOled) {
     return {
       bg:       'var(--background)',
@@ -88,6 +88,23 @@ function th(isDark: boolean, isOled = false) {
       pageGrad: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(139,124,246,0.04))',
       toolbarBtnBg: 'rgba(255,255,255,0.06)',
       backlinkBg: 'rgba(255,255,255,0.03)',
+    };
+  }
+  if (isNavy || isCosmic) {
+    return {
+      bg:       'var(--background)',
+      text:     'rgba(224,220,212,0.95)',
+      muted:    'rgba(123,158,199,0.55)',
+      faint:    'rgba(123,158,199,0.2)',
+      border:   'var(--border)',
+      hover:    'var(--glass-hover)',
+      accent:   'var(--pfc-accent)',
+      green:    '#6DD8A8',
+      journal:  'rgba(109,216,168,0.1)',
+      journalGrad: 'linear-gradient(135deg, rgba(109,216,168,0.14), rgba(109,216,168,0.04))',
+      pageGrad: 'linear-gradient(135deg, rgba(123,158,199,0.1), rgba(139,124,246,0.08))',
+      toolbarBtnBg: 'rgba(123,158,199,0.1)',
+      backlinkBg: 'rgba(123,158,199,0.06)',
     };
   }
   return {
@@ -130,22 +147,23 @@ function NoteTitleTypewriter({
     cursorLingerMs: 600,
   });
 
-  const titleColor = isDark ? 'rgba(237,224,212,0.95)' : 'rgba(0,0,0,0.85)';
+  const titleColor = 'var(--foreground)';
 
   return (
     <h1
       onClick={onClick}
       style={{
         fontFamily: 'var(--font-heading)',
-        fontSize: '2.75rem',
+        fontSize: 'clamp(1.5rem, 5vw, 2.75rem)',
         letterSpacing: '-0.01em',
         lineHeight: 1.15,
         fontWeight: 400,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        minHeight: '3.5rem',
+        wordBreak: 'break-word',
+        overflowWrap: 'break-word',
+        minHeight: '2rem',
         display: 'flex',
         alignItems: 'center',
+        flexWrap: 'wrap',
         margin: 0,
         cursor: 'text',
       }}
@@ -349,12 +367,12 @@ const TOOLS_T_LABEL = `max-width 0.3s ${TOOLS_CUP}, opacity 0.2s ${TOOLS_CUP}`;
 const TOOLS_T_COLOR = 'background 0.15s ease, color 0.15s ease';
 
 function toolsTriggerBg(isOpen: boolean, isDark: boolean) {
-  if (isOpen) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)';
+  if (isOpen) return isDark ? 'var(--glass-hover, rgba(255,255,255,0.08))' : 'rgba(210,195,175,0.35)';
   return 'transparent';
 }
 function toolsTriggerColor(isOpen: boolean, isDark: boolean) {
-  if (isOpen) return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)';
-  return isDark ? 'rgba(205,198,186,0.92)' : 'rgba(72,54,36,0.86)';
+  if (isOpen) return 'var(--foreground)';
+  return isDark ? 'color-mix(in srgb, var(--foreground) 85%, transparent)' : 'rgba(72,54,36,0.86)';
 }
 
 const ToolsPillTrigger = memo(function ToolsPillTrigger({
@@ -452,25 +470,25 @@ function ToolsTextBtn({
         whiteSpace: 'nowrap',
         color: isActive
           ? (activeColor ?? 'var(--pfc-accent)')
-          : (isDark ? 'rgba(205,198,186,0.75)' : 'rgba(72,54,36,0.6)'),
+          : (isDark ? 'color-mix(in srgb, var(--foreground) 75%, transparent)' : 'rgba(72,54,36,0.6)'),
         background: isActive
-          ? (isDark ? 'rgba(55,50,45,0.45)' : 'rgba(210,195,175,0.25)')
+          ? (isDark ? 'var(--glass-hover, rgba(255,255,255,0.06))' : 'rgba(210,195,175,0.25)')
           : 'transparent',
         transition: 'background 0.12s ease, color 0.12s ease',
       }}
       onMouseEnter={(e) => {
         if (!isActive) {
           (e.currentTarget as HTMLElement).style.background = isDark
-            ? 'rgba(55,50,45,0.3)' : 'rgba(210,195,175,0.18)';
+            ? 'var(--glass-hover, rgba(255,255,255,0.06))' : 'rgba(210,195,175,0.18)';
           (e.currentTarget as HTMLElement).style.color = isDark
-            ? 'rgba(232,228,222,0.9)' : 'rgba(60,45,30,0.8)';
+            ? 'var(--foreground)' : 'rgba(60,45,30,0.8)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isActive) {
           (e.currentTarget as HTMLElement).style.background = 'transparent';
           (e.currentTarget as HTMLElement).style.color = isDark
-            ? 'rgba(205,198,186,0.75)' : 'rgba(72,54,36,0.6)';
+            ? 'color-mix(in srgb, var(--foreground) 75%, transparent)' : 'rgba(72,54,36,0.6)';
         }
       }}
     >
@@ -536,12 +554,12 @@ const TAB_T_SIZE = `padding 0.3s ${TAB_CUP}, gap 0.3s ${TAB_CUP}`;
 const TAB_T_COLOR = 'background 0.15s ease, color 0.15s ease';
 
 function tabBubbleBg(isActive: boolean, isDark: boolean) {
-  if (isActive) return isDark ? 'rgba(55,50,45,0.55)' : 'rgba(210,195,175,0.35)';
+  if (isActive) return isDark ? 'var(--glass-hover, rgba(255,255,255,0.08))' : 'rgba(210,195,175,0.35)';
   return 'transparent';
 }
 function tabBubbleColor(isActive: boolean, isDark: boolean) {
-  if (isActive) return isDark ? 'rgba(232,228,222,0.95)' : 'rgba(60,45,30,0.85)';
-  return isDark ? 'rgba(205,198,186,0.92)' : 'rgba(72,54,36,0.86)';
+  if (isActive) return 'var(--foreground)';
+  return isDark ? 'color-mix(in srgb, var(--foreground) 85%, transparent)' : 'rgba(72,54,36,0.86)';
 }
 
 const TabBubble = memo(function TabBubble({
@@ -625,7 +643,7 @@ const TabBubble = memo(function TabBubble({
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 14, height: 14, borderRadius: '50%',
             background: 'transparent', cursor: 'pointer', flexShrink: 0,
-            color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+            color: isDark ? 'color-mix(in srgb, var(--foreground) 40%, transparent)' : 'rgba(0,0,0,0.3)',
             transition: 'background 0.1s',
           }}
         >
@@ -669,12 +687,12 @@ const ToolbarStats = memo(function ToolbarStats({
     <>
       <span style={{
         width: 3, height: 3, borderRadius: '50%', flexShrink: 0,
-        background: isDark ? 'rgba(155,150,137,0.25)' : 'rgba(0,0,0,0.12)',
+        background: isDark ? 'color-mix(in srgb, var(--foreground) 18%, transparent)' : 'rgba(0,0,0,0.12)',
       }} />
       <span style={{
         display: 'flex', alignItems: 'center', gap: '0.5rem',
         fontSize: '0.75rem', fontWeight: 650, whiteSpace: 'nowrap',
-        color: isDark ? 'rgba(156,143,128,0.6)' : 'rgba(120,110,100,0.6)',
+        color: isDark ? 'color-mix(in srgb, var(--foreground) 50%, transparent)' : 'rgba(120,110,100,0.6)',
         padding: '0 0.45rem',
       }}>
         <span>{stats.totalWords} word{stats.totalWords !== 1 ? 's' : ''}</span>
@@ -712,8 +730,8 @@ function saveViewMode(mode: NotesViewMode) {
 export default function NotesPage() {
   const ready = useSetupGuard();
   const router = useRouter();
-  const { isDark, isOled, mounted } = useIsDark();
-  const c = th(isDark, isOled);
+  const { isDark, isOled, isNavy, isCosmic, mounted } = useIsDark();
+  const c = th(isDark, isOled, isNavy, isCosmic);
 
   const learningSession = usePFCStore((s) => s.learningSession);
 
@@ -730,6 +748,8 @@ export default function NotesPage() {
   const setActivePage    = usePFCStore((s) => s.setActivePage);
   const openTabIds       = usePFCStore((s) => s.openTabIds);
   const closeTab         = usePFCStore((s) => s.closeTab);
+  const goBack           = usePFCStore((s) => s.goBack);
+  const navHistoryLen    = usePFCStore((s) => s.navigationHistory.length);
 
   // ── Vault system ──
   const vaults = usePFCStore((s) => s.vaults);
@@ -805,9 +825,6 @@ export default function NotesPage() {
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   }, [pagesPanelSize]);
-
-  // ── Fused AI panel (controlled from toolbar) ──
-  const [aiPanelOpen, setAIPanelOpen] = useState(false);
 
   // ── Right-side tools pill (collapsed → expanded) ──
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -1115,6 +1132,51 @@ export default function NotesPage() {
                   marginBottom: '2.5rem',
                   paddingTop: '4rem',
                 }}>
+                  {/* Back button — appears when navigating via [[links]] */}
+                  <AnimatePresence>
+                    {navHistoryLen > 0 && (
+                      <motion.button
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={goBack}
+                        title="Back to previous note"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                          padding: '0.3rem 0.625rem',
+                          borderRadius: '9999px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.6875rem',
+                          fontWeight: 500,
+                          letterSpacing: '-0.01em',
+                          color: isDark ? 'color-mix(in srgb, var(--foreground) 65%, transparent)' : 'rgba(72,54,36,0.55)',
+                          background: isDark ? 'var(--glass-hover, rgba(255,255,255,0.06))' : 'rgba(210,195,175,0.2)',
+                          marginBottom: '0.625rem',
+                          transition: 'background 0.15s ease, color 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = isDark
+                            ? 'rgba(255,255,255,0.1)' : 'rgba(210,195,175,0.35)';
+                          (e.currentTarget as HTMLElement).style.color = isDark
+                            ? 'var(--foreground)' : 'rgba(60,45,30,0.8)';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = isDark
+                            ? 'var(--glass-hover, rgba(255,255,255,0.06))' : 'rgba(210,195,175,0.2)';
+                          (e.currentTarget as HTMLElement).style.color = isDark
+                            ? 'color-mix(in srgb, var(--foreground) 65%, transparent)' : 'rgba(72,54,36,0.55)';
+                        }}
+                      >
+                        <ArrowLeftIcon style={{ width: '0.75rem', height: '0.75rem', strokeWidth: 2.2 }} />
+                        Back
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+
                   {activePage.isJournal && (
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.5rem',
@@ -1178,7 +1240,7 @@ export default function NotesPage() {
                             display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
                             fontSize: '0.8125rem', fontWeight: 500,
                             color: c.muted,
-                            background: isOled ? 'rgba(255,255,255,0.06)' : isDark ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)',
+                            background: isDark ? 'var(--glass-hover, rgba(255,255,255,0.06))' : 'rgba(0,0,0,0.04)',
                             borderRadius: '9999px', padding: '0.25rem 0.75rem',
                             cursor: 'pointer',
                           }}
@@ -1242,7 +1304,7 @@ export default function NotesPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: isOled ? 'rgba(255,255,255,0.04)' : isDark ? 'rgba(244,189,111,0.06)' : 'rgba(0,0,0,0.03)',
+                    background: isDark ? 'var(--glass-hover, rgba(255,255,255,0.04))' : 'rgba(0,0,0,0.03)',
                   }}
                 >
                   <PenLineIcon style={{ width: '1.5rem', height: '1.5rem', color: c.faint }} />
@@ -1251,7 +1313,7 @@ export default function NotesPage() {
                 <div>
                   <h3 style={{
                     fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em',
-                    color: isDark ? 'rgba(237,224,212,0.7)' : 'rgba(0,0,0,0.6)', marginBottom: '0.5rem',
+                    color: isDark ? 'color-mix(in srgb, var(--foreground) 70%, transparent)' : 'rgba(0,0,0,0.6)', marginBottom: '0.5rem',
                   }}>
                     Notes
                   </h3>
@@ -1284,7 +1346,7 @@ export default function NotesPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: '0.375rem',
                       padding: '0.625rem 1.25rem', borderRadius: '9999px', border: 'none',
-                      background: isOled ? 'rgba(255,255,255,0.10)' : isDark ? 'rgba(244,189,111,0.12)' : 'rgba(244,189,111,0.1)',
+                      background: isDark ? 'rgba(var(--pfc-accent-rgb), 0.12)' : 'rgba(244,189,111,0.1)',
                       color: c.accent, fontSize: '0.9375rem', fontWeight: 600, cursor: 'pointer',
                     }}
                   >
@@ -1294,6 +1356,7 @@ export default function NotesPage() {
                 </div>
               </motion.div>
 
+              <WhatYouMissed isDark={isDark} c={c} />
               <RecentPagesGrid isDark={isDark} c={c} />
             </motion.div>
           )}
@@ -1334,11 +1397,11 @@ export default function NotesPage() {
                 overflowX: 'auto',
                 scrollbarWidth: 'none',
                 background: isDark
-                  ? 'rgba(22,21,19,0.65)'
+                  ? 'var(--pfc-surface-dark)'
                   : 'rgba(237,232,222,0.6)',
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
-                border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+                border: `1px solid ${isDark ? 'var(--border)' : 'rgba(190,183,170,0.3)'}`,
                 boxShadow: isDark
                   ? '0 2px 12px -2px rgba(0,0,0,0.3)'
                   : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
@@ -1380,20 +1443,18 @@ export default function NotesPage() {
                   border: 'none',
                   cursor: 'pointer',
                   background: 'transparent',
-                  color: isOled ? 'rgba(130,130,130,0.5)' : isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)',
+                  color: isDark ? 'color-mix(in srgb, var(--foreground) 40%, transparent)' : 'rgba(0,0,0,0.25)',
                   flexShrink: 0,
                   transition: 'color 0.15s ease, background 0.15s ease',
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.color = 'var(--pfc-accent)';
-                  (e.currentTarget as HTMLElement).style.background = isOled
-                    ? 'rgba(255,255,255,0.06)' : isDark
-                      ? 'rgba(244,189,111,0.08)' : 'rgba(0,0,0,0.04)';
+                  (e.currentTarget as HTMLElement).style.background = isDark
+                    ? 'var(--glass-hover, rgba(255,255,255,0.06))' : 'rgba(0,0,0,0.04)';
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.color = isOled
-                    ? 'rgba(130,130,130,0.5)' : isDark
-                      ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.25)';
+                  (e.currentTarget as HTMLElement).style.color = isDark
+                    ? 'color-mix(in srgb, var(--foreground) 40%, transparent)' : 'rgba(0,0,0,0.25)';
                   (e.currentTarget as HTMLElement).style.background = 'transparent';
                 }}
               >
@@ -1426,11 +1487,11 @@ export default function NotesPage() {
                 borderRadius: toolsOpen ? '1rem' : '9999px',
                 padding: '0.3125rem',
                 background: isDark
-                  ? 'rgba(22,21,19,0.65)'
+                  ? 'var(--pfc-surface-dark)'
                   : 'rgba(237,232,222,0.6)',
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
-                border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
+                border: `1px solid ${isDark ? 'var(--border)' : 'rgba(190,183,170,0.3)'}`,
                 boxShadow: isDark
                   ? '0 2px 12px -2px rgba(0,0,0,0.3)'
                   : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
@@ -1532,14 +1593,7 @@ export default function NotesPage() {
                         onClick={() => setShowVaultPicker((v) => !v)}
                       />
                     )}
-                    {activePageId && viewMode === 'notes' && (
-                      <ToolsTextBtn
-                        label="AI"
-                        isDark={isDark}
-                        isActive={aiPanelOpen}
-                        onClick={() => setAIPanelOpen((v) => !v)}
-                      />
-                    )}
+                    {/* AI button moved to floating character */}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1601,7 +1655,7 @@ export default function NotesPage() {
                 <span style={{
                   fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.03em',
                   textTransform: 'uppercase',
-                  color: isDark ? 'rgba(156,143,128,0.45)' : 'rgba(0,0,0,0.28)',
+                  color: isDark ? 'color-mix(in srgb, var(--foreground) 35%, transparent)' : 'rgba(0,0,0,0.28)',
                 }}>
                   Pages
                 </span>
@@ -1612,7 +1666,7 @@ export default function NotesPage() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: 22, height: 22, borderRadius: '50%',
                     background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: isDark ? 'rgba(156,143,128,0.5)' : 'rgba(0,0,0,0.3)',
+                    color: isDark ? 'color-mix(in srgb, var(--foreground) 40%, transparent)' : 'rgba(0,0,0,0.3)',
                   }}
                 >
                   <XIcon style={{ width: 12, height: 12 }} />
@@ -1645,16 +1699,6 @@ export default function NotesPage() {
           )}
         </AnimatePresence>
 
-        {/* ═══ Fused AI panel — controlled by toolbar button ═══ */}
-        {activePageId && mounted && viewMode === 'notes' && (
-          <NoteAIChat
-            pageId={activePageId}
-            activeBlockId={editingBlockId}
-            isOpen={aiPanelOpen}
-            onClose={() => setAIPanelOpen(false)}
-          />
-        )}
-
         {/* Vault picker overlay */}
         {showVaultPicker && mounted && (
           <VaultPicker onClose={() => setShowVaultPicker(false)} />
@@ -1676,6 +1720,223 @@ export default function NotesPage() {
 
 // ═══════════════════════════════════════════════════════════════════
 // Recent Pages Grid — shown on landing page
+// ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// ██ WHAT YOU MISSED — Daily digest of agent + AI activity
+// ═══════════════════════════════════════════════════════════════════
+
+interface DaemonDigestEvent {
+  id: number;
+  event_type: string;
+  task_name: string | null;
+  payload: string | null;
+  created_at: string;
+}
+
+function WhatYouMissed({
+  isDark,
+  c,
+}: {
+  isDark: boolean;
+  c: ReturnType<typeof th>;
+}) {
+  const [events, setEvents] = useState<DaemonDigestEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  // Fetch daemon events from the last 24 hours
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchDigest() {
+      try {
+        const res = await fetch('/api/daemon?endpoint=events&limit=20');
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data)) {
+          // Filter to events from last 24h
+          const cutoff = Date.now() - 86400000;
+          const recent = data.filter((e: DaemonDigestEvent) => {
+            const ts = typeof e.created_at === 'string'
+              ? new Date(e.created_at).getTime()
+              : Number(e.created_at);
+            return ts > cutoff;
+          });
+          setEvents(recent);
+        }
+      } catch {
+        // Daemon not running or no events — that's fine
+      }
+      if (!cancelled) setLoading(false);
+    }
+    fetchDigest();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Parse event payloads for display
+  const digest = useMemo(() => {
+    const items: { icon: 'agent' | 'chat' | 'alert'; title: string; detail: string; time: string }[] = [];
+
+    for (const evt of events) {
+      if (evt.event_type === 'task_complete' && evt.task_name) {
+        let result = '';
+        if (evt.payload) {
+          try {
+            const p = JSON.parse(evt.payload);
+            result = p.result || p.summary || '';
+          } catch {
+            result = evt.payload;
+          }
+        }
+        const taskLabel = evt.task_name.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+        items.push({
+          icon: 'agent',
+          title: taskLabel,
+          detail: result.slice(0, 200) || 'Task completed',
+          time: formatTimeAgo(evt.created_at),
+        });
+      } else if (evt.event_type === 'task_error' && evt.task_name) {
+        items.push({
+          icon: 'alert',
+          title: `${evt.task_name.replace(/-/g, ' ')} — Error`,
+          detail: evt.payload ? (tryParseField(evt.payload, 'error') || evt.payload).slice(0, 150) : 'Unknown error',
+          time: formatTimeAgo(evt.created_at),
+        });
+      }
+    }
+
+    return items;
+  }, [events]);
+
+  if (loading || digest.length === 0) return null;
+
+  const visible = expanded ? digest : digest.slice(0, 3);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...spring.gentle, delay: 0.12 }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        marginTop: '1.5rem',
+        width: '100%',
+        maxWidth: '28rem',
+      }}
+    >
+      <span style={{
+        fontSize: '0.6875rem',
+        fontWeight: 700,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        color: c.faint,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.375rem',
+      }}>
+        <SparklesIcon style={{ width: '0.75rem', height: '0.75rem' }} />
+        What You Missed
+      </span>
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.375rem',
+      }}>
+        {visible.map((item, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ ...spring.gentle, delay: 0.05 * i }}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.625rem',
+              padding: '0.625rem 0.75rem',
+              borderRadius: '0.75rem',
+              background: isDark ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.02)',
+              border: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
+            }}
+          >
+            <div style={{
+              width: '1.5rem',
+              height: '1.5rem',
+              borderRadius: '0.375rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              marginTop: '0.125rem',
+              background: item.icon === 'agent'
+                ? isDark ? 'rgba(52,211,153,0.1)' : 'rgba(52,211,153,0.08)'
+                : item.icon === 'alert'
+                ? isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)'
+                : isDark ? 'rgba(139,124,246,0.1)' : 'rgba(139,124,246,0.08)',
+            }}>
+              {item.icon === 'agent' && <BotIcon style={{ width: '0.75rem', height: '0.75rem', color: c.green }} />}
+              {item.icon === 'chat' && <MessageSquareIcon style={{ width: '0.75rem', height: '0.75rem', color: '#8B7CF6' }} />}
+              {item.icon === 'alert' && <AlertCircleIcon style={{ width: '0.75rem', height: '0.75rem', color: '#EF4444' }} />}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: c.text }}>{item.title}</span>
+                <span style={{ fontSize: '0.625rem', color: c.faint }}>{item.time}</span>
+              </div>
+              <p style={{
+                fontSize: '0.6875rem',
+                color: c.muted,
+                lineHeight: 1.5,
+                marginTop: '0.125rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+              }}>
+                {item.detail}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {digest.length > 3 && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          style={{
+            fontSize: '0.6875rem',
+            color: c.faint,
+            cursor: 'pointer',
+            background: 'none',
+            border: 'none',
+            padding: '0.25rem 0',
+            textAlign: 'center',
+          }}
+        >
+          {expanded ? 'Show less' : `Show ${digest.length - 3} more`}
+        </button>
+      )}
+    </motion.div>
+  );
+}
+
+function formatTimeAgo(ts: string | number): string {
+  const ms = typeof ts === 'string' ? Date.now() - new Date(ts).getTime() : Date.now() - ts;
+  if (ms < 60000) return 'just now';
+  if (ms < 3600000) return `${Math.floor(ms / 60000)}m ago`;
+  if (ms < 86400000) return `${Math.floor(ms / 3600000)}h ago`;
+  return `${Math.floor(ms / 86400000)}d ago`;
+}
+
+function tryParseField(json: string, field: string): string {
+  try { return JSON.parse(json)[field] || ''; } catch { return ''; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ██ RECENT PAGES GRID
 // ═══════════════════════════════════════════════════════════════════
 
 function RecentPagesGrid({

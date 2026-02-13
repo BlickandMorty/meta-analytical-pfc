@@ -69,7 +69,7 @@ function MiniConceptCanvas({
         vy: 0,
         r: 6 + w * 6,
         weight: w,
-        color: COLORS[i % COLORS.length],
+        color: COLORS[i % COLORS.length]!,
       };
     });
     nodesRef.current = nodes;
@@ -112,24 +112,24 @@ function MiniConceptCanvas({
       let fx = 0, fy = 0;
       for (let j = 0; j < nodes.length; j++) {
         if (i === j) continue;
-        const dx = nodes[i].x - nodes[j].x;
-        const dy = nodes[i].y - nodes[j].y;
+        const dx = nodes[i]!.x - nodes[j]!.x;
+        const dy = nodes[i]!.y - nodes[j]!.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
         const force = 800 / (dist * dist);
         fx += (dx / dist) * force;
         fy += (dy / dist) * force;
       }
       // Gravity
-      fx -= nodes[i].x * 0.015;
-      fy -= nodes[i].y * 0.015;
+      fx -= nodes[i]!.x * 0.015;
+      fy -= nodes[i]!.y * 0.015;
       // Gentle movement
       fx += Math.sin(t * 1.5 + i) * 0.1;
       fy += Math.cos(t * 1.5 + i * 0.7) * 0.1;
 
-      nodes[i].vx = (nodes[i].vx + fx) * 0.9;
-      nodes[i].vy = (nodes[i].vy + fy) * 0.9;
-      nodes[i].x += nodes[i].vx;
-      nodes[i].y += nodes[i].vy;
+      nodes[i]!.vx = (nodes[i]!.vx + fx) * 0.9;
+      nodes[i]!.vy = (nodes[i]!.vy + fy) * 0.9;
+      nodes[i]!.x += nodes[i]!.vx;
+      nodes[i]!.y += nodes[i]!.vy;
     }
 
     ctx.clearRect(0, 0, W, H);
@@ -139,8 +139,8 @@ function MiniConceptCanvas({
       const j = (i + 1) % nodes.length;
       if (nodes.length < 2) break;
       ctx.beginPath();
-      ctx.moveTo(cx + nodes[i].x, cy + nodes[i].y);
-      ctx.lineTo(cx + nodes[j].x, cy + nodes[j].y);
+      ctx.moveTo(cx + nodes[i]!.x, cy + nodes[i]!.y);
+      ctx.lineTo(cx + nodes[j]!.x, cy + nodes[j]!.y);
       ctx.strokeStyle = `rgba(107, 92, 231, 0.12)`;
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -189,7 +189,7 @@ function MiniConceptCanvas({
     // Cache canvas dimensions via ResizeObserver — avoids getBoundingClientRect per frame
     const resizeObs = canvas
       ? new ResizeObserver(([entry]) => {
-          const { width, height } = entry.contentRect;
+          const { width, height } = entry!.contentRect;
           sizeRef.current = { w: width, h: height };
         })
       : null;
@@ -211,8 +211,8 @@ function MiniConceptCanvas({
     const observer = canvas
       ? new IntersectionObserver(
           ([entry]) => {
-            intersectingRef.current = entry.isIntersecting;
-            if (entry.isIntersecting && !pausedRef.current) {
+            intersectingRef.current = entry!.isIntersecting;
+            if (entry!.isIntersecting && !pausedRef.current) {
               animRef.current = requestAnimationFrame(draw);
             }
           },
@@ -327,7 +327,7 @@ export function ConceptMiniMap({
   // Get concept weight data for displayed concepts
   const relevantWeights = displayConcepts
     .map((c) => conceptWeights[c])
-    .filter(Boolean)
+    .filter((x): x is ConceptWeight => Boolean(x))
     .sort((a, b) => (b.weight * b.autoWeight) - (a.weight * a.autoWeight));
 
   const handleAdjust = (concept: string, delta: number) => {

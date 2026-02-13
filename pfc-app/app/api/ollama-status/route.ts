@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
 import {
   getOllamaRunningModels,
   getOllamaModelInfo,
@@ -15,9 +16,9 @@ function getGpuInfo(): { name: string; vramTotal: number; vramUsed: number } | n
     const parts = output.trim().split(',').map((s) => s.trim());
     if (parts.length < 3) return null;
     return {
-      name: parts[0],
-      vramTotal: parseInt(parts[1], 10) * 1024 * 1024,
-      vramUsed: parseInt(parts[2], 10) * 1024 * 1024,
+      name: parts[0]!,
+      vramTotal: parseInt(parts[1]!, 10) * 1024 * 1024,
+      vramUsed: parseInt(parts[2]!, 10) * 1024 * 1024,
     };
   } catch {
     return null;
@@ -35,7 +36,7 @@ function isAllowedOllamaUrl(url: string): boolean {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function _GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const baseUrl = searchParams.get('baseUrl') || 'http://localhost:11434';
 
@@ -53,22 +54,26 @@ export async function GET(request: NextRequest) {
 
   let models: { name: string; estimatedVram: number; paramSize: string; quantization: string }[] = [];
   if (tagsRes && tagsRes.ok) {
-    const tagsData = await tagsRes.json();
-    const modelList: { name: string }[] = tagsData.models || [];
+    try {
+      const tagsData = await tagsRes.json();
+      const modelList: { name: string }[] = tagsData.models || [];
 
-    const detailPromises = modelList.slice(0, 10).map(async (m) => {
-      const detail = await getOllamaModelInfo(baseUrl, m.name);
-      if (!detail) return null;
-      return {
-        name: m.name,
-        estimatedVram: estimateVram(detail.paramSize, detail.quantization),
-        paramSize: detail.paramSize,
-        quantization: detail.quantization,
-      };
-    });
+      const detailPromises = modelList.slice(0, 10).map(async (m) => {
+        const detail = await getOllamaModelInfo(baseUrl, m.name);
+        if (!detail) return null;
+        return {
+          name: m.name,
+          estimatedVram: estimateVram(detail.paramSize, detail.quantization),
+          paramSize: detail.paramSize,
+          quantization: detail.quantization,
+        };
+      });
 
-    const results = await Promise.all(detailPromises);
-    models = results.filter((r): r is NonNullable<typeof r> => r !== null);
+      const results = await Promise.all(detailPromises);
+      models = results.filter((r): r is NonNullable<typeof r> => r !== null);
+    } catch {
+      // JSON parse or model info fetch failed — return empty models list
+    }
   }
 
   const gpu = getGpuInfo();
@@ -80,3 +85,5 @@ export async function GET(request: NextRequest) {
     timestamp: Date.now(),
   });
 }
+
+export const GET = withMiddleware(_GET, { maxRequests: 60, windowMs: 60_000, skipAuth: true });

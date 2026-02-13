@@ -48,7 +48,7 @@ const SPRING = { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.5
 /*  Theme                                                               */
 /* ------------------------------------------------------------------ */
 
-function t(isDark: boolean, isOled = false) {
+function t(isDark: boolean, isOled = false, isNavy = false, isCosmic = false) {
   if (isOled) {
     return {
       bg:        'rgba(8,8,8,0.96)',
@@ -63,6 +63,22 @@ function t(isDark: boolean, isOled = false) {
       danger:    '#E05252',
       tabBg:     'rgba(30,30,30,0.3)',
       tabActive: 'rgba(255,255,255,0.12)',
+    };
+  }
+  if (isNavy || isCosmic) {
+    return {
+      bg:        'var(--chat-surface)',
+      text:      'rgba(224,220,212,0.9)',
+      muted:     'rgba(123,158,199,0.55)',
+      border:    'var(--border)',
+      hover:     'var(--glass-hover)',
+      active:    'rgba(123,158,199,0.15)',
+      accent:    'var(--pfc-accent)',
+      icon:      'rgba(123,158,199,0.45)',
+      inputBg:   'rgba(123,158,199,0.12)',
+      danger:    '#E05252',
+      tabBg:     'rgba(123,158,199,0.08)',
+      tabActive: 'rgba(123,158,199,0.18)',
     };
   }
   return {
@@ -88,8 +104,8 @@ type SidebarView = 'pages' | 'journals' | 'books' | 'graph';
 /* ------------------------------------------------------------------ */
 
 export const NotesSidebar = memo(function NotesSidebar() {
-  const { isDark, isOled } = useIsDark();
-  const c = t(isDark, isOled);
+  const { isDark, isOled, isNavy, isCosmic } = useIsDark();
+  const c = t(isDark, isOled, isNavy, isCosmic);
 
   const notePages          = usePFCStore((s) => s.notePages);
   const noteBooks          = usePFCStore((s) => s.noteBooks);

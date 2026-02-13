@@ -85,7 +85,7 @@ function conceptFingerprint(concepts: string[]): [number, number, number, number
   const buckets = [0, 0, 0, 0];
   for (const c of concepts) {
     const idx = hashConcept(c) % 4;
-    buckets[idx] += 1;
+    buckets[idx]! += 1;
   }
   // Normalize: max concepts per bucket is ~7 (total concepts 3-7)
   const maxPerBucket = Math.max(1, ...buckets);
@@ -200,7 +200,7 @@ export function encodeSynthesisKey(
     vector,
     dimensions: DIMENSION_LABELS,
     queryFeatures,
-    id: `sk-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `steer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     timestamp: Date.now(),
     chatId,
   };
@@ -215,7 +215,7 @@ function clamp01(v: number): number {
 /** L2 norm of a vector */
 function vectorNorm(v: number[]): number {
   let sum = 0;
-  for (let i = 0; i < v.length; i++) sum += v[i] * v[i];
+  for (let i = 0; i < v.length; i++) sum += v[i]! * v[i]!;
   return Math.sqrt(sum);
 }
 
@@ -244,10 +244,10 @@ export function vectorScale(v: number[], s: number): number[] {
 /** Element-wise mean of multiple vectors */
 export function vectorMean(vectors: number[][]): number[] {
   if (vectors.length === 0) return [];
-  const dim = vectors[0].length;
+  const dim = vectors[0]!.length;
   const sum = new Array(dim).fill(0);
   for (const v of vectors) {
-    for (let i = 0; i < dim; i++) sum[i] += v[i];
+    for (let i = 0; i < dim; i++) sum[i]! += v[i]!;
   }
   return sum.map(x => x / vectors.length);
 }
@@ -256,8 +256,8 @@ export function vectorMean(vectors: number[][]): number[] {
 export function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0, normA = 0, normB = 0;
   for (let i = 0; i < a.length; i++) {
-    dot += a[i] * (b[i] ?? 0);
-    normA += a[i] * a[i];
+    dot += a[i]! * (b[i] ?? 0);
+    normA += a[i]! * a[i]!;
     normB += (b[i] ?? 0) * (b[i] ?? 0);
   }
   const denom = Math.sqrt(normA) * Math.sqrt(normB);
@@ -267,7 +267,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 /** Dot product */
 function vectorDot(a: number[], b: number[]): number {
   let sum = 0;
-  for (let i = 0; i < a.length; i++) sum += a[i] * (b[i] ?? 0);
+  for (let i = 0; i < a.length; i++) sum += a[i]! * (b[i] ?? 0);
   return sum;
 }
 

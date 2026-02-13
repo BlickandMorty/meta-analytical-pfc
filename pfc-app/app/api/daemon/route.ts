@@ -1,17 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
 import { spawn } from 'child_process';
 import path from 'path';
 
 const DAEMON_PORT = parseInt(process.env.PFC_DAEMON_PORT || '3099', 10);
 const DAEMON_URL = `http://localhost:${DAEMON_PORT}`;
 
+// Allowed GET endpoints — whitelist only
+const ALLOWED_GET_ENDPOINTS = new Set(['status', 'config', 'health']);
+
+// Allowed POST proxy path prefixes
+const ALLOWED_PROXY_PREFIXES = ['/fs/'];
+// /shell/ intentionally excluded — too dangerous to expose through web proxy
+
 // ═══════════════════════════════════════════════════════════════════
 // GET /api/daemon — proxy status from daemon HTTP server
 // ═══════════════════════════════════════════════════════════════════
 
-export async function GET(req: NextRequest) {
+async function _GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const endpoint = searchParams.get('endpoint') || 'status';
+
+  // Whitelist — only allow known safe endpoints
+  if (!ALLOWED_GET_ENDPOINTS.has(endpoint)) {
+    return NextResponse.json(
+      { error: 'Endpoint not allowed' },
+      { status: 403 },
+    );
+  }
 
   try {
     const res = await fetch(`${DAEMON_URL}/${endpoint}`, {
@@ -29,30 +45,31 @@ export async function GET(req: NextRequest) {
 
 // ═══════════════════════════════════════════════════════════════════
 // POST /api/daemon — start, stop, or configure the daemon
-//
-// Body: { action: 'start' | 'stop' | 'config', ... }
 // ═══════════════════════════════════════════════════════════════════
 
-export async function POST(req: NextRequest) {
+async function _POST(req: NextRequest) {
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    // Limit body size to 1MB
+    const text = await req.text();
+    if (text.length > 1_000_000) {
+      return NextResponse.json({ error: 'Body too large' }, { status: 413 });
+    }
+    body = JSON.parse(text);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
-  const action = body.action as string;
 
-  if (!action || typeof action !== 'string') {
+  const action = typeof body.action === 'string' ? body.action : '';
+  if (!action) {
     return NextResponse.json({ error: 'Missing or invalid "action" field' }, { status: 400 });
   }
 
   switch (action) {
     case 'start': {
-      // Spawn daemon as detached process
       const daemonScript = path.join(process.cwd(), 'daemon', 'index.ts');
 
       try {
-        // Check if already running
         const statusRes = await fetch(`${DAEMON_URL}/status`, {
           signal: AbortSignal.timeout(2000),
         });
@@ -64,8 +81,7 @@ export async function POST(req: NextRequest) {
       }
 
       return new Promise<NextResponse>((resolve) => {
-        // Only pass required env vars to daemon — avoid leaking secrets
-      const child = spawn('npx', ['tsx', daemonScript], {
+        const child = spawn('npx', ['tsx', daemonScript], {
           cwd: process.cwd(),
           detached: true,
           stdio: 'ignore',
@@ -77,10 +93,8 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        // Unref so the parent process doesn't wait for the child
         child.unref();
 
-        // Give it a moment to start
         setTimeout(async () => {
           try {
             const res = await fetch(`${DAEMON_URL}/status`, {
@@ -113,46 +127,51 @@ export async function POST(req: NextRequest) {
     }
 
     case 'config': {
-      try {
-        const res = await fetch(`${DAEMON_URL}/config`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body.config || {}),
-          signal: AbortSignal.timeout(3000),
-        });
-        const data = await res.json();
-        return NextResponse.json(data);
-      } catch {
-        return NextResponse.json({ ok: false, error: 'Daemon is not running' });
+      // Only allow plain object config values (no nested functions, etc.)
+      const config = body.config;
+      if (config !== null && typeof config === 'object' && !Array.isArray(config)) {
+        try {
+          const res = await fetch(`${DAEMON_URL}/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config),
+            signal: AbortSignal.timeout(3000),
+          });
+          const data = await res.json();
+          return NextResponse.json(data);
+        } catch {
+          return NextResponse.json({ ok: false, error: 'Daemon is not running' });
+        }
       }
+      return NextResponse.json({ error: 'config must be a plain object' }, { status: 400 });
     }
 
-    // ── Generic proxy: forward arbitrary POST to daemon ──
-    // Used for Phase C endpoints: /fs/*, /shell/*, etc.
     case 'proxy': {
-      const daemonPath = body.daemonPath as string;
-      if (!daemonPath || typeof daemonPath !== 'string') {
+      const daemonPath = typeof body.daemonPath === 'string' ? body.daemonPath : '';
+      if (!daemonPath) {
         return NextResponse.json({ error: 'Missing daemonPath' }, { status: 400 });
       }
 
-      // Security: normalize path to prevent traversal (e.g. /fs/../secret)
+      // Normalize to prevent path traversal
       const normalizedPath = path.posix.normalize(daemonPath);
 
-      // Security: only allow known path prefixes
-      const allowedPrefixes = ['/fs/', '/shell/'];
-      if (!allowedPrefixes.some(p => normalizedPath.startsWith(p))) {
+      // Re-check after normalization — traversal like /fs/../shell would collapse
+      if (!ALLOWED_PROXY_PREFIXES.some((p) => normalizedPath.startsWith(p))) {
         return NextResponse.json(
-          { error: `Daemon path "${normalizedPath}" is not allowed through the proxy` },
+          { error: 'Daemon path not allowed through proxy' },
           { status: 403 },
         );
       }
+
+      // Limit proxied data payload
+      const proxyData = body.data !== undefined ? body.data : {};
 
       try {
         const res = await fetch(`${DAEMON_URL}${normalizedPath}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body.data || {}),
-          signal: AbortSignal.timeout(35000), // 35s — shell commands can take up to 30s
+          body: JSON.stringify(proxyData),
+          signal: AbortSignal.timeout(10000),
         });
         const data = await res.json();
         return NextResponse.json(data, { status: res.status });
@@ -162,6 +181,9 @@ export async function POST(req: NextRequest) {
     }
 
     default:
-      return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+      return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   }
 }
+
+export const GET = withMiddleware(_GET, { maxRequests: 10, windowMs: 60_000 });
+export const POST = withMiddleware(_POST, { maxRequests: 10, windowMs: 60_000 });

@@ -8,11 +8,13 @@ import type { PFCSet, PFCGet } from '../use-pfc-store';
 
 export type PortalViewType = 'artifact' | 'terminal' | 'suggestion' | 'home';
 
+export type ArtifactType = 'code' | 'document' | 'html' | 'react' | 'image' | 'data' | 'text';
+
 export interface PortalArtifact {
   messageId: string;
   identifier: string;
   title: string;
-  type: string;
+  type: ArtifactType;
   language?: string;
   content: string;
 }
@@ -41,7 +43,7 @@ export interface PortalSliceActions {
   openArtifact: (artifact: PortalArtifact) => void;
   closePortal: () => void;
   setPortalDisplayMode: (mode: 'code' | 'preview') => void;
-  goBack: () => void;
+  portalGoBack: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -63,7 +65,7 @@ export const createPortalSlice = (set: PFCSet, get: PFCGet) => ({
       // Smart duplicate prevention: if top is already an artifact, replace
       if (
         stack.length > 0 &&
-        stack[stack.length - 1].type === 'artifact'
+        stack[stack.length - 1]!.type === 'artifact'
       ) {
         return {
           portalStack: [...stack.slice(0, -1), view],
@@ -81,7 +83,7 @@ export const createPortalSlice = (set: PFCSet, get: PFCGet) => ({
   setPortalDisplayMode: (mode: 'code' | 'preview') =>
     set({ portalDisplayMode: mode }),
 
-  goBack: () =>
+  portalGoBack: () =>
     set((s) => {
       const stack = s.portalStack as PortalViewData[];
       if (stack.length <= 1) {

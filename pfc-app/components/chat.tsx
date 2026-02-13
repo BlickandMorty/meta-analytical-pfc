@@ -7,11 +7,9 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
-import { SynthesisCard } from './synthesis-card';
 import { PixelSun } from './pixel-sun';
-import { PixelMoon } from './pixel-moon';
 import { FeatureButtons } from './feature-buttons';
-import { RecentChats, type ChatEntry, formatRelativeTime, parseTimestamp } from './recent-chats';
+import { type ChatEntry, formatRelativeTime, parseTimestamp } from './recent-chats';
 import { ResearchModeBar } from './research-mode-bar';
 import { ThinkingControls } from './thinking-controls';
 import { ErrorBoundary } from './error-boundary';
@@ -19,7 +17,7 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { getInferenceModeFeatures } from '@/lib/research/types';
-import { CloudIcon, MonitorIcon, ArrowLeftIcon, MessageSquareIcon, SearchIcon } from 'lucide-react';
+import { CloudIcon, MonitorIcon, ArrowLeftIcon, MessageSquareIcon, SearchIcon, ExternalLinkIcon, ZapIcon, DownloadIcon } from 'lucide-react';
 import type { ChatMode } from '@/lib/store/use-pfc-store';
 
 // ═══════════════════════════════════════════════════════════════════
@@ -28,7 +26,6 @@ import type { ChatMode } from '@/lib/store/use-pfc-store';
 
 const LiveControls = dynamic(() => import('./live-controls').then((m) => ({ default: m.LiveControls })), { ssr: false });
 const ConceptHierarchyPanel = dynamic(() => import('./concept-hierarchy-panel').then((m) => ({ default: m.ConceptHierarchyPanel })), { ssr: false });
-const ThoughtVisualizer = dynamic(() => import('./thought-visualizer').then((m) => ({ default: m.ThoughtVisualizer })), { ssr: false });
 const PortalSidebar = dynamic(() => import('./portal-sidebar').then((m) => ({ default: m.PortalSidebar })), { ssr: false });
 
 /* Harmonoid-inspired spring configs */
@@ -44,7 +41,7 @@ function ModeToggle({ isDark }: { isDark: boolean }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
   const modes: { key: ChatMode; label: string }[] = [
-    { key: 'measurement', label: 'Research Suite' },
+    { key: 'measurement', label: 'Full AI & Measurement' },
     { key: 'research', label: 'Deep Analysis' },
     { key: 'plain', label: 'Plain Chat' },
   ];
@@ -155,11 +152,11 @@ const PROMPT_DEFS: PromptDef[] = [
     ],
   },
   {
-    plain: 'console.log("soooooo... you gonna type something?")',
+    plain: 'fmt.Println("soooooo... you gonna type something?")',
     colored: [
-      { text: 'console', color: WARM_ORANGE },
+      { text: 'fmt', color: WARM_ORANGE },
       { text: '.', color: WARM_ORANGE },
-      { text: 'log', color: LIGHT_BLUE },
+      { text: 'Println', color: LIGHT_BLUE },
       { text: '(', color: WARM_ORANGE },
       { text: '"soooooo... you gonna type something?"', color: ASHY_RED },
       { text: ')', color: WARM_ORANGE },
@@ -209,11 +206,11 @@ const PROMPT_DEFS: PromptDef[] = [
     ],
   },
   {
-    plain: 'console.log("type type type type type...")',
+    plain: 'fmt.Println("type type type type type...")',
     colored: [
-      { text: 'console', color: WARM_ORANGE },
+      { text: 'fmt', color: WARM_ORANGE },
       { text: '.', color: WARM_ORANGE },
-      { text: 'log', color: LIGHT_BLUE },
+      { text: 'Println', color: LIGHT_BLUE },
       { text: '(', color: WARM_ORANGE },
       { text: '"type type type type type..."', color: ASHY_RED },
       { text: ')', color: WARM_ORANGE },
@@ -315,7 +312,7 @@ function GreetingSubtitle({ isDark, isOled, dismissing }: { isDark: boolean; isO
       const s = stateRef.current;
       if (s.charIdx > 0) {
         s.charIdx--;
-        const target = PROMPT_DEFS[s.variation].plain;
+        const target = PROMPT_DEFS[s.variation]!.plain;
         setDisplayText(target.slice(0, s.charIdx));
         dismissTimerRef.current = setTimeout(backspaceTick, 20); // Fast backspace
       } else {
@@ -340,7 +337,7 @@ function GreetingSubtitle({ isDark, isOled, dismissing }: { isDark: boolean; isO
       const s = stateRef.current;
       if (s.phase === 'dismissed') return; // Guard against stale tick
 
-      const target = PROMPT_DEFS[s.variation].plain;
+      const target = PROMPT_DEFS[s.variation]!.plain;
 
       if (s.phase === 'typing') {
         if (s.charIdx < target.length) {
@@ -376,7 +373,7 @@ function GreetingSubtitle({ isDark, isOled, dismissing }: { isDark: boolean; isO
     return () => clearTimeout(timer);
   }, [dismissing, dismissed]);
 
-  const def = PROMPT_DEFS[variationIdx];
+  const def = PROMPT_DEFS[variationIdx]!;
 
   // Build colored spans for current displayText length
   const coloredOutput = useMemo(() => {
@@ -398,7 +395,7 @@ function GreetingSubtitle({ isDark, isOled, dismissing }: { isDark: boolean; isO
   const cursorColor = isOled
     ? 'rgba(160,160,160,0.5)'
     : isDark
-      ? 'rgba(180,160,140,0.4)'
+      ? 'rgba(var(--pfc-accent-rgb), 0.35)'
       : 'rgba(0,0,0,0.25)';
 
   return (
@@ -439,6 +436,7 @@ function GreetingSubtitle({ isDark, isOled, dismissing }: { isDark: boolean; isO
 
 function AllChatsView({ chats, isDark, isOled, onBack }: { chats: ChatEntry[]; isDark: boolean; isOled?: boolean; onBack: () => void }) {
   const router = useRouter();
+  const setChatMinimized = usePFCStore((s) => s.setChatMinimized);
   const [search, setSearch] = useState('');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -481,7 +479,7 @@ function AllChatsView({ chats, isDark, isOled, onBack }: { chats: ChatEntry[]; i
             fontWeight: 500,
             fontFamily: 'var(--font-sans)',
             color: isDark ? 'rgba(155,150,137,0.8)' : 'rgba(0,0,0,0.45)',
-            background: isDark ? (isOled ? 'rgba(14,14,14,0.85)' : 'rgba(28,27,25,0.7)') : 'rgba(255,255,255,0.75)',
+            background: isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.75)',
             transition: 'background 0.15s ease',
           }}
         >
@@ -506,10 +504,10 @@ function AllChatsView({ chats, isDark, isOled, onBack }: { chats: ChatEntry[]; i
         gap: '0.5rem',
         padding: '0.5rem 0.875rem',
         borderRadius: '9999px',
-        background: isDark ? (isOled ? 'rgba(10,10,10,0.8)' : 'rgba(22,21,19,0.65)') : 'rgba(237,232,222,0.6)',
+        background: isDark ? 'var(--pfc-surface-dark)' : 'rgba(237,232,222,0.6)',
         backdropFilter: 'blur(12px) saturate(1.4)',
         WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
-        border: `1px solid ${isDark ? (isOled ? 'rgba(40,40,40,0.3)' : 'rgba(50,49,45,0.25)') : 'rgba(190,183,170,0.3)'}`,
+        border: `1px solid ${isDark ? 'var(--border)' : 'rgba(190,183,170,0.3)'}`,
       }}>
         <SearchIcon style={{
           height: '0.875rem',
@@ -553,7 +551,7 @@ function AllChatsView({ chats, isDark, isOled, onBack }: { chats: ChatEntry[]; i
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...ENTER_SPRING, delay: Math.min(idx * 0.02, 0.3) }}
-              onClick={() => router.push(`/chat/${chat.id}`)}
+              onClick={() => { setChatMinimized(false); router.push(`/chat/${chat.id}`); }}
               onMouseEnter={() => setHoveredId(chat.id)}
               onMouseLeave={() => setHoveredId(null)}
               style={{
@@ -567,13 +565,9 @@ function AllChatsView({ chats, isDark, isOled, onBack }: { chats: ChatEntry[]; i
                 width: '100%',
                 minHeight: '3.25rem',
                 background: isDark
-                  ? (isOled
-                    ? (isHovered ? 'rgba(35,35,35,0.8)' : 'rgba(14,14,14,0.8)')
-                    : (isHovered ? 'rgba(45,42,38,0.6)' : 'rgba(28,27,25,0.5)'))
+                  ? (isHovered ? 'var(--glass-hover)' : 'var(--pfc-surface-dark)')
                   : (isHovered ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.6)'),
-                border: `1px solid ${
-                  isDark ? (isOled ? 'rgba(40,40,40,0.35)' : 'rgba(50,49,45,0.25)') : 'rgba(190,183,170,0.2)'
-                }`,
+                border: `1px solid ${isDark ? 'var(--border)' : 'rgba(190,183,170,0.2)'}`,
                 transition: 'background 0.15s ease',
               }}
             >
@@ -629,6 +623,7 @@ function AllChatsView({ chats, isDark, isOled, onBack }: { chats: ChatEntry[]; i
 
 function ChatsOverlay({ isDark, isOled, onClose }: { isDark: boolean; isOled?: boolean; onClose: () => void }) {
   const router = useRouter();
+  const setChatMinimized = usePFCStore((s) => s.setChatMinimized);
   const [chats, setChats] = useState<ChatEntry[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState(false);
@@ -665,7 +660,7 @@ function ChatsOverlay({ isDark, isOled, onClose }: { isDark: boolean; isOled?: b
         style={{
           position: 'absolute',
           inset: 0,
-          zIndex: 'var(--z-nav)',
+          zIndex: 'var(--z-modal-backdrop)',
           background: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.08)',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
@@ -678,7 +673,7 @@ function ChatsOverlay({ isDark, isOled, onClose }: { isDark: boolean; isOled?: b
           position: 'absolute',
           top: '3.5rem',
           left: '0.625rem',
-          zIndex: 'calc(var(--z-nav) + 1)',
+          zIndex: 'var(--z-modal)',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.375rem',
@@ -705,7 +700,12 @@ function ChatsOverlay({ isDark, isOled, onClose }: { isDark: boolean; isOled?: b
                 mass: 0.5,
                 delay: Math.min(idx * 0.04, 0.5),
               }}
-              onClick={() => router.push(`/chat/${chat.id}`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+                setChatMinimized(false);
+                router.push(`/chat/${chat.id}`);
+              }}
               onMouseEnter={() => setHoveredId(chat.id)}
               onMouseLeave={() => setHoveredId(null)}
               whileTap={{ scale: 0.97 }}
@@ -720,8 +720,8 @@ function ChatsOverlay({ isDark, isOled, onClose }: { isDark: boolean; isOled?: b
                 border: 'none',
                 maxWidth: '22rem',
                 background: isHovered
-                  ? (isDark ? (isOled ? 'rgba(24,24,24,0.9)' : 'rgba(55,50,45,0.85)') : 'rgba(255,255,255,0.95)')
-                  : (isDark ? (isOled ? 'rgba(12,12,12,0.9)' : 'rgba(28,27,25,0.8)') : 'rgba(255,255,255,0.85)'),
+                  ? (isDark ? 'var(--glass-hover)' : 'rgba(255,255,255,0.95)')
+                  : (isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.85)'),
                 boxShadow: isHovered
                   ? (isDark
                     ? '0 4px 20px -4px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.2)'
@@ -826,13 +826,13 @@ function AllChatsButton({ isDark, isOled, onShowAll }: { isDark: boolean; isOled
           gap: '0.375rem',
           padding: '0.4375rem 0.875rem',
           borderRadius: '9999px',
-          border: `1px solid ${isDark ? 'rgba(50,49,45,0.25)' : 'rgba(190,183,170,0.3)'}`,
-          background: isDark ? (isOled ? 'rgba(10,10,10,0.8)' : 'rgba(22,21,19,0.65)') : 'rgba(237,232,222,0.6)',
+          border: `1px solid ${isDark ? 'var(--border)' : 'rgba(190,183,170,0.3)'}`,
+          background: isDark ? 'var(--pfc-surface-dark)' : 'rgba(237,232,222,0.6)',
           cursor: 'pointer',
           fontSize: '0.625rem',
           fontWeight: 400,
           color: isDark ? 'rgba(155,150,137,0.7)' : 'rgba(0,0,0,0.4)',
-          fontFamily: 'var(--font-heading)',
+          fontFamily: 'var(--font-sans)',
           letterSpacing: '0.02em',
           boxShadow: isDark
             ? '0 2px 8px -1px rgba(0,0,0,0.2)'
@@ -855,6 +855,133 @@ function AllChatsButton({ isDark, isOled, onShowAll }: { isDark: boolean; isOled
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// ActiveThreadsPills — shows mini-chat threads with messages on landing page
+// ═══════════════════════════════════════════════════════════════════
+
+function ActiveThreadsPills({ isDark }: { isDark: boolean }) {
+  const router = useRouter();
+  const chatThreads = usePFCStore((s) => s.chatThreads);
+  const expandThreadToChat = usePFCStore((s) => s.expandThreadToChat);
+  const setChatMinimized = usePFCStore((s) => s.setChatMinimized);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  // Only show threads that have at least 1 message
+  const threadsWithMessages = chatThreads.filter((t) => t.messages.length > 0);
+  if (threadsWithMessages.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...ENTER_SPRING, delay: 0.32 }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '0.5rem',
+        width: '100%',
+        maxWidth: '36rem',
+      }}
+    >
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '0.375rem',
+        width: '100%', padding: '0 0.125rem',
+      }}>
+        <ZapIcon style={{
+          height: '0.75rem', width: '0.75rem',
+          color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+        }} />
+        <span style={{
+          fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          color: isDark ? 'rgba(155,150,137,0.5)' : 'rgba(0,0,0,0.3)',
+          fontFamily: 'var(--font-sans)',
+        }}>
+          Active Threads
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', width: '100%' }}>
+        {threadsWithMessages.map((thread) => {
+          const isHovered = hoveredId === thread.id;
+          const msgCount = thread.messages.length;
+          const lastMsg = thread.messages[msgCount - 1];
+          const preview = lastMsg?.content?.slice(0, 50) || '';
+          return (
+            <motion.button
+              key={thread.id}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                if (thread.chatId) {
+                  setChatMinimized(false);
+                  router.push(`/chat/${thread.chatId}`);
+                } else {
+                  expandThreadToChat(thread.id);
+                }
+              }}
+              onMouseEnter={() => setHoveredId(thread.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.5rem 0.875rem',
+                borderRadius: 'var(--shape-lg)',
+                border: `1px solid ${isDark ? 'var(--border)' : 'rgba(190,183,170,0.2)'}`,
+                background: isDark
+                  ? (isHovered ? 'var(--glass-hover)' : 'var(--pfc-surface-dark)')
+                  : (isHovered ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.6)'),
+                cursor: 'pointer', textAlign: 'left', flex: '1 1 auto',
+                minWidth: '10rem', maxWidth: '100%',
+                transition: 'background 0.15s, border-color 0.15s',
+              }}
+            >
+              <MessageSquareIcon style={{
+                height: '0.875rem', width: '0.875rem', flexShrink: 0,
+                color: isHovered ? 'var(--pfc-accent)' : (isDark ? 'rgba(155,150,137,0.45)' : 'rgba(0,0,0,0.2)'),
+                transition: 'color 0.15s',
+              }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.4,
+                  color: isHovered
+                    ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.85)')
+                    : (isDark ? 'rgba(155,150,137,0.75)' : 'rgba(0,0,0,0.5)'),
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  fontFamily: 'var(--font-sans)', transition: 'color 0.15s',
+                }}>
+                  {thread.label}
+                </div>
+                {preview && (
+                  <div style={{
+                    fontSize: '0.6875rem', fontWeight: 400, marginTop: '0.125rem',
+                    color: isDark ? 'rgba(155,150,137,0.35)' : 'rgba(0,0,0,0.2)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    fontFamily: 'var(--font-sans)',
+                  }}>
+                    {preview}{preview.length >= 50 ? '...' : ''}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
+                <span style={{
+                  fontSize: '0.5625rem', fontFamily: 'var(--font-mono)', fontWeight: 500,
+                  color: isDark ? 'rgba(155,150,137,0.4)' : 'rgba(0,0,0,0.2)',
+                }}>
+                  {msgCount} msg{msgCount !== 1 ? 's' : ''}
+                </span>
+                <ExternalLinkIcon style={{
+                  height: '0.625rem', width: '0.625rem',
+                  color: isHovered ? 'var(--pfc-accent)' : (isDark ? 'rgba(155,150,137,0.25)' : 'rgba(0,0,0,0.12)'),
+                  transition: 'color 0.15s',
+                }} />
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Chat — landing page ↔ chat interface with TOC sidebar
 // ═══════════════════════════════════════════════════════════════════
 
@@ -862,14 +989,14 @@ export function Chat() {
   const messages = usePFCStore((s) => s.messages);
   const isProcessing = usePFCStore((s) => s.isProcessing);
   const isStreaming = usePFCStore((s) => s.isStreaming);
-  const researchChatMode = usePFCStore((s) => s.researchChatMode);
+  // researchChatMode is always true — hardcoded on
   const chatMode = usePFCStore((s) => s.chatMode);
-  const chatViewMode = usePFCStore((s) => s.chatViewMode);
   const tierFeatures = usePFCStore((s) => s.tierFeatures);
   const inferenceMode = usePFCStore((s) => s.inferenceMode);
-  const clearMessages = usePFCStore((s) => s.clearMessages);
+  const chatMinimized = usePFCStore((s) => s.chatMinimized);
+  const setChatMinimized = usePFCStore((s) => s.setChatMinimized);
   const { sendQuery, abort, pause, resume } = useChatStream();
-  const { isDark, isOled, mounted } = useIsDark();
+  const { isDark, isOled, isNavy, isCosmic, mounted } = useIsDark();
   const [modeHintDismissed, setModeHintDismissed] = useState(false);
   const [showAllChats, setShowAllChats] = useState(false);
   const [allChatsData, setAllChatsData] = useState<ChatEntry[]>([]);
@@ -891,9 +1018,10 @@ export function Chat() {
   }, []);
 
   const isEmpty = messages.length === 0;
-  const showThoughtViz = researchChatMode && chatViewMode === 'visualize-thought' && tierFeatures.thoughtVisualizer !== 'off' && !isEmpty;
+  // Hide full chat when minimized — mini-chat widget takes over
+  const showFullChat = !isEmpty && !chatMinimized;
   const features = useMemo(() => getInferenceModeFeatures(inferenceMode), [inferenceMode]);
-  const showModeHint = researchChatMode && !features.playPause && !modeHintDismissed && !isEmpty;
+  const showModeHint = !features.playPause && !modeHintDismissed && showFullChat;
 
   return (
     <ErrorBoundary>
@@ -901,8 +1029,9 @@ export function Chat() {
 
       {/* ═══════════════════════════════════════════════════════════════
           Landing page — greeting + search bar
+          Also shown when chat is minimized to floating widget
           ═══════════════════════════════════════════════════════════════ */}
-      {isEmpty && (
+      {(isEmpty || chatMinimized) && (
         <motion.div
           key="empty"
           initial={{ opacity: 1 }}
@@ -916,24 +1045,29 @@ export function Chat() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '0 24px',
-            background: isOled
+            background: (isOled || isCosmic)
               ? 'transparent'
               : isDark
-                ? '#151311'
+                ? 'var(--background)'
                 : 'var(--m3-surface)',
             transform: 'translateZ(0)',
           }}
         >
-          {/* Wallpaper fade overlay — covers starfield when search focused */}
+          {/* Wallpaper fade overlay — covers starfield when search focused.
+              In cosmic mode: also blurs the wallpaper for a frosted-glass effect */}
           <div
             style={{
               position: 'absolute',
               inset: 0,
               zIndex: 0,
-              background: isOled ? '#000' : isDark ? '#151311' : 'var(--m3-surface)',
+              background: isOled ? '#000' : isCosmic ? 'rgba(6, 5, 16, 0.7)' : isDark ? 'var(--background)' : 'var(--m3-surface)',
               opacity: searchFocused ? 1 : 0,
-              transition: searchFocused ? 'opacity 0.4s ease-out' : 'opacity 3s ease-in',
+              transition: searchFocused ? 'opacity 0.4s ease-out, backdrop-filter 0.4s ease-out' : 'opacity 3s ease-in, backdrop-filter 3s ease-in',
               pointerEvents: 'none',
+              ...(isCosmic ? {
+                backdropFilter: searchFocused ? 'blur(12px) saturate(1.1)' : 'blur(0px)',
+                WebkitBackdropFilter: searchFocused ? 'blur(12px) saturate(1.1)' : 'blur(0px)',
+              } as React.CSSProperties : {}),
             }}
           />
 
@@ -957,7 +1091,7 @@ export function Chat() {
                   position: 'relative',
                   zIndex: 'calc(var(--z-base) + 1)',
                   width: '100%',
-                  maxWidth: '38rem',
+                  maxWidth: '44rem',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -965,7 +1099,7 @@ export function Chat() {
                 }}
               >
 
-                {/* Pixel mascot — sun for light mode, robot for dark/OLED */}
+                {/* Pixel mascot — sun for light, moon for dark + OLED */}
                 <motion.div
                   initial={{ opacity: 0, y: 16, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -977,8 +1111,8 @@ export function Chat() {
                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                   >
                     <Image
-                      src={isDark ? '/pixel-robot.gif' : '/pixel-sun.gif'}
-                      alt={isDark ? 'PFC Robot' : 'PFC Sun'}
+                      src={isDark ? '/pixel-moon.gif' : '/pixel-sun.gif'}
+                      alt={isDark ? 'ResearchLab Moon' : 'ResearchLab Sun'}
                       width={96}
                       height={96}
                       unoptimized
@@ -1001,7 +1135,7 @@ export function Chat() {
                   <h1
                     style={{
                       fontFamily: "'RetroGaming', var(--font-display)",
-                      fontSize: '2.75rem',
+                      fontSize: '2.25rem',
                       letterSpacing: '-0.01em',
                       lineHeight: 1.2,
                       fontWeight: 400,
@@ -1028,15 +1162,15 @@ export function Chat() {
                     transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
                     style={{
                       borderRadius: '1.625rem',
-                      overflow: 'hidden',
+                      overflow: 'visible',
                       width: '100%',
-                      maxWidth: '36rem',
+                      maxWidth: '42rem',
                       background: isDark
-                        ? (isOled ? 'rgba(18,18,18,0.88)' : 'rgba(30,28,25,0.72)')
+                        ? (isOled ? 'rgba(18,18,18,0.88)' : (isNavy || isCosmic) ? 'rgba(16,15,28,0.72)' : 'rgba(30,28,25,0.72)')
                         : 'rgba(237,232,222,0.6)',
                       backdropFilter: 'blur(12px)',
                       WebkitBackdropFilter: 'blur(12px)',
-                      border: `1px solid ${isDark ? (isOled ? 'rgba(55,55,55,0.4)' : 'rgba(55,50,44,0.3)') : 'rgba(190,183,170,0.3)'}`,
+                      border: `1px solid ${isDark ? (isOled ? 'rgba(55,55,55,0.4)' : (isNavy || isCosmic) ? 'rgba(60,58,80,0.35)' : 'rgba(55,50,44,0.3)') : 'rgba(190,183,170,0.3)'}`,
                       boxShadow: isDark
                         ? '0 2px 12px -2px rgba(0,0,0,0.3)'
                         : '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 4px -1px rgba(0,0,0,0.03)',
@@ -1074,6 +1208,9 @@ export function Chat() {
                 {mounted && (
                   <AllChatsButton isDark={isDark} isOled={isOled} onShowAll={handleShowAllChats} />
                 )}
+
+                {/* Active mini-chat threads — click to expand into main chat */}
+                {mounted && <ActiveThreadsPills isDark={isDark} />}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1082,9 +1219,10 @@ export function Chat() {
 
       {/* ═══════════════════════════════════════════════════════════════
           Chat interface — messages + chats overlay
+          Hidden when chatMinimized (mini-chat widget takes over)
           ═══════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
-        {!isEmpty && (
+        {showFullChat && (
           <motion.div
             key="chat"
             initial={{ opacity: 0 }}
@@ -1096,7 +1234,8 @@ export function Chat() {
               display: 'flex',
               flex: 1,
               minHeight: 0,
-              background: 'var(--m3-surface)',
+              background: isCosmic ? 'rgba(6, 8, 20, 0.75)' : isDark ? 'var(--background)' : 'var(--m3-surface)',
+              ...(isCosmic ? { backdropFilter: 'blur(20px) saturate(1.2)', WebkitBackdropFilter: 'blur(20px) saturate(1.2)' } as React.CSSProperties : {}),
               transform: 'translateZ(0)',
             }}
           >
@@ -1132,7 +1271,7 @@ export function Chat() {
                   onClick={() => {
                     if (Date.now() - lastBackClickRef.current < 300) return;
                     lastBackClickRef.current = Date.now();
-                    clearMessages();
+                    setChatMinimized(true);
                   }}
                   style={{
                     pointerEvents: 'auto',
@@ -1148,7 +1287,7 @@ export function Chat() {
                     fontWeight: 500,
                     fontFamily: 'var(--font-sans)',
                     color: isDark ? 'rgba(155,150,137,0.8)' : 'rgba(0,0,0,0.45)',
-                    background: isDark ? 'rgba(28,27,25,0.7)' : 'rgba(255,255,255,0.75)',
+                    background: isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.75)',
                     backdropFilter: 'blur(12px) saturate(1.4)',
                     WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
                     boxShadow: isDark
@@ -1158,11 +1297,11 @@ export function Chat() {
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.8)';
-                    e.currentTarget.style.background = isDark ? 'rgba(55,50,45,0.7)' : 'rgba(255,255,255,0.9)';
+                    e.currentTarget.style.background = isDark ? 'var(--glass-hover)' : 'rgba(255,255,255,0.9)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = isDark ? 'rgba(155,150,137,0.8)' : 'rgba(0,0,0,0.45)';
-                    e.currentTarget.style.background = isDark ? 'rgba(28,27,25,0.7)' : 'rgba(255,255,255,0.75)';
+                    e.currentTarget.style.background = isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.75)';
                   }}
                 >
                   <ArrowLeftIcon style={{ height: '0.8125rem', width: '0.8125rem' }} />
@@ -1194,8 +1333,8 @@ export function Chat() {
                       ? (isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.8)')
                       : (isDark ? 'rgba(155,150,137,0.8)' : 'rgba(0,0,0,0.45)'),
                     background: showChatsOverlay
-                      ? (isDark ? 'rgba(55,50,45,0.7)' : 'rgba(255,255,255,0.9)')
-                      : (isDark ? 'rgba(28,27,25,0.7)' : 'rgba(255,255,255,0.75)'),
+                      ? (isDark ? 'var(--glass-hover)' : 'rgba(255,255,255,0.9)')
+                      : (isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.75)'),
                     backdropFilter: 'blur(12px) saturate(1.4)',
                     WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
                     boxShadow: isDark
@@ -1206,43 +1345,80 @@ export function Chat() {
                   onMouseEnter={(e) => {
                     if (!showChatsOverlay) {
                       e.currentTarget.style.color = isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.8)';
-                      e.currentTarget.style.background = isDark ? 'rgba(55,50,45,0.7)' : 'rgba(255,255,255,0.9)';
+                      e.currentTarget.style.background = isDark ? 'var(--glass-hover)' : 'rgba(255,255,255,0.9)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!showChatsOverlay) {
                       e.currentTarget.style.color = isDark ? 'rgba(155,150,137,0.8)' : 'rgba(0,0,0,0.45)';
-                      e.currentTarget.style.background = isDark ? 'rgba(28,27,25,0.7)' : 'rgba(255,255,255,0.75)';
+                      e.currentTarget.style.background = isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.75)';
                     }
                   }}
                 >
                   <MessageSquareIcon style={{ height: '0.8125rem', width: '0.8125rem' }} />
                   Chats
                 </motion.button>
+
+                {/* Export thread button */}
+                {messages.length > 0 && (
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      const lines = messages.map((m: { role: string; text?: string; content?: string }) => {
+                        const role = m.role === 'user' ? 'You' : 'Assistant';
+                        const text = m.text || m.content || '';
+                        return `## ${role}\n\n${text}`;
+                      });
+                      const md = `# Chat Export — ${new Date().toLocaleDateString()}\n\n${lines.join('\n\n---\n\n')}`;
+                      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `chat-export-${new Date().toISOString().slice(0, 10)}.md`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    style={{
+                      pointerEvents: 'auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      height: '2.125rem',
+                      padding: '0 0.75rem',
+                      borderRadius: 'var(--shape-full)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: 'var(--type-label-md)',
+                      fontWeight: 500,
+                      fontFamily: 'var(--font-sans)',
+                      color: isDark ? 'rgba(155,150,137,0.8)' : 'rgba(0,0,0,0.45)',
+                      background: isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.75)',
+                      backdropFilter: 'blur(12px) saturate(1.4)',
+                      WebkitBackdropFilter: 'blur(12px) saturate(1.4)',
+                      boxShadow: isDark
+                        ? '0 2px 8px -1px rgba(0,0,0,0.3)'
+                        : '0 2px 12px -2px rgba(0,0,0,0.06)',
+                      transition: 'color 0.15s, background 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = isDark ? 'rgba(232,228,222,0.95)' : 'rgba(0,0,0,0.8)';
+                      e.currentTarget.style.background = isDark ? 'var(--glass-hover)' : 'rgba(255,255,255,0.9)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = isDark ? 'rgba(155,150,137,0.8)' : 'rgba(0,0,0,0.45)';
+                      e.currentTarget.style.background = isDark ? 'var(--pfc-surface-dark)' : 'rgba(255,255,255,0.75)';
+                    }}
+                  >
+                    <DownloadIcon style={{ height: '0.8125rem', width: '0.8125rem' }} />
+                    Export
+                  </motion.button>
+                )}
               </motion.div>
 
-              {/* Thought Visualizer (mind-map mode) */}
-              {showThoughtViz ? (
-                <ErrorBoundary fallback={
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5, fontSize: 13 }}>
-                    Visualization unavailable
-                  </div>
-                }>
-                <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-                  <ThoughtVisualizer isDark={isDark} />
-                </div>
-                </ErrorBoundary>
-              ) : (
-                <Messages />
-              )}
+              <Messages />
 
               {/* Bottom controls area */}
               <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
-                {researchChatMode && (
-                  <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0 1rem' }}>
-                    <SynthesisCard />
-                  </div>
-                )}
 
                 {/* Mode hint — M3 tonal surface */}
                 <AnimatePresence>
@@ -1295,7 +1471,7 @@ export function Chat() {
                 </AnimatePresence>
 
                 {/* Thinking Controls */}
-                {(isProcessing || isStreaming) && researchChatMode && (
+                {(isProcessing || isStreaming) && (
                   <div style={{ margin: '0 auto', maxWidth: '48rem', width: '100%', padding: '0.375rem 1rem' }}>
                     <ThinkingControls isDark={isDark} onStop={abort} onPause={pause} onResume={resume} />
                   </div>
@@ -1311,11 +1487,9 @@ export function Chat() {
                   width: '100%',
                   padding: '0.375rem 1rem 0.5rem',
                 }}>
-                  {researchChatMode && (
-                    <div style={{ position: 'relative', marginBottom: '0.375rem' }}>
-                      <ResearchModeBar isDark={isDark} />
-                    </div>
-                  )}
+                  <div style={{ position: 'relative', marginBottom: '0.375rem' }}>
+                    <ResearchModeBar isDark={isDark} />
+                  </div>
                   <MultimodalInput
                     onSubmit={sendQuery}
                     onStop={abort}

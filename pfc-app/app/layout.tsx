@@ -4,9 +4,9 @@ import { AppShell } from '@/components/app-shell';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'PFC | Meta-Analytical Reasoning Engine',
+  title: 'ResearchLab | Portable Research Laboratory',
   description:
-    'A 10-stage analytical pipeline that stress-tests claims through statistical, causal, Bayesian, and adversarial reasoning.',
+    'A portable research laboratory with AI-powered analytical pipeline, notes, and autonomous agents. Stress-tests claims through statistical, causal, Bayesian, and adversarial reasoning.',
   icons: {
     icon: '/favicon.ico',
   },
@@ -33,7 +33,7 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
-          themes={['light', 'dark', 'oled']}
+          themes={['light', 'sunny', 'dark', 'navy', 'cosmic', 'sunset', 'oled']}
           disableTransitionOnChange
         >
           <AppShell>

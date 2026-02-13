@@ -15,6 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import http from 'http';
+import { logger } from '@/lib/debug-logger';
 import { createDaemonContext } from './context';
 import { Scheduler } from './scheduler';
 import {
@@ -56,12 +57,7 @@ else {
 // ═══════════════════════════════════════════════════════════════════
 
 function startDaemon() {
-  console.log(`
-╔══════════════════════════════════════════╗
-║       PFC Daemon — Autonomous Agent      ║
-║       Port: ${PORT}                          ║
-╚══════════════════════════════════════════╝
-`);
+  logger.info('daemon', `Starting PFC Daemon — Autonomous Agent on port ${PORT}`);
 
   const ctx = createDaemonContext();
   const scheduler = new Scheduler(ctx);
@@ -317,10 +313,10 @@ async function checkStatus(): Promise<number> {
   try {
     const res = await fetch(`http://localhost:${PORT}/status`);
     const data = await res.json();
-    console.log(JSON.stringify(data, null, 2));
+    logger.info('daemon', JSON.stringify(data, null, 2));
     return 0;
   } catch {
-    console.log('Daemon is not running');
+    logger.info('daemon', 'Daemon is not running');
     return 1;
   }
 }
@@ -329,10 +325,10 @@ async function stopDaemon(): Promise<number> {
   try {
     const res = await fetch(`http://localhost:${PORT}/stop`, { method: 'POST' });
     const data = await res.json();
-    console.log(data.message || 'Stop signal sent');
+    logger.info('daemon', data.message || 'Stop signal sent');
     return 0;
   } catch {
-    console.log('Daemon is not running (or already stopped)');
+    logger.info('daemon', 'Daemon is not running (or already stopped)');
     return 1;
   }
 }

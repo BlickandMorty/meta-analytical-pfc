@@ -348,7 +348,7 @@ export async function generateIdeas(
       for (let j = i + 1; j < rawIdeas.length; j++) {
         if (!keepIndices.has(j)) continue;
         try {
-          const { isDuplicate } = await checkDuplication(model, rawIdeas[i].idea, rawIdeas[j].idea);
+          const { isDuplicate } = await checkDuplication(model, rawIdeas[i]!.idea, rawIdeas[j]!.idea);
           if (isDuplicate) {
             keepIndices.delete(j); // Remove the later duplicate
           }

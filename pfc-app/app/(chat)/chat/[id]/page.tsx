@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { logger } from '@/lib/debug-logger';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Chat } from '@/components/chat';
 
@@ -25,7 +26,7 @@ export default function ChatByIdPage() {
           loadMessages(data.messages);
         }
       } catch (error) {
-        console.error('[chat/[id]] Failed to load messages:', error);
+        logger.error('chat/[id]', 'Failed to load messages:', error);
       }
     }
 

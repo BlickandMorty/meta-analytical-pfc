@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
+import { logger } from '@/lib/debug-logger';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSteeringStore } from '@/lib/store/use-steering-store';
 import type { PipelineEvent } from '@/lib/engine/types';
@@ -107,7 +108,7 @@ export function useChatStream() {
       },
       onError: (error) => {
         if (!isExpectedStreamInterruption(error)) {
-          console.error('StreamingHandler error:', error);
+          logger.error('chat-stream', 'StreamingHandler error:', error);
         }
         store.stopStreaming();
       },
@@ -306,7 +307,7 @@ export function useChatStream() {
               case 'soar':
                 // SOAR events are informational — logged for debugging
                 if (store.soarConfig?.verbose) {
-                  console.log('[SOAR]', event.event, event.data);
+                  logger.info('SOAR', event.event, event.data);
                 }
                 break;
 
@@ -423,7 +424,7 @@ export function useChatStream() {
               }
 
               case 'error':
-                console.error('Pipeline error:', event.message);
+                logger.error('chat-stream', 'Pipeline error:', event.message);
                 // Surface the error to the user — previously only logged to console
                 store.addToast({
                   message: event.message || 'Pipeline error — check Settings',
@@ -435,15 +436,13 @@ export function useChatStream() {
           } catch {
             // ── Fix 2F: Track parse errors instead of silently swallowing ──
             parseErrorCountRef.current++;
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('[stream] Malformed JSON chunk skipped:', data.slice(0, 120));
-            }
+            logger.debug('stream', 'Malformed JSON chunk skipped:', data.slice(0, 120));
           }
         }
       }
     } catch (error) {
       if (!isExpectedStreamInterruption(error)) {
-        console.error('Stream error:', error);
+        logger.error('chat-stream', 'Stream error:', error);
         usePFCStore.getState().addToast({ message: 'Stream connection failed', type: 'error' });
       }
       store.stopStreaming();

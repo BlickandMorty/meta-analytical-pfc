@@ -540,7 +540,6 @@ location.reload();`}</CodeBlock>
 │   ├── settings/         # Configuration
 │   ├── diagnostics/      # Signal diagnostics
 │   ├── visualizer/       # Charts & graphs
-│   ├── evaluate/         # ML project evaluator
 │   ├── concept-atlas/    # Force-directed concept graph
 │   ├── steering-lab/     # Adaptive steering engine
 │   ├── cortex-archive/   # Brain state snapshots

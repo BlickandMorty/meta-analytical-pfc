@@ -1,6 +1,8 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { ArrowLeftIcon } from 'lucide-react';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { useTypewriter } from '@/hooks/use-typewriter';
 import { motion } from 'framer-motion';
@@ -13,28 +15,36 @@ import { motion } from 'framer-motion';
    and spacing instead of glass cards.
    ═══════════════════════════════════════════════════════════ */
 
+/** Pages reachable from the main nav — no back button needed */
+const MAIN_NAV_PATHS = ['/', '/notes', '/library', '/analytics', '/daemon', '/settings'];
+
 interface PageShellProps {
   icon: LucideIcon;
   iconColor?: string;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  /** When true, omits the outer height:100vh container and page header.
+   *  Used when rendered inside the analytics hub which has its own chrome. */
+  embedded?: boolean;
+  /** Explicit back URL. If omitted, auto-detects: sub-pages get a back button, main-nav pages don't. */
+  backHref?: string;
 }
 
 const headerVariants = {
-  hidden: { opacity: 0, y: 12, scale: 0.98 },
+  hidden: { opacity: 0, y: 8, scale: 0.99 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { type: 'spring' as const, stiffness: 400, damping: 30, mass: 0.5 },
+    transition: { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.4 },
   },
 };
 
 const contentVariants = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.06, delayChildren: 0.15 },
+    transition: { staggerChildren: 0.04, delayChildren: 0.08 },
   },
 };
 
@@ -44,65 +54,106 @@ export function PageShell({
   title,
   subtitle,
   children,
+  embedded,
+  backHref,
 }: PageShellProps) {
   const { isDark, isOled } = useIsDark();
-  const { displayText: titleText, cursorVisible: titleCursor } = useTypewriter(title, true, {
-    speed: 30,
-    startDelay: 200,
+  const pathname = usePathname();
+  const router = useRouter();
+  // Auto-detect embedded mode when rendered inside the analytics hub
+  const isEmbedded = embedded || pathname === '/analytics';
+  const showHeader = !isEmbedded;
+  // Show back button on sub-pages (not in main nav) unless embedded
+  const showBack = !isEmbedded && (backHref != null || !MAIN_NAV_PATHS.includes(pathname));
+  const { displayText: titleText, cursorVisible: titleCursor } = useTypewriter(title, showHeader, {
+    speed: 25,
+    startDelay: 50,
     cursorLingerMs: 500,
   });
 
   return (
     <div
       style={{
-        height: '100vh',
-        overflow: 'hidden',
+        ...(isEmbedded ? {} : { height: '100vh', overflow: 'hidden' }),
         display: 'flex',
         flexDirection: 'column',
-        background: 'var(--chat-surface)',
+        background: isEmbedded ? 'transparent' : 'var(--chat-surface)',
         color: 'var(--foreground)',
       }}
     >
       <div
         style={{
           flex: 1,
-          overflow: 'auto',
+          overflow: isEmbedded ? undefined : 'auto',
           maxWidth: '56rem',
           marginLeft: 'auto',
           marginRight: 'auto',
-          padding: '3.5rem 2rem 4rem 4rem',
+          padding: isEmbedded ? '0.5rem 2rem 4rem 2rem' : '3.5rem 2rem 4rem 4rem',
           width: '100%',
-          willChange: 'scroll-position',
-          overscrollBehavior: 'contain',
-          WebkitOverflowScrolling: 'touch',
+          ...(isEmbedded ? {} : {
+            willChange: 'scroll-position',
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
+          }),
           contain: 'layout style paint',
           transform: 'translateZ(0)',
         } as React.CSSProperties}
       >
-        {/* ── Page header ── */}
+        {/* ── Page header (hidden when embedded in analytics hub) ── */}
         <motion.div
           variants={headerVariants}
           initial="hidden"
           animate="visible"
-          style={{ marginBottom: '3rem', transform: 'translateZ(0)' }}
+          style={{ marginBottom: isEmbedded ? '1rem' : '3rem', transform: 'translateZ(0)' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '0.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isEmbedded ? '0.75rem' : '1.25rem', marginBottom: '0.25rem' }}>
+            {/* Back button for sub-pages */}
+            {showBack && (
+              <button
+                onClick={() => backHref ? router.push(backHref) : router.back()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '2.25rem',
+                  width: '2.25rem',
+                  borderRadius: '0.625rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  background: isOled ? 'rgba(25,25,25,0.6)' : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                  color: isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.35)',
+                  transition: 'background 0.15s ease, color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+                  e.currentTarget.style.color = isDark ? 'rgba(232,228,222,0.9)' : 'rgba(0,0,0,0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = isOled ? 'rgba(25,25,25,0.6)' : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+                  e.currentTarget.style.color = isDark ? 'rgba(156,143,128,0.7)' : 'rgba(0,0,0,0.35)';
+                }}
+                title="Go back"
+              >
+                <ArrowLeftIcon style={{ height: '1rem', width: '1rem' }} />
+              </button>
+            )}
             <div
               style={{
                 display: 'flex',
-                height: '3.5rem',
-                width: '3.5rem',
+                height: isEmbedded ? '2.25rem' : '3.5rem',
+                width: isEmbedded ? '2.25rem' : '3.5rem',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '1rem',
+                borderRadius: isEmbedded ? '0.625rem' : '1rem',
                 flexShrink: 0,
                 background: isOled ? 'rgba(25,25,25,0.8)' : isDark ? 'var(--pfc-accent-light)' : 'rgba(0,0,0,0.04)',
               }}
             >
               <Icon
                 style={{
-                  height: '1.75rem',
-                  width: '1.75rem',
+                  height: isEmbedded ? '1.125rem' : '1.75rem',
+                  width: isEmbedded ? '1.125rem' : '1.75rem',
                   color: iconColor || 'var(--pfc-accent)',
                 }}
               />
@@ -111,7 +162,7 @@ export function PageShell({
               <h1
                 style={{
                   fontFamily: 'var(--font-heading)',
-                  fontSize: '2.25rem',
+                  fontSize: isEmbedded ? '1.375rem' : '2.25rem',
                   fontWeight: 400,
                   letterSpacing: '-0.01em',
                   lineHeight: 1.2,
@@ -132,7 +183,7 @@ export function PageShell({
                   }} />
                 )}
               </h1>
-              {subtitle && (
+              {subtitle && !isEmbedded && (
                 <p
                   style={{
                     fontSize: '1rem',
@@ -177,11 +228,11 @@ interface SectionProps {
 }
 
 const sectionVariants = {
-  hidden: { opacity: 0, y: 8 },
+  hidden: { opacity: 0, y: 6 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: 'spring' as const, stiffness: 400, damping: 30, mass: 0.5 },
+    transition: { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.4 },
   },
 };
 

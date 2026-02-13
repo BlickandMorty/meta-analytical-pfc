@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FlaskConicalIcon,
@@ -40,7 +41,7 @@ import { exportData, downloadExport, getMimeType } from '@/lib/research/export';
 import type { ResearchPaper, ExportFormat } from '@/lib/research/types';
 
 /* ═══════════════════════════════════════════════════════════════════
-   Design Tokens (matches evaluate page)
+   Design Tokens
    ═══════════════════════════════════════════════════════════════════ */
 
 const SPRING_SOFT = { type: 'spring' as const, stiffness: 300, damping: 25, mass: 0.6 };
@@ -1440,7 +1441,11 @@ function LibraryTab({ isDark }: { isDark: boolean }) {
 export default function ResearchHubPage() {
   const ready = useSetupGuard();
   const { isDark } = useIsDark();
-  const [activeTab, setActiveTab] = useState<HubTab>('search');
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get('tab') as HubTab) || 'search';
+  const [activeTab, setActiveTab] = useState<HubTab>(
+    HUB_TABS.some((t) => t.key === initialTab) ? initialTab : 'search',
+  );
 
   if (!ready) {
     return (
@@ -1459,6 +1464,7 @@ export default function ResearchHubPage() {
       iconColor="var(--color-pfc-ember)"
       title="Research Hub"
       subtitle="AI-powered paper search, review, novelty checking, citation finding, and idea generation"
+      backHref="/library?tab=tools"
     >
       {/* ── Tab Switcher (scrollable pill row) ── */}
       <div

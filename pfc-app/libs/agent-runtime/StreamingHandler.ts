@@ -109,16 +109,23 @@ function parseArtifactAttributes(attrString: string): Record<string, string> {
   const regex = /(\w+)="([^"]*)"/g;
   let match;
   while ((match = regex.exec(attrString)) !== null) {
-    attrs[match[1]] = match[2];
+    attrs[match[1]!] = match[2]!;
   }
   return attrs;
 }
 
 /** Detect code blocks in message content that should be pushed to portal */
+import type { ArtifactType } from '@/lib/store/slices/portal';
+
+const VALID_ARTIFACT_TYPES = new Set<ArtifactType>(['code', 'document', 'html', 'react', 'image', 'data', 'text']);
+function toArtifactType(raw: string | undefined): ArtifactType {
+  return VALID_ARTIFACT_TYPES.has(raw as ArtifactType) ? (raw as ArtifactType) : 'code';
+}
+
 interface DetectedArtifact {
   identifier: string;
   title: string;
-  type: string;
+  type: ArtifactType;
   language?: string;
   content: string;
   startIndex: number;
@@ -135,7 +142,7 @@ export function detectArtifacts(content: string): DetectedArtifact[] {
     artifacts.push({
       identifier: attrs.identifier || `artifact-${Date.now()}`,
       title: attrs.title || 'Code',
-      type: attrs.type || 'code',
+      type: toArtifactType(attrs.type),
       language: attrs.language,
       content: tagMatch[2].trim(),
       startIndex: tagMatch.index,
@@ -148,7 +155,7 @@ export function detectArtifacts(content: string): DetectedArtifact[] {
   let codeMatch;
   while ((codeMatch = codeBlockRegex.exec(content)) !== null) {
     const language = codeMatch[1] || 'text';
-    const code = codeMatch[2].trim();
+    const code = codeMatch[2]!.trim();
 
     // Only push significant code blocks (>5 lines)
     if (code.split('\n').length > 5) {
@@ -172,7 +179,7 @@ function extractThinking(content: string): { thinking: string; cleanContent: str
   const match = THINKING_TAG_REGEX.exec(content);
   if (!match) return null;
 
-  const thinking = match[1].trim();
+  const thinking = match[1]!.trim();
   const cleanContent = content.replace(match[0], '').trim();
 
   return { thinking, cleanContent };

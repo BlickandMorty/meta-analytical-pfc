@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
+import { logger } from '@/lib/debug-logger';
 import { generateSynthesisReport } from '@/lib/engine/synthesizer';
 import type { ChatMessage } from '@/lib/engine/types';
 import { parseBodyWithLimit } from '@/lib/api-utils';
@@ -8,7 +10,7 @@ interface SynthesisBody {
   signals?: Record<string, unknown>;
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   try {
     const parsedBody = await parseBodyWithLimit<SynthesisBody>(request, 5 * 1024 * 1024);
     if ('error' in parsedBody) {
@@ -70,10 +72,12 @@ export async function POST(request: NextRequest) {
 
     return Response.json(report);
   } catch (error) {
-    console.error('[synthesis/route] Error:', error);
+    logger.error('synthesis/route', 'Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Synthesis failed' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
 }
+
+export const POST = withMiddleware(_POST, { maxRequests: 10, windowMs: 60_000 });

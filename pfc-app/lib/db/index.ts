@@ -233,3 +233,14 @@ export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
     return value;
   },
 });
+
+/**
+ * Run a synchronous block inside a SQLite transaction.
+ * Uses better-sqlite3's transaction() wrapper for automatic
+ * BEGIN IMMEDIATE / COMMIT / ROLLBACK.
+ */
+export function withTransaction(fn: () => void): void {
+  const sqlite = getSqlite();
+  const wrapped = sqlite.transaction(fn);
+  wrapped();
+}

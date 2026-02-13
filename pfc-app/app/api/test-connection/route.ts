@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { withMiddleware } from '@/lib/api-middleware';
 import { generateText } from 'ai';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
@@ -25,7 +26,7 @@ interface TestConnectionBody {
   ollamaModel?: string;
 }
 
-export async function POST(request: NextRequest) {
+async function _POST(request: NextRequest) {
   try {
     const parsedBody = await parseBodyWithLimit<TestConnectionBody>(request, 5 * 1024 * 1024);
     if ('error' in parsedBody) {
@@ -60,7 +61,12 @@ export async function POST(request: NextRequest) {
 
     return Response.json({ success: true, response: result.text.trim() });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    // Sanitize: strip API keys or tokens that may appear in error messages
+    let message = error instanceof Error ? error.message : 'Unknown error';
+    message = message.replace(/(?:sk-|key-|token-|Bearer\s+)\S+/gi, '[REDACTED]');
+    if (message.length > 500) message = message.slice(0, 500) + '...';
     return Response.json({ success: false, error: message }, { status: 400 });
   }
 }
+
+export const POST = withMiddleware(_POST, { maxRequests: 60, windowMs: 60_000, skipAuth: true });

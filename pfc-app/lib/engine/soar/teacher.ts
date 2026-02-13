@@ -14,6 +14,7 @@
 import { generateText, generateObject } from 'ai';
 import type { LanguageModel } from 'ai';
 import { z } from 'zod';
+import { logger } from '@/lib/debug-logger';
 import type { QueryAnalysis } from '../simulate';
 import type { Curriculum, SteppingStone, SOARReward } from './types';
 
@@ -137,7 +138,7 @@ export async function generateCurriculum(
       };
     } catch (err) {
       // Fallback to simulation on LLM error — rationale marks it clearly
-      console.error('[SOAR Teacher] LLM curriculum generation failed:', err);
+      logger.error('SOAR Teacher', 'LLM curriculum generation failed:', err);
       const fallback = generateSimulatedCurriculum(query, qa, numStones, iteration, curriculumId, startTime);
       fallback.teacherRationale = `[LLM Error Fallback] ${err instanceof Error ? err.message : 'Unknown error'}. ${fallback.teacherRationale}`;
       return fallback;

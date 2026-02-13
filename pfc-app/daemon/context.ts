@@ -7,6 +7,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import type { LanguageModel } from 'ai';
+import { logger } from '@/lib/debug-logger';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
 import type { DaemonConfig } from './config';
@@ -34,7 +35,7 @@ function createLogger(sqlite: Database.Database): DaemonLogger {
   function log(level: string, message: string, taskName?: string, data?: Record<string, unknown>) {
     const timestamp = new Date().toISOString();
     const prefix = taskName ? `[${taskName}]` : '[daemon]';
-    console.log(`${timestamp} ${level.toUpperCase()} ${prefix} ${message}`);
+    logger.info('daemon', `${timestamp} ${level.toUpperCase()} ${prefix} ${message}`);
 
     logStmt.run(
       level,
