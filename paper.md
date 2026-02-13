@@ -1,5 +1,7 @@
 # Playing God with Better Blueprints: Biomimetic Cognitive Architecture for Self-Correcting Artificial Intelligence
 
+> **Implementation Note:** The mathematical modules described in this paper have been extracted into a standalone Python project: [`meta-analytical-pipeline`](../meta-analytical-pipeline) — a pip-installable library with FastAPI endpoints for all reasoning engines, TDA, and monitoring systems. The application (meta-analytical-pfc) now uses prompt-based reasoning informed by these mathematical frameworks.
+
 **Author:** Jojo
 **Affiliation:** Independent Research
 **Date:** February 2025

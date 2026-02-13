@@ -1,172 +1,158 @@
 # Meta-Analytical PFC
 
-A biomimetic cognitive architecture that wraps large language models in an executive reasoning system modeled on the human prefrontal cortex.
+A note-taking and research app with AI-powered analytical reasoning, modeled on the executive functions of the human prefrontal cortex.
 
 ---
 
 ## What This Is
 
-Modern LLMs are powerful pattern matchers trained on everything ever written. They can retrieve, they can generate, they can mimic expertise. What they cannot do is *reason about reasoning*. They don't know when they're uncertain. They don't know when two concepts they're combining are contradictory. They don't adjust how deeply they think based on how hard a problem is. They don't attack their own conclusions before presenting them.
+An AI research assistant that doesn't just answer questions — it *reasons about them* through a structured analytical pipeline. Every query passes through ten stages of analysis, from statistical evaluation to causal inference to Bayesian updating, producing research-grade insights with calibrated confidence.
 
-The human prefrontal cortex does all of this. It triages complexity, modulates attention, detects dissonance, runs counterfactual simulations, and calibrates its confidence against the actual strength of its evidence. These aren't philosophical luxuries — they're the computational operations that separate a PubMed search from a differential diagnosis.
+Built as a local-first productivity app with deep notes, a research library, and background agents that learn from your work.
 
-This project implements those operations as an explicit, inspectable orchestration layer around any LLM. Not trained into weights where they're opaque and unverifiable, but instrumented as mathematical modules that *govern* inference the way the PFC governs the neocortex.
-
-The body is mechanistically perfect — a creation refined over 500 million years of optimization under the hardest loss function in existence: survival. The thesis here is simple: use that as the blueprint.
+> **Note:** The mathematical reasoning modules (Python implementations of DerSimonian-Laird, Bradford Hill, Ripser TDA, etc.) have been extracted into a standalone project: [`meta-analytical-pipeline`](../meta-analytical-pipeline). This app uses prompt-based equivalents that encode the same analytical frameworks.
 
 ---
 
 ## Who This Is For
 
-- **AI researchers** building systems that need to reason under uncertainty rather than hallucinate through it
-- **Medical and clinical researchers** who need meta-analytical rigor — DerSimonian-Laird pooling, Bradford Hill scoring, publication bias detection — applied automatically
-- **Neuroscience-minded engineers** interested in biomimetic cognitive architectures
-- **Anyone tired of LLMs that express 0.95 confidence on claims they can't ground**
-
-This is a research-grade tool. It's built for people who understand that the interesting problem in AI isn't making models bigger — it's making them *think better*.
+- **Researchers** who need structured analytical thinking applied to their questions
+- **Students** building a knowledge base with AI-assisted note-taking and concept extraction
+- **Anyone** who wants an AI that reasons under uncertainty rather than hallucinating through it
 
 ---
 
 ## What It Does
 
-A query enters the system and passes through a **ten-stage executive pipeline**:
+### Ten-Stage Analytical Pipeline
+
+A query enters the system and passes through:
 
 1. **Triage** — scores complexity, routes to the right depth of analysis
-2. **Memory** — retrieves semantically relevant context from a persistent ChromaDB store
+2. **Memory** — retrieves semantically relevant context from ChromaDB
 3. **Pathway Routing** — simple, moderate, or full executive processing
 4. **Statistical Analysis** — effect sizes (Cohen's d), power analysis, bias detection, MCID thresholds
-5. **Causal Inference** — DAG construction, Bradford Hill criteria scoring, confounder identification
-6. **Meta-Analysis** — DerSimonian-Laird random-effects pooling with heterogeneity quantification
-7. **Bayesian Updating** — conjugate normal prior-to-posterior computation with prior sensitivity analysis
+5. **Causal Inference** — Bradford Hill criteria scoring, confounding analysis, counterfactual reasoning
+6. **Meta-Analysis** — DerSimonian-Laird concepts, heterogeneity assessment, publication bias
+7. **Bayesian Updating** — prior specification, posterior interpretation, Bayes factor analysis
 8. **Synthesis** — full evidential response generation
 9. **Adversarial Review** — structured five-point red-team self-critique
-10. **Confidence Calibration** — final uncertainty quantification starting from maximum ignorance
+10. **Confidence Calibration** — uncertainty quantification starting from maximum ignorance
 
-Running beneath the pipeline are three continuous monitoring systems:
+Stages 4-7 use **structured prompt templates** that encode mathematical frameworks as behavioral LLM instructions. The LLM reasons with the same rigor as formal statistical methods, but applied to actual research context rather than heuristically-extracted numbers.
 
-- **Leibnizian Concept Harmonics** — prime-number encoding of concepts with dissonance detection (Fundamental Theorem of Arithmetic guarantees unique factorization of any concept combination)
-- **Continued-Fraction Focus Controller** — an entropy valve that modulates temperature and depth in real time based on the complexity of the model's internal state
-- **Contextual Allostasis Engine** — embedding-based threat detection with exponential smoothing and graded safety response (GREEN/YELLOW/RED), inspired by biological allostasis
+### Note-Taking System
 
-Above the pipeline sits a **meta-learning loop**: executive traces are recorded, clustered via TF-IDF/DBSCAN, analyzed for skill gaps, and converted into training examples. The system teaches itself from its own reasoning history.
+- Block-based editor with rich formatting (headings, code, math, quotes, callouts, lists, todos)
+- Vault organization with journals
+- Bi-directional page links (`[[page-ref]]`)
+- AI-assisted writing (continue, summarize, expand, rewrite)
+- Concept extraction and correlation mapping
 
----
+### Research Library
 
-## The Mathematics
+- Paper management with Semantic Scholar integration
+- Citation search and tracking
+- NeurIPS-style paper review generation
+- Research idea generation and novelty checking
 
-This isn't a wrapper with vibes. Every subsystem is formally defined:
+### Background Agents (Daemon)
 
-| Component | Framework |
-|---|---|
-| Meta-Analysis | DerSimonian-Laird random-effects model with Egger's publication bias test |
-| Bayesian Reasoning | Precision-weighted conjugate normal updating with Bayes factor interpretation |
-| Causal Inference | DAGs (NetworkX) + Bradford Hill criteria composite scoring |
-| Topological Analysis | Persistent homology via Ripser — Betti numbers, persistence entropy on activation manifolds |
-| Focus Control | Continued fractions as nonlinear scaling functions for temperature and token depth |
-| Concept Encoding | Leibnizian prime products with harmonic frequency dissonance rules |
-| Safety | Cosine similarity threat anchors with exponential moving average smoothing |
-| Confidence | Evidence-based calibration starting from 0.5 base, adjusted by statistical power, causal strength, and self-critique severity |
-| Pattern Detection | TF-IDF vectorization + DBSCAN clustering for skill gap identification |
-| Health Scoring | Weighted fusion of normalized entropy and combined dissonance |
+Five background tasks that auto-learn from your notes:
 
-Full mathematical treatment available in [`paper.md`](paper.md).
+1. **Connection Finder** — discovers hidden links between notes
+2. **Daily Brief** — morning summary of changes and key insights
+3. **Auto-Organizer** — tags untagged pages, clusters by topic similarity
+4. **Research Assistant** — identifies implicit research questions in your notes
+5. **Learning Protocol** — 7-step recursive learning engine (inventory → gap-analysis → deep-dive → cross-reference → synthesis → questions → iterate)
+
+### Steering Engine
+
+A 3-layer hybrid system (contrastive vectors + Bayesian priors + k-NN recall) that translates your control settings into behavioral LLM directives. Adjust complexity bias, adversarial intensity, Bayesian prior strength, focus depth, and temperature — the steering engine composes these into natural-language instructions injected into the LLM system prompt.
 
 ---
 
 ## Run
 
-```sh
-pip install -r requirements.txt
-export ANTHROPIC_API_KEY="your-key"
-python run_pfc.py
+```bash
+cd pfc-app
+npm install
+npm run dev
 ```
 
-Windows quickstart:
+Open `http://localhost:3000`.
 
-```powershell
-.\run_pfc.ps1
+### Inference Modes
+
+Configure in Settings:
+
+- **Simulation** — template-generated responses, no API keys needed (default)
+- **API** — cloud LLM calls (Anthropic, OpenAI, Google) with structured analytical prompts
+- **Local** — Ollama-compatible models with full steering control
+
+### Local Models (Ollama)
+
+```bash
+# Install Ollama, then:
+ollama pull qwen2.5:32b    # for 32GB machines
+ollama pull qwen2.5:14b    # for 16GB machines
+ollama pull llama3.1:8b     # for 8GB GPU
 ```
 
-### Local-Only Mode
-
-No API key? Run entirely on local models:
-
-```yaml
-# config/runtime.yaml
-runtime:
-  inference_mode: "local"
-```
-
-### Hybrid Mode
-
-Use Anthropic for synthesis, local models for activation capture and TDA:
-
-```yaml
-runtime:
-  inference_mode: "hybrid"
-```
+Configure the Ollama URL in Settings → Inference Mode → Local.
 
 ---
 
 ## Project Structure
 
 ```
-src/
-├── core/           # Executive orchestration (AdaptivePFC, PFC Engine, Memory)
-├── reasoning/      # Statistical, causal, meta-analytical, Bayesian engines
-├── control/        # Focus controller (continued fractions), CAE (safety)
-├── monitoring/     # Telemetry, concept harmonics, signal computation
-├── validation/     # Adversarial review, confidence calibration
-├── learning/       # Executive traces, pattern detection, training generation
-├── tda/            # Persistent homology pipeline, activation capture
-├── models/         # Model orchestration (API + local with 4-bit quantization)
-└── utils/          # Config loader, logging
-
-config/             # All YAML configs (runtime, CAE thresholds, local model settings)
-evaluation/         # Correlation analysis, ablation studies, benchmarks
-data/               # Telemetry logs, memory, traces, training data
+pfc-app/
+├── app/                    # Next.js pages and API routes
+│   ├── (chat)/api/chat/    # Main 10-stage pipeline endpoint (SSE)
+│   ├── api/                # Assistant, notes-ai, research, daemon routes
+│   ├── settings/           # Configuration UI
+│   ├── notes/              # Note-taking interface
+│   ├── analytics/          # Dashboard and visualization
+│   └── daemon/             # Background agent management
+├── lib/
+│   ├── engine/
+│   │   ├── simulate.ts     # 10-stage pipeline orchestrator
+│   │   ├── prompts/        # Structured analytical prompt templates
+│   │   ├── steering/       # 3-layer hybrid steering engine
+│   │   ├── soar/           # Self-Optimizing Analytical Reasoning
+│   │   └── llm/            # Multi-provider LLM resolution
+│   ├── db/                 # SQLite schema and queries (Drizzle ORM)
+│   ├── store/              # Zustand state management (12 slices)
+│   └── notes/              # Note system utilities
+├── components/             # React UI components
+└── daemon/                 # Background agent system
+    ├── tasks/              # 5 agent task implementations
+    └── scheduler.ts        # Task scheduling and lifecycle
 ```
 
 ---
 
-## Telemetry and Dashboard
+## Tech Stack
 
-Every inference is logged as structured JSONL telemetry — entropy, dissonance, Betti numbers, focus plans, safety states. A live FastAPI + WebSocket dashboard renders it in real time.
-
-```sh
-python run_dashboard.py
-```
-
----
-
-## Evaluation
-
-```sh
-python evaluation/tda_metrics.py --path data/telemetry/events.jsonl
-python evaluation/correlation_bootstrap.py
-python evaluation/predictive_model.py
-python evaluation/report_summary.py
-```
+- **Framework:** Next.js 16, React 19, TypeScript
+- **State:** Zustand with localStorage persistence
+- **Styling:** Tailwind CSS 4, Radix UI, Framer Motion
+- **Database:** SQLite via Drizzle ORM
+- **AI:** Vercel AI SDK (Anthropic, OpenAI, Google, Ollama)
+- **Visualization:** D3.js
+- **Search:** ChromaDB for semantic memory
 
 ---
 
 ## Docs
 
-- [`paper.md`](paper.md) — full academic paper on the architecture, mathematics, and implications
+- [`paper.md`](paper.md) — full academic paper on the mathematical architecture
 - [`PROJECT_SUMMARY.md`](PROJECT_SUMMARY.md) — architectural summary
-- [`USER_GUIDE.md`](USER_GUIDE.md) — usage guide and commands
-- [`RESEARCH_OVERVIEW.md`](RESEARCH_OVERVIEW.md) — research-grade explanation of signals and dashboard
-- [`FEEDBACK_LOOP.md`](FEEDBACK_LOOP.md) — planned self-improvement loop
-
----
-
-## The Point
-
-We've been building AI wrong. Not in degree — not too few parameters, not too little data — but in *kind*. We've been building powerful engines without governors. The transformer is the neocortex. This project gives it a prefrontal cortex.
-
-The art is in the complexity. And the complexity is already there — in the architecture that evolution spent 3.8 billion years refining. We just have to be willing to learn from it.
+- [`FRONTEND_SPEC.md`](FRONTEND_SPEC.md) — complete UI/UX specification
+- [`RESEARCH_OVERVIEW.md`](RESEARCH_OVERVIEW.md) — research-grade explanation of signals and analytics
+- [`FEEDBACK_LOOP.md`](FEEDBACK_LOOP.md) — self-improvement via the steering engine
 
 ---
 
 *Built by Jojo.*
-*Paper and full mathematical treatment: [`paper.md`](paper.md)*
+*Mathematical foundations: [`paper.md`](paper.md) | Standalone implementations: [`meta-analytical-pipeline`](../meta-analytical-pipeline)*

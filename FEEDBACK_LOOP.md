@@ -1,45 +1,66 @@
-# Feedback Loop (Scaffold)
+# Feedback Loop — Self-Improvement Architecture
 
-This document defines the feedback loop that can make a model improve itself using the signals already computed in this project (TDA, chord dissonance, entropy valve, CAE).
+The app improves its analytical behavior over time through two mechanisms: the **steering engine** and **background learning agents**.
 
-## Goal
-Convert telemetry signals into a training signal so a future model can *learn* to reduce instability and dissonance.
+## Steering Engine (Active Learning)
 
-## What exists now
-- `src/learning/feedback_loop.py` collects and stores samples in `data/feedback/buffer.jsonl`.
-- It computes reward/penalty based on:
-  - critique severity
-  - dissonance score
-  - entropy score
+The 3-layer hybrid steering engine is the primary self-improvement mechanism:
 
-## What still needs to be implemented
-1. **Dataset builder**
-   - Read `buffer.jsonl`
-   - Convert reward/penalty into training pairs (e.g., preference format)
-   - Save dataset to `data/feedback/dataset.jsonl`
+### Layer 1: Contrastive Vectors
+- Stores positive and negative exemplars from user feedback
+- Computes: `mean(positive_exemplars) - mean(negative_exemplars)` → steering direction
+- Confidence weighted by exemplar count and separation magnitude
 
-2. **Fine‑tuning step**
-   - Load model core (Beaba or a baseline)
-   - Apply LoRA or full finetune
-   - Save updated weights
+### Layer 2: Bayesian Prior Adaptation
+- Beta(α, β) priors per dimension, updated on each outcome
+- Learning rate: `0.5 × 0.99^sampleCount` (slows as data accumulates)
+- Converts prior distributions to biases via deviation from neutral (0.5)
 
-3. **Scheduler**
-   - Decide when to finetune (every N samples, or when penalty rate rises)
+### Layer 3: Contextual k-NN Recall
+- Finds k nearest positive exemplars by query feature similarity
+- Computes centroid of their signal vectors
+- Context bias = `(centroid - globalMean) × contextMatchScore`
 
-4. **Integration point**
-   - After a response is generated, call `FeedbackLoop.evaluate()`
-   - Store samples for later fine‑tuning
+### Combined Output
+```
+finalBias = w1·contrastive + w2·bayesian + w3·contextual
+steeringStrength = min(1.0, sqrt(totalExemplars / 20))
+```
 
-## Proposed flow
-1. Run model inference
-2. Compute signals (entropy, dissonance, critique)
-3. If high penalty or good reward → store sample
-4. Periodically build dataset and finetune
+The prompt composer then translates these numerical biases into natural-language behavioral directives injected into the LLM system prompt.
 
-## Config
-- `config/feedback.yaml` controls thresholds and storage
+## Background Learning Agents (Passive Learning)
 
-## Why this is useful
-- Turns telemetry into *learning*
-- Enables self‑improving models using your supervision stack
+The daemon's 5 background tasks provide passive improvement:
 
+1. **Connection Finder** — discovers implicit relationships between notes, enriching the knowledge graph
+2. **Auto-Organizer** — tags and clusters notes, improving retrieval quality
+3. **Research Assistant** — identifies knowledge gaps, prompting deeper investigation
+4. **Learning Protocol** — runs a 7-step recursive learning loop:
+   - Inventory → Gap Analysis → Deep Dive → Cross-Reference → Synthesis → Questions → Iterate
+
+## How It Works Together
+
+```
+User asks question
+  ↓
+Steering engine applies learned biases to prompt composition
+  ↓
+Pipeline runs with tuned analytical prompts
+  ↓
+User provides implicit feedback (follow-up questions, corrections, ratings)
+  ↓
+Steering engine updates exemplars and priors
+  ↓
+Next query benefits from updated steering
+```
+
+The system gets better at analytical reasoning for *your* specific research domain over time, without any model fine-tuning — purely through prompt-level behavioral adaptation.
+
+## Implementation
+
+- Steering engine: `pfc-app/lib/engine/steering/engine.ts` (479 lines)
+- Prompt composer: `pfc-app/lib/engine/steering/prompt-composer.ts` (282 lines)
+- Exemplar storage: `pfc-app/lib/engine/steering/memory.ts`
+- Feedback evaluation: `pfc-app/lib/engine/steering/feedback.ts`
+- Daemon tasks: `pfc-app/daemon/tasks/`

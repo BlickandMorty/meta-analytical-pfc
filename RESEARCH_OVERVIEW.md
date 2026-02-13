@@ -1,67 +1,58 @@
 # Meta-Analytical PFC — Research Overview
 
-This system is a research-oriented orchestration layer that instruments model behavior, computes structured signals, and logs telemetry for analysis. It is not a standalone LLM; it is a control and analysis framework around local or hybrid inference.
+This system is a research-oriented AI reasoning framework that structures LLM behavior through analytical pipelines, computes heuristic signals, and provides steering controls for tuning inference quality.
 
 ## What It Does
-1. Routes queries by complexity and domain.
-2. Runs specialized reasoning engines (statistical, causal, Bayesian, meta-analysis).
-3. Captures activation geometry (TDA) for local models when enabled.
-4. Computes concept-chord signals, dissonance, entropy, and a focus plan.
-5. Logs telemetry to JSONL and renders a live dashboard.
-6. Optionally runs a meta-analyzer pass that surfaces blind spots and missing checks.
 
-## Why It Matters (Research Use)
-The system turns normally opaque model behavior into analyzable signals. This enables:
-- Correlating internal signals with answer quality or critique severity.
-- Studying stability/entropy in activations across prompts.
-- Testing intervention mechanisms (focus controller) under controlled metrics.
-- Building reproducible datasets of reasoning traces + telemetry for later modeling.
+1. Routes queries by complexity and domain via triage analysis.
+2. Runs specialized reasoning stages through structured prompt templates encoding mathematical frameworks (Bradford Hill, Cohen's d, DerSimonian-Laird, Bayesian updating).
+3. Computes heuristic signals (confidence, entropy, dissonance, health) from query properties.
+4. Translates user steering settings into behavioral LLM directives via the prompt composer.
+5. Runs background agents that auto-learn from your notes.
+6. Provides a dual-layer response: research-grade analysis + accessible layman summary.
 
-## Dashboard Panels (What You’re Seeing)
+## Why It Matters
 
-**Learned Skills**  
-Shows which learned skills were injected into the current prompt (if enabled).  
-Research value: makes retrieval augmentation explicit and auditable.
+The system makes AI reasoning structured, inspectable, and tunable:
+- **Structured** — forces the LLM through formal analytical frameworks rather than free-form generation.
+- **Inspectable** — every stage produces visible signals (confidence, entropy, dissonance) and tagged output.
+- **Tunable** — the steering engine lets you adjust how the LLM reasons, not just what it produces.
 
-**Homeostasis Meter**  
-Visualizes a “health” score derived from entropy + dissonance.  
-Research value: acts as a proxy for internal coherence vs instability.
+## Signal System
 
-**Master Chord**  
-Displays concept frequencies derived from a Leibnizian chord model.  
-Research value: shows which conceptual harmonics are activated by a query.
+All signals are **heuristic functions** of query properties (domain, complexity, entity count) and user steering settings. They are not calibrated probabilities or information-theoretic measures — they provide useful relative rankings for UI display and steering.
 
-**Entropy Oscilloscope**  
-Animated noise signal proportional to entropy score.  
-Research value: quick visual cue of activation complexity / chaos.
+| Signal | What It Represents | Range |
+|--------|-------------------|-------|
+| **Confidence** | Evidence-grounded certainty estimate | 0.1 – 0.95 |
+| **Entropy** | Query complexity / activation noise | 0.01 – 0.95 |
+| **Dissonance** | Degree of internal tension between claims | 0.01 – 0.95 |
+| **Health Score** | Weighted fusion: `1 - entropy×0.45 - dissonance×0.35` | 0.2 – 1.0 |
+| **Risk Score** | Safety-sensitive query indicator | 0.01 – 0.9 |
+| **Focus Depth** | Analytical depth scaling | 2 – 10 |
+| **Temperature** | LLM exploration vs. determinism | 0.1 – 1.0 |
 
-**Meta-Analyzer Pass (behind the scenes)**  
-Triggered for high-complexity queries (configurable threshold).  
-Research value: forces explicit checks for confounds, heterogeneity, priors, and risk mitigation.
+## Analytics Dashboard
 
-**Continued Fraction Spiral**  
-Represents the focus controller’s planned depth (entropy valve).  
-Research value: reveals how the controller modulates compute based on signals.
+The analytics page provides 8 sub-tabs:
 
-**Topological Mapper**  
-Renders point clouds + topology edges from activation TDA.  
-Research value: interpretable view of activation manifold structure.
+- **Research Copilot** — methodology guidance and technique scaffolding
+- **Cortex Archive** — saved brain-state snapshots as a card grid
+- **Steering Lab** — live parameter sliders (complexity bias, adversarial intensity, Bayesian prior strength, focus depth, temperature)
+- **Pipeline** — real-time 10-stage visualization with per-stage status and progress
+- **Signals** — confidence, entropy, dissonance line charts over time
+- **Visualizer** — interactive D3 charts: parallel coordinates, heat maps, smoothing, trendlines
+- **Evaluate** — truth assessment / claim validity tool
+- **Concepts** — concept hierarchy tree and weight visualization
 
-**Leibnizian Spectrogram**  
-Time‑stacked view of concept chord activity.  
-Research value: shows how conceptual harmonics shift across queries.
+## Prompt Template Architecture
 
-## Reset State (What It Does)
-The “Reset State” button clears the visualization’s local history buffers only.
-It does NOT delete telemetry logs or learned knowledge.
+The analytical stages (Statistical, Causal, Meta-Analysis, Bayesian) use structured prompt templates in `pfc-app/lib/engine/prompts/`. Each template encodes a formal analytical framework with:
+- Specific rubrics and scoring criteria
+- Mathematical threshold scales (e.g., Cohen's d: negligible < 0.2, small < 0.5, medium < 0.8, large)
+- Output format tags (e.g., `[DATA]`, `[HILL]`, `[POOLED]`, `[PRIOR]`)
+- Explicit instructions for what to evaluate and how
 
-## Telemetry Outputs
-- JSONL stream: `data/telemetry/events.jsonl`
-- Used for correlation, drift, and predictive baselines in `evaluation/`.
+This approach means the LLM applies the same analytical rigor as formal statistical methods, but with contextual understanding of the actual research domain.
 
-## Future‑Proofing
-The framework is modular. You can replace the LLM with your own model later, and keep:
-- Telemetry, signal pipeline, and dashboard
-- Reasoning orchestration and evaluation scripts
-- Learned-knowledge retrieval as a switchable layer
-- Concept-depth triage + meta-analyzer for research-grade auditability
+> **Note:** For numerical computation using these frameworks (actual DerSimonian-Laird pooling, Ripser TDA, etc.), see the standalone [`meta-analytical-pipeline`](../meta-analytical-pipeline) project.

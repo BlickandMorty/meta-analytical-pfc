@@ -1,88 +1,102 @@
 # Meta-Analytical PFC — User Guide
 
-This is the practical, low-friction guide for running and using the system.
+Practical guide for running and using the app.
 
-## Run (one command)
-```powershell
-.\run_pfc.ps1
-```
-This launches the dashboard, opens your browser, and starts the assistant prompt in the same terminal.
+## Quick Start
 
-## Where to type questions
-In the terminal that shows:
-```
-Meta-Analytical PFC ready. Type 'exit' to quit.
-
-QUERY:
+```bash
+cd pfc-app
+npm install
+npm run dev
 ```
 
-## Interactive commands (terminal)
-- `:learn`  
-  Forces a learning cycle from existing executive traces (no waiting on thresholds).
+Open `http://localhost:3000` in your browser.
 
-- `:skills`  
-  Lists learned skills stored in `data/learned_knowledge/knowledge_base.json`.
+## First Run
 
-- `exit` / `quit` / `q`  
-  Stops the assistant.
+On first launch, you'll see the onboarding flow:
+1. Boot sequence animation
+2. Device capability detection
+3. Suite tier selection (Notes / Deep Analysis / Full AI & Measurement)
+4. API key entry (optional — skip for Simulation mode)
 
-## Smoke test (non-interactive)
-```powershell
-python scripts\smoke_test.py
-```
-This runs a single query, verifies telemetry append, and prints PASS/FAIL.
+## Inference Modes
 
-## Full end-to-end test (slow)
-```powershell
-python scripts\full_test.py
-```
-This runs a real query through the model, verifies telemetry, and prints PASS/FAIL.
+Configure in **Settings → Inference Mode**:
 
-## Dashboard
-Open `http://localhost:8000` (opened automatically by `run_pfc.ps1`).
+| Mode | What It Does | Needs |
+|------|-------------|-------|
+| **Simulation** | Template-generated responses for offline demo | Nothing |
+| **API** | Cloud LLM calls with structured analytical prompts | API key (Anthropic, OpenAI, or Google) |
+| **Local** | Ollama-compatible models with full steering control | Ollama running locally |
 
-If the dashboard looks stale, you can also open:
-```
-http://localhost:8000/replay
-```
-This shows the raw telemetry stream.
+### Setting Up Ollama (Local Mode)
 
-## Learning (optional)
-To inject learned skills into prompts, enable this in `config/model_config.yaml`:
-```yaml
-learning:
-  use_retrieval: true
-```
-When enabled, the top 1–3 learned skills are prepended to prompts.
+1. Install Ollama: https://ollama.ai
+2. Pull a model: `ollama pull qwen2.5:14b`
+3. In Settings → Local Mode, enter `http://localhost:11434`
+4. Click "Test Connection"
+5. Select your model from the dropdown
 
-## Feature toggles (short)
-- `config/telemetry.yaml`  
-  `telemetry.enabled` and `focus_control.enabled` control logging and the focus controller.
-- `config/local_model.yaml`  
-  `activation_capture.enabled` and `skip_for_simple` control TDA activation capture.
-- `config/runtime.yaml`  
-  `inference_mode` selects `local` vs `hybrid`, and `local_generation.*` controls the local model.
-- `config/model_config.yaml`  
-  `triage.concept_depth.*` and `triage.meta_analyzer.*` control concept‑driven complexity and the extra meta‑analyzer pass.
+## Core Features
 
-## Key config files (short)
-- `config/runtime.yaml`  
-  Local vs hybrid inference and local model settings.
-- `config/model_config.yaml`  
-  High-level behavior, learning settings, thresholds, and paths.
-- `config/local_model.yaml`  
-  Activation capture settings (TDA, skip for simple queries, etc.).
-- `config/telemetry.yaml`  
-  Telemetry logging and focus controller parameters.
-- `config/concepts.yaml`  
-  Concept chords, dissonance rules, harmonic base.
-- `config/cae.yaml`  
-  Safety state machine configuration (CAE).
+### Chat (`/`)
+- Type research questions in the input bar
+- Toggle between **Research view** (detailed) and **Layman view** (simplified) per message
+- Expand the reasoning accordion to see the AI's thinking process
+- View confidence and evidence grades per response
 
-## Files you may care about
-- `data/telemetry/events.jsonl` — live telemetry stream
-- `data/learned_knowledge/knowledge_base.json` — learned skills store
+### Notes (`/notes`)
+- Create pages organized in vaults
+- Block-based editing: paragraphs, headings, code, math, quotes, callouts, lists, todos
+- Use `[[page name]]` for bi-directional links
+- AI-assisted writing: select blocks → ask AI to continue, summarize, expand, or rewrite
+- Daily journal entries auto-created
 
-## Reset State (dashboard)
-The “Reset State” button only resets the visual history in the dashboard.
-It does NOT delete learned skills, memory, or telemetry logs.
+### Research Library (`/research-library`)
+- Add papers with title, authors, DOI, tags, abstract
+- Search by keyword or tag
+- Inline notes on each paper
+
+### Analytics (`/analytics`)
+- **Pipeline** tab shows real-time 10-stage progress
+- **Signals** tab charts confidence, entropy, dissonance over time
+- **Steering Lab** lets you adjust complexity bias, adversarial intensity, Bayesian prior strength, focus depth, temperature
+
+## Background Agents (Daemon)
+
+Go to `/daemon` to manage background agents:
+
+1. Click **Start** to launch the daemon
+2. Enable/disable individual tasks
+3. Configure agent behavior (complexity bias, adversarial intensity, permissions)
+4. View event log for task results
+
+The 5 agent tasks:
+- **Connection Finder** — finds links between notes you didn't know existed
+- **Daily Brief** — morning summary of what changed
+- **Auto-Organizer** — tags and clusters unorganized notes
+- **Research Assistant** — identifies research questions implicit in your notes
+- **Learning Protocol** — multi-step deep learning from your knowledge base
+
+## Export
+
+Go to `/export` to download your data:
+- **Formats:** JSON, CSV, Markdown, BibTeX, RIS
+- **Data types:** All data, signals, papers, chat history, pipeline runs
+
+## Keyboard Shortcuts
+
+- `Cmd+\` — toggle notes sidebar
+- Standard text editing shortcuts in the block editor
+
+## Settings Reference
+
+| Setting | Location | What It Does |
+|---------|----------|-------------|
+| Inference Mode | Settings → top | Simulation / API / Local |
+| Suite Tier | Settings → Suite Tier | Feature gating (Notes / Deep Analysis / Full) |
+| Analytics Engine | Settings → Analytics Engine | Enable/disable signal computation and SOAR |
+| SOAR | Settings → SOAR | Toggle meta-reasoning and configure iterations |
+| Theme | Settings → Appearance | 8 theme options (light, dark, OLED, cosmic, etc.) |
+| Export | Settings → Export Data | Download data in various formats |
