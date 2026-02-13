@@ -309,6 +309,8 @@ interface MultimodalInputProps {
 // Stable selectors
 const selectToggleLiveControls = (s: { toggleLiveControls: () => void }) => s.toggleLiveControls;
 const selectLiveControlsOpen = (s: { liveControlsOpen: boolean }) => s.liveControlsOpen;
+const selectPendingAttachments = (s: { pendingAttachments: import('@/lib/engine/types').FileAttachment[] }) => s.pendingAttachments;
+const selectRemoveAttachment = (s: { removeAttachment: (id: string) => void }) => s.removeAttachment;
 
 export function MultimodalInput({
   onSubmit,
@@ -324,6 +326,8 @@ export function MultimodalInput({
 }: MultimodalInputProps) {
   const toggleLiveControls = usePFCStore(selectToggleLiveControls);
   const liveControlsOpen = usePFCStore(selectLiveControlsOpen);
+  const pendingAttachments = usePFCStore(selectPendingAttachments);
+  const removeAttachment = usePFCStore(selectRemoveAttachment);
   const { isDark } = useIsDark();
   const { theme, setTheme } = useTheme();
   const [value, setValue] = useState('');
@@ -576,6 +580,88 @@ export function MultimodalInput({
                 style={{ boxShadow: 'none', width: '100%', ...inputStyle }}
               />
             </div>
+
+            {/* Attachment Preview Strip */}
+            {pendingAttachments.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.375rem 0',
+                overflowX: 'auto',
+                flexWrap: 'nowrap',
+              }}>
+                {pendingAttachments.map((att) => {
+                  const isImage = att.type === 'image';
+                  const sizeStr = att.size < 1024 * 1024
+                    ? `${(att.size / 1024).toFixed(0)}KB`
+                    : `${(att.size / (1024 * 1024)).toFixed(1)}MB`;
+                  return (
+                    <div
+                      key={att.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: isImage ? '0.125rem' : '0.25rem 0.5rem',
+                        borderRadius: isImage ? '0.5rem' : '999px',
+                        background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                        border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                        flexShrink: 0,
+                        maxWidth: '200px',
+                        fontSize: '0.75rem',
+                        color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
+                      }}
+                    >
+                      {isImage && att.preview ? (
+                        <img
+                          src={att.preview}
+                          alt={att.name}
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            objectFit: 'cover',
+                            borderRadius: '0.375rem',
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: '0.875rem' }}>
+                          {att.type === 'pdf' ? '📄' : att.type === 'csv' ? '📊' : '📎'}
+                        </span>
+                      )}
+                      <span style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: isImage ? '80px' : '120px',
+                      }}>
+                        {att.name}
+                      </span>
+                      {!isImage && (
+                        <span style={{ opacity: 0.5, flexShrink: 0 }}>{sizeStr}</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(att.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '0 0.125rem',
+                          color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)',
+                          fontSize: '0.875rem',
+                          lineHeight: 1,
+                          flexShrink: 0,
+                        }}
+                        aria-label={`Remove ${att.name}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Row 2: Buttons bottom row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem' }}>
