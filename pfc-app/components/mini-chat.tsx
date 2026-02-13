@@ -2140,6 +2140,9 @@ Each result should have realistic academic paper details. Only return the JSON a
     if (results.length > 0) {
       setResults((prev) => prev.map((r) => ({ ...r, formatted: formatCitation(r, format) })));
     }
+  // SAFETY: results is read via the setState callback (prev), not as a reactive dep.
+  // The guard `results.length > 0` prevents no-op runs; adding results would cause
+  // an infinite loop (effect writes results).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [format]);
 

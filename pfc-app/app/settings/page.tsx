@@ -190,11 +190,15 @@ export default function SettingsPage() {
     if (storedOllamaUrl) setOllamaBaseUrl(storedOllamaUrl);
     const storedOllamaModel = localStorage.getItem('pfc-ollama-model');
     if (storedOllamaModel) setOllamaModel(storedOllamaModel);
+    // SAFETY: One-time mount hydration from localStorage. All setters are stable
+    // Zustand actions. Re-running would overwrite user changes made after mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (inferenceMode === 'local') checkOllama();
+    // SAFETY: checkOllama identity changes when ollamaBaseUrl changes; adding it
+    // here would double-trigger checks. This effect only fires on mode switch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inferenceMode]);
 
@@ -249,6 +253,9 @@ export default function SettingsPage() {
       }
     } catch { setOllamaStatus(false, []); }
     finally { setOllamaChecking(false); }
+    // SAFETY: ollamaModel and handleOllamaModelChange are read at call-time, not
+    // as reactive triggers. Zustand setters (setOllamaStatus, setOllamaChecking)
+    // are stable. Only ollamaBaseUrl should cause a re-check.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ollamaBaseUrl]);
 
@@ -260,11 +267,15 @@ export default function SettingsPage() {
       setOllamaHardware(data);
     } catch { setOllamaHardware(null); }
     finally { setHwLoading(false); }
+    // SAFETY: Zustand setters (setOllamaHardware, setHwLoading) are stable.
+    // Only ollamaBaseUrl should trigger a re-fetch of hardware status.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ollamaBaseUrl]);
 
   useEffect(() => {
     if (inferenceMode === 'local' && ollamaAvailable) fetchHardwareStatus();
+    // SAFETY: fetchHardwareStatus is a stable callback (deps: [ollamaBaseUrl]).
+    // This effect should only fire when availability or mode changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ollamaAvailable, inferenceMode]);
 

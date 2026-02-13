@@ -824,8 +824,9 @@ const BlockItem = memo(function BlockItem({
       const expected = block.content;
       if (current !== expected) {
         suppressInputRef.current = true;
-        // Content is locally-generated AI text (same trust as other sync paths)
-        contentRef.current.innerHTML = expected; // eslint-disable-line -- trusted local content
+        // SAFETY: innerHTML assignment uses locally-generated AI text with the same
+        // trust model as the existing content sync paths in this component.
+        contentRef.current.innerHTML = expected;
         contentRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
     } else if (wasTypewriterRef.current && !isTypewriterTarget) {
@@ -856,6 +857,9 @@ const BlockItem = memo(function BlockItem({
       sel?.removeAllRanges();
       sel?.addRange(range);
     }
+  // SAFETY: block.content is intentionally omitted — this effect handles focus and
+  // cursor placement when isEditing changes, not content sync (handled elsewhere).
+  // contentRef and suppressInputRef are stable refs.
   }, [isEditing, isTypewriterTarget]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup typing undo timer on unmount

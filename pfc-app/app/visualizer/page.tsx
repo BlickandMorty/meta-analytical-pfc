@@ -723,6 +723,9 @@ const D3ForceGraph = memo(function D3ForceGraph({
       clearTimeout(timer);
       sim.stop();
     };
+    // SAFETY: concepts.join('|') is an inline derived key that ESLint cannot parse;
+    // COLORS is a local constant. The simulation must only restart when the concept
+    // set or container size changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [concepts.join('|'), dimensions.width, dimensions.height]);
 
@@ -806,6 +809,8 @@ function InteractiveSignalRadar({
     e.preventDefault();
     (e.target as SVGElement).setPointerCapture(e.pointerId);
     setDragging(index);
+  // SAFETY: axes is read as a guard (editable check) but adding it would re-create
+  // the handler on every render, breaking pointer capture and drag stability.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1282,7 +1287,6 @@ export default function VisualizerPage() {
       { key: 'dissonance', label: 'Dissonance', color: RED, data: dissData },
       { key: 'health', label: 'Health', color: GREEN, data: healthData },
     ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confidence, entropy, dissonance, healthScore]);
 
   // Parallel coordinates data (AIM Params Explorer style)
@@ -1314,7 +1318,6 @@ export default function VisualizerPage() {
       });
     }
     return runs;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confidence, entropy, dissonance, healthScore, riskScore, harmonyKeyDistance]);
 
   // Heat map correlation matrix
@@ -1343,7 +1346,6 @@ export default function VisualizerPage() {
       });
     }
     return pts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confidence, entropy, dissonance, healthScore, riskScore, harmonyKeyDistance]);
 
   if (!ready) {

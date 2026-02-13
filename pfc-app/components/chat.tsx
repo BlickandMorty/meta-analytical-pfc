@@ -325,6 +325,8 @@ function GreetingSubtitle({ isDark, isOled, dismissing }: { isDark: boolean; isO
     return () => {
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     };
+  // SAFETY: dismissed is read conditionally (not a reactive trigger); stateRef and
+  // dismissTimerRef are stable refs. Only dismissing should restart the backspace animation.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dismissing]);
 
@@ -1007,7 +1009,6 @@ export function Chat() {
   // Pick random greeting client-side only to avoid hydration mismatch
   useEffect(() => {
     setLandingGreeting(LANDING_GREETINGS[Math.floor(Math.random() * LANDING_GREETINGS.length)]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const lastBackClickRef = useRef(0);
   const lastChatsClickRef = useRef(0);

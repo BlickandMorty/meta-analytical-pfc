@@ -226,6 +226,9 @@ export default function DaemonPage() {
         if (data.baseDir && !baseDirDraft) setBaseDirDraft(data.baseDir);
       }
     } catch { /* non-critical */ }
+    // SAFETY: baseDirDraft is read as a guard (only set if empty); adding it would
+    // re-fetch permissions on every keystroke in the base-dir input. Zustand setters
+    // are stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -250,12 +253,16 @@ export default function DaemonPage() {
   // Also fetch events when status changes (new task completed)
   useEffect(() => {
     if (showEvents && status?.running) fetchEvents();
+    // SAFETY: showEvents and fetchEvents are guards/stable callbacks; this effect
+    // should only fire when a new task completes (currentTask changes).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.currentTask]);
 
   // Fetch permissions when daemon is running
   useEffect(() => {
     if (status?.running && status?.pid) fetchPermissions();
+    // SAFETY: fetchPermissions is a stable callback (empty deps). This effect
+    // should only fire when daemon running state changes, not on every status poll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.running]);
 

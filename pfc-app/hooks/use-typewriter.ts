@@ -95,6 +95,9 @@ export function useTypewriter(
       if (timerRef.current) clearTimeout(timerRef.current);
       if (lingerRef.current) clearTimeout(lingerRef.current);
     };
+    // SAFETY: speed, startDelay, cursorLingerMs are config read once at effect start;
+    // reset is a stable ref-clearing callback. Re-running on config change mid-animation
+    // would restart the typewriter unexpectedly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, text]);
 

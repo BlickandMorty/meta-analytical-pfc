@@ -208,6 +208,9 @@ function useGreetingTypewriter(shouldAnimate: boolean, isDark: boolean) {
     // Start after a short delay
     setTimeout(typeNext, 200);
     return () => { cancelled = true; };
+  // SAFETY: lines is derived from characterKey and intentionally not listed — the
+  // effect should only restart when the character changes or animation toggles.
+  // hasPlayedRef and lastCharRef are stable refs.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldAnimate, characterKey]);
 

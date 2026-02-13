@@ -121,6 +121,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
     } catch { /* ignore corrupt data */ }
 
+    // SAFETY: One-time mount hydration from localStorage. All setters are stable
+    // Zustand actions that never change identity. Re-running would overwrite user
+    // changes made after mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

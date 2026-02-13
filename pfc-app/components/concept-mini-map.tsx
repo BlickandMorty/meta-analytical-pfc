@@ -73,6 +73,9 @@ function MiniConceptCanvas({
       };
     });
     nodesRef.current = nodes;
+    // SAFETY: conceptsKey and weightsKey are stable derived strings that replace
+    // the raw concepts array and conceptWeights object to avoid re-creating nodes
+    // on every render. COLORS is a local constant.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conceptsKey, weightsKey]);
 
