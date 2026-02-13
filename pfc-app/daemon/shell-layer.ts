@@ -128,12 +128,13 @@ export async function runCommand(
         cwd,
         timeout,
         maxBuffer: MAX_OUTPUT_BYTES,
-        env: {
-          // Minimal environment — don't leak host env
+        // SAFETY: Minimal environment — intentionally omits most process.env keys
+        // to avoid leaking host env. The Record type satisfies execFile's env option.
+        env: Object.assign(Object.create(null) as NodeJS.ProcessEnv, {
           PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
           HOME: process.env.HOME || '',
           LANG: 'en_US.UTF-8',
-        } as unknown as NodeJS.ProcessEnv,
+        }),
       },
       (error: ExecFileException | null, stdout: string, stderr: string) => {
         const durationMs = Date.now() - start;

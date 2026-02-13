@@ -16,6 +16,11 @@ const MAX_TEXT_LENGTH = 30_000;
 
 export type FileCategory = 'image' | 'text' | 'data' | 'document' | 'other';
 
+/** Shape of the optional mammoth module for DOCX text extraction */
+interface MammothLike {
+  extractRawText: (opts: { buffer: Buffer }) => Promise<{ value: string }>;
+}
+
 // ---------------------------------------------------------------------------
 // Supported extensions
 // ---------------------------------------------------------------------------
@@ -174,7 +179,10 @@ export async function extractTextContent(
   // DOCX / DOC — dynamic import
   if (['.docx', '.doc'].includes(e) || m.includes('wordprocessingml') || m === 'application/msword') {
     try {
-      const mammoth = await import('mammoth') as unknown as { extractRawText: (opts: { buffer: Buffer }) => Promise<{ value: string }> };
+      // SAFETY: mammoth is an optional dependency without bundled types.
+      // The dynamic import returns a module with extractRawText on its default or named export.
+      const mammothModule: { default?: MammothLike; extractRawText?: MammothLike['extractRawText'] } = await import('mammoth');
+      const mammoth = mammothModule.default ?? mammothModule as unknown as MammothLike;
       const result = await mammoth.extractRawText({ buffer });
       return truncate(result.value);
     } catch {

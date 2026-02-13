@@ -41,6 +41,32 @@ import { exportData, downloadExport, getMimeType } from '@/lib/research/export';
 import type { ResearchPaper, ExportFormat } from '@/lib/research/types';
 
 /* ═══════════════════════════════════════════════════════════════════
+   API Response Interfaces
+   ═══════════════════════════════════════════════════════════════════ */
+
+interface NoveltyCheckResult {
+  isNovel?: boolean;
+  confidence?: number;
+  summary?: string;
+  rounds?: unknown[];
+  totalPapersReviewed?: number;
+  closestPapers?: S2Paper[];
+}
+
+interface PaperReviewResult {
+  averagedScores?: Record<string, number>;
+  scores?: Record<string, number>;
+  decision?: string;
+  consensusDecision?: string;
+  individualReviews?: unknown[];
+  agreementLevel?: number;
+  metaReview?: string;
+  summary?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    Design Tokens
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -400,7 +426,7 @@ function NoveltyCheckTab({ isDark }: { isDark: boolean }) {
   const inferenceConfig = useInferenceConfig();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [result, setResult] = useState<NoveltyCheckResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
@@ -415,7 +441,7 @@ function NoveltyCheckTab({ isDark }: { isDark: boolean }) {
     abortRef.current = controller;
     setLoading(true); setError('');
     try {
-      const data = await researchFetch<Record<string, unknown>>('check-novelty', {
+      const data = await researchFetch<NoveltyCheckResult>('check-novelty', {
         title: title.trim(), description: description.trim(),
         maxRounds: 3, inferenceConfig,
       }, controller.signal);
@@ -424,12 +450,12 @@ function NoveltyCheckTab({ isDark }: { isDark: boolean }) {
     finally { if (!controller.signal.aborted) setLoading(false); }
   }, [title, description, inferenceConfig]);
 
-  const isNovel = result?.isNovel as boolean | undefined;
-  const confidence = result?.confidence as number | undefined;
-  const summary = result?.summary as string | undefined;
-  const rounds = result?.rounds as unknown[] | undefined;
-  const totalPapersReviewed = result?.totalPapersReviewed as number | undefined;
-  const closestPapers = result?.closestPapers as S2Paper[] | undefined;
+  const isNovel = result?.isNovel;
+  const confidence = result?.confidence;
+  const summary = result?.summary;
+  const rounds = result?.rounds;
+  const totalPapersReviewed = result?.totalPapersReviewed;
+  const closestPapers = result?.closestPapers;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -530,7 +556,7 @@ function PaperReviewTab({ isDark }: { isDark: boolean }) {
   const [abstract, setAbstract] = useState('');
   const [fullText, setFullText] = useState('');
   const [useEnsemble, setUseEnsemble] = useState(false);
-  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [result, setResult] = useState<PaperReviewResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
@@ -546,7 +572,7 @@ function PaperReviewTab({ isDark }: { isDark: boolean }) {
     setLoading(true); setError('');
     try {
       const action = useEnsemble ? 'ensemble-review' : 'review-paper';
-      const data = await researchFetch<Record<string, unknown>>(action, {
+      const data = await researchFetch<PaperReviewResult>(action, {
         title: title.trim(), abstract: abstract.trim(),
         fullText: fullText.trim() || undefined,
         numReviewers: 3, inferenceConfig,
@@ -557,15 +583,15 @@ function PaperReviewTab({ isDark }: { isDark: boolean }) {
   }, [title, abstract, fullText, useEnsemble, inferenceConfig]);
 
   // Extract typed fields
-  const scores = (result?.averagedScores ?? result?.scores) as Record<string, number> | undefined;
-  const decision = (result?.decision ?? result?.consensusDecision) as string | undefined;
+  const scores = result?.averagedScores ?? result?.scores;
+  const decision = result?.decision ?? result?.consensusDecision;
   const isAccept = decision === 'accept';
   const isEnsemble = Boolean(result?.individualReviews);
-  const agreementLevel = result?.agreementLevel as number | undefined;
-  const reviewerCount = (result?.individualReviews as unknown[] | undefined)?.length;
-  const reviewSummary = (result?.metaReview ?? result?.summary) as string | undefined;
-  const strengths = result?.strengths as string[] | undefined;
-  const weaknesses = result?.weaknesses as string[] | undefined;
+  const agreementLevel = result?.agreementLevel;
+  const reviewerCount = result?.individualReviews?.length;
+  const reviewSummary = result?.metaReview ?? result?.summary;
+  const strengths = result?.strengths;
+  const weaknesses = result?.weaknesses;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

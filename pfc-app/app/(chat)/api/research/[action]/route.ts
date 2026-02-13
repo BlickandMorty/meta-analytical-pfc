@@ -129,8 +129,9 @@ function resolveModel(body: ResearchRequestBody) {
 
 async function _POST(
   request: NextRequest,
-  { params }: { params: Promise<{ action: string }> },
+  context?: { params: Promise<Record<string, string>> },
 ) {
+  const params = context!.params;
   try {
     const parsedBody = await parseBodyWithLimit<ResearchRequestBody>(request, 5 * 1024 * 1024);
     if ('error' in parsedBody) {
@@ -341,4 +342,4 @@ async function _POST(
   }
 }
 
-export const POST = withMiddleware(_POST as any, { maxRequests: 30, windowMs: 60_000 });
+export const POST = withMiddleware(_POST, { maxRequests: 30, windowMs: 60_000 });

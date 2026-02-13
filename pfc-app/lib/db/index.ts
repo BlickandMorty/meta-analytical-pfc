@@ -221,14 +221,14 @@ function getDb() {
 }
 
 // For backward compatibility, export as `db` using a Proxy
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
   get(_target, prop) {
     const realDb = getDb();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const value = (realDb as any)[prop];
+    // SAFETY: Proxy get trap requires dynamic property access on the drizzle instance.
+    // The prop is forwarded as-is; drizzle's own runtime handles unknown keys safely.
+    const value = (realDb as unknown as Record<string | symbol, unknown>)[prop];
     if (typeof value === 'function') {
-      return value.bind(realDb);
+      return (value as (...args: unknown[]) => unknown).bind(realDb);
     }
     return value;
   },
