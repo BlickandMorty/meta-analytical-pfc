@@ -31,7 +31,7 @@ All optional. The app is local-first and runs without any env vars.
 | `ANTHROPIC_API_KEY`   | Anthropic API access (Claude models)      |
 | `OPENAI_API_KEY`      | OpenAI API access                         |
 | `GOOGLE_GENERATIVE_AI_KEY` | Google Gemini API access             |
-| `PFC_API_TOKEN`       | When set, gates all API routes via edge middleware |
+| `PFC_API_TOKEN`       | When set, gates all API routes via edge proxy |
 
 ---
 
@@ -65,8 +65,8 @@ brainiac-2.0/
 │   │   ├── system/[action]/      # Ollama check, daemon, test-connection
 │   │   ├── notes/[action]/       # Notes AI, learn, sync
 │   │   └── assistant/            # Assistant endpoint
-│   └── middleware.ts             # -> root middleware.ts (see below)
-├── middleware.ts                 # Edge auth -- PFC_API_TOKEN gate
+│   └── proxy.ts             # -> root proxy.ts (see below)
+├── proxy.ts                 # Edge auth -- PFC_API_TOKEN gate
 ├── components/
 │   ├── layout/                   # AppShell, PageShell, TopNav, PageTransition, ErrorBoundary
 │   ├── chat/                     # Chat UI (20 components)
@@ -131,7 +131,7 @@ brainiac-2.0/
 │   │   └── motion-config.ts      # ALL motion presets (springs, easings, CSS keyframes)
 │   ├── branded.ts                # Branded types: UserId, ChatId, MessageId, etc.
 │   ├── rate-limit.ts             # Sliding-window rate limiter
-│   ├── api-middleware.ts         # withRateLimit() wrapper for route handlers
+│   ├── api-proxy.ts         # withRateLimit() wrapper for route handlers
 │   ├── api-utils.ts              # Shared API utilities (parseBodyWithLimit, etc.)
 │   ├── daemon-ipc.ts             # Typed IPC for daemon communication
 │   └── utils.ts                  # General utilities
@@ -146,7 +146,7 @@ brainiac-2.0/
 ├── tests/                        # 12 test files, 193 tests
 ├── vitest.config.ts
 ├── drizzle.config.ts
-└── middleware.ts                 # Edge auth middleware
+└── proxy.ts                 # Edge auth middleware
 ```
 
 ### Key Architectural Decisions
@@ -159,7 +159,7 @@ brainiac-2.0/
 
 4. **Event bus for cross-slice communication.** Slices must never mutate state owned by another slice. Instead, use the typed event bus in `lib/store/events.ts`. Events are emitted via `emit()` and subscribed via `onStoreEvent()` in `use-pfc-store.ts`. Defined events: `query:submitted`, `query:completed`, `chat:cleared`, `learning:page-created`, `learning:block-created`.
 
-5. **Two-layer auth.** Edge middleware (`middleware.ts`) handles token authentication when `PFC_API_TOKEN` is set. Per-route rate limiting is handled by `withRateLimit()` in `lib/api-middleware.ts`, applied inside each route handler.
+5. **Two-layer auth.** Edge proxy (`proxy.ts`) handles token authentication when `PFC_API_TOKEN` is set. Per-route rate limiting is handled by `withRateLimit()` in `lib/api-proxy.ts`, applied inside each route handler.
 
 6. **Drizzle schema is the single source of truth.** All table definitions live in `lib/db/schema.ts`. To change the schema, edit that file and run `npx drizzle-kit generate` to produce a migration. Never write raw DDL.
 
@@ -247,7 +247,7 @@ brainiac-2.0/
 - System-related (Ollama, daemon, connectivity): add a case in `app/api/system/[action]/route.ts`.
 - Notes-related (AI, learning, sync): add a case in `app/api/notes/[action]/route.ts`.
 - Other: create a new route directory under `app/api/`.
-- Wrap the handler with `withRateLimit()` from `lib/api-middleware.ts`.
+- Wrap the handler with `withRateLimit()` from `lib/api-proxy.ts`.
 - Use `parseBodyWithLimit()` from `lib/api-utils.ts` for POST body parsing.
 
 ### Running the daemon
