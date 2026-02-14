@@ -3,14 +3,11 @@
 import { useEffect, useMemo } from 'react';
 import { useSteeringStore } from '@/lib/store/use-steering-store';
 import { projectPCA } from '@/lib/engine/steering/engine';
-import { getMemoryStats } from '@/lib/engine/steering/memory';
 import { DIMENSION_LABELS } from '@/lib/engine/steering/encoder';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
-import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PixelBook } from '@/components/decorative/pixel-mascots';
+import { GlassSection } from '@/components/layout/page-shell';
 import { useIsDark } from '@/hooks/use-is-dark';
 import {
   CompassIcon,
@@ -25,8 +22,38 @@ import {
   GaugeIcon,
 } from 'lucide-react';
 
-export default function SteeringLabPage() {
-  const ready = useSetupGuard();
+// -- StatCard sub-component --
+
+function StatCard({ label, value, icon, color, sub }: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  color: string;
+  sub?: string;
+}) {
+  const { isDark, isOled } = useIsDark();
+  return (
+    <div
+      className="rounded-2xl p-4"
+      style={{
+        background: isOled
+          ? 'rgba(22,22,22,0.85)'
+          : isDark
+            ? 'rgba(255,255,255,0.035)'
+            : 'rgba(0,0,0,0.025)',
+      }}
+    >
+      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+        <span className={color}>{icon}</span>
+        <span className="text-[10px] uppercase tracking-wider">{label}</span>
+      </div>
+      <p className={cn('text-2xl font-bold tabular-nums', color)}>{value}</p>
+      {sub && <p className="text-[10px] text-muted-foreground/60 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+export function SteeringLabView() {
   const memory = useSteeringStore((s) => s.memory);
   const config = useSteeringStore((s) => s.config);
   const currentBias = useSteeringStore((s) => s.currentBias);
@@ -99,22 +126,22 @@ export default function SteeringLabPage() {
 
   const strengthPct = Math.round(currentBias.steeringStrength * 100);
 
-  // Show loading state until setup guard + steering store are both ready
-  if (!ready || !isLoaded) {
+  // Show loading state until steering store is ready
+  if (!isLoaded) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <PixelBook size={40} />
+      <div className="flex items-center justify-center h-[60vh] opacity-40">
+        <div style={{
+          width: '2rem', height: '2rem', borderRadius: '50%',
+          border: '2px solid currentColor', borderTopColor: 'transparent',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
-    <PageShell
-      icon={CompassIcon}
-      iconColor="var(--color-pfc-violet)"
-      title="Steering Lab"
-      subtitle="Adaptive steering memory and bias engine"
-    >
+    <>
       {stats.totalExemplars === 0 ? (
         /* Empty state */
         <GlassSection>
@@ -125,7 +152,7 @@ export default function SteeringLabPage() {
             <h2 className="text-lg font-semibold tracking-tight mb-1">No Steering Data Yet</h2>
             <p className="text-sm text-muted-foreground max-w-md">
               Submit queries in the chat to start building your steering memory.
-              The engine learns from each analysis — rate results with thumbs up/down for faster adaptation.
+              The engine learns from each analysis -- rate results with thumbs up/down for faster adaptation.
             </p>
             <p className="text-xs text-muted-foreground/50 mt-3">
               Steering activates after 3+ exemplars | Full strength at 20+
@@ -148,7 +175,7 @@ export default function SteeringLabPage() {
                 value={stats.totalExemplars.toString()}
                 icon={<ScatterChartIcon className="h-3.5 w-3.5" />}
                 color="text-pfc-violet"
-                sub={`${stats.positiveCount}↑ ${stats.negativeCount}↓ ${stats.neutralCount}~`}
+                sub={`${stats.positiveCount}\u2191 ${stats.negativeCount}\u2193 ${stats.neutralCount}~`}
               />
               <StatCard
                 label="User Rated"
@@ -250,7 +277,7 @@ export default function SteeringLabPage() {
                       )}
                     </div>
                     <span className="text-[9px] tabular-nums text-muted-foreground/60 w-8 text-right">
-                      {sampleCount > 0 ? `${(confidence * 100).toFixed(0)}%` : '—'}
+                      {sampleCount > 0 ? `${(confidence * 100).toFixed(0)}%` : '\u2014'}
                     </span>
                   </div>
                 ))}
@@ -287,7 +314,7 @@ export default function SteeringLabPage() {
                   </p>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-8">No active bias — need more exemplars</p>
+                <p className="text-xs text-muted-foreground text-center py-8">No active bias -- need more exemplars</p>
               )}
             </GlassSection>
 
@@ -388,37 +415,6 @@ export default function SteeringLabPage() {
           )}
         </div>
       )}
-    </PageShell>
-  );
-}
-
-// -- StatCard sub-component --
-
-function StatCard({ label, value, icon, color, sub }: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  color: string;
-  sub?: string;
-}) {
-  const { isDark, isOled } = useIsDark();
-  return (
-    <div
-      className="rounded-2xl p-4"
-      style={{
-        background: isOled
-          ? 'rgba(22,22,22,0.85)'
-          : isDark
-            ? 'rgba(255,255,255,0.035)'
-            : 'rgba(0,0,0,0.025)',
-      }}
-    >
-      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-        <span className={color}>{icon}</span>
-        <span className="text-[10px] uppercase tracking-wider">{label}</span>
-      </div>
-      <p className={cn('text-2xl font-bold tabular-nums', color)}>{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground/60 mt-0.5">{sub}</p>}
-    </div>
+    </>
   );
 }

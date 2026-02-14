@@ -20,11 +20,9 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import type { SafetyState } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
-import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/decorative/pixel-mascots';
+import { GlassSection } from '@/components/layout/page-shell';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { EducationalTooltipButton } from '@/components/shared/educational-tooltip';
 import { SIGNAL_TOOLTIPS } from '@/lib/research/educational-data';
@@ -193,8 +191,7 @@ const cardVariants = {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function DiagnosticsPage() {
-  const ready = useSetupGuard();
+export function DiagnosticsView() {
   const confidence = usePFCStore((s) => s.confidence);
   const entropy = usePFCStore((s) => s.entropy);
   const dissonance = usePFCStore((s) => s.dissonance);
@@ -215,16 +212,8 @@ export default function DiagnosticsPage() {
 
   const anomalies = getAnomalies({ entropy, dissonance, healthScore, riskScore, confidence });
 
-  if (!ready) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <PixelBook size={40} />
-      </div>
-    );
-  }
-
   return (
-    <PageShell icon={GaugeIcon} iconColor="var(--color-pfc-ember)" title="Diagnostics" subtitle="System health & signal analysis">
+    <>
       {/* Anomaly Alerts */}
       {anomalies.length > 0 && (
         <GlassSection
@@ -367,8 +356,8 @@ export default function DiagnosticsPage() {
         <p className="text-xs text-muted-foreground/50 mb-3">Heuristic structural metrics derived from query properties. Higher values indicate more complex analytical structure.</p>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {([
-            { label: 'β₀ (Fragmentation)', value: tda.betti0 },
-            { label: 'β₁ (Cyclical)', value: tda.betti1 },
+            { label: 'B0 (Fragmentation)', value: tda.betti0 },
+            { label: 'B1 (Cyclical)', value: tda.betti1 },
             { label: 'Persistence Entropy', value: tda.persistenceEntropy },
             { label: 'Max Persistence', value: tda.maxPersistence },
           ] as const).map((item, i) => (
@@ -479,6 +468,6 @@ export default function DiagnosticsPage() {
           ))}
         </div>
       </GlassSection>
-    </PageShell>
+    </>
   );
 }

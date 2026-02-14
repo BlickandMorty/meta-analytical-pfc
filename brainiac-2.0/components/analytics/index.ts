@@ -1,2 +1,5 @@
-// TODO: Analytics components will be extracted from app/analytics/page.tsx into this directory in Phase 2
-export {};
+export { DiagnosticsView } from './diagnostics-view';
+export { VisualizerView } from './visualizer-view';
+export { SteeringLabView } from './steering-lab-view';
+export { CortexArchiveView } from './cortex-archive-view';
+export { PipelineView } from './pipeline-view';

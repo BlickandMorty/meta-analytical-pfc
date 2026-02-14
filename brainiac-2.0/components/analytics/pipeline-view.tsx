@@ -2,7 +2,6 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  NetworkIcon,
   CheckCircle2Icon,
   CircleDotIcon,
   AlertTriangleIcon,
@@ -12,20 +11,19 @@ import {
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import {
   STAGES,
-  STAGE_LABELS,
-  STAGE_DESCRIPTIONS,
 } from '@/lib/constants';
 import type { StageResult, StageStatus } from '@/lib/engine/types';
 
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/decorative/pixel-mascots';
+import { GlassSection } from '@/components/layout/page-shell';
 import { EducationalTooltipButton } from '@/components/shared/educational-tooltip';
 import { PIPELINE_TOOLTIPS } from '@/lib/research/educational-data';
 import { useIsDark } from '@/hooks/use-is-dark';
+
+// Inline the stage labels/descriptions that were imported via constants
+import { STAGE_LABELS, STAGE_DESCRIPTIONS } from '@/lib/constants';
 
 function StatusIcon({ status }: { status: StageStatus }) {
   switch (status) {
@@ -44,7 +42,7 @@ function StageRow({ result, index, isDark, isOled }: { result: StageResult; inde
   const { stage, status, detail, value } = result;
   const tooltip = PIPELINE_TOOLTIPS[stage];
 
-  // M3 flat surface — OLED gets dark grey, others get subtle tonal fill
+  // M3 flat surface -- OLED gets dark grey, others get subtle tonal fill
   const baseBg = isOled
     ? 'rgba(22,22,22,0.85)'
     : isDark
@@ -110,8 +108,7 @@ function StageRow({ result, index, isDark, isOled }: { result: StageResult; inde
   );
 }
 
-export default function PipelinePage() {
-  const ready = useSetupGuard();
+export function PipelineView() {
   const pipelineStages = usePFCStore((s) => s.pipelineStages);
   const isProcessing = usePFCStore((s) => s.isProcessing);
   const { isDark, isOled } = useIsDark();
@@ -119,21 +116,8 @@ export default function PipelinePage() {
   const completedCount = pipelineStages.filter((s) => s.status === 'complete').length;
   const overallProgress = (completedCount / STAGES.length) * 100;
 
-  if (!ready) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <PixelBook size={40} />
-      </div>
-    );
-  }
-
   return (
-    <PageShell
-      icon={NetworkIcon}
-      iconColor="var(--color-pfc-ember)"
-      title="Pipeline"
-      subtitle="10-stage executive reasoning protocol"
-    >
+    <>
       {/* Progress overview */}
       <GlassSection>
         <div
@@ -176,6 +160,6 @@ export default function PipelinePage() {
           </AnimatePresence>
         </div>
       </GlassSection>
-    </PageShell>
+    </>
   );
 }

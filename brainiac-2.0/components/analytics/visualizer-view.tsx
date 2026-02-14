@@ -34,10 +34,8 @@ import {
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { cn } from '@/lib/utils';
-import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/decorative/pixel-mascots';
+import { GlassSection } from '@/components/layout/page-shell';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { useIsDark } from '@/hooks/use-is-dark';
 
@@ -328,7 +326,7 @@ const D3LineChart = memo(function D3LineChart({
           {showConfidenceBands && (
             <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer">
               <input type="checkbox" checked={bandEnabled} onChange={(e) => setBandEnabled(e.target.checked)} className="accent-[#6B5CE7] h-3 w-3" />
-              Confidence Bands (\u00b11\u03c3)
+              Confidence Bands ({'\u00b1'}1{'\u03c3'})
             </label>
           )}
         </div>
@@ -474,15 +472,11 @@ const D3LineChart = memo(function D3LineChart({
             <span className="text-muted-foreground">{s.label}</span>
           </div>
         ))}
-        <span className="text-[9px] text-muted-foreground/40 ml-auto">Drag to zoom \u00b7 Click to pin</span>
+        <span className="text-[9px] text-muted-foreground/40 ml-auto">Drag to zoom {'\u00b7'} Click to pin</span>
       </div>
     </div>
   );
 });
-
-// ---------------------------------------------------------------------------
-// AIM-inspired: D3 Scatter Plot (Scatters Explorer pattern)
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // AIM-inspired: D3 Force-Directed Concept Graph
@@ -773,7 +767,7 @@ const D3HeatMap = memo(function D3HeatMap({
   const cellH = plotH / n;
 
   function heatColor(v: number): string {
-    // Blue (negative) → White (zero) → Ember (positive)
+    // Blue (negative) -> White (zero) -> Ember (positive)
     if (v >= 0) {
       const t = Math.min(1, v);
       const r = Math.round(255 - (255 - 193) * t);
@@ -846,11 +840,10 @@ const TAB_DEFS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// Page
+// Component
 // ---------------------------------------------------------------------------
 
-export default function VisualizerPage() {
-  const ready = useSetupGuard();
+export function VisualizerView() {
   const confidence = usePFCStore((s) => s.confidence);
   const entropy = usePFCStore((s) => s.entropy);
   const dissonance = usePFCStore((s) => s.dissonance);
@@ -911,16 +904,8 @@ export default function VisualizerPage() {
     return computeCorrelationMatrix(signalHistory);
   }, [signalHistory]);
 
-  if (!ready) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <PixelBook size={40} />
-      </div>
-    );
-  }
-
   return (
-    <PageShell icon={BarChart3Icon} iconColor="var(--color-pfc-ember)" title="Visualizer" subtitle="AIM-fused interactive visualization dashboard">
+    <>
       {/* Live signal badges */}
       <div className="flex flex-wrap items-center gap-2 mb-6">
         <Badge variant="outline" className="text-xs font-mono">Confidence {confidence.toFixed(2)}</Badge>
@@ -948,7 +933,7 @@ export default function VisualizerPage() {
             })}
           </TabsList>
 
-          {/* DASHBOARD — AIM-style grid overview */}
+          {/* DASHBOARD -- AIM-style grid overview */}
           <TabsContent value="dashboard">
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ contain: 'layout', transform: 'translateZ(0)' }}>
@@ -965,7 +950,7 @@ export default function VisualizerPage() {
             </motion.div>
           </TabsContent>
 
-          {/* METRICS EXPLORER — AIM-style D3 line chart with smoothing + bands */}
+          {/* METRICS EXPLORER -- AIM-style D3 line chart with smoothing + bands */}
           <TabsContent value="metrics">
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
               <div className="space-y-4">
@@ -983,7 +968,7 @@ export default function VisualizerPage() {
             </motion.div>
           </TabsContent>
 
-          {/* HEAT MAP — AIM-inspired correlation matrix */}
+          {/* HEAT MAP -- AIM-inspired correlation matrix */}
           <TabsContent value="heatmap">
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3, ease: CUP }}>
               <div className="space-y-4">
@@ -1055,9 +1040,9 @@ export default function VisualizerPage() {
             </motion.div>
           </TabsContent>
 
-          {/* Harmony — included in Dashboard view */}
+          {/* Harmony -- included in Dashboard view */}
         </Tabs>
       </GlassSection>
-    </PageShell>
+    </>
   );
 }

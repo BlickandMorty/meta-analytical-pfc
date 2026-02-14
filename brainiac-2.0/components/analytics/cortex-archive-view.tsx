@@ -8,9 +8,7 @@ import {
   Trash2Icon,
   RotateCcwIcon,
   BrainCircuitIcon,
-  SaveIcon,
   CalendarIcon,
-  ActivityIcon,
   ChevronDownIcon,
   ChevronUpIcon,
 } from 'lucide-react';
@@ -18,7 +16,6 @@ import { formatDistanceToNow } from 'date-fns';
 
 import { usePFCStore, type CortexSnapshot } from '@/lib/store/use-pfc-store';
 import { cn } from '@/lib/utils';
-// Card imports removed — using flat Material You containers
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
@@ -34,9 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/decorative/pixel-mascots';
+import { GlassSection } from '@/components/layout/page-shell';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -100,9 +95,9 @@ function SnapshotCard({
           <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-1">
             <CalendarIcon className="h-3 w-3" />
             {timeAgo}
-            <span className="mx-1">·</span>
+            <span className="mx-1">{'\u00b7'}</span>
             {snapshot.meta.queriesProcessed} queries
-            <span className="mx-1">·</span>
+            <span className="mx-1">{'\u00b7'}</span>
             {snapshot.concepts.activeConcepts.length} concepts
           </p>
         </div>
@@ -220,11 +215,10 @@ function SnapshotCard({
 }
 
 // ---------------------------------------------------------------------------
-// Page
+// Component
 // ---------------------------------------------------------------------------
 
-export default function CortexArchivePage() {
-  const ready = useSetupGuard();
+export function CortexArchiveView() {
   const cortexArchive = usePFCStore((s) => s.cortexArchive);
   const saveCortexSnapshot = usePFCStore((s) => s.saveCortexSnapshot);
   const deleteCortexSnapshot = usePFCStore((s) => s.deleteCortexSnapshot);
@@ -243,70 +237,60 @@ export default function CortexArchivePage() {
     setNewLabel('');
   };
 
-  if (!ready) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[var(--chat-surface)]">
-        <PixelBook size={40} />
-      </div>
-    );
-  }
-
   return (
-    <PageShell icon={ArchiveIcon} iconColor="var(--color-pfc-ember)" title="Cortex Archive" subtitle="Save and restore brain states">
-      <div className="space-y-6">
-        {/* Save current state */}
-        <GlassSection title="Save Current Brain State" className="">
-          <p className="text-xs text-muted-foreground mb-3">
-            Capture a snapshot of all signals, concepts, controls, and pipeline settings before resetting.
-          </p>
-          <div className="flex items-center gap-2 rounded-xl p-2" style={{ background: 'var(--m3-surface-container-lowest)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-            <Input
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="Snapshot label (optional)..."
-              className="text-sm bg-transparent"
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            />
-            <GlassBubbleButton color="ember" onClick={handleSave}>
-              <DownloadIcon className="h-3.5 w-3.5" />
-              Save
-            </GlassBubbleButton>
-          </div>
-        </GlassSection>
+    <div className="space-y-6">
+      {/* Save current state */}
+      <GlassSection title="Save Current Brain State" className="">
+        <p className="text-xs text-muted-foreground mb-3">
+          Capture a snapshot of all signals, concepts, controls, and pipeline settings before resetting.
+        </p>
+        <div className="flex items-center gap-2 rounded-xl p-2" style={{ background: 'var(--m3-surface-container-lowest)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+          <Input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            placeholder="Snapshot label (optional)..."
+            className="text-sm bg-transparent"
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          />
+          <GlassBubbleButton color="ember" onClick={handleSave}>
+            <DownloadIcon className="h-3.5 w-3.5" />
+            Save
+          </GlassBubbleButton>
+        </div>
+      </GlassSection>
 
-        {/* Archive list */}
-        <GlassSection
-          title="Saved States"
-          badge={
-            cortexArchive.length > 0 ? (
-              <Badge variant="outline" className="text-[10px] font-mono border-0">
-                {cortexArchive.length} snapshot{cortexArchive.length !== 1 ? 's' : ''}
-              </Badge>
-            ) : undefined
-          }
-        >
-          {cortexArchive.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <ArchiveIcon className="h-10 w-10 text-muted-foreground/20 mb-3" />
-              <p className="text-sm text-muted-foreground/50">No saved brain states yet</p>
-              <p className="text-xs text-muted-foreground/30 mt-1">Save a snapshot above before resetting to preserve your insights</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <AnimatePresence>
-                {cortexArchive.map((snap) => (
-                  <SnapshotCard
-                    key={snap.id}
-                    snapshot={snap}
-                    onRestore={restoreCortexSnapshot}
-                    onDelete={deleteCortexSnapshot}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </GlassSection>
-      </div>
-    </PageShell>
+      {/* Archive list */}
+      <GlassSection
+        title="Saved States"
+        badge={
+          cortexArchive.length > 0 ? (
+            <Badge variant="outline" className="text-[10px] font-mono border-0">
+              {cortexArchive.length} snapshot{cortexArchive.length !== 1 ? 's' : ''}
+            </Badge>
+          ) : undefined
+        }
+      >
+        {cortexArchive.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <ArchiveIcon className="h-10 w-10 text-muted-foreground/20 mb-3" />
+            <p className="text-sm text-muted-foreground/50">No saved brain states yet</p>
+            <p className="text-xs text-muted-foreground/30 mt-1">Save a snapshot above before resetting to preserve your insights</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <AnimatePresence>
+              {cortexArchive.map((snap) => (
+                <SnapshotCard
+                  key={snap.id}
+                  snapshot={snap}
+                  onRestore={restoreCortexSnapshot}
+                  onDelete={deleteCortexSnapshot}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </GlassSection>
+    </div>
   );
 }

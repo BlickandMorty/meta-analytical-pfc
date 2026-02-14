@@ -8,9 +8,9 @@ import { useIsDark } from '@/hooks/use-is-dark';
 import { PillTabs, type TabItem } from '@/components/ui/pill-tabs';
 import { ArchiveIcon, CompassIcon, NetworkIcon, BarChart3Icon, ActivityIcon } from 'lucide-react';
 
-/* ═══════════════════════════════════════════════════════════
+/* ===================================================================
    Shared loading fallback for dynamic sub-pages
-   ═══════════════════════════════════════════════════════════ */
+   =================================================================== */
 
 function SubpageLoader() {
   return (
@@ -28,19 +28,34 @@ function SubpageLoader() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════
-   Dynamic imports — lazy-load each analytics sub-page
-   ═══════════════════════════════════════════════════════════ */
+/* ===================================================================
+   Dynamic imports — lazy-load each analytics component
+   =================================================================== */
 
-const DiagnosticsPage = dynamic(() => import('../diagnostics/page'), { ssr: false, loading: SubpageLoader });
-const VisualizerPage = dynamic(() => import('../visualizer/visualizer-content'), { ssr: false, loading: SubpageLoader });
-const SteeringLabPage = dynamic(() => import('../steering-lab/page'), { ssr: false, loading: SubpageLoader });
-const CortexArchivePage = dynamic(() => import('../cortex-archive/page'), { ssr: false, loading: SubpageLoader });
-const PipelinePage = dynamic(() => import('../pipeline/page'), { ssr: false, loading: SubpageLoader });
+const DiagnosticsView = dynamic(
+  () => import('@/components/analytics/diagnostics-view').then((m) => ({ default: m.DiagnosticsView })),
+  { ssr: false, loading: SubpageLoader },
+);
+const VisualizerView = dynamic(
+  () => import('@/components/analytics/visualizer-view').then((m) => ({ default: m.VisualizerView })),
+  { ssr: false, loading: SubpageLoader },
+);
+const SteeringLabView = dynamic(
+  () => import('@/components/analytics/steering-lab-view').then((m) => ({ default: m.SteeringLabView })),
+  { ssr: false, loading: SubpageLoader },
+);
+const CortexArchiveView = dynamic(
+  () => import('@/components/analytics/cortex-archive-view').then((m) => ({ default: m.CortexArchiveView })),
+  { ssr: false, loading: SubpageLoader },
+);
+const PipelineView = dynamic(
+  () => import('@/components/analytics/pipeline-view').then((m) => ({ default: m.PipelineView })),
+  { ssr: false, loading: SubpageLoader },
+);
 
-/* ═══════════════════════════════════════════════════════════
+/* ===================================================================
    Tab definitions — local to analytics page (removed from nav)
-   ═══════════════════════════════════════════════════════════ */
+   =================================================================== */
 
 const TABS = [
   'archive', 'steering', 'pipeline',
@@ -59,9 +74,9 @@ const TAB_ITEMS: TabItem<TabKey>[] = [
 
 const M3_EASE = [0.2, 0, 0, 1] as const;
 
-/* ═══════════════════════════════════════════════════════════
+/* ===================================================================
    Analytics Hub — tab navigation lives inside the page now
-   ═══════════════════════════════════════════════════════════ */
+   =================================================================== */
 
 export default function AnalyticsPage() {
   return (
@@ -87,7 +102,7 @@ function AnalyticsPageInner() {
       background: 'var(--m3-surface)',
       WebkitOverflowScrolling: 'touch',
     } as React.CSSProperties}>
-      {/* ── Section tabs — replaces nav bar sub-bubbles ── */}
+      {/* -- Section tabs -- replaces nav bar sub-bubbles -- */}
       <div style={{
         display: 'flex',
         justifyContent: 'center',
@@ -101,7 +116,7 @@ function AnalyticsPageInner() {
         />
       </div>
 
-      {/* ── Tab content ── */}
+      {/* -- Tab content -- */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
@@ -111,11 +126,11 @@ function AnalyticsPageInner() {
           transition={{ duration: 0.3, ease: M3_EASE }}
           style={{ transform: 'translateZ(0)' }}
         >
-          {activeTab === 'pipeline' && <PipelinePage />}
-          {activeTab === 'signals' && <DiagnosticsPage />}
-          {activeTab === 'visualizer' && <VisualizerPage />}
-          {activeTab === 'steering' && <SteeringLabPage />}
-          {activeTab === 'archive' && <CortexArchivePage />}
+          {activeTab === 'pipeline' && <PipelineView />}
+          {activeTab === 'signals' && <DiagnosticsView />}
+          {activeTab === 'visualizer' && <VisualizerView />}
+          {activeTab === 'steering' && <SteeringLabView />}
+          {activeTab === 'archive' && <CortexArchiveView />}
         </motion.div>
       </AnimatePresence>
     </div>

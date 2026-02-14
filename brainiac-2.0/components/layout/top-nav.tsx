@@ -420,11 +420,9 @@ export function TopNav() {
   // Prefetch all nav routes on mount so pages are compiled before click
   useEffect(() => {
     const routes = NAV_ITEMS.map((item) => item.href);
-    // Also prefetch analytics sub-pages (standalone routes)
+    // Also prefetch remaining standalone routes (analytics sub-pages are now components, not routes)
     const extraRoutes = [
-      '/steering-lab', '/research-copilot', '/concept-atlas',
-      '/cortex-archive', '/visualizer',
-      '/pipeline', '/diagnostics', '/library',
+      '/research-copilot', '/concept-atlas', '/library',
     ];
     for (const route of [...routes, ...extraRoutes]) {
       router.prefetch(route);
