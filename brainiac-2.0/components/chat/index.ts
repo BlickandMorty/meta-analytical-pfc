@@ -14,3 +14,5 @@ export { SteeringFeedback } from './steering-feedback';
 export { SteeringIndicator } from './steering-indicator';
 export { LiveControls } from './live-controls';
 export { GlassBubbleButton } from './glass-bubble-button';
+export { GreetingTypewriter, SearchBarPlaceholder } from './greeting-typewriter';
+export { ChatsSidePanel, ChatsOverlay } from './chat-history-sheet';
