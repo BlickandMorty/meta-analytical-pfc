@@ -80,30 +80,20 @@ const ROUTES = {
       '@/app/(chat)/chat/[id]/page',
   },
   features: {
-    'Pipeline viewer — app/pipeline/page.tsx':
-      '@/app/pipeline/page',
-    'Steering lab — app/steering-lab/page.tsx':
-      '@/app/steering-lab/page',
     'Analytics — app/analytics/page.tsx':
       '@/app/analytics/page',
     'Notes — app/notes/page.tsx':
       '@/app/notes/page',
     'Concept atlas — app/concept-atlas/page.tsx':
       '@/app/concept-atlas/page',
-    'Cortex archive — app/cortex-archive/page.tsx':
-      '@/app/cortex-archive/page',
     'Library — app/library/page.tsx':
       '@/app/library/page',
     'Research copilot — app/research-copilot/page.tsx':
       '@/app/research-copilot/page',
-    'Visualizer — app/visualizer/page.tsx':
-      '@/app/visualizer/page',
   },
   tools: {
     'Export — app/export/page.tsx':
       '@/app/export/page',
-    'Diagnostics — app/diagnostics/page.tsx':
-      '@/app/diagnostics/page',
     'Daemon — app/daemon/page.tsx':
       '@/app/daemon/page',
   },
