@@ -13,6 +13,7 @@ import {
 import type {
   NotePage, NoteBlock, NoteBook, Vault, Concept, PageLink,
 } from '@/lib/notes/types';
+import { vaultId as toVaultId } from '@/lib/branded';
 
 // ═══════════════════════════════════════════════════════════════════
 // GET /api/notes/sync
@@ -37,7 +38,7 @@ async function _GET(req: NextRequest) {
 
     // Load specific vault
     if (vaultId) {
-      const data = await loadVaultFromDb(vaultId);
+      const data = await loadVaultFromDb(toVaultId(vaultId));
       if (!data) {
         return NextResponse.json({ error: 'Vault not found' }, { status: 404 });
       }
@@ -122,7 +123,7 @@ async function _POST(req: NextRequest) {
         if (!vaultId) {
           return NextResponse.json({ error: 'vaultId is required' }, { status: 400 });
         }
-        await syncVaultToDb(vaultId, vault, pages, blocks, books, concepts, pageLinks);
+        await syncVaultToDb(toVaultId(vaultId), vault, pages, blocks, books, concepts, pageLinks);
         return NextResponse.json({ ok: true, synced: pages.length });
       }
 
@@ -139,7 +140,7 @@ async function _POST(req: NextRequest) {
 
         for (const vaultData of vaults) {
           const { vault, pages, blocks, books, concepts, pageLinks } = vaultData;
-          await syncVaultToDb(vault.id, vault, pages, blocks, books, concepts, pageLinks);
+          await syncVaultToDb(toVaultId(vault.id), vault, pages, blocks, books, concepts, pageLinks);
           totalPages += pages.length;
         }
 
@@ -162,7 +163,7 @@ async function _POST(req: NextRequest) {
         if (!body.vaultId) {
           return NextResponse.json({ error: 'vaultId is required' }, { status: 400 });
         }
-        await deleteVault(body.vaultId);
+        await deleteVault(toVaultId(body.vaultId));
         return NextResponse.json({ ok: true });
       }
 

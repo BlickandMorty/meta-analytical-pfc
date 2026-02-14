@@ -16,6 +16,7 @@ export type PageId = Brand<string, 'PageId'>;
 export type BlockId = Brand<string, 'BlockId'>;
 export type VaultId = Brand<string, 'VaultId'>;
 export type ThreadId = Brand<string, 'ThreadId'>;
+export type ConceptId = Brand<string, 'ConceptId'>;
 
 // ── Factory functions (the only way to create branded values) ──
 
@@ -26,3 +27,4 @@ export function pageId(raw: string): PageId { return raw as PageId; }
 export function blockId(raw: string): BlockId { return raw as BlockId; }
 export function vaultId(raw: string): VaultId { return raw as VaultId; }
 export function threadId(raw: string): ThreadId { return raw as ThreadId; }
+export function conceptId(raw: string): ConceptId { return raw as ConceptId; }

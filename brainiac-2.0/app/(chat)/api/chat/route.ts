@@ -22,6 +22,8 @@ import {
   getMessagesByChatId,
 } from '@/lib/db/queries';
 import { generateUUID } from '@/lib/utils';
+import { userId as toUserId, chatId as toChatId, messageId as toMessageId } from '@/lib/branded';
+import type { ChatId } from '@/lib/branded';
 import {
   createSSEWriter,
   isAbortLikeError,
@@ -59,7 +61,7 @@ interface ProcessedAttachment {
  * Build conversation context from prior messages so the pipeline can detect
  * follow-up queries and inherit the original topic.
  */
-async function buildConversationContext(chatId: string): Promise<ConversationContext | undefined> {
+async function buildConversationContext(chatId: ChatId): Promise<ConversationContext | undefined> {
   try {
     // Only fetch the most recent 20 messages (desc) for context — avoids loading entire history
     const messages = await getMessagesByChatId(chatId, { limit: 20, orderBy: 'desc' });
@@ -106,7 +108,7 @@ async function buildConversationContext(chatId: string): Promise<ConversationCon
 }
 
 async function _POST(request: NextRequest) {
-  let resolvedChatId = '';
+  let resolvedChatId = toChatId('');
   let query = '';
   let existingChat: Awaited<ReturnType<typeof getChatById>> | null = null;
   let controls: PipelineControls | undefined;
@@ -242,8 +244,8 @@ async function _POST(request: NextRequest) {
       query = `${attachmentContext}\n\n${query}`;
     }
 
-    const resolvedUserId = userId || 'local-user';
-    resolvedChatId = chatId || generateUUID();
+    const resolvedUserId = toUserId(userId || 'local-user');
+    resolvedChatId = toChatId(chatId || generateUUID());
 
     // Ensure user exists first (foreign key constraint)
     await getOrCreateUser(resolvedUserId);
@@ -264,7 +266,7 @@ async function _POST(request: NextRequest) {
     }
 
     // Save user message (with attachment metadata if any)
-    const userMsgId = generateUUID();
+    const userMsgId = toMessageId(generateUUID());
     await saveMessage({
       id: userMsgId,
       chatId: resolvedChatId,
@@ -345,7 +347,7 @@ async function _POST(request: NextRequest) {
           // When complete, save the system message to DB
           if (event.type === 'complete') {
             try {
-              const sysMsgId = generateUUID();
+              const sysMsgId = toMessageId(generateUUID());
               await saveMessage({
                 id: sysMsgId,
                 chatId: capturedChatId,

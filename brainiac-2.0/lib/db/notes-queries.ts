@@ -8,6 +8,7 @@ import type {
   NotePage, NoteBlock, NoteBook, Vault, Concept,
   ConceptCorrelation, PageLink,
 } from '@/lib/notes/types';
+import type { VaultId, PageId, BlockId, ConceptId } from '@/lib/branded';
 
 // ═══════════════════════════════════════════════════════════════════
 // Row ↔ Type converters
@@ -39,7 +40,7 @@ function rowToPage(r: typeof notePage.$inferSelect): NotePage {
   };
 }
 
-function pageToRow(p: NotePage, vaultId: string) {
+function pageToRow(p: NotePage, vaultId: VaultId) {
   return {
     id: p.id,
     vaultId,
@@ -112,7 +113,7 @@ function rowToBook(r: typeof noteBook.$inferSelect): NoteBook {
   };
 }
 
-function bookToRow(b: NoteBook, vaultId: string) {
+function bookToRow(b: NoteBook, vaultId: VaultId) {
   return {
     id: b.id,
     vaultId,
@@ -143,7 +144,7 @@ function rowToConcept(r: typeof noteConcept.$inferSelect): Concept {
   };
 }
 
-function conceptToRow(c: Concept, vaultId: string) {
+function conceptToRow(c: Concept, vaultId: VaultId) {
   return {
     id: c.id,
     vaultId,
@@ -195,7 +196,7 @@ export async function getVaults(): Promise<Vault[]> {
   return rows.map(rowToVault);
 }
 
-export async function getVaultById(id: string): Promise<Vault | null> {
+export async function getVaultById(id: VaultId): Promise<Vault | null> {
   const row = await db.query.noteVault.findFirst({ where: eq(noteVault.id, id) });
   return row ? rowToVault(row) : null;
 }
@@ -221,7 +222,7 @@ export async function upsertVault(v: Vault): Promise<void> {
   }).run();
 }
 
-export async function deleteVault(id: string): Promise<void> {
+export async function deleteVault(id: VaultId): Promise<void> {
   await db.delete(noteVault).where(eq(noteVault.id, id)).run();
 }
 
@@ -229,12 +230,12 @@ export async function deleteVault(id: string): Promise<void> {
 // Page Queries
 // ═══════════════════════════════════════════════════════════════════
 
-export async function getPagesByVault(vaultId: string): Promise<NotePage[]> {
+export async function getPagesByVault(vaultId: VaultId): Promise<NotePage[]> {
   const rows = await db.select().from(notePage).where(eq(notePage.vaultId, vaultId));
   return rows.map(rowToPage);
 }
 
-export async function upsertPage(p: NotePage, vaultId: string): Promise<void> {
+export async function upsertPage(p: NotePage, vaultId: VaultId): Promise<void> {
   const row = pageToRow(p, vaultId);
   await db.insert(notePage).values(row).onConflictDoUpdate({
     target: notePage.id,
@@ -254,7 +255,7 @@ export async function upsertPage(p: NotePage, vaultId: string): Promise<void> {
   }).run();
 }
 
-export async function deletePage(id: string): Promise<void> {
+export async function deletePage(id: PageId): Promise<void> {
   await db.delete(notePage).where(eq(notePage.id, id)).run();
 }
 
@@ -262,7 +263,7 @@ export async function deletePage(id: string): Promise<void> {
 // Block Queries
 // ═══════════════════════════════════════════════════════════════════
 
-export async function getBlocksByVault(vaultId: string): Promise<NoteBlock[]> {
+export async function getBlocksByVault(vaultId: VaultId): Promise<NoteBlock[]> {
   // Join through note_page to get all blocks for a vault
   const rows = await db
     .select({ block: noteBlock })
@@ -272,7 +273,7 @@ export async function getBlocksByVault(vaultId: string): Promise<NoteBlock[]> {
   return rows.map(r => rowToBlock(r.block));
 }
 
-export async function getBlocksByPage(pageId: string): Promise<NoteBlock[]> {
+export async function getBlocksByPage(pageId: PageId): Promise<NoteBlock[]> {
   const rows = await db.select().from(noteBlock).where(eq(noteBlock.pageId, pageId));
   return rows.map(rowToBlock);
 }
@@ -296,11 +297,11 @@ export async function upsertBlock(b: NoteBlock): Promise<void> {
   }).run();
 }
 
-export async function deleteBlock(id: string): Promise<void> {
+export async function deleteBlock(id: BlockId): Promise<void> {
   await db.delete(noteBlock).where(eq(noteBlock.id, id)).run();
 }
 
-export async function deleteBlocksByPage(pageId: string): Promise<void> {
+export async function deleteBlocksByPage(pageId: PageId): Promise<void> {
   await db.delete(noteBlock).where(eq(noteBlock.pageId, pageId)).run();
 }
 
@@ -308,12 +309,12 @@ export async function deleteBlocksByPage(pageId: string): Promise<void> {
 // Book Queries
 // ═══════════════════════════════════════════════════════════════════
 
-export async function getBooksByVault(vaultId: string): Promise<NoteBook[]> {
+export async function getBooksByVault(vaultId: VaultId): Promise<NoteBook[]> {
   const rows = await db.select().from(noteBook).where(eq(noteBook.vaultId, vaultId));
   return rows.map(rowToBook);
 }
 
-export async function upsertBook(b: NoteBook, vaultId: string): Promise<void> {
+export async function upsertBook(b: NoteBook, vaultId: VaultId): Promise<void> {
   const row = bookToRow(b, vaultId);
   await db.insert(noteBook).values(row).onConflictDoUpdate({
     target: noteBook.id,
@@ -339,12 +340,12 @@ export async function deleteBook(id: string): Promise<void> {
 // Concept Queries
 // ═══════════════════════════════════════════════════════════════════
 
-export async function getConceptsByVault(vaultId: string): Promise<Concept[]> {
+export async function getConceptsByVault(vaultId: VaultId): Promise<Concept[]> {
   const rows = await db.select().from(noteConcept).where(eq(noteConcept.vaultId, vaultId));
   return rows.map(rowToConcept);
 }
 
-export async function upsertConcept(c: Concept, vaultId: string): Promise<void> {
+export async function upsertConcept(c: Concept, vaultId: VaultId): Promise<void> {
   const row = conceptToRow(c, vaultId);
   await db.insert(noteConcept).values(row).onConflictDoUpdate({
     target: noteConcept.id,
@@ -352,11 +353,11 @@ export async function upsertConcept(c: Concept, vaultId: string): Promise<void> 
   }).run();
 }
 
-export async function deleteConcept(id: string): Promise<void> {
+export async function deleteConcept(id: ConceptId): Promise<void> {
   await db.delete(noteConcept).where(eq(noteConcept.id, id)).run();
 }
 
-export async function deleteConceptsByVault(vaultId: string): Promise<void> {
+export async function deleteConceptsByVault(vaultId: VaultId): Promise<void> {
   await db.delete(noteConcept).where(eq(noteConcept.vaultId, vaultId)).run();
 }
 
@@ -364,7 +365,7 @@ export async function deleteConceptsByVault(vaultId: string): Promise<void> {
 // Correlation Queries
 // ═══════════════════════════════════════════════════════════════════
 
-export async function getCorrelationsByVault(vaultId: string): Promise<ConceptCorrelation[]> {
+export async function getCorrelationsByVault(vaultId: VaultId): Promise<ConceptCorrelation[]> {
   // Correlations reference concepts; join through concept to filter by vault
   const rows = await db
     .select({ corr: noteConceptCorrelation })
@@ -398,7 +399,7 @@ export async function upsertCorrelation(c: ConceptCorrelation): Promise<void> {
 // Page Link Queries
 // ═══════════════════════════════════════════════════════════════════
 
-export async function getPageLinksByVault(vaultId: string): Promise<PageLink[]> {
+export async function getPageLinksByVault(vaultId: VaultId): Promise<PageLink[]> {
   const rows = await db
     .select({ link: notePageLink })
     .from(notePageLink)
@@ -412,7 +413,7 @@ export async function getPageLinksByVault(vaultId: string): Promise<PageLink[]> 
   }));
 }
 
-export async function replacePageLinks(vaultId: string, links: PageLink[]): Promise<void> {
+export async function replacePageLinks(vaultId: VaultId, links: PageLink[]): Promise<void> {
   // Get all page IDs in this vault to scope deletion
   const vaultPages = await db.select({ id: notePage.id }).from(notePage).where(eq(notePage.vaultId, vaultId));
   const pageIdSet = new Set(vaultPages.map(p => p.id));
@@ -439,7 +440,7 @@ export async function replacePageLinks(vaultId: string, links: PageLink[]): Prom
 // ═══════════════════════════════════════════════════════════════════
 
 export async function syncVaultToDb(
-  vaultId: string,
+  vaultId: VaultId,
   vault: Vault,
   pages: NotePage[],
   blocks: NoteBlock[],
@@ -521,7 +522,7 @@ export async function syncVaultToDb(
 // Load full vault from DB
 // ═══════════════════════════════════════════════════════════════════
 
-export async function loadVaultFromDb(vaultId: string): Promise<{
+export async function loadVaultFromDb(vaultId: VaultId): Promise<{
   pages: NotePage[];
   blocks: NoteBlock[];
   books: NoteBook[];

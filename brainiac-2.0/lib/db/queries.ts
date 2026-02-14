@@ -2,10 +2,11 @@ import { db } from './index';
 import { chat, message, chatSignals, user } from './schema';
 import { desc, eq } from 'drizzle-orm';
 import { generateUUID } from '@/lib/utils';
+import type { UserId, ChatId, MessageId } from '@/lib/branded';
 
 // --- User ---
 
-export async function getOrCreateUser(userId: string) {
+export async function getOrCreateUser(userId: UserId) {
   const existing = await db.query.user.findFirst({
     where: eq(user.id, userId),
   });
@@ -26,8 +27,8 @@ export async function createChat({
   userId,
   title,
 }: {
-  id: string;
-  userId: string;
+  id: ChatId;
+  userId: UserId;
   title: string;
 }) {
   const now = new Date();
@@ -48,7 +49,7 @@ export async function createChat({
 }
 
 export async function getChatsByUserId(
-  userId: string,
+  userId: UserId,
   opts?: { limit?: number; offset?: number },
 ) {
   return db.query.chat.findMany({
@@ -59,13 +60,13 @@ export async function getChatsByUserId(
   });
 }
 
-export async function getChatById(chatId: string) {
+export async function getChatById(chatId: ChatId) {
   return db.query.chat.findFirst({
     where: eq(chat.id, chatId),
   });
 }
 
-export async function updateChatTitle(chatId: string, title: string) {
+export async function updateChatTitle(chatId: ChatId, title: string) {
   await db.update(chat)
     .set({ title, updatedAt: new Date() })
     .where(eq(chat.id, chatId))
@@ -75,7 +76,7 @@ export async function updateChatTitle(chatId: string, title: string) {
 // --- Messages ---
 
 export async function getMessagesByChatId(
-  chatId: string,
+  chatId: ChatId,
   opts?: { limit?: number; orderBy?: 'asc' | 'desc' },
 ) {
   const results = db.query.message.findMany({
@@ -98,8 +99,8 @@ export async function saveMessage({
   mode,
   attachments,
 }: {
-  id: string;
-  chatId: string;
+  id: MessageId;
+  chatId: ChatId;
   role: 'user' | 'system';
   content: string;
   dualMessage?: string;

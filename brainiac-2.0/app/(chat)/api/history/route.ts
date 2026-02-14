@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withMiddleware } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { getChatsByUserId, getMessagesByChatId } from '@/lib/db/queries';
+import { userId as toUserId, chatId as toChatId } from '@/lib/branded';
 
 async function _GET(request: NextRequest) {
   const userId = request.nextUrl.searchParams.get('userId') || 'local-user';
@@ -19,7 +20,7 @@ async function _GET(request: NextRequest) {
   try {
     if (chatId) {
       // Return messages for a specific chat
-      const messages = await getMessagesByChatId(chatId);
+      const messages = await getMessagesByChatId(toChatId(chatId));
 
       // Parse JSON fields (safely — corrupted rows don't crash the whole response)
       const parsed = messages.map((m) => {
@@ -54,7 +55,7 @@ async function _GET(request: NextRequest) {
     // Return chat list (paginated)
     const limit = Math.min(Number(request.nextUrl.searchParams.get('limit')) || 50, 200);
     const offset = Math.max(Number(request.nextUrl.searchParams.get('offset')) || 0, 0);
-    const chats = await getChatsByUserId(userId, { limit, offset });
+    const chats = await getChatsByUserId(toUserId(userId), { limit, offset });
     return NextResponse.json({ chats });
   } catch (error) {
     logger.error('history', 'DB error:', error);
