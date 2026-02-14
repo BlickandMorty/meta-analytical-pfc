@@ -9,7 +9,7 @@ import type {
 } from '@/lib/notes/types';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
 import {
-  generateBlockId, generatePageId, normalizePageName,
+  generateBlockId, normalizePageName,
   createEmptyBlock, createNewPage, getTodayJournalDate,
   extractPageLinks, orderBetween, migrateBlock, stripHtml,
   generateVaultId,
@@ -222,7 +222,7 @@ function connectNoteAISSE(set: PFCSet, get: PFCGet) {
   // ── Undo snapshot: capture pre-AI block content for typewriter mode ──
   // This lets Cmd+Z revert the entire AI insertion in one step
   let _typewriterPreContent: string | null = null;
-  let _typewriterBlockId: string | null = noteAI.typewriterBlockId ?? null;
+  const _typewriterBlockId: string | null = noteAI.typewriterBlockId ?? null;
   if (noteAI.writeToNote && _typewriterBlockId) {
     const targetBlock = state.noteBlocks.find((b: NoteBlock) => b.id === _typewriterBlockId);
     _typewriterPreContent = targetBlock ? targetBlock.content : null;

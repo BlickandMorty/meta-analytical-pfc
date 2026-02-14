@@ -17,7 +17,7 @@ import {
   TerminalIcon,
   type LucideIcon,
 } from 'lucide-react';
-import { PageShell, GlassSection } from '@/components/layout/page-shell';
+import { PageShell } from '@/components/layout/page-shell';
 import { useIsDark } from '@/hooks/use-is-dark';
 
 /* ═══════════════════════════════════════════════════════════

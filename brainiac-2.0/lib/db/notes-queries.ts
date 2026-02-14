@@ -3,7 +3,7 @@ import {
   noteVault, notePage, noteBlock, noteBook,
   noteConcept, noteConceptCorrelation, notePageLink,
 } from './schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type {
   NotePage, NoteBlock, NoteBook, Vault, Concept,
   ConceptCorrelation, PageLink,

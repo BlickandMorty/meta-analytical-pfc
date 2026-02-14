@@ -11,8 +11,6 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useTheme } from 'next-themes';
 import { useIsDark } from '@/hooks/use-is-dark';
 
-import { M3_EASE } from '@/lib/motion/motion-config';
-
 // ---------------------------------------------------------------------------
 // Research-ready prompt generation engine
 // ---------------------------------------------------------------------------

@@ -17,14 +17,11 @@ import { STAGES, type PipelineStage } from '@/lib/constants';
 import { logger } from '@/lib/debug-logger';
 import type { SteeringBias } from '@/lib/engine/steering/types';
 import type {
-  AnalysisMode,
   DualMessage,
-  EvidenceGrade,
   LaymanSummary,
   PipelineEvent,
   PipelineControls,
   StageResult,
-  SignalUpdate,
   SafetyState,
 } from './types';
 import { generateReflection } from './reflection';

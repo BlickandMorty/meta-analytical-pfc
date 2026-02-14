@@ -9,14 +9,11 @@ import type {
   TruthAssessment,
   StageResult,
   StageStatus,
-  SignalUpdate,
-  SafetyState,
 } from '@/lib/engine/types';
 import type {
   ResearchPaper,
   Citation,
 } from '@/lib/research/types';
-import type { PipelineStage } from '@/lib/constants';
 import { STAGES, STAGE_LABELS } from '@/lib/constants';
 import type { PFCSet, PFCGet } from '../use-pfc-store';
 import { emit } from '../events';

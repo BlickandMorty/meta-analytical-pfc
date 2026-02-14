@@ -118,7 +118,7 @@ async function _POST(request: NextRequest) {
   let analyticsEngineEnabled = true;
   let chatMode: 'research' | 'plain' | undefined;
   let conversationContext: ConversationContext | undefined;
-  let processedAttachments: ProcessedAttachment[] = [];
+  const processedAttachments: ProcessedAttachment[] = [];
 
   try {
     const parsedBody = await parseBodyWithLimit<ChatRequestBody>(request, 25 * 1024 * 1024);

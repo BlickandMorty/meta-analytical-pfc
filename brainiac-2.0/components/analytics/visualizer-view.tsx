@@ -17,7 +17,6 @@ import {
   type SimulationLinkDatum,
 } from 'd3-force';
 import {
-  BarChart3Icon,
   RadarIcon,
   TrendingUpIcon,
   BrainIcon,

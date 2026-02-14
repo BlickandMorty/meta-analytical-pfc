@@ -11,7 +11,7 @@
 // critical for learning progress than solution correctness."
 // ═══════════════════════════════════════════════════════════════════
 
-import { generateText, generateObject } from 'ai';
+import { generateObject } from 'ai';
 import type { LanguageModel } from 'ai';
 import { z } from 'zod';
 import { logger } from '@/lib/debug-logger';

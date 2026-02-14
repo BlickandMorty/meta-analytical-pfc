@@ -13,7 +13,7 @@
  * feasibility, and novelty assessment.
  */
 
-import { generateObject, generateText } from 'ai';
+import { generateObject } from 'ai';
 import type { LanguageModel } from 'ai';
 import { z } from 'zod';
 import { checkNovelty, type NoveltyCheckResult, type NoveltyCheckInput } from './novelty-check';

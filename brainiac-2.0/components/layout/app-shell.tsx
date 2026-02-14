@@ -13,7 +13,7 @@ import { StarField } from '../decorative/star-field';
 const ThematicWallpaper = dynamic(() => import('../decorative/wallpapers/thematic').then(m => ({ default: m.ThematicWallpaper })), { ssr: false });
 const SunnyWallpaper = dynamic(() => import('../decorative/wallpapers/sunny').then(m => ({ default: m.SunnyWallpaper })), { ssr: false });
 import type { InferenceMode, ApiProvider } from '@/lib/engine/llm/config';
-import type { SuiteTier, ResearchPaper } from '@/lib/research/types';
+import type { ResearchPaper } from '@/lib/research/types';
 import { detectDevice, cacheDeviceProfile } from '@/lib/device-detection';
 import { ToastContainer } from '../shared/toast-container';
 import { MiniChat } from '../assistant/mini-chat';

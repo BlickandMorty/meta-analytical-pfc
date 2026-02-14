@@ -5,12 +5,10 @@ import { useSteeringStore } from '@/lib/store/use-steering-store';
 import { projectPCA } from '@/lib/engine/steering/engine';
 import { DIMENSION_LABELS } from '@/lib/engine/steering/encoder';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { GlassSection } from '@/components/layout/page-shell';
 import { useIsDark } from '@/hooks/use-is-dark';
 import {
-  CompassIcon,
   DownloadIcon,
   UploadIcon,
   TrashIcon,

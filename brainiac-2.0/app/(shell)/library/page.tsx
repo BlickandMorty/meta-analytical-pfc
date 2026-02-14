@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -28,7 +28,7 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PageShell, GlassSection } from '@/components/layout/page-shell';
+import { PageShell } from '@/components/layout/page-shell';
 import { PixelBook } from '@/components/decorative/pixel-mascots';
 import { useIsDark } from '@/hooks/use-is-dark';
 import type { ResearchPaper, Citation } from '@/lib/research/types';
@@ -455,7 +455,6 @@ function LibraryPageInner() {
   const researchPapers = usePFCStore((s) => s.researchPapers);
   const currentCitations = usePFCStore((s) => s.currentCitations);
   const activeConcepts = usePFCStore((s) => s.activeConcepts);
-  const messages = usePFCStore((s) => s.messages);
   const scanNotesForResearch = usePFCStore((s) => s.scanNotesForResearch);
   const noteBlocks = usePFCStore((s) => s.noteBlocks);
 

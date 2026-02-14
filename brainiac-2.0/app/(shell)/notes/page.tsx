@@ -9,7 +9,7 @@ import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { useTypewriter } from '@/hooks/use-typewriter';
 import { ErrorBoundary } from '@/components/layout/error-boundary';
-import { spring, variants, ease, physicsSpring, cssEase } from '@/lib/motion/motion-config';
+import { spring, ease, physicsSpring, cssEase } from '@/lib/motion/motion-config';
 import {
   PlusIcon,
   CalendarIcon,
@@ -28,7 +28,6 @@ import {
   PencilIcon,
   FolderOpenIcon,
   XIcon,
-  MousePointerClickIcon,
   SparklesIcon,
   WrenchIcon,
   BotIcon,

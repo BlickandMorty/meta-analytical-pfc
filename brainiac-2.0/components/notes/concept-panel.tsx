@@ -1,10 +1,10 @@
 'use client';
 
 import { memo, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import type { Concept, ConceptCorrelation, NotePage } from '@/lib/notes/types';
+import type { Concept, NotePage } from '@/lib/notes/types';
 import {
   XIcon,
   LinkIcon,

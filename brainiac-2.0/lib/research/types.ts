@@ -13,12 +13,6 @@ export type SuiteTier = 'programming';
 /** Research chat mode toggle */
 export type ChatViewMode = 'chat' | 'visualize-thought';
 
-/** Thinking playback state */
-type ThinkingPlayState = 'playing' | 'paused' | 'stopped';
-
-/** Thinking speed multiplier */
-type ThinkingSpeed = 0.25 | 0.5 | 1 | 1.5 | 2;
-
 // ═══════════════════════════════════════════════════════════════════
 // Research Types
 // ═══════════════════════════════════════════════════════════════════

@@ -20,7 +20,7 @@ import type { OllamaHardwareStatus } from '@/lib/engine/llm/ollama';
 import { formatBytes } from '@/lib/engine/llm/ollama';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import { readString, writeString } from '@/lib/storage-versioning';
+import { writeString } from '@/lib/storage-versioning';
 import { cn } from '@/lib/utils';
 import { OPENAI_MODELS, ANTHROPIC_MODELS, GOOGLE_MODELS } from '@/lib/engine/llm/config';
 import type { InferenceMode, ApiProvider, OpenAIModel, AnthropicModel, GoogleModel } from '@/lib/engine/llm/config';
@@ -377,7 +377,7 @@ export function InferenceSection() {
       {/* Analytics Engine */}
       <GlassSection title="Analytics Engine">
         <p className="text-sm text-muted-foreground/60 mb-5" style={{ fontFamily: 'var(--font-secondary)', fontWeight: 400 }}>
-          Controls the research analytics pipeline: signal generation (confidence, entropy, dissonance), structural complexity analysis, steering directive composition, and SOAR meta-reasoning. The pipeline uses structured prompt templates encoding mathematical frameworks (Bradford Hill, Cohen's d, DerSimonian-Laird, Bayesian updating) to guide LLM reasoning. Disable this to use the app as a pure chat + notes tool without analytical overhead.
+          Controls the research analytics pipeline: signal generation (confidence, entropy, dissonance), structural complexity analysis, steering directive composition, and SOAR meta-reasoning. The pipeline uses structured prompt templates encoding mathematical frameworks (Bradford Hill, Cohen&apos;s d, DerSimonian-Laird, Bayesian updating) to guide LLM reasoning. Disable this to use the app as a pure chat + notes tool without analytical overhead.
         </p>
 
         <div className="flex items-center justify-between mb-4">
@@ -434,7 +434,7 @@ export function InferenceSection() {
               <div className="mt-3 rounded-lg bg-muted/30 px-3 py-2.5">
                 <p className="font-semibold text-foreground/60 text-[10px] mb-1.5">Computation honesty note</p>
                 <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
-                  Signals are <strong>heuristic</strong> — hand-tuned formulas responding to query properties and your steering settings. They are not calibrated probabilities or information-theoretic measures. In <strong>API/Local mode</strong>, the prompt-composer translates signals into behavioral LLM directives and structured analytical frameworks (Bradford Hill criteria, Cohen's d scale, DerSimonian-Laird concepts, Bayesian updating) — so they genuinely influence output quality and analytical rigor. The <strong>steering engine</strong> (3-layer hybrid: contrastive vectors + Bayesian priors + k-NN recall) uses real linear algebra.
+                  Signals are <strong>heuristic</strong> — hand-tuned formulas responding to query properties and your steering settings. They are not calibrated probabilities or information-theoretic measures. In <strong>API/Local mode</strong>, the prompt-composer translates signals into behavioral LLM directives and structured analytical frameworks (Bradford Hill criteria, Cohen&apos;s d scale, DerSimonian-Laird concepts, Bayesian updating) — so they genuinely influence output quality and analytical rigor. The <strong>steering engine</strong> (3-layer hybrid: contrastive vectors + Bayesian priors + k-NN recall) uses real linear algebra.
                 </p>
               </div>
             </motion.div>

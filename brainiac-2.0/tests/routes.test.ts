@@ -7,7 +7,7 @@
  * without crashing and exports a default React component (function).
  * We do NOT render components — just verify module-level integrity.
  */
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mock next/navigation — used by many route pages

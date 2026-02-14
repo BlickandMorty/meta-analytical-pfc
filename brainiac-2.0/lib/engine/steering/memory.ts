@@ -8,7 +8,6 @@
 //   - localStorage persistence (follows Cortex Archive pattern)
 // ═══════════════════════════════════════════════════════════════════
 
-import { logger } from '@/lib/debug-logger';
 import { readVersioned, writeVersioned, removeStorage } from '@/lib/storage-versioning';
 import type {
   SteeringMemory,

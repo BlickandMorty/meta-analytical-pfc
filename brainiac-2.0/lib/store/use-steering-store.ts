@@ -13,7 +13,6 @@ import type {
   SteeringMemory,
   SteeringBias,
   SteeringConfig,
-  SynthesisKey,
   QueryFeatureVector,
 } from '@/lib/engine/steering/types';
 import {

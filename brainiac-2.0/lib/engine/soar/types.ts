@@ -13,7 +13,7 @@
 // rewarded based on measured student improvement, not answer quality.
 // ═══════════════════════════════════════════════════════════════════
 
-import type { InferenceConfig, InferenceMode } from '../llm/config';
+import type { InferenceMode } from '../llm/config';
 
 // ---------------------------------------------------------------------------
 // Edge-of-Learnability Detection

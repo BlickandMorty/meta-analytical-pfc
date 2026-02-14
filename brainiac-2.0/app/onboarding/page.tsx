@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,10 +12,8 @@ import {
   EyeIcon,
   EyeOffIcon,
   CheckCircle2Icon,
-  CpuIcon,
 } from 'lucide-react';
 import { readString, writeString } from '@/lib/storage-versioning';
-import { detectDevice, cacheDeviceProfile } from '@/lib/device-detection';
 
 // ═══════════════════════════════════════════════════════════════════════
 // Boot lines

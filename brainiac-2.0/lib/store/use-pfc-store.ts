@@ -27,12 +27,12 @@ import { createToastSlice } from './slices/toast';
 
 // Slice types — local imports for composition
 import type { MessageSliceState, MessageSliceActions } from './slices/message';
-import type { PipelineSliceState, PipelineSliceActions, SignalHistoryEntry } from './slices/pipeline';
+import type { PipelineSliceState, PipelineSliceActions } from './slices/pipeline';
 import type { InferenceSliceState, InferenceSliceActions } from './slices/inference';
 import type { ControlsSliceState, ControlsSliceActions } from './slices/controls';
 
-import type { CortexSliceState, CortexSliceActions, CortexSnapshot } from './slices/cortex';
-import type { ConceptsSliceState, ConceptsSliceActions, ConceptWeight } from './slices/concepts';
+import type { CortexSliceState, CortexSliceActions } from './slices/cortex';
+import type { ConceptsSliceState, ConceptsSliceActions } from './slices/concepts';
 import type { ResearchSliceState, ResearchSliceActions } from './slices/research';
 import type { PortalSliceState, PortalSliceActions } from './slices/portal';
 import type { UISliceState, UISliceActions } from './slices/ui';
@@ -96,7 +96,7 @@ export type PFCState = PFCStoreState & PFCStoreActions;
 // ═══════════════════════════════════════════════════════════════════
 
 export const usePFCStore = create<PFCState>()(
-  subscribeWithSelector((set, get, api) => ({
+  subscribeWithSelector((set, get, _api) => ({
     // Compose all slices
     ...createMessageSlice(set, get),
     ...createPipelineSlice(set, get),
@@ -114,12 +114,10 @@ export const usePFCStore = create<PFCState>()(
 
     // Global reset — preserves tier settings, cortex, and codebase analyses
     reset: () => {
-      const s = get();
       // Get fresh defaults from each slice
       const freshMsg = createMessageSlice(set, get);
       const freshPipeline = createPipelineSlice(set, get);
       const freshControls = createControlsSlice(set, get);
-      const freshResearch = createResearchSlice(set, get);
       const freshPortal = createPortalSlice(set, get);
       const freshUI = createUISlice(set, get);
 

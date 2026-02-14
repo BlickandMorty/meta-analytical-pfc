@@ -7,7 +7,6 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
-import { PixelSun } from '../decorative/pixel-mascots';
 import { ResearchModeBar } from './research-mode-bar';
 import { ThinkingControls } from './thinking-controls';
 import { ErrorBoundary } from '../layout/error-boundary';

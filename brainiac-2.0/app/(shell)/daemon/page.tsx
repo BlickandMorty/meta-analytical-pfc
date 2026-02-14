@@ -15,7 +15,6 @@ import {
   GraduationCapIcon,
   LinkIcon,
   CircleIcon,
-  AlertTriangleIcon,
   CheckCircle2Icon,
   XCircleIcon,
   SettingsIcon,
@@ -36,7 +35,6 @@ import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Progress } from '@/components/ui/progress';
 import { PixelBook } from '@/components/decorative/pixel-mascots';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { cn } from '@/lib/utils';
@@ -1134,8 +1132,8 @@ export default function DaemonPage() {
                 <p>Tasks run sequentially (not in parallel), so GPU usage stays within a single inference at a time. CPU and memory impact is minimal.</p>
               </div>
               <div>
-                <p className="font-semibold text-foreground/60">It says an agent is running but I didn't start one?</p>
-                <p>The daemon auto-starts previously enabled tasks from its last session. Open Agent Tasks and disable any you don't want. If you never started the daemon, this is a stale status — click Stop then Start to reset.</p>
+                <p className="font-semibold text-foreground/60">It says an agent is running but I didn&apos;t start one?</p>
+                <p>The daemon auto-starts previously enabled tasks from its last session. Open Agent Tasks and disable any you don&apos;t want. If you never started the daemon, this is a stale status — click Stop then Start to reset.</p>
               </div>
             </div>
           </div>
