@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withMiddleware } from '@/lib/api-middleware';
+import { withRateLimit } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { parseBodyWithLimit } from '@/lib/api-utils';
 import {
@@ -182,5 +182,5 @@ async function _POST(req: NextRequest) {
   }
 }
 
-export const GET = withMiddleware(_GET, { maxRequests: 20, windowMs: 60_000 });
-export const POST = withMiddleware(_POST, { maxRequests: 20, windowMs: 60_000 });
+export const GET = withRateLimit(_GET, { maxRequests: 20, windowMs: 60_000 });
+export const POST = withRateLimit(_POST, { maxRequests: 20, windowMs: 60_000 });

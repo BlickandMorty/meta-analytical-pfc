@@ -20,7 +20,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withMiddleware } from '@/lib/api-middleware';
+import { withRateLimit } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
@@ -339,4 +339,4 @@ async function _POST(
   }
 }
 
-export const POST = withMiddleware(_POST, { maxRequests: 30, windowMs: 60_000 });
+export const POST = withRateLimit(_POST, { maxRequests: 30, windowMs: 60_000 });

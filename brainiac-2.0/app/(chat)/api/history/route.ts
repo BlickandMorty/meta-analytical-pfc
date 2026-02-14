@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withMiddleware } from '@/lib/api-middleware';
+import { withRateLimit } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { getChatsByUserId, getMessagesByChatId } from '@/lib/db/queries';
 import { userId as toUserId, chatId as toChatId } from '@/lib/branded';
@@ -63,4 +63,4 @@ async function _GET(request: NextRequest) {
   }
 }
 
-export const GET = withMiddleware(_GET, { maxRequests: 60, windowMs: 60_000 });
+export const GET = withRateLimit(_GET, { maxRequests: 60, windowMs: 60_000 });

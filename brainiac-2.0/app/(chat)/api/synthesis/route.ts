@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withMiddleware } from '@/lib/api-middleware';
+import { withRateLimit } from '@/lib/api-middleware';
 import { logger } from '@/lib/debug-logger';
 import { generateSynthesisReport } from '@/lib/engine/synthesizer';
 import type { ChatMessage } from '@/lib/engine/types';
@@ -80,4 +80,4 @@ async function _POST(request: NextRequest) {
   }
 }
 
-export const POST = withMiddleware(_POST, { maxRequests: 10, windowMs: 60_000 });
+export const POST = withRateLimit(_POST, { maxRequests: 10, windowMs: 60_000 });

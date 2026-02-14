@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withMiddleware } from '@/lib/api-middleware';
+import { withRateLimit } from '@/lib/api-middleware';
 import {
   getOllamaRunningModels,
   getOllamaModelInfo,
@@ -86,4 +86,4 @@ async function _GET(request: NextRequest) {
   });
 }
 
-export const GET = withMiddleware(_GET, { maxRequests: 60, windowMs: 60_000, skipAuth: true });
+export const GET = withRateLimit(_GET, { maxRequests: 60, windowMs: 60_000 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withMiddleware } from '@/lib/api-middleware';
+import { withRateLimit } from '@/lib/api-middleware';
 import { streamText } from 'ai';
 import { logger } from '@/lib/debug-logger';
 import { resolveProvider } from '@/lib/engine/llm/provider';
@@ -331,4 +331,4 @@ async function _POST(request: NextRequest) {
   });
 }
 
-export const POST = withMiddleware(_POST, { maxRequests: 30, windowMs: 60_000 });
+export const POST = withRateLimit(_POST, { maxRequests: 30, windowMs: 60_000 });

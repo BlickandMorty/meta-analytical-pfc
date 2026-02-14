@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withMiddleware } from '@/lib/api-middleware';
+import { withRateLimit } from '@/lib/api-middleware';
 import { spawn } from 'child_process';
 import path from 'path';
 
@@ -185,5 +185,5 @@ async function _POST(req: NextRequest) {
   }
 }
 
-export const GET = withMiddleware(_GET, { maxRequests: 10, windowMs: 60_000 });
-export const POST = withMiddleware(_POST, { maxRequests: 10, windowMs: 60_000 });
+export const GET = withRateLimit(_GET, { maxRequests: 10, windowMs: 60_000 });
+export const POST = withRateLimit(_POST, { maxRequests: 10, windowMs: 60_000 });

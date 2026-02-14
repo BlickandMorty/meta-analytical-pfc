@@ -1,20 +1,21 @@
 /**
- * API route middleware — auth + rate limiting wrapper.
+ * API route middleware — per-route rate limiting wrapper.
+ *
+ * Auth is now handled at the edge by middleware.ts (see project root).
+ * This module only handles rate limiting, which varies per route.
  *
  * Usage:
- *   export const POST = withMiddleware(handler, { maxRequests: 30, windowMs: 60_000 });
+ *   export const POST = withRateLimit(handler, { maxRequests: 30, windowMs: 60_000 });
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit } from './rate-limit';
 
-export interface MiddlewareConfig {
+export interface RateLimitConfig {
   /** Max requests per window. Default: 30. */
   maxRequests?: number;
   /** Window duration in ms. Default: 60_000 (1 min). */
   windowMs?: number;
-  /** Skip auth check. Default: false. */
-  skipAuth?: boolean;
 }
 
 type RouteHandler = (
@@ -30,37 +31,14 @@ function getClientIP(request: NextRequest): string {
   );
 }
 
-function checkAuth(request: NextRequest): boolean {
-  const token = process.env.PFC_API_TOKEN;
-  // No token configured → open access (local dev default)
-  if (!token) return true;
-
-  const headerToken = request.headers.get('x-pfc-token');
-  if (headerToken === token) return true;
-
-  // Also check cookie for browser-based access
-  const cookieToken = request.cookies.get('pfc-auth')?.value;
-  if (cookieToken === token) return true;
-
-  return false;
-}
-
-export function withMiddleware(
+export function withRateLimit(
   handler: RouteHandler,
-  config: MiddlewareConfig = {},
+  config: RateLimitConfig = {},
 ): RouteHandler {
-  const { maxRequests = 30, windowMs = 60_000, skipAuth = false } = config;
+  const { maxRequests = 30, windowMs = 60_000 } = config;
 
   return async (request: NextRequest, context?) => {
-    // 1. Auth check
-    if (!skipAuth && !checkAuth(request)) {
-      return NextResponse.json(
-        { error: 'Unauthorized — set x-pfc-token header or pfc-auth cookie' },
-        { status: 401 },
-      );
-    }
-
-    // 2. Rate limiting
+    // Rate limiting
     const ip = getClientIP(request);
     const routeKey = `${ip}:${request.nextUrl.pathname}`;
     const result = checkRateLimit(routeKey, maxRequests, windowMs);
@@ -80,7 +58,7 @@ export function withMiddleware(
       );
     }
 
-    // 3. Run handler
+    // Run handler
     const response = await handler(request, context);
 
     // Attach rate limit headers to successful responses
@@ -92,3 +70,9 @@ export function withMiddleware(
     return response;
   };
 }
+
+/**
+ * @deprecated Use `withRateLimit` instead. Auth is now handled by edge middleware.
+ * Kept as an alias for backward compatibility during migration.
+ */
+export const withMiddleware = withRateLimit;

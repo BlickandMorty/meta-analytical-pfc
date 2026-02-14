@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withMiddleware } from '@/lib/api-middleware';
+import { withRateLimit } from '@/lib/api-middleware';
 import { generateText } from 'ai';
 import { resolveProvider, isAllowedOllamaUrl } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
@@ -58,4 +58,4 @@ async function _POST(request: NextRequest) {
   }
 }
 
-export const POST = withMiddleware(_POST, { maxRequests: 60, windowMs: 60_000 });
+export const POST = withRateLimit(_POST, { maxRequests: 60, windowMs: 60_000 });
