@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core';
 
 export const user = sqliteTable('user', {
   id: text('id').primaryKey().notNull(),
@@ -19,7 +19,10 @@ export const chat = sqliteTable('chat', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index('idx_chat_user').on(table.userId),
+  index('idx_chat_updated').on(table.updatedAt),
+]);
 
 export const message = sqliteTable('message', {
   id: text('id').primaryKey().notNull(),
@@ -38,7 +41,10 @@ export const message = sqliteTable('message', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index('idx_message_chat').on(table.chatId),
+  index('idx_message_created').on(table.createdAt),
+]);
 
 export const chatSignals = sqliteTable('chat_signals', {
   id: text('id').primaryKey().notNull(),
@@ -61,7 +67,9 @@ export const chatSignals = sqliteTable('chat_signals', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
-});
+}, (table) => [
+  index('idx_signals_chat').on(table.chatId),
+]);
 
 export const pipelineRun = sqliteTable('pipeline_run', {
   id: text('id').primaryKey().notNull(),
@@ -77,7 +85,9 @@ export const pipelineRun = sqliteTable('pipeline_run', {
     .notNull()
     .$defaultFn(() => new Date()),
   completedAt: integer('completed_at', { mode: 'timestamp' }),
-});
+}, (table) => [
+  index('idx_pipeline_chat').on(table.chatId),
+]);
 
 // ═══════════════════════════════════════════════════════════════════
 // Notes System Tables
@@ -108,7 +118,10 @@ export const notePage = sqliteTable('note_page', {
   pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
-});
+}, (table) => [
+  index('idx_note_page_vault').on(table.vaultId),
+  index('idx_note_page_name').on(table.vaultId, table.name),
+]);
 
 export const noteBlock = sqliteTable('note_block', {
   id: text('id').primaryKey().notNull(),
@@ -123,7 +136,10 @@ export const noteBlock = sqliteTable('note_block', {
   refs: text('refs').notNull().default('[]'),                // JSON array
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
-});
+}, (table) => [
+  index('idx_note_block_page').on(table.pageId),
+  index('idx_note_block_parent').on(table.parentId),
+]);
 
 export const noteBook = sqliteTable('note_book', {
   id: text('id').primaryKey().notNull(),
@@ -149,7 +165,9 @@ export const noteConcept = sqliteTable('note_concept', {
   type: text('type').notNull(),  // heading, key-term, entity, definition, custom
   context: text('context').notNull().default(''),
   createdAt: integer('created_at').notNull(),
-});
+}, (table) => [
+  index('idx_note_concept_page').on(table.sourcePageId),
+]);
 
 export const noteConceptCorrelation = sqliteTable('note_concept_correlation', {
   id: text('id').primaryKey().notNull(),
@@ -169,7 +187,10 @@ export const notePageLink = sqliteTable('note_page_link', {
   targetPageId: text('target_page_id').notNull(),
   sourceBlockId: text('source_block_id').notNull(),
   context: text('context').notNull().default(''),
-});
+}, (table) => [
+  index('idx_note_page_link_source').on(table.sourcePageId),
+  index('idx_note_page_link_target').on(table.targetPageId),
+]);
 
 // ═══════════════════════════════════════════════════════════════════
 // Daemon Tables (for Phase B)
