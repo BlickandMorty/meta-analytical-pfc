@@ -4,11 +4,11 @@ import { useState, useRef, memo, useMemo, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import { MessageLayman } from './message-layman';
-import { MessageResearch } from './message-research';
+import { MessageLayman } from '../message-layman';
+import { MessageResearch } from '../message-research';
 import { TruthBotCard } from './truth-bot-card';
 import { ThinkingAccordion } from './thinking-accordion';
-import { MarkdownContent } from './markdown-content';
+import { MarkdownContent } from '../shared/markdown-content';
 import type { ChatMessage } from '@/lib/engine/types';
 import { cn } from '@/lib/utils';
 import {
@@ -20,7 +20,7 @@ import {
   StickyNoteIcon,
 } from 'lucide-react';
 import { useIsDark } from '@/hooks/use-is-dark';
-import { ConceptMiniMap } from './concept-mini-map';
+import { ConceptMiniMap } from '../concept-mini-map';
 import { SteeringFeedback } from './steering-feedback';
 import { useSteeringStore } from '@/lib/store/use-steering-store';
 

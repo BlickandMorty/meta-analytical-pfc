@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';

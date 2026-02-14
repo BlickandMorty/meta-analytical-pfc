@@ -58,8 +58,8 @@ import { API_PROVIDERS, OPENAI_MODELS, ANTHROPIC_MODELS, GOOGLE_MODELS } from '@
 import type { ApiProvider } from '@/lib/engine/llm/config';
 import type { MiniChatTab, ChatThread, AssistantMessage } from '@/lib/store/slices/ui';
 import type { LearningSession } from '@/lib/notes/learning-protocol';
-import type { ChatEntry } from '@/components/recent-chats';
-import { parseTimestamp, formatRelativeTime } from '@/components/recent-chats';
+import type { ChatEntry } from '@/components/chat/recent-chats';
+import { parseTimestamp, formatRelativeTime } from '@/components/chat/recent-chats';
 
 /* ─── Constants ─── */
 

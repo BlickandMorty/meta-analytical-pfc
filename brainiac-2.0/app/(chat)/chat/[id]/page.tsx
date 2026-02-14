@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { logger } from '@/lib/debug-logger';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import { Chat } from '@/components/chat';
+import { Chat } from '@/components/chat/chat';
 
 export default function ChatByIdPage() {
   const params = useParams();

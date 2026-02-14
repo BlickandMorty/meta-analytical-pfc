@@ -3,7 +3,7 @@
 import { memo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDownIcon, AtomIcon } from 'lucide-react';
-import { PixelBook } from './pixel-book';
+import { PixelBook } from '../pixel-book';
 
 interface ThinkingAccordionProps {
   content: string;

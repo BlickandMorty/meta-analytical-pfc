@@ -38,7 +38,7 @@ import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { cn } from '@/lib/utils';
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { PixelBook } from '@/components/pixel-book';
-import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { useIsDark } from '@/hooks/use-is-dark';
 
 // ---------------------------------------------------------------------------

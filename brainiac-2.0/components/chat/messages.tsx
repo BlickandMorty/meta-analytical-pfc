@@ -9,7 +9,7 @@ import { ThinkingAccordion } from './thinking-accordion';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import { ArrowDownIcon } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PixelBook } from './pixel-book';
+import { PixelBook } from '../pixel-book';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { useComposedRefs } from '@radix-ui/react-compose-refs';
 

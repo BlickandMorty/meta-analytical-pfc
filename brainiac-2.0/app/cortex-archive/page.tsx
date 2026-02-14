@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 // Card imports removed — using flat Material You containers
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { Input } from '@/components/ui/input';
 import {
   AlertDialog,

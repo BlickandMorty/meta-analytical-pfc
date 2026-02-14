@@ -1,2 +1,16 @@
-// TODO: Chat components (Chat, Messages, Message, MultimodalInput, etc.) will be moved here in Phase 2
-export {};
+export { Chat } from './chat';
+export { Message } from './message';
+export { Messages } from './messages';
+export { MultimodalInput } from './multimodal-input';
+export { StreamingText } from './streaming-text';
+export { ThinkingAccordion } from './thinking-accordion';
+export { ThinkingControls } from './thinking-controls';
+export { ResearchModeBar } from './research-mode-bar';
+export { TruthBotCard } from './truth-bot-card';
+export { FeatureButtons } from './feature-buttons';
+export { RecentChats, parseTimestamp, formatRelativeTime } from './recent-chats';
+export type { ChatEntry } from './recent-chats';
+export { SteeringFeedback } from './steering-feedback';
+export { SteeringIndicator } from './steering-indicator';
+export { LiveControls } from './live-controls';
+export { GlassBubbleButton } from './glass-bubble-button';

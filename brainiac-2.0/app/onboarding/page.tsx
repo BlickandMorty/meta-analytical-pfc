@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
-import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import {
   KeyIcon,
   ArrowRightIcon,

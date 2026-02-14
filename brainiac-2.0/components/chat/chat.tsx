@@ -7,11 +7,11 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { Messages } from './messages';
 import { MultimodalInput } from './multimodal-input';
-import { PixelSun } from './pixel-sun';
+import { PixelSun } from '../pixel-sun';
 import { type ChatEntry, formatRelativeTime, parseTimestamp } from './recent-chats';
 import { ResearchModeBar } from './research-mode-bar';
 import { ThinkingControls } from './thinking-controls';
-import { ErrorBoundary } from './layout/error-boundary';
+import { ErrorBoundary } from '../layout/error-boundary';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIsDark } from '@/hooks/use-is-dark';
@@ -23,8 +23,8 @@ import { CloudIcon, MonitorIcon, ArrowLeftIcon, MessageSquareIcon, SearchIcon, E
 // ═══════════════════════════════════════════════════════════════════
 
 const LiveControls = dynamic(() => import('./live-controls').then((m) => ({ default: m.LiveControls })), { ssr: false });
-const ConceptHierarchyPanel = dynamic(() => import('./concept-hierarchy-panel').then((m) => ({ default: m.ConceptHierarchyPanel })), { ssr: false });
-const PortalSidebar = dynamic(() => import('./portal-sidebar').then((m) => ({ default: m.PortalSidebar })), { ssr: false });
+const ConceptHierarchyPanel = dynamic(() => import('../concept-hierarchy-panel').then((m) => ({ default: m.ConceptHierarchyPanel })), { ssr: false });
+const PortalSidebar = dynamic(() => import('../portal-sidebar').then((m) => ({ default: m.PortalSidebar })), { ssr: false });
 
 /* Spring configs — spring physics handle interruption gracefully
    (retarget mid-animation) unlike duration-based easing which

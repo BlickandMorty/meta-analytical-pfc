@@ -7,7 +7,7 @@ import { getMemoryStats } from '@/lib/engine/steering/memory';
 import { DIMENSION_LABELS } from '@/lib/engine/steering/encoder';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { GlassBubbleButton } from '@/components/glass-bubble-button';
+import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PixelBook } from '@/components/pixel-book';

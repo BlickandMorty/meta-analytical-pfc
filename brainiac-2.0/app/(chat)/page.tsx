@@ -1,6 +1,6 @@
 'use client';
 
-import { Chat } from '@/components/chat';
+import { Chat } from '@/components/chat/chat';
 
 export default function ChatPage() {
   return <Chat mode="landing" />;

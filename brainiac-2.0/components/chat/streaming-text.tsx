@@ -1,7 +1,7 @@
 'use client';
 
 import { usePFCStore } from '@/lib/store/use-pfc-store';
-import { MarkdownContent } from './markdown-content';
+import { MarkdownContent } from '../shared/markdown-content';
 
 // Stable selectors — extracted outside component to avoid re-creating on every render
 const selectStreamingText = (s: { streamingText: string }) => s.streamingText;
