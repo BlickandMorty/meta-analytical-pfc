@@ -320,6 +320,19 @@ com.apple.security.keychain-access-groups: [com.brainiac.app]
 - F5: Breathe Mode
 - F6: iCloud Vault Sync
 
+### F7: Liquid Search Bubbles
+When the user starts typing in the search/chat bar, a fluid animation plays and the bar
+"spits out" bubbles. Each bubble contains a scientifically precise, technically refined
+prompt suggestion — a deeper version of what you're typing. Tap a bubble to use it.
+
+**Implementation:**
+- SpriteKit particle emitter or custom Canvas overlay for liquid/bubble physics
+- LLM generates 3-5 enhanced prompts as user types (debounced 500ms)
+- Each bubble is a tappable pill with the enhanced prompt text
+- Bubbles float upward with gentle wobble physics
+- Tapping a bubble replaces the input and submits
+- Works with both API and local LLMs
+
 ### Cut (not needed in native)
 - API routes (no server — direct function calls)
 - proxy.ts / middleware (no edge runtime)
