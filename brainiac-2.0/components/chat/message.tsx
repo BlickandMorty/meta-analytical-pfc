@@ -8,7 +8,7 @@ import { MessageLayman } from './message-layman';
 import { MessageResearch } from './message-research';
 import { TruthBotCard } from './truth-bot-card';
 import { ThinkingAccordion } from './thinking-accordion';
-import { MarkdownContent } from '../shared/markdown-content';
+import { MarkdownContent } from '../shared/markdown';
 import type { ChatMessage } from '@/lib/engine/types';
 import { cn } from '@/lib/utils';
 import {
