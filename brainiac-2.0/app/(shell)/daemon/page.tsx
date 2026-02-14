@@ -196,7 +196,7 @@ export default function DaemonPage() {
   // ── Fetch daemon status ──
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/daemon?endpoint=status');
+      const res = await fetch('/api/system/daemon?endpoint=status');
       const data: DaemonStatus = await res.json();
       setStatus(data);
     } catch {
@@ -208,7 +208,7 @@ export default function DaemonPage() {
   // ── Fetch events ──
   const fetchEvents = useCallback(async () => {
     try {
-      const res = await fetch('/api/daemon?endpoint=events&limit=30');
+      const res = await fetch('/api/system/daemon?endpoint=events&limit=30');
       const data = await res.json();
       if (Array.isArray(data)) setEvents(data);
     } catch { /* non-critical */ }
@@ -217,7 +217,7 @@ export default function DaemonPage() {
   // ── Fetch config ──
   const fetchConfig = useCallback(async () => {
     try {
-      const res = await fetch('/api/daemon?endpoint=config');
+      const res = await fetch('/api/system/daemon?endpoint=config');
       const data = await res.json();
       if (data && typeof data === 'object' && !data.error) setConfig(data);
     } catch { /* non-critical */ }
@@ -226,7 +226,7 @@ export default function DaemonPage() {
   // ── Fetch permissions ──
   const fetchPermissions = useCallback(async () => {
     try {
-      const res = await fetch('/api/daemon?endpoint=permissions');
+      const res = await fetch('/api/system/daemon?endpoint=permissions');
       const data = await res.json();
       if (data && data.level) {
         setPermissions(data);
@@ -277,7 +277,7 @@ export default function DaemonPage() {
   const handleStart = async () => {
     setActionLoading(true);
     try {
-      await fetch('/api/daemon', {
+      await fetch('/api/system/daemon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'start' }),
@@ -295,7 +295,7 @@ export default function DaemonPage() {
   const handleStop = async () => {
     setActionLoading(true);
     try {
-      await fetch('/api/daemon', {
+      await fetch('/api/system/daemon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'stop' }),
@@ -328,7 +328,7 @@ export default function DaemonPage() {
     }
 
     try {
-      const res = await fetch('/api/daemon', {
+      const res = await fetch('/api/system/daemon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'config', config: { [key]: value } }),
@@ -361,7 +361,7 @@ export default function DaemonPage() {
   const handleSyncExport = async () => {
     setSyncStatus('Exporting...');
     try {
-      const res = await fetch('/api/daemon', {
+      const res = await fetch('/api/system/daemon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -385,7 +385,7 @@ export default function DaemonPage() {
   const handleSyncImport = async () => {
     setSyncStatus('Importing...');
     try {
-      const res = await fetch('/api/daemon', {
+      const res = await fetch('/api/system/daemon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -124,7 +124,7 @@ export function InferenceSection() {
   const checkOllama = useCallback(async () => {
     setOllamaChecking(true);
     try {
-      const res = await fetch(`/api/ollama-check?baseUrl=${encodeURIComponent(ollamaBaseUrl)}`);
+      const res = await fetch(`/api/system/ollama-check?baseUrl=${encodeURIComponent(ollamaBaseUrl)}`);
       const data = await res.json();
       setOllamaStatus(data.available, data.models || []);
       if (data.available && data.models?.length > 0 && !ollamaModel) {
@@ -141,7 +141,7 @@ export function InferenceSection() {
   const fetchHardwareStatus = useCallback(async () => {
     setHwLoading(true);
     try {
-      const res = await fetch(`/api/ollama-status?baseUrl=${encodeURIComponent(ollamaBaseUrl)}`);
+      const res = await fetch(`/api/system/ollama-status?baseUrl=${encodeURIComponent(ollamaBaseUrl)}`);
       const data: OllamaHardwareStatus = await res.json();
       setOllamaHardware(data);
     } catch { setOllamaHardware(null); }
@@ -162,7 +162,7 @@ export function InferenceSection() {
     setTestStatus('testing');
     setTestError('');
     try {
-      const res = await fetch('/api/test-connection', {
+      const res = await fetch('/api/system/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: inferenceMode, provider: apiProvider, apiKey, openaiModel, anthropicModel, googleModel, ollamaBaseUrl, ollamaModel }),

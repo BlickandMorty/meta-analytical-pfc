@@ -1697,7 +1697,7 @@ function WhatYouMissed({
     let cancelled = false;
     async function fetchDigest() {
       try {
-        const res = await fetch('/api/daemon?endpoint=events&limit=20');
+        const res = await fetch('/api/system/daemon?endpoint=events&limit=20');
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) {

@@ -1,7 +1,7 @@
 /**
  * Daemon IPC types — shared contract between Next.js routes and the daemon process.
  *
- * The daemon runs as a separate process on DAEMON_PORT. The Next.js `/api/daemon`
+ * The daemon runs as a separate process on DAEMON_PORT. The Next.js `/api/system/daemon`
  * route proxies requests to it. These types ensure both sides agree on shapes.
  */
 

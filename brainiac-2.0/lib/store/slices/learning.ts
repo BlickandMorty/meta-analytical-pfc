@@ -106,7 +106,7 @@ export interface LearningSliceActions {
   hydrateLearning: () => void;
 }
 
-// ── SSE event types emitted by /api/notes-learn ──
+// ── SSE event types emitted by /api/notes/learn ──
 type LearningSSEEvent =
   | { type: 'step-start'; stepIndex: number; stepType: string }
   | { type: 'step-progress'; stepIndex: number; progress: number; detail?: string }
@@ -260,7 +260,7 @@ function connectLearningSSE(set: PFCSet, get: PFCGet, sessionType: 'full-protoco
   // Fire the SSE fetch
   (async () => {
     try {
-      const response = await fetch('/api/notes-learn', {
+      const response = await fetch('/api/notes/learn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -476,13 +476,13 @@ Main entry point. Accepts query + inference config, runs the 10-stage pipeline a
 | Route | Method | Purpose |
 |-------|--------|---------|
 | `/api/assistant` | POST | Alternative assistant endpoint |
-| `/api/daemon` | GET/POST | Daemon task control (whitelist + body cap) |
-| `/api/notes` | POST | Note CRUD operations |
-| `/api/notes-ai` | POST | AI-powered note enhancement |
-| `/api/notes-learn` | POST | Trigger learning on a note |
-| `/api/ollama-check` | GET | Local model detection |
-| `/api/ollama-status` | POST | Model status polling |
-| `/api/test-connection` | POST | API key verification |
+| `/api/system/daemon` | GET/POST | Daemon task control (whitelist + body cap) |
+| `/api/system/ollama-check` | GET | Local model detection |
+| `/api/system/ollama-status` | GET | Model status polling |
+| `/api/system/test-connection` | POST | API key verification |
+| `/api/notes/ai` | POST | AI-powered note enhancement |
+| `/api/notes/learn` | POST | Trigger learning on a note |
+| `/api/notes/sync` | GET/POST | Note vault sync to SQLite |
 | `/api/history` | GET | Chat history retrieval |
 
 ---

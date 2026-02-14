@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════
 // Learning Runner — executes the 7-step recursive learning protocol
 //
-// Runs the same protocol as the web UI's /api/notes-learn route,
+// Runs the same protocol as the web UI's /api/notes/learn route,
 // but writes results directly to SQLite instead of streaming SSE.
 // ═══════════════════════════════════════════════════════════════════
 

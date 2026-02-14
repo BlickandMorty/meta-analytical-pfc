@@ -202,7 +202,7 @@ function vaultKey(vaultId: string, suffix: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Note AI SSE connection — calls /api/notes-ai and streams response
+// Note AI SSE connection — calls /api/notes/ai and streams response
 // Same pattern as connectLearningSSE in the learning slice
 // ═══════════════════════════════════════════════════════════════════
 
@@ -247,7 +247,7 @@ function connectNoteAISSE(set: PFCSet, get: PFCGet) {
 
   (async () => {
     try {
-      const response = await fetch('/api/notes-ai', {
+      const response = await fetch('/api/notes/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,9 +1,353 @@
+/**
+ * Consolidated notes API route.
+ *
+ * Merges the following former standalone routes:
+ *   /api/notes-ai     -> /api/notes/ai     (POST)
+ *   /api/notes-learn  -> /api/notes/learn   (POST)
+ *   /api/notes/sync   -> /api/notes/sync    (GET/POST)
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { withRateLimit } from '@/lib/api-middleware';
-import { generateText } from 'ai';
+
+// ═══════════════════════════════════════════════════════════════════
+// notes-ai handler (POST)
+// ═══════════════════════════════════════════════════════════════════
+
+import { streamText, generateText } from 'ai';
 import { logger } from '@/lib/debug-logger';
 import { resolveProvider } from '@/lib/engine/llm/provider';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
+import {
+  createSSEWriter,
+  isAbortLikeError,
+  parseBodyWithLimit,
+  sanitizeErrorMessage,
+} from '@/lib/api-utils';
+
+interface NotesAIRequestBody {
+  pages?: unknown;
+  blocks?: unknown;
+  prompt?: unknown;
+  targetBlockId?: unknown;
+  inferenceConfig?: InferenceConfig;
+}
+
+interface NotesAIPageInput {
+  id: string;
+  title: string;
+}
+
+interface NotesAIBlockInput {
+  id: string;
+  pageId: string;
+  order: string;
+  indent: number;
+  content: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizeAIPages(raw: unknown): NotesAIPageInput[] | null {
+  if (raw == null) return [];
+  if (!Array.isArray(raw)) return null;
+
+  const pages: NotesAIPageInput[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) return null;
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const title = typeof item.title === 'string' ? item.title.trim() : '';
+    if (!id || !title) return null;
+    pages.push({ id, title });
+  }
+  return pages;
+}
+
+function normalizeAIBlocks(raw: unknown): NotesAIBlockInput[] | null {
+  if (raw == null) return [];
+  if (!Array.isArray(raw)) return null;
+
+  const blocks: NotesAIBlockInput[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) return null;
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const pageId = typeof item.pageId === 'string' ? item.pageId.trim() : '';
+    const order = typeof item.order === 'string' ? item.order : '';
+    const content = typeof item.content === 'string' ? item.content : '';
+    const indent =
+      typeof item.indent === 'number' && Number.isFinite(item.indent)
+        ? Math.max(0, Math.floor(item.indent))
+        : 0;
+    if (!id || !pageId || !order) return null;
+    blocks.push({ id, pageId, order, indent, content });
+  }
+  return blocks;
+}
+
+// ── SSE helper ──
+function sseEvent(data: Record<string, unknown>): string {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+// ── Build note content string (for notes-ai) ──
+function buildAINoteContent(pages: NotesAIPageInput[], blocks: NotesAIBlockInput[]): string {
+  const sections: string[] = [];
+
+  for (const page of pages) {
+    const pageBlocks = blocks
+      .filter((b) => b.pageId === page.id)
+      .sort((a, b) => a.order.localeCompare(b.order));
+
+    const blockContent = pageBlocks
+      .map((b) => {
+        const indent = '  '.repeat(b.indent || 0);
+        const text = b.content.replace(/<[^>]*>/g, '');
+        return text.trim() ? `${indent}${text}` : '';
+      })
+      .filter(Boolean)
+      .join('\n');
+
+    if (blockContent.trim()) {
+      sections.push(`## ${page.title}\n${blockContent}`);
+    }
+  }
+
+  return sections.join('\n\n');
+}
+
+// ── Build the system prompt for a given action ──
+function buildSystemPrompt(action: string): string {
+  return `You are an intelligent note-taking assistant embedded in a knowledge management app. Your role is to help users write, expand, and refine their notes.
+
+Guidelines:
+- Write in a natural, conversational tone that matches the user's existing style.
+- Be concise and direct. Avoid filler words and unnecessary preamble.
+- Do NOT wrap your response in markdown code fences or add metadata.
+- Just output the text content directly.
+- Match the formatting style of the existing notes (plain text, short paragraphs).
+
+Action: ${action}`;
+}
+
+// ── Build the user prompt based on action type ──
+function buildUserPrompt(
+  action: string,
+  prompt: string,
+  noteContent: string,
+  targetBlockContent: string | null,
+): string {
+  const contextSection = noteContent
+    ? `Here are the current notes:\n\n${noteContent}\n\n`
+    : '';
+
+  const blockSection = targetBlockContent
+    ? `The selected block reads:\n"${targetBlockContent}"\n\n`
+    : '';
+
+  switch (action) {
+    case 'continue':
+      return `${contextSection}Continue writing from where these notes left off. Match the tone and style. Write 2-4 paragraphs.`;
+    case 'summarize':
+      return `${contextSection}Summarize the key points of these notes concisely. Use bullet points if appropriate.`;
+    case 'expand':
+      return `${contextSection}${blockSection}Expand on this block with more detail and supporting points. Write 2-3 paragraphs.`;
+    case 'rewrite':
+      return `${contextSection}${blockSection}Rewrite this block to be clearer and more concise while preserving the core meaning.`;
+    default:
+      // Custom prompt
+      return `${contextSection}${blockSection}${prompt}`;
+  }
+}
+
+// ── Detect the action type from the prompt ──
+function detectAction(prompt: string): string {
+  const lower = prompt.toLowerCase();
+  if (lower.includes('continue writing')) return 'continue';
+  if (lower.includes('summarize the key points')) return 'summarize';
+  if (lower.includes('expand on this block')) return 'expand';
+  if (lower.includes('rewrite this block')) return 'rewrite';
+  return 'custom';
+}
+
+function getNotesAIGenerationBudget(action: string, mode: InferenceConfig['mode'] | undefined): {
+  maxOutputTokens: number;
+  temperature: number;
+} {
+  const isLocal = mode === 'local';
+  if (isLocal) {
+    switch (action) {
+      case 'continue':
+      case 'expand':
+        return { maxOutputTokens: 900, temperature: 0.55 };
+      case 'summarize':
+      case 'rewrite':
+        return { maxOutputTokens: 620, temperature: 0.45 };
+      default:
+        return { maxOutputTokens: 760, temperature: 0.5 };
+    }
+  }
+
+  switch (action) {
+    case 'continue':
+    case 'expand':
+      return { maxOutputTokens: 2048, temperature: 0.7 };
+    case 'summarize':
+    case 'rewrite':
+      return { maxOutputTokens: 1400, temperature: 0.6 };
+    default:
+      return { maxOutputTokens: 1700, temperature: 0.68 };
+  }
+}
+
+async function handleNotesAI(request: NextRequest) {
+  let pages: NotesAIPageInput[];
+  let blocks: NotesAIBlockInput[];
+  let prompt: string;
+  let targetBlockId: string | null;
+  let inferenceConfig: InferenceConfig | undefined;
+
+  try {
+    const parsedBody = await parseBodyWithLimit<NotesAIRequestBody>(request, 10 * 1024 * 1024);
+    if ('error' in parsedBody) {
+      return parsedBody.error;
+    }
+    const body = parsedBody.data;
+
+    const normalizedPages = normalizeAIPages(body.pages);
+    if (!normalizedPages) {
+      return NextResponse.json({ error: 'Invalid pages payload' }, { status: 400 });
+    }
+    const normalizedBlocks = normalizeAIBlocks(body.blocks);
+    if (!normalizedBlocks) {
+      return NextResponse.json({ error: 'Invalid blocks payload' }, { status: 400 });
+    }
+
+    pages = normalizedPages;
+    blocks = normalizedBlocks;
+    prompt = typeof body.prompt === 'string' ? body.prompt : '';
+    targetBlockId = typeof body.targetBlockId === 'string' ? body.targetBlockId : null;
+    inferenceConfig = body.inferenceConfig;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return NextResponse.json({ error: 'Missing prompt' }, { status: 400 });
+    }
+
+    if (prompt.length > 50000) {
+      return NextResponse.json({ error: 'Prompt too long (max 50,000 characters)' }, { status: 400 });
+    }
+  } catch (error) {
+    logger.error('notes-ai', 'Request parsing error:', error);
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      { status: 400 },
+    );
+  }
+
+  if (!inferenceConfig) {
+    return NextResponse.json(
+      { error: 'No inference model configured. Set an API key or connect a local model.' },
+      { status: 400 },
+    );
+  }
+
+  const action = detectAction(prompt);
+
+  // Build note content and target block content
+  const noteContent = buildAINoteContent(pages, blocks);
+  const targetBlock = targetBlockId
+    ? blocks.find((b) => b.id === targetBlockId)
+    : null;
+  const targetBlockContent = targetBlock
+    ? targetBlock.content.replace(/<[^>]*>/g, '')
+    : null;
+
+  const encoder = new TextEncoder();
+
+  // Use request.signal to detect client disconnect
+  const clientSignal = request.signal;
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const writer = createSSEWriter(controller, encoder);
+      const emit = (data: Record<string, unknown>) => writer.raw(sseEvent(data));
+
+      try {
+        let model;
+        try {
+          model = resolveProvider(inferenceConfig);
+        } catch (error) {
+          emit({ type: 'error', message: error instanceof Error ? error.message : 'Failed to resolve provider' });
+          writer.done();
+          writer.close();
+          return;
+        }
+
+        const systemPrompt = buildSystemPrompt(action);
+        const userPrompt = buildUserPrompt(action, prompt, noteContent, targetBlockContent);
+        const generationBudget = getNotesAIGenerationBudget(action, inferenceConfig.mode);
+
+        const result = streamText({
+          model,
+          system: systemPrompt,
+          prompt: userPrompt,
+          maxOutputTokens: generationBudget.maxOutputTokens,
+          temperature: generationBudget.temperature,
+        });
+
+        let emittedText = false;
+        for await (const chunk of result.textStream) {
+          // Stop if client disconnected
+          if (clientSignal.aborted || writer.isClosed()) {
+            writer.close();
+            return;
+          }
+
+          emittedText = true;
+          if (!emit({ type: 'text', text: chunk })) {
+            writer.close();
+            return;
+          }
+        }
+
+        if (!emittedText && inferenceConfig.mode === 'local') {
+          emit({
+            type: 'error',
+            message: 'Local model produced no output. Check Ollama server and selected model.',
+          });
+        }
+
+        emit({ type: 'done' });
+      } catch (error) {
+        if (clientSignal.aborted || writer.isClosed() || isAbortLikeError(error)) {
+          writer.close();
+          return;
+        }
+        const message = sanitizeErrorMessage(error);
+        logger.error('notes-ai', 'Error:', message);
+        emit({ type: 'error', message });
+      } finally {
+        writer.done();
+        writer.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// notes-learn handler (POST)
+// ═══════════════════════════════════════════════════════════════════
+
 import type { LearningSession, LearningStepType } from '@/lib/notes/learning-protocol';
 import {
   buildInventoryPrompt,
@@ -15,12 +359,6 @@ import {
   buildIterationCheckPrompt,
   buildDailyBriefPrompt,
 } from '@/lib/notes/learning-prompts';
-import {
-  createSSEWriter,
-  isAbortLikeError,
-  parseBodyWithLimit,
-  sanitizeErrorMessage,
-} from '@/lib/api-utils';
 
 interface NotesLearnPageInput {
   id: string;
@@ -48,11 +386,7 @@ interface NotesLearnRequestBody {
   recentActivity?: string;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function normalizePages(raw: unknown): NotesLearnPageInput[] | null {
+function normalizeLearnPages(raw: unknown): NotesLearnPageInput[] | null {
   if (!Array.isArray(raw)) return null;
   const pages: NotesLearnPageInput[] = [];
   for (const item of raw) {
@@ -65,7 +399,7 @@ function normalizePages(raw: unknown): NotesLearnPageInput[] | null {
   return pages;
 }
 
-function normalizeBlocks(raw: unknown, pageIds: Set<string>): NotesLearnBlockInput[] | null {
+function normalizeLearnBlocks(raw: unknown, pageIds: Set<string>): NotesLearnBlockInput[] | null {
   if (!Array.isArray(raw)) return null;
   const blocks: NotesLearnBlockInput[] = [];
   for (const item of raw) {
@@ -83,11 +417,6 @@ function normalizeBlocks(raw: unknown, pageIds: Set<string>): NotesLearnBlockInp
     blocks.push({ id, pageId, order, indent, content });
   }
   return blocks;
-}
-
-// ── SSE helper ──
-function sseEvent(data: Record<string, unknown>): string {
-  return `data: ${JSON.stringify(data)}\n\n`;
 }
 
 // ── Temperature per step type ──
@@ -123,8 +452,8 @@ function getStepMaxTokens(
   return stepType === 'deep-dive' || stepType === 'synthesis' ? 4096 : 2048;
 }
 
-// ── Build note content string ──
-function buildNoteContent(pages: NotesLearnPageInput[], blocks: NotesLearnBlockInput[]): string {
+// ── Build note content string (for notes-learn) ──
+function buildLearnNoteContent(pages: NotesLearnPageInput[], blocks: NotesLearnBlockInput[]): string {
   const sections: string[] = [];
 
   for (const page of pages) {
@@ -345,8 +674,7 @@ function parseIterateResponse(text: string): {
   }
 }
 
-// ── POST handler ──
-async function _POST(request: NextRequest) {
+async function handleNotesLearn(request: NextRequest) {
   let notes: NotesLearnInput;
   let session: LearningSession;
   let inferenceConfig: InferenceConfig | undefined;
@@ -366,11 +694,11 @@ async function _POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing notes or session' }, { status: 400 });
     }
 
-    const normalizedPages = normalizePages(bodyNotes.pages);
+    const normalizedPages = normalizeLearnPages(bodyNotes.pages);
     if (!normalizedPages) {
       return NextResponse.json({ error: 'Invalid notes payload: pages must be an array of {id, title}' }, { status: 400 });
     }
-    const normalizedBlocks = normalizeBlocks(
+    const normalizedBlocks = normalizeLearnBlocks(
       bodyNotes.blocks,
       new Set(normalizedPages.map((p) => p.id)),
     );
@@ -444,7 +772,7 @@ async function _POST(request: NextRequest) {
   }
 
   // Build the note content string
-  const noteContent = buildNoteContent(notes.pages, notes.blocks);
+  const noteContent = buildLearnNoteContent(notes.pages, notes.blocks);
 
   const encoder = new TextEncoder();
   const capturedSession = session;
@@ -559,7 +887,7 @@ async function _POST(request: NextRequest) {
         : notes.blocks;
 
       const effectiveNoteContent = capturedSession.targetPageIds?.length
-        ? buildNoteContent(targetPages, targetBlocks)
+        ? buildLearnNoteContent(targetPages, targetBlocks)
         : capturedNoteContent;
 
       // Track generated content across iterations so subsequent passes see new material
@@ -755,4 +1083,206 @@ async function _POST(request: NextRequest) {
   });
 }
 
-export const POST = withRateLimit(_POST, { maxRequests: 5, windowMs: 60_000 });
+// ═══════════════════════════════════════════════════════════════════
+// notes/sync handler (GET/POST)
+// ═══════════════════════════════════════════════════════════════════
+
+import {
+  syncVaultToDb,
+  loadVaultFromDb,
+  hasNotesInDb,
+  getVaults,
+  upsertVault,
+  deleteVault,
+} from '@/lib/db/notes-queries';
+import type {
+  NotePage, NoteBlock, NoteBook, Vault, Concept, PageLink,
+} from '@/lib/notes/types';
+import { vaultId as toVaultId } from '@/lib/branded';
+
+async function handleSyncGet(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const check = searchParams.get('check');
+    const vaultId = searchParams.get('vaultId');
+
+    // Migration check
+    if (check === 'migration') {
+      const hasNotes = await hasNotesInDb();
+      return NextResponse.json({ hasMigrated: hasNotes });
+    }
+
+    // Load specific vault
+    if (vaultId) {
+      const data = await loadVaultFromDb(toVaultId(vaultId));
+      if (!data) {
+        return NextResponse.json({ error: 'Vault not found' }, { status: 404 });
+      }
+      return NextResponse.json(data);
+    }
+
+    // List all vaults
+    const vaults = await getVaults();
+    return NextResponse.json({ vaults });
+  } catch (err) {
+    logger.error('notes/sync', 'GET error:', err);
+    return NextResponse.json(
+      { error: 'Failed to read notes from database' },
+      { status: 500 },
+    );
+  }
+}
+
+interface SyncPayload {
+  action: 'sync';
+  vaultId: string;
+  vault: Vault;
+  pages: NotePage[];
+  blocks: NoteBlock[];
+  books: NoteBook[];
+  concepts: Concept[];
+  pageLinks: PageLink[];
+}
+
+interface MigratePayload {
+  action: 'migrate';
+  vaults: Array<{
+    vault: Vault;
+    pages: NotePage[];
+    blocks: NoteBlock[];
+    books: NoteBook[];
+    concepts: Concept[];
+    pageLinks: PageLink[];
+  }>;
+}
+
+interface UpsertVaultPayload {
+  action: 'upsert-vault';
+  vault: Vault;
+}
+
+interface DeleteVaultPayload {
+  action: 'delete-vault';
+  vaultId: string;
+}
+
+type SyncPostPayload = SyncPayload | MigratePayload | UpsertVaultPayload | DeleteVaultPayload;
+
+// Limit body to ~10MB (notes shouldn't need more; prevents abuse)
+const SYNC_MAX_BODY_SIZE = 10 * 1024 * 1024;
+
+async function handleSyncPost(req: NextRequest) {
+  try {
+    // Use parseBodyWithLimit for actual stream-level size enforcement (not just header check)
+    const parsedBody = await parseBodyWithLimit<SyncPostPayload>(req, SYNC_MAX_BODY_SIZE);
+    if ('error' in parsedBody) {
+      return parsedBody.error;
+    }
+    const body = parsedBody.data;
+
+    switch (body.action) {
+      // ── Full vault sync (write-through) ──
+      case 'sync': {
+        const { vaultId, vault, pages, blocks, books, concepts, pageLinks } = body;
+        if (!vaultId) {
+          return NextResponse.json({ error: 'vaultId is required' }, { status: 400 });
+        }
+        await syncVaultToDb(toVaultId(vaultId), vault, pages, blocks, books, concepts, pageLinks);
+        return NextResponse.json({ ok: true, synced: pages.length });
+      }
+
+      // ── One-time migration: push all vaults from localStorage ──
+      case 'migrate': {
+        // Check if already migrated
+        const alreadyMigrated = await hasNotesInDb();
+        if (alreadyMigrated) {
+          return NextResponse.json({ ok: true, skipped: true, reason: 'already migrated' });
+        }
+
+        const { vaults } = body;
+        let totalPages = 0;
+
+        for (const vaultData of vaults) {
+          const { vault, pages, blocks, books, concepts, pageLinks } = vaultData;
+          await syncVaultToDb(toVaultId(vault.id), vault, pages, blocks, books, concepts, pageLinks);
+          totalPages += pages.length;
+        }
+
+        return NextResponse.json({
+          ok: true,
+          migrated: true,
+          vaultCount: vaults.length,
+          totalPages,
+        });
+      }
+
+      // ── Upsert a single vault record ──
+      case 'upsert-vault': {
+        await upsertVault(body.vault);
+        return NextResponse.json({ ok: true });
+      }
+
+      // ── Delete a vault ──
+      case 'delete-vault': {
+        if (!body.vaultId) {
+          return NextResponse.json({ error: 'vaultId is required' }, { status: 400 });
+        }
+        await deleteVault(toVaultId(body.vaultId));
+        return NextResponse.json({ ok: true });
+      }
+
+      default:
+        return NextResponse.json(
+          { error: 'Unknown action' },
+          { status: 400 },
+        );
+    }
+  } catch (err) {
+    logger.error('notes/sync', 'POST error:', err);
+    return NextResponse.json(
+      { error: 'Failed to sync notes to database' },
+      { status: 500 },
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Route exports — dispatch by [action] param
+// ═══════════════════════════════════════════════════════════════════
+
+async function _GET(
+  req: NextRequest,
+  context?: { params: Promise<Record<string, string>> },
+) {
+  const { action } = await context!.params;
+
+  switch (action) {
+    case 'sync':
+      return handleSyncGet(req);
+    default:
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+}
+
+async function _POST(
+  req: NextRequest,
+  context?: { params: Promise<Record<string, string>> },
+) {
+  const { action } = await context!.params;
+
+  switch (action) {
+    case 'ai':
+      return handleNotesAI(req);
+    case 'learn':
+      return handleNotesLearn(req);
+    case 'sync':
+      return handleSyncPost(req);
+    default:
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+}
+
+// Rate limits applied at route level — most restrictive is notes-learn (5/min).
+// Using a reasonable common limit; individual handlers enforce their own constraints.
+export const GET = withRateLimit(_GET, { maxRequests: 20, windowMs: 60_000 });
+export const POST = withRateLimit(_POST, { maxRequests: 30, windowMs: 60_000 });
