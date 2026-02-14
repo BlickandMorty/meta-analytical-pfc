@@ -17,7 +17,6 @@ import { createInferenceSlice } from './slices/inference';
 import { createControlsSlice } from './slices/controls';
 import { createCortexSlice } from './slices/cortex';
 import { createConceptsSlice } from './slices/concepts';
-import { createTierSlice } from './slices/tier';
 import { createResearchSlice } from './slices/research';
 import { createPortalSlice } from './slices/portal';
 import { createUISlice } from './slices/ui';
@@ -34,7 +33,6 @@ import type { ControlsSliceState, ControlsSliceActions } from './slices/controls
 
 import type { CortexSliceState, CortexSliceActions, CortexSnapshot } from './slices/cortex';
 import type { ConceptsSliceState, ConceptsSliceActions, ConceptWeight } from './slices/concepts';
-import type { TierSliceState, TierSliceActions } from './slices/tier';
 import type { ResearchSliceState, ResearchSliceActions } from './slices/research';
 import type { PortalSliceState, PortalSliceActions } from './slices/portal';
 import type { UISliceState, UISliceActions } from './slices/ui';
@@ -47,7 +45,7 @@ import type { ToastSliceState, ToastSliceActions } from './slices/toast';
 export type { SignalHistoryEntry } from './slices/pipeline';
 export type { CortexSnapshot } from './slices/cortex';
 export type { ConceptWeight } from './slices/concepts';
-export type { ChatMode, MiniChatTab } from './slices/ui';
+export type { MiniChatTab } from './slices/ui';
 
 // ═══════════════════════════════════════════════════════════════════
 // Slice creator helpers — typed set/get for all slices
@@ -67,7 +65,6 @@ export type PFCStoreState =
   & ControlsSliceState
   & CortexSliceState
   & ConceptsSliceState
-  & TierSliceState
   & ResearchSliceState
   & PortalSliceState
   & UISliceState
@@ -83,7 +80,6 @@ export type PFCStoreActions =
   & ControlsSliceActions
   & CortexSliceActions
   & ConceptsSliceActions
-  & TierSliceActions
   & ResearchSliceActions
   & PortalSliceActions
   & UISliceActions
@@ -108,7 +104,6 @@ export const usePFCStore = create<PFCState>()(
     ...createControlsSlice(set, get),
     ...createCortexSlice(set, get),
     ...createConceptsSlice(set, get),
-    ...createTierSlice(set, get),
     ...createResearchSlice(set, get),
     ...createPortalSlice(set, get),
     ...createUISlice(set, get),
@@ -170,7 +165,6 @@ export const usePFCStore = create<PFCState>()(
         researchPapers: [],
         currentCitations: [],
         pendingReroute: null,
-        researchChatMode: freshResearch.researchChatMode,
 
         // Reset portal
         portalStack: freshPortal.portalStack,
@@ -186,8 +180,7 @@ export const usePFCStore = create<PFCState>()(
         threadStreamingText: {},
         threadIsStreaming: {},
 
-        // Preserve tier and cortex
-        // (suiteTier, measurementEnabled, tierFeatures stay)
+        // Preserve cortex
         // (cortexArchive stays)
         // (conceptWeights reset)
         conceptWeights: {},

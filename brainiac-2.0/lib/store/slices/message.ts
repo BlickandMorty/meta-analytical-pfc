@@ -261,7 +261,7 @@ export const createMessageSlice = (set: PFCSet, get: PFCGet) => ({
       isReasoning: false,
     }));
     // Notify pipeline slice via event bus (pipeline handles its own state)
-    emit('query:submitted', { query, mode: get().chatMode ?? 'research' });
+    emit('query:submitted', { query, mode: 'research' });
   },
 
   completeProcessing: (

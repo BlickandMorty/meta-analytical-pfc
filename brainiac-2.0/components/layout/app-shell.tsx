@@ -49,8 +49,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const setApiProvider = usePFCStore((s) => s.setApiProvider);
   const setOllamaBaseUrl = usePFCStore((s) => s.setOllamaBaseUrl);
   const setOllamaModel = usePFCStore((s) => s.setOllamaModel);
-  const setSuiteTier = usePFCStore((s) => s.setSuiteTier);
-  const setMeasurementEnabled = usePFCStore((s) => s.setMeasurementEnabled);
   const initScheduler = usePFCStore((s) => s.initScheduler);
 
   const [mounted, setMounted] = useState(false);
@@ -97,10 +95,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (storedOllamaUrl) setOllamaBaseUrl(storedOllamaUrl);
     const storedOllamaModel = ls('pfc-ollama-model');
     if (storedOllamaModel) setOllamaModel(storedOllamaModel);
-
-    // --- Suite Tier (single mode — always programming, all features on) ---
-    setSuiteTier('programming');
-    setMeasurementEnabled(true);
 
     // --- Detect and cache device profile ---
     const profile = detectDevice();

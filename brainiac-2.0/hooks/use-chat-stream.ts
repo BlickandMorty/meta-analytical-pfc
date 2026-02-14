@@ -206,7 +206,7 @@ export function useChatStream() {
           inferenceConfig,
           ...(soarConfig?.enabled && { soarConfig }),
           analyticsEngineEnabled,
-          chatMode: store.chatMode,
+          chatMode: 'research' as const,
           ...(attachments && { attachments }),
           ...(filePaths.length > 0 && { filePaths }),
         }),

@@ -93,14 +93,12 @@ describe('store integrity', () => {
       'cortexArchive',
       // concepts slice
       'conceptWeights', 'queryConceptHistory',
-      // tier slice
-      'suiteTier', 'measurementEnabled', 'tierFeatures',
       // research slice
       'researchPapers', 'currentCitations',
       // portal slice
       'portalStack', 'showPortal',
       // UI slice
-      'chatMode', 'chatMinimized', 'chatThreads', 'activeThreadId',
+      'chatMinimized', 'chatThreads', 'activeThreadId',
       // notes slice
       'notePages', 'noteBlocks', 'noteBooks',
       // learning slice
@@ -332,14 +330,12 @@ describe('store integrity', () => {
   // 5. Store reset
   // ═══════════════════════════════════════════════════════════════════
 
-  it('reset clears messages and pipeline but preserves tier', () => {
+  it('reset clears messages and pipeline state', () => {
     // Seed state
     usePFCStore.getState().submitQuery('pre-reset message');
     usePFCStore.getState().startStreaming();
     usePFCStore.getState().appendStreamingText('partial');
     usePFCStore.getState().applySignalUpdate({ confidence: 0.95, entropy: 0.8 });
-
-    const tierBefore = usePFCStore.getState().suiteTier;
 
     usePFCStore.getState().reset();
     const s = usePFCStore.getState();
@@ -353,9 +349,6 @@ describe('store integrity', () => {
     // Pipeline signals should be reset
     expect(s.confidence).toBe(0.5);
     expect(s.signalHistory).toEqual([]);
-
-    // Tier should be preserved
-    expect(s.suiteTier).toBe(tierBefore);
 
     assertValidState();
   });

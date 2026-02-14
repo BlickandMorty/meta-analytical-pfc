@@ -16,7 +16,6 @@ const RESEARCH_PAPERS_VERSION = 1;
 // ---------------------------------------------------------------------------
 
 export interface ResearchSliceState {
-  researchChatMode: boolean;
   researchPapers: ResearchPaper[];
   currentCitations: Citation[];
   pendingReroute: RerouteInstruction | null;
@@ -28,7 +27,6 @@ export interface ResearchSliceState {
 // ---------------------------------------------------------------------------
 
 export interface ResearchSliceActions {
-  toggleResearchChatMode: () => void;
   addResearchPaper: (paper: ResearchPaper) => void;
   removeResearchPaper: (id: string) => void;
   updateResearchPaper: (
@@ -46,16 +44,12 @@ export interface ResearchSliceActions {
 
 export const createResearchSlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
-  researchChatMode: true,
   researchPapers: [] as ResearchPaper[],
   currentCitations: [] as Citation[],
   pendingReroute: null as RerouteInstruction | null,
   researchBooks: [] as ResearchBook[],
 
   // --- actions ---
-
-  // Research mode is always on — toggle is a no-op for backward compat
-  toggleResearchChatMode: () => {},
 
   addResearchPaper: (paper: ResearchPaper) =>
     set((s) => {

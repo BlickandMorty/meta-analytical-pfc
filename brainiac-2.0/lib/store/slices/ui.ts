@@ -9,9 +9,6 @@ import type { PFCSet, PFCGet } from '../use-pfc-store';
 // Types
 // ---------------------------------------------------------------------------
 
-/** @deprecated Single mode — always 'research'. Kept for backward compat. */
-export type ChatMode = 'research';
-
 /** Tabs inside the mini-chat panel */
 export type MiniChatTab = 'chat' | 'notes' | 'research' | 'history';
 
@@ -65,7 +62,6 @@ function makeDefaultThread(): ChatThread {
 export interface UISliceState {
   showTruthBot: boolean;
   latestTruthAssessment: TruthAssessment | null;
-  chatMode: ChatMode;
   /** When true the full-size chat is hidden and the mini floating widget shows */
   chatMinimized: boolean;
   /** Draggable position for the mini-chat widget (viewport px) */
@@ -101,7 +97,6 @@ export interface UISliceState {
 export interface UISliceActions {
   toggleTruthBot: () => void;
   setTruthAssessment: (assessment: TruthAssessment) => void;
-  setChatMode: (mode: ChatMode) => void;
   setChatMinimized: (minimized: boolean) => void;
   setMiniChatPosition: (pos: { x: number; y: number }) => void;
   setMiniChatSize: (size: { w: number; h: number }) => void;
@@ -161,7 +156,6 @@ export const createUISlice = (set: PFCSet, get: PFCGet) => ({
   // --- initial state ---
   showTruthBot: true,
   latestTruthAssessment: null as TruthAssessment | null,
-  chatMode: 'research' as ChatMode,
   chatMinimized: false,
   miniChatPosition: { x: 900, y: 400 },
   miniChatSize: { w: 280, h: 440 },
@@ -494,12 +488,4 @@ export const createUISlice = (set: PFCSet, get: PFCGet) => ({
     return id;
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  // Chat mode (unchanged)
-  // ═══════════════════════════════════════════════════════════════════
-
-  /** @deprecated No-op — single mode, always 'research'. */
-  setChatMode: (_mode: ChatMode) => {
-    // intentionally no-op — always research mode
-  },
 });

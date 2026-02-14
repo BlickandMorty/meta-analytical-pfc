@@ -120,7 +120,7 @@ export function useAssistantStream() {
       tda: store.tda,
       inferenceMode: store.inferenceMode,
       apiProvider: store.apiProvider,
-      suiteTier: store.suiteTier,
+      suiteTier: 'programming',
       notes: notesContext,
     };
 
