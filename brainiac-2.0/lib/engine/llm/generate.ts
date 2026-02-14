@@ -9,7 +9,7 @@
 import { generateText, generateObject, streamText } from 'ai';
 import type { LanguageModel } from 'ai';
 import type { PipelineStage } from '@/lib/constants';
-import type { QueryAnalysis } from '../simulate';
+import type { QueryAnalysis } from '../query-analysis';
 import type {
   LaymanSummary,
   ReflectionResult,

@@ -14,7 +14,7 @@
 
 import { generateText } from 'ai';
 import type { LanguageModel } from 'ai';
-import type { QueryAnalysis } from '../simulate';
+import type { QueryAnalysis } from '../query-analysis';
 import type { Curriculum, StoneAttempt, FinalAttempt, SteppingStone } from './types';
 
 // ---------------------------------------------------------------------------

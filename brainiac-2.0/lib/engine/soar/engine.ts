@@ -15,7 +15,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import type { LanguageModel } from 'ai';
-import type { QueryAnalysis } from '../simulate';
+import type { QueryAnalysis } from '../query-analysis';
 import { probeLearnability } from './detector';
 import { generateCurriculum } from './teacher';
 import { attemptStone, attemptTarget } from './student';

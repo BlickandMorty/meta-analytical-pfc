@@ -8,7 +8,7 @@
 // identifies that condition before committing to a full pipeline run.
 // ═══════════════════════════════════════════════════════════════════
 
-import type { QueryAnalysis } from '../simulate';
+import type { QueryAnalysis } from '../query-analysis';
 import type {
   LearnabilityProbe,
   LearnabilityThresholds,

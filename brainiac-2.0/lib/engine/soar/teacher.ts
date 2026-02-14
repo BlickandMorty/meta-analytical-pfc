@@ -15,7 +15,7 @@ import { generateText, generateObject } from 'ai';
 import type { LanguageModel } from 'ai';
 import { z } from 'zod';
 import { logger } from '@/lib/debug-logger';
-import type { QueryAnalysis } from '../simulate';
+import type { QueryAnalysis } from '../query-analysis';
 import type { Curriculum, SteppingStone, SOARReward } from './types';
 
 // ---------------------------------------------------------------------------

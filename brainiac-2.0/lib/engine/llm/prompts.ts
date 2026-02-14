@@ -14,7 +14,7 @@
 // 5. Role embodiment — deep character, not shallow persona
 // ═══════════════════════════════════════════════════════════════════
 
-import type { QueryAnalysis } from '../simulate';
+import type { QueryAnalysis } from '../query-analysis';
 import type { StageResult, DualMessage, SignalUpdate } from '../types';
 
 // ── Shared preamble ─────────────────────────────────────────────
