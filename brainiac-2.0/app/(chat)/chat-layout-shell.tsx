@@ -1,7 +1,7 @@
 'use client';
 
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { ErrorBoundary } from '@/components/error-boundary';
+import { ErrorBoundary } from '@/components/layout/error-boundary';
 import { motion } from 'framer-motion';
 
 export function ChatLayoutShell({ children }: { children: React.ReactNode }) {

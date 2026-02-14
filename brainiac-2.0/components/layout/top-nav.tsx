@@ -19,7 +19,7 @@ import {
   MessageSquareIcon,
   type LucideIcon,
 } from 'lucide-react';
-import { SteeringIndicator } from './steering-indicator';
+import { SteeringIndicator } from '../steering-indicator';
 
 /* ─── Constants ─── */
 const CUP = 'cubic-bezier(0.2, 0, 0, 1)'; // M3 emphasized deceleration

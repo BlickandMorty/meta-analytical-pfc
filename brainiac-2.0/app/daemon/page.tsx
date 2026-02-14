@@ -32,7 +32,7 @@ import {
   SlidersHorizontalIcon,
 } from 'lucide-react';
 
-import { PageShell, GlassSection } from '@/components/page-shell';
+import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';

@@ -8,7 +8,7 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { useTypewriter } from '@/hooks/use-typewriter';
-import { ErrorBoundary } from '@/components/error-boundary';
+import { ErrorBoundary } from '@/components/layout/error-boundary';
 import { spring, variants, ease } from '@/lib/motion/motion-config';
 import {
   PlusIcon,

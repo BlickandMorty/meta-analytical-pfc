@@ -71,7 +71,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { PageShell, GlassSection } from '@/components/page-shell';
+import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { PixelBook } from '@/components/pixel-book';
 
 const MODE_OPTIONS: {

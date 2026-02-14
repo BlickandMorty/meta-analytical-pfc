@@ -1,2 +1,5 @@
-// TODO: Layout components (AppShell, PageShell, TopNav, etc.) will be moved here in Phase 2
-export {};
+export { AppShell } from './app-shell';
+export { PageShell, Section, GlassSection } from './page-shell';
+export { PageTransition } from './page-transition';
+export { TopNav } from './top-nav';
+export { ErrorBoundary } from './error-boundary';

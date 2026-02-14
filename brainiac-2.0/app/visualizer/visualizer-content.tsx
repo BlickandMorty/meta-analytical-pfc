@@ -36,7 +36,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { cn } from '@/lib/utils';
-import { PageShell, GlassSection } from '@/components/page-shell';
+import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { PixelBook } from '@/components/pixel-book';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { useIsDark } from '@/hooks/use-is-dark';

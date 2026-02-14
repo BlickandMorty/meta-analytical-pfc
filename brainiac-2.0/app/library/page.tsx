@@ -28,7 +28,7 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PageShell, GlassSection } from '@/components/page-shell';
+import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { PixelBook } from '@/components/pixel-book';
 import { useIsDark } from '@/hooks/use-is-dark';
 import type { ResearchPaper, Citation } from '@/lib/research/types';

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PageShell, GlassSection } from '@/components/page-shell';
+import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { PixelBook } from '@/components/pixel-book';
 import { useIsDark } from '@/hooks/use-is-dark';
 

@@ -8,7 +8,7 @@ import { DIMENSION_LABELS } from '@/lib/engine/steering/encoder';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
-import { PageShell, GlassSection } from '@/components/page-shell';
+import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PixelBook } from '@/components/pixel-book';
 import { useIsDark } from '@/hooks/use-is-dark';

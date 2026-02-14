@@ -20,7 +20,7 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import type { SafetyState } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
-import { PageShell, GlassSection } from '@/components/page-shell';
+import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { PixelBook } from '@/components/pixel-book';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';

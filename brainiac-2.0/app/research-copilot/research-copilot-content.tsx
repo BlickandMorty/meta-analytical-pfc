@@ -32,7 +32,7 @@ import {
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PageShell, Section } from '@/components/page-shell';
+import { PageShell, Section } from '@/components/layout/page-shell';
 import { GlassBubbleButton } from '@/components/glass-bubble-button';
 import { PixelBook } from '@/components/pixel-book';
 import type { InferenceConfig } from '@/lib/engine/llm/config';

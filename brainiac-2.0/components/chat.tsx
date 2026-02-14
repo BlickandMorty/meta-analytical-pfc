@@ -11,7 +11,7 @@ import { PixelSun } from './pixel-sun';
 import { type ChatEntry, formatRelativeTime, parseTimestamp } from './recent-chats';
 import { ResearchModeBar } from './research-mode-bar';
 import { ThinkingControls } from './thinking-controls';
-import { ErrorBoundary } from './error-boundary';
+import { ErrorBoundary } from './layout/error-boundary';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIsDark } from '@/hooks/use-is-dark';
