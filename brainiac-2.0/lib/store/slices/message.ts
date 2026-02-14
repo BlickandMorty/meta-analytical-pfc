@@ -273,19 +273,8 @@ export const createMessageSlice = (set: PFCSet, get: PFCGet) => ({
   ) => {
     const id = nextMsgId();
     set((s) => {
-      // Record signal history entry
-      const historyEntry = {
-        timestamp: Date.now(),
-        confidence,
-        entropy: s.entropy,
-        dissonance: s.dissonance,
-        healthScore: s.healthScore,
-        riskScore: s.riskScore,
-      };
-      const MAX_SIGNAL_HISTORY = 50;
-      const newHistory = [...s.signalHistory, historyEntry].slice(
-        -MAX_SIGNAL_HISTORY,
-      );
+      // NOTE: signalHistory is written by the query:completed event handler
+      // in use-pfc-store.ts — do NOT write it here to avoid double-write.
 
       // Record concepts for this query in the hierarchy
       const now = Date.now();
