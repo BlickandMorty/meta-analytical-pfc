@@ -5,7 +5,7 @@ import { AlertTriangleIcon, RefreshCwIcon, HomeIcon } from 'lucide-react';
 
 /**
  * Error boundary for the (chat) route group.
- * Catches errors in app/(chat)/page.tsx and app/(chat)/chat/[id]/page.tsx.
+ * Catches errors in app/(shell)/(chat)/page.tsx and app/(shell)/(chat)/chat/[id]/page.tsx.
  * This is a safety net in addition to the ErrorBoundary in ChatLayoutShell.
  */
 export default function ChatError({

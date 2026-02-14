@@ -164,7 +164,7 @@ describe('/api/chat', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    const mod = await import('@/app/(chat)/api/chat/route');
+    const mod = await import('@/app/(shell)/(chat)/api/chat/route');
     POST = mod.POST;
   });
 
@@ -220,7 +220,7 @@ describe('/api/history', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    const mod = await import('@/app/(chat)/api/history/route');
+    const mod = await import('@/app/(shell)/(chat)/api/history/route');
     GET = mod.GET;
   });
 
@@ -273,7 +273,7 @@ describe('/api/synthesis', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    const mod = await import('@/app/(chat)/api/synthesis/route');
+    const mod = await import('@/app/(shell)/(chat)/api/synthesis/route');
     POST = mod.POST;
   });
 
@@ -327,7 +327,7 @@ describe('/api/research/[action]', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    const mod = await import('@/app/(chat)/api/research/[action]/route');
+    const mod = await import('@/app/(shell)/(chat)/api/research/[action]/route');
     POST = mod.POST;
   });
 
@@ -527,9 +527,9 @@ describe('Error response shape', () => {
   it('all error responses have { error: string } shape', async () => {
     // Collect error responses from various routes
     const [chatMod, synthMod, histMod, assistMod] = await Promise.all([
-      import('@/app/(chat)/api/chat/route'),
-      import('@/app/(chat)/api/synthesis/route'),
-      import('@/app/(chat)/api/history/route'),
+      import('@/app/(shell)/(chat)/api/chat/route'),
+      import('@/app/(shell)/(chat)/api/synthesis/route'),
+      import('@/app/(shell)/(chat)/api/history/route'),
       import('@/app/api/assistant/route'),
     ]);
 

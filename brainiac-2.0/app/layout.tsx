@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from '@/components/theme-provider';
-import { AppShell } from '@/components/layout/app-shell';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -36,9 +35,7 @@ export default function RootLayout({
           themes={['light', 'sunny', 'dark', 'cosmic', 'sunset', 'oled']}
           disableTransitionOnChange
         >
-          <AppShell>
-            {children}
-          </AppShell>
+          {children}
         </ThemeProvider>
       </body>
     </html>

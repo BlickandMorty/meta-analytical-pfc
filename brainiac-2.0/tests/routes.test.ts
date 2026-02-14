@@ -74,36 +74,36 @@ vi.mock('better-sqlite3', () => ({
 // ---------------------------------------------------------------------------
 const ROUTES = {
   chat: {
-    'Main chat page — app/(chat)/page.tsx':
-      '@/app/(chat)/page',
-    'Individual chat page — app/(chat)/chat/[id]/page.tsx':
-      '@/app/(chat)/chat/[id]/page',
+    'Main chat page — app/(shell)/(chat)/page.tsx':
+      '@/app/(shell)/(chat)/page',
+    'Individual chat page — app/(shell)/(chat)/chat/[id]/page.tsx':
+      '@/app/(shell)/(chat)/chat/[id]/page',
   },
   features: {
-    'Analytics — app/analytics/page.tsx':
-      '@/app/analytics/page',
-    'Notes — app/notes/page.tsx':
-      '@/app/notes/page',
-    'Concept atlas — app/concept-atlas/page.tsx':
-      '@/app/concept-atlas/page',
-    'Library — app/library/page.tsx':
-      '@/app/library/page',
-    'Research copilot — app/research-copilot/page.tsx':
-      '@/app/research-copilot/page',
+    'Analytics — app/(shell)/analytics/page.tsx':
+      '@/app/(shell)/analytics/page',
+    'Notes — app/(shell)/notes/page.tsx':
+      '@/app/(shell)/notes/page',
+    'Concept atlas — app/(shell)/concept-atlas/page.tsx':
+      '@/app/(shell)/concept-atlas/page',
+    'Library — app/(shell)/library/page.tsx':
+      '@/app/(shell)/library/page',
+    'Research copilot — app/(shell)/research-copilot/page.tsx':
+      '@/app/(shell)/research-copilot/page',
   },
   tools: {
-    'Export — app/export/page.tsx':
-      '@/app/export/page',
-    'Daemon — app/daemon/page.tsx':
-      '@/app/daemon/page',
+    'Export — app/(shell)/export/page.tsx':
+      '@/app/(shell)/export/page',
+    'Daemon — app/(shell)/daemon/page.tsx':
+      '@/app/(shell)/daemon/page',
   },
   misc: {
     'Onboarding — app/onboarding/page.tsx':
       '@/app/onboarding/page',
-    'Docs — app/docs/page.tsx':
-      '@/app/docs/page',
-    'Settings — app/settings/page.tsx':
-      '@/app/settings/page',
+    'Docs — app/(shell)/docs/page.tsx':
+      '@/app/(shell)/docs/page',
+    'Settings — app/(shell)/settings/page.tsx':
+      '@/app/(shell)/settings/page',
   },
 } as const;
 
