@@ -1,4 +1,4 @@
-import { db } from './index';
+import { db, withTransaction } from './index';
 import {
   noteVault, notePage, noteBlock, noteBook,
   noteConcept, noteConceptCorrelation, notePageLink,
@@ -448,74 +448,121 @@ export async function syncVaultToDb(
   concepts: Concept[],
   pageLinks: PageLink[],
 ): Promise<void> {
-  // Upsert vault
-  await upsertVault(vault);
+  // All drizzle + better-sqlite3 operations are synchronous under the hood.
+  // Wrap in a single transaction for atomicity (auto-rollback on error).
+  withTransaction(() => {
+    // Upsert vault
+    db.insert(noteVault).values({
+      id: vault.id, name: vault.name, description: vault.description ?? null,
+      icon: vault.icon ?? null, pageCount: vault.pageCount,
+      createdAt: vault.createdAt, updatedAt: vault.updatedAt,
+    }).onConflictDoUpdate({
+      target: noteVault.id,
+      set: { name: vault.name, description: vault.description ?? null,
+        icon: vault.icon ?? null, pageCount: vault.pageCount, updatedAt: vault.updatedAt },
+    }).run();
 
-  // Get existing IDs to compute deletes
-  const existingPages = await db.select({ id: notePage.id }).from(notePage).where(eq(notePage.vaultId, vaultId));
-  const existingPageIds = new Set(existingPages.map(p => p.id));
-  const newPageIds = new Set(pages.map(p => p.id));
+    // Get existing IDs to compute deletes
+    const existingPages = db.select({ id: notePage.id }).from(notePage).where(eq(notePage.vaultId, vaultId)).all();
+    const existingPageIds = new Set(existingPages.map(p => p.id));
+    const newPageIds = new Set(pages.map(p => p.id));
 
-  // Delete removed pages (cascade deletes blocks)
-  for (const ep of existingPageIds) {
-    if (!newPageIds.has(ep)) {
-      await db.delete(notePage).where(eq(notePage.id, ep)).run();
+    // Delete removed pages (cascade deletes blocks)
+    for (const ep of existingPageIds) {
+      if (!newPageIds.has(ep)) {
+        db.delete(notePage).where(eq(notePage.id, ep)).run();
+      }
     }
-  }
 
-  // Upsert pages
-  for (const p of pages) {
-    await upsertPage(p, vaultId);
-  }
-
-  // For blocks: delete removed, upsert existing
-  const existingBlocks = await db
-    .select({ id: noteBlock.id })
-    .from(noteBlock)
-    .innerJoin(notePage, eq(noteBlock.pageId, notePage.id))
-    .where(eq(notePage.vaultId, vaultId));
-  const existingBlockIds = new Set(existingBlocks.map(b => b.id));
-  const newBlockIds = new Set(blocks.map(b => b.id));
-
-  for (const eb of existingBlockIds) {
-    if (!newBlockIds.has(eb)) {
-      await db.delete(noteBlock).where(eq(noteBlock.id, eb)).run();
+    // Upsert pages
+    for (const p of pages) {
+      const row = pageToRow(p, vaultId);
+      db.insert(notePage).values(row).onConflictDoUpdate({
+        target: notePage.id,
+        set: { title: row.title, name: row.name, isJournal: row.isJournal,
+          journalDate: row.journalDate, icon: row.icon, coverImage: row.coverImage,
+          properties: row.properties, tags: row.tags, favorite: row.favorite,
+          pinned: row.pinned, updatedAt: row.updatedAt },
+      }).run();
     }
-  }
 
-  for (const b of blocks) {
-    await upsertBlock(b);
-  }
+    // For blocks: delete removed, upsert existing
+    const existingBlocks = db
+      .select({ id: noteBlock.id })
+      .from(noteBlock)
+      .innerJoin(notePage, eq(noteBlock.pageId, notePage.id))
+      .where(eq(notePage.vaultId, vaultId))
+      .all();
+    const existingBlockIds = new Set(existingBlocks.map(b => b.id));
+    const newBlockIds = new Set(blocks.map(b => b.id));
 
-  // Books: delete removed, upsert existing
-  const existingBooks = await db.select({ id: noteBook.id }).from(noteBook).where(eq(noteBook.vaultId, vaultId));
-  const existingBookIds = new Set(existingBooks.map(b => b.id));
-  const newBookIds = new Set(books.map(b => b.id));
-
-  for (const eb of existingBookIds) {
-    if (!newBookIds.has(eb)) {
-      await db.delete(noteBook).where(eq(noteBook.id, eb)).run();
+    for (const eb of existingBlockIds) {
+      if (!newBlockIds.has(eb)) {
+        db.delete(noteBlock).where(eq(noteBlock.id, eb)).run();
+      }
     }
-  }
 
-  for (const b of books) {
-    await upsertBook(b, vaultId);
-  }
+    for (const b of blocks) {
+      const row = blockToRow(b);
+      db.insert(noteBlock).values(row).onConflictDoUpdate({
+        target: noteBlock.id,
+        set: { pageId: row.pageId, type: row.type, content: row.content,
+          parentId: row.parentId, blockOrder: row.blockOrder, collapsed: row.collapsed,
+          indent: row.indent, properties: row.properties, refs: row.refs,
+          updatedAt: row.updatedAt },
+      }).run();
+    }
 
-  // Concepts: replace all for vault
-  await deleteConceptsByVault(vaultId);
-  for (const c of concepts) {
-    await upsertConcept(c, vaultId);
-  }
+    // Books: delete removed, upsert existing
+    const existingBooks = db.select({ id: noteBook.id }).from(noteBook).where(eq(noteBook.vaultId, vaultId)).all();
+    const existingBookIds = new Set(existingBooks.map(b => b.id));
+    const newBookIds = new Set(books.map(b => b.id));
 
-  // Page links: replace all for vault
-  await replacePageLinks(vaultId, pageLinks);
+    for (const eb of existingBookIds) {
+      if (!newBookIds.has(eb)) {
+        db.delete(noteBook).where(eq(noteBook.id, eb)).run();
+      }
+    }
 
-  // Update vault page count
-  await db.update(noteVault).set({
-    pageCount: pages.length,
-    updatedAt: Date.now(),
-  }).where(eq(noteVault.id, vaultId)).run();
+    for (const b of books) {
+      const row = bookToRow(b, vaultId);
+      db.insert(noteBook).values(row).onConflictDoUpdate({
+        target: noteBook.id,
+        set: { title: row.title, description: row.description, icon: row.icon,
+          coverColor: row.coverColor, pageIds: row.pageIds, chapters: row.chapters,
+          autoGenerated: row.autoGenerated, category: row.category, updatedAt: row.updatedAt },
+      }).run();
+    }
+
+    // Concepts: replace all for vault
+    db.delete(noteConcept).where(eq(noteConcept.vaultId, vaultId)).run();
+    for (const c of concepts) {
+      const row = conceptToRow(c, vaultId);
+      db.insert(noteConcept).values(row).onConflictDoUpdate({
+        target: noteConcept.id,
+        set: { name: row.name, context: row.context },
+      }).run();
+    }
+
+    // Page links: replace all for vault
+    const vaultPages = db.select({ id: notePage.id }).from(notePage).where(eq(notePage.vaultId, vaultId)).all();
+    const pageIdSet = new Set(vaultPages.map(p => p.id));
+    for (const pid of pageIdSet) {
+      db.delete(notePageLink).where(eq(notePageLink.sourcePageId, pid)).run();
+    }
+    for (const link of pageLinks) {
+      db.insert(notePageLink).values({
+        sourcePageId: link.sourcePageId, targetPageId: link.targetPageId,
+        sourceBlockId: link.sourceBlockId, context: link.context,
+      }).run();
+    }
+
+    // Update vault page count
+    db.update(noteVault).set({
+      pageCount: pages.length,
+      updatedAt: Date.now(),
+    }).where(eq(noteVault.id, vaultId)).run();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════

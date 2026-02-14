@@ -244,3 +244,24 @@ export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
   },
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// Transaction helper — wraps synchronous work in a SQLite transaction
+// Uses better-sqlite3's `.transaction()` which auto-commits on success
+// and auto-rolls-back on exception.
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Execute `fn` inside a SQLite transaction. If `fn` throws, the
+ * transaction is rolled back. Returns whatever `fn` returns.
+ *
+ * NOTE: better-sqlite3 transactions are synchronous. The callback
+ * must not contain real async I/O. Our drizzle `.run()` calls are
+ * synchronous under better-sqlite3, so wrapping them is safe.
+ */
+export function withTransaction<T>(fn: () => T): T {
+  const sqlite = getSqlite();
+  initDb(); // ensure tables exist
+  const txn = sqlite.transaction(fn);
+  return txn();
+}
+

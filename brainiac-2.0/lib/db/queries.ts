@@ -1,4 +1,4 @@
-import { db } from './index';
+import { db, withTransaction } from './index';
 import { chat, message, chatSignals, user } from './schema';
 import { desc, eq } from 'drizzle-orm';
 import { generateUUID } from '@/lib/utils';
@@ -110,25 +110,28 @@ export async function saveMessage({
   mode?: string;
   attachments?: string; // JSON stringified FileAttachment[]
 }) {
-  await db.insert(message)
-    .values({
-      id,
-      chatId,
-      role,
-      content,
-      dualMessage: dualMsg || null,
-      truthAssessment: truthAss || null,
-      confidence: conf ?? null,
-      evidenceGrade: evidenceGrade || null,
-      mode: mode || null,
-      attachments: attachments ?? null,
-      createdAt: new Date(),
-    })
-    .run();
+  // Insert message + update chat timestamp atomically
+  withTransaction(() => {
+    db.insert(message)
+      .values({
+        id,
+        chatId,
+        role,
+        content,
+        dualMessage: dualMsg || null,
+        truthAssessment: truthAss || null,
+        confidence: conf ?? null,
+        evidenceGrade: evidenceGrade || null,
+        mode: mode || null,
+        attachments: attachments ?? null,
+        createdAt: new Date(),
+      })
+      .run();
 
-  // Update chat's updatedAt
-  await db.update(chat)
-    .set({ updatedAt: new Date() })
-    .where(eq(chat.id, chatId))
-    .run();
+    // Update chat's updatedAt
+    db.update(chat)
+      .set({ updatedAt: new Date() })
+      .where(eq(chat.id, chatId))
+      .run();
+  });
 }
