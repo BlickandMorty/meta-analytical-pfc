@@ -10,8 +10,10 @@ import {
 } from 'lucide-react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 
+import { spring } from '@/lib/motion/motion-config';
+
 /* M3 emphasized easing for staggered entrance */
-const BTN_SPRING = { duration: 0.3, ease: [0.2, 0, 0, 1] as const };
+const BTN_SPRING = spring.bouncy;
 
 interface FeatureButtonsProps {
   isDark: boolean;

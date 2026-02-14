@@ -24,8 +24,10 @@ import { ConceptMiniMap } from '../viz/concept-mini-map';
 import { SteeringFeedback } from './steering-feedback';
 import { useSteeringStore } from '@/lib/store/use-steering-store';
 
+import { spring } from '@/lib/motion/motion-config';
+
 /* M3 emphasized easing for message entrance — smooth slide, no recoil */
-const MSG_SPRING = { duration: 0.35, ease: [0.2, 0, 0, 1] as const };
+const MSG_SPRING = spring.standard;
 
 interface MessageProps {
   message: ChatMessage;

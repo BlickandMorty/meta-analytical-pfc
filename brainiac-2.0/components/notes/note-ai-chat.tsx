@@ -61,7 +61,9 @@ type QuickAction = {
 
 // ── Constants ──────────────────────────────────────────────────────
 
-const CUPERTINO_EASE = [0.32, 0.72, 0, 1] as const;
+import { ease } from '@/lib/motion/motion-config';
+
+const CUPERTINO_EASE = ease.cupertino;
 
 const QUICK_ACTIONS: QuickAction[] = [
   {

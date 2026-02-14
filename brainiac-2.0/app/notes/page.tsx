@@ -9,7 +9,7 @@ import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { useTypewriter } from '@/hooks/use-typewriter';
 import { ErrorBoundary } from '@/components/layout/error-boundary';
-import { spring, variants, ease } from '@/lib/motion/motion-config';
+import { spring, variants, ease, physicsSpring, cssEase } from '@/lib/motion/motion-config';
 import {
   PlusIcon,
   CalendarIcon,
@@ -77,7 +77,7 @@ const ConceptCorrelationPanel = dynamic(
 );
 
 // ── 60fps: Cupertino easing for CSS transitions (S-Tier only) ──
-const CUP_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const CUP_EASE = cssEase.cupertino;
 
 // ═══════════════════════════════════════════════════════════════════
 // Theme helper — consistent with sidebar
@@ -400,8 +400,8 @@ function ToolsIconBtn({
       title={label}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.12, delay: idx * 0.015, ease: [0.3, 0, 0.8, 0.15] } }}
-      transition={{ layout: { type: 'spring', stiffness: 500, damping: 35, mass: 0.8 }, opacity: { duration: 0.15, delay: idx * 0.025 }, scale: { duration: 0.15, delay: idx * 0.025, ease: [0.2, 0, 0, 1] } }}
+      exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.12, delay: idx * 0.015, ease: ease.accelerate } }}
+      transition={{ layout: physicsSpring.notesLayout, opacity: { duration: 0.15, delay: idx * 0.025 }, scale: { duration: 0.15, delay: idx * 0.025, ease: ease.emphasized } }}
       whileTap={{ scale: 0.9 }}
       style={{
         display: 'flex',
@@ -493,7 +493,7 @@ function ToolbarBtn({
 // Expands label on hover/active, collapses to icon+truncated title otherwise
 // ═══════════════════════════════════════════════════════════════════
 
-const TAB_CUP = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const TAB_CUP = cssEase.cupertino;
 const TAB_T_SIZE = `padding 0.3s ${TAB_CUP}, gap 0.3s ${TAB_CUP}`;
 const TAB_T_COLOR = 'background 0.15s ease, color 0.15s ease';
 
@@ -1425,7 +1425,7 @@ export default function NotesPage() {
               layout
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ layout: { type: 'spring', stiffness: 500, damping: 35, mass: 0.8 }, opacity: { duration: 0.15 } }}
+              transition={{ layout: physicsSpring.notesLayout, opacity: { duration: 0.15 } }}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -1448,7 +1448,7 @@ export default function NotesPage() {
                 onClick={() => setToolsOpen((v) => !v)}
                 title="Utilities"
                 whileTap={{ scale: 0.9 }}
-                transition={{ layout: { type: 'spring', stiffness: 500, damping: 35, mass: 0.8 } }}
+                transition={{ layout: physicsSpring.notesLayout }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1480,8 +1480,8 @@ export default function NotesPage() {
                       key="tools-divider"
                       initial={{ opacity: 0, scaleX: 0 }}
                       animate={{ opacity: 1, scaleX: 1 }}
-                      exit={{ opacity: 0, scaleX: 0, transition: { duration: 0.06, ease: [0.3, 0, 0.8, 0.15] } }}
-                      transition={{ layout: { type: 'spring', stiffness: 500, damping: 35, mass: 0.8 }, opacity: { duration: 0.12 }, scaleX: { duration: 0.12, ease: [0.2, 0, 0, 1] } }}
+                      exit={{ opacity: 0, scaleX: 0, transition: { duration: 0.06, ease: ease.accelerate } }}
+                      transition={{ layout: physicsSpring.notesLayout, opacity: { duration: 0.12 }, scaleX: { duration: 0.12, ease: ease.emphasized } }}
                       style={{
                         width: '1rem',
                         height: '1px',
@@ -1557,7 +1557,7 @@ export default function NotesPage() {
               exit={{ opacity: 0, scale: 0.88, y: -12, x: -12 }}
               transition={{
                 duration: 0.32,
-                ease: [0.32, 0.72, 0, 1],
+                ease: ease.cupertino,
                 opacity: { duration: 0.22 },
               }}
               style={{

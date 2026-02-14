@@ -31,7 +31,7 @@ interface PageShellProps {
   backHref?: string;
 }
 
-const M3_EASE: [number, number, number, number] = [0.2, 0, 0, 1];
+import { M3_EASE } from '@/lib/motion/motion-config';
 
 const headerVariants = {
   hidden: { opacity: 0, y: 8, scale: 0.99 },

@@ -13,8 +13,10 @@ import { PixelBook } from '../decorative/pixel-mascots';
 import { useIsDark } from '@/hooks/use-is-dark';
 import { useComposedRefs } from '@radix-ui/react-compose-refs';
 
+import { spring } from '@/lib/motion/motion-config';
+
 /* M3 emphasized easing — smooth slide, no recoil */
-const HARMONOID_SPRING = { duration: 0.35, ease: [0.2, 0, 0, 1] as const };
+const HARMONOID_SPRING = spring.standard;
 
 // Stable selectors
 const selectMessages = (s: { messages: ChatMessage[] }) => s.messages;

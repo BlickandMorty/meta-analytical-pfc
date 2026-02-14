@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { MessageSquareIcon, ClockIcon, ArrowRightIcon } from 'lucide-react';
 
-const ENTER_SPRING = { duration: 0.35, ease: [0.2, 0, 0, 1] as const };
+import { spring } from '@/lib/motion/motion-config';
+
+const ENTER_SPRING = spring.standard;
 
 export interface ChatEntry {
   id: string;

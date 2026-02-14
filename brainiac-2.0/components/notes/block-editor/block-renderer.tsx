@@ -15,8 +15,10 @@ import {
 } from 'lucide-react';
 import { SlashMenu } from './slash-menu';
 
+import { cssEase } from '@/lib/motion/motion-config';
+
 // ── Shared constant ──
-const CUP = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const CUP = cssEase.cupertino;
 
 // ── Process [[page links]] for display (non-editing blocks) ──
 function processContentLinks(html: string): string {

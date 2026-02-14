@@ -12,7 +12,9 @@ import { ArrowLeftIcon, MessageSquareIcon, SearchIcon } from 'lucide-react';
 // Typewriter summary reveals on hover per chat card.
 // ═══════════════════════════════════════════════════════════════════
 
-const PANEL_SPRING = { type: 'spring' as const, stiffness: 480, damping: 36, mass: 0.7 };
+import { physicsSpring } from '@/lib/motion/motion-config';
+
+const PANEL_SPRING = physicsSpring.chatPanel;
 
 /** Typewriter hook for summary text — types out on hover, resets on leave */
 function useSummaryTypewriter(text: string, active: boolean) {
@@ -398,7 +400,7 @@ export function ChatsSidePanel({ isDark, isOled, isCosmic, isSunny, isSunset, on
 // Material You: flat surface, no blur, clean elevation, fluid spring
 // ═══════════════════════════════════════════════════════════════════
 
-const SHEET_SPRING = { type: 'spring' as const, stiffness: 500, damping: 38, mass: 0.8 };
+const SHEET_SPRING = physicsSpring.chatSheet;
 
 export function ChatsOverlay({ isDark, isOled, isCosmic, isSunny, onClose }: {
   isDark: boolean; isOled?: boolean; isCosmic?: boolean; isSunny?: boolean; onClose: () => void;

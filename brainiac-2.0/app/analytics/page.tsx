@@ -72,7 +72,7 @@ const TAB_ITEMS: TabItem<TabKey>[] = [
   { id: 'visualizer', label: 'Visualizer', icon: BarChart3Icon },
 ];
 
-const M3_EASE = [0.2, 0, 0, 1] as const;
+import { M3_EASE } from '@/lib/motion/motion-config';
 
 /* ===================================================================
    Analytics Hub — tab navigation lives inside the page now

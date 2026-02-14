@@ -12,7 +12,9 @@ interface ThinkingAccordionProps {
   className?: string;
 }
 
-const CUPERTINO: [number, number, number, number] = [0.2, 0, 0, 1];
+import { ease } from '@/lib/motion/motion-config';
+
+const CUPERTINO = ease.emphasized;
 
 export const ThinkingAccordion = memo<ThinkingAccordionProps>(function ThinkingAccordion({
   content,

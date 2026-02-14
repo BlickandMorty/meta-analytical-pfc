@@ -41,8 +41,10 @@ const GraphView = lazy(() =>
 /*  Constants & Easing                                                  */
 /* ------------------------------------------------------------------ */
 
-const CUPERTINO: [number, number, number, number] = [0.2, 0, 0, 1];
-const SPRING = { duration: 0.3, ease: [0.2, 0, 0, 1] as const };
+import { ease, spring as motionSpring } from '@/lib/motion/motion-config';
+
+const CUPERTINO = ease.emphasized;
+const SPRING = motionSpring.bouncy;
 
 /* ------------------------------------------------------------------ */
 /*  Theme                                                               */

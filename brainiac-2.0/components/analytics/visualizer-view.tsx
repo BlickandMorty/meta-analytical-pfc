@@ -52,7 +52,9 @@ const CYAN = '#06B6D4';
 const PINK = '#EC4899';
 const TEAL = '#14B8A6';
 
-const CUP: [number, number, number, number] = [0.32, 0.72, 0, 1];
+import { ease } from '@/lib/motion/motion-config';
+
+const CUP = ease.cupertino;
 
 // ---------------------------------------------------------------------------
 // Shared helpers

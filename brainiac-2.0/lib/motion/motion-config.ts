@@ -8,17 +8,18 @@
 // All motion uses tween-based easing (no springs = no recoil)
 // cubic-bezier(0.2, 0, 0, 1) = fast start, smooth deceleration, zero overshoot
 
-const M3_EASE = [0.2, 0, 0, 1] as [number, number, number, number];
-const M3_ACCEL = [0.3, 0, 0.8, 0.15] as [number, number, number, number];
+export const M3_EASE = [0.2, 0, 0, 1] as [number, number, number, number];
+export const M3_ACCEL = [0.3, 0, 0.8, 0.15] as [number, number, number, number];
 
+// ── Tween Presets (duration + ease) ──
 export const spring = {
   /** Snappy toggle/switch — lightweight, responsive (buttons, chips) */
   snappy:   { duration: 0.2, ease: M3_EASE },
-  /** Standard UI transition — balanced (panels, cards) */
+  /** Standard UI transition — balanced (panels, cards, messages) */
   standard: { duration: 0.35, ease: M3_EASE },
   /** Heavy element — weighty, authoritative (modals, drawers) */
   heavy:    { duration: 0.45, ease: M3_EASE },
-  /** Bouncy — now smooth entrance (notifications, toasts) */
+  /** Bouncy — smooth entrance (notifications, toasts, buttons) */
   bouncy:   { duration: 0.3, ease: M3_EASE },
   /** Gentle — slow, ambient (background elements, fades) */
   gentle:   { duration: 0.5, ease: M3_EASE },
@@ -26,6 +27,24 @@ export const spring = {
   settle:   { duration: 0.3, ease: M3_EASE },
   /** Editor — responsive for block operations */
   editor:   { duration: 0.25, ease: M3_EASE },
+  /** Soft — slightly slower, relaxed entrance (research panels, content sections) */
+  soft:     { duration: 0.4, ease: M3_EASE },
+} as const;
+
+// ── True Spring Presets (physics-based, handles interruption) ──
+// Spring physics retarget mid-animation unlike duration-based easing
+// which queues up and glitches on rapid page cycling / toggle
+export const physicsSpring = {
+  /** Chat message/element enter — responsive, light */
+  chatEnter:       { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 },
+  /** Chat element enter — snappier, punchy */
+  chatEnterSnappy: { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.5 },
+  /** Side panel slide — moderate weight */
+  chatPanel:       { type: 'spring' as const, stiffness: 480, damping: 36, mass: 0.7 },
+  /** Bottom sheet / overlay — heavier, authoritative */
+  chatSheet:       { type: 'spring' as const, stiffness: 500, damping: 38, mass: 0.8 },
+  /** Notes card layout — same as chatSheet but for note grids */
+  notesLayout:     { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.8 },
 } as const;
 
 // ── Easing Curves ──
@@ -34,6 +53,14 @@ export const ease = {
   emphasized: M3_EASE,
   decelerate: [0, 0, 0.2, 1] as [number, number, number, number],
   accelerate: M3_ACCEL,
+} as const;
+
+// ── CSS Easing Strings (for inline CSS `transition` property) ──
+export const cssEase = {
+  /** M3 emphasized deceleration — cubic-bezier(0.2, 0, 0, 1) */
+  emphasized: 'cubic-bezier(0.2, 0, 0, 1)',
+  /** Cupertino smooth — cubic-bezier(0.32, 0.72, 0, 1) */
+  cupertino:  'cubic-bezier(0.32, 0.72, 0, 1)',
 } as const;
 
 // ── Component Animation Variants ──

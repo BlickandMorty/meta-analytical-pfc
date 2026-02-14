@@ -16,8 +16,7 @@ import { type ReactNode, useRef } from 'react';
    still feels instant without overlapping DOM nodes.
    ═══════════════════════════════════════════════════════════ */
 
-const M3_EASE: [number, number, number, number] = [0.2, 0, 0, 1];
-const M3_ACCEL: [number, number, number, number] = [0.3, 0, 0.8, 0.15];
+import { M3_EASE, M3_ACCEL } from '@/lib/motion/motion-config';
 
 const pageVariants = {
   initial: { opacity: 0 },

@@ -49,7 +49,9 @@ const DEFAULT_W = 280;
 const DEFAULT_H = 440;
 const MIN_W = 360;
 const MIN_H = 300;
-const SPRING = { duration: 0.35, ease: [0.2, 0, 0, 1] as const };
+import { spring as motionSpring } from '@/lib/motion/motion-config';
+
+const SPRING = motionSpring.standard;
 
 /* ─── Inner tab definitions ─── */
 

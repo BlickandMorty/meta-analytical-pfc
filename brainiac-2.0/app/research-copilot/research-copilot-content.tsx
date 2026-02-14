@@ -70,8 +70,10 @@ interface PaperReviewResult {
    Design Tokens
    ═══════════════════════════════════════════════════════════════════ */
 
-const SPRING_SOFT = { duration: 0.4, ease: [0.2, 0, 0, 1] as const };
-const CUP = 'cubic-bezier(0.32, 0.72, 0, 1)';
+import { spring, cssEase } from '@/lib/motion/motion-config';
+
+const SPRING_SOFT = spring.soft;
+const CUP = cssEase.cupertino;
 
 /* ═══════════════════════════════════════════════════════════════════
    Tabs

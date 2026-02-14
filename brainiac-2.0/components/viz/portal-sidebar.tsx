@@ -30,7 +30,9 @@ import { useRouter } from 'next/navigation';
 // Constants
 // ---------------------------------------------------------------------------
 
-const CUPERTINO: [number, number, number, number] = [0.32, 0.72, 0, 1];
+import { ease } from '@/lib/motion/motion-config';
+
+const CUPERTINO = ease.cupertino;
 
 const PFC_VIOLET = 'var(--pfc-accent)';
 const PFC_GREEN = '#34D399';

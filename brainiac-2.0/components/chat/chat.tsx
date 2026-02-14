@@ -27,11 +27,13 @@ const LiveControls = dynamic(() => import('./live-controls').then((m) => ({ defa
 const ConceptHierarchyPanel = dynamic(() => import('../viz/concept-hierarchy-panel').then((m) => ({ default: m.ConceptHierarchyPanel })), { ssr: false });
 const PortalSidebar = dynamic(() => import('../viz/portal-sidebar').then((m) => ({ default: m.PortalSidebar })), { ssr: false });
 
+import { physicsSpring } from '@/lib/motion/motion-config';
+
 /* Spring configs — spring physics handle interruption gracefully
    (retarget mid-animation) unlike duration-based easing which
    queues up and glitches on rapid page cycling / All Chats toggle */
-const ENTER_SPRING = { type: 'spring' as const, stiffness: 400, damping: 32, mass: 0.6 };
-const ENTER_SPRING_SNAPPY = { type: 'spring' as const, stiffness: 500, damping: 35, mass: 0.5 };
+const ENTER_SPRING = physicsSpring.chatEnter;
+const ENTER_SPRING_SNAPPY = physicsSpring.chatEnterSnappy;
 
 
 // ═══════════════════════════════════════════════════════════════════

@@ -22,7 +22,9 @@ import {
 import { SteeringIndicator } from '../chat/steering-indicator';
 
 /* ─── Constants ─── */
-const CUP = 'cubic-bezier(0.2, 0, 0, 1)'; // M3 emphasized deceleration
+import { cssEase } from '@/lib/motion/motion-config';
+
+const CUP = cssEase.emphasized;
 const T_SIZE = `padding 0.25s ${CUP}, gap 0.25s ${CUP}`;
 const T_LABEL = `max-width 0.25s ${CUP}, opacity 0.18s ${CUP}`;
 const T_COLOR = 'background 0.15s ease, color 0.15s ease';

@@ -178,12 +178,14 @@ function getAnomalies(state: {
 // Animation variants
 // ---------------------------------------------------------------------------
 
+import { ease } from '@/lib/motion/motion-config';
+
 const cardVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.06, duration: 0.35, ease: [0.32, 0.72, 0, 1] as const },
+    transition: { delay: i * 0.06, duration: 0.35, ease: ease.cupertino },
   }),
 };
 

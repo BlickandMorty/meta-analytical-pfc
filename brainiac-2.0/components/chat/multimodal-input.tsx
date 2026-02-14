@@ -11,8 +11,7 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useTheme } from 'next-themes';
 import { useIsDark } from '@/hooks/use-is-dark';
 
-// M3 emphasized easing
-const M3_EASE = [0.2, 0, 0, 1] as const;
+import { M3_EASE } from '@/lib/motion/motion-config';
 
 // ---------------------------------------------------------------------------
 // Research-ready prompt generation engine

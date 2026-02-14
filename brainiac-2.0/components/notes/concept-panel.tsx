@@ -16,7 +16,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-const CUPERTINO = [0.32, 0.72, 0, 1] as const;
+import { ease } from '@/lib/motion/motion-config';
+
+const CUPERTINO = ease.cupertino;
 
 const TYPE_ICONS: Record<string, LucideIcon> = {
   'shared-concept': LinkIcon,
