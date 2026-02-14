@@ -72,7 +72,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 
 const MODE_OPTIONS: {
   value: InferenceMode;

@@ -1,2 +1,4 @@
-// TODO: Visualization components (ConceptMiniMap, ConceptHierarchyPanel, StarField, etc.) will be moved here in Phase 2
-export {};
+export { ConceptHierarchyPanel } from './concept-hierarchy-panel';
+export { ConceptMiniMap } from './concept-mini-map';
+export { ThoughtVisualizer } from './thought-visualizer';
+export { PortalSidebar } from './portal-sidebar';

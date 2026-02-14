@@ -37,7 +37,7 @@ import {
   ArrowLeftIcon,
 } from 'lucide-react';
 import type { NotePage, NoteBlock, PageLink } from '@/lib/notes/types';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 
 // ═══════════════════════════════════════════════════════════════════
 // Dynamic imports — code-split heavy editor components

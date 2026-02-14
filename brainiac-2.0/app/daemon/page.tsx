@@ -37,7 +37,7 @@ import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { cn } from '@/lib/utils';
 import { useIsDark } from '@/hooks/use-is-dark';

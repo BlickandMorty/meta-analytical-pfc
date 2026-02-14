@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 
 // ---------------------------------------------------------------------------
 // Helpers

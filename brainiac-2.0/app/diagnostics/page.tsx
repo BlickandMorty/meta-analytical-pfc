@@ -21,12 +21,12 @@ import type { SafetyState } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { useIsDark } from '@/hooks/use-is-dark';
-import { EducationalTooltipButton } from '@/components/educational-tooltip';
+import { EducationalTooltipButton } from '@/components/shared/educational-tooltip';
 import { SIGNAL_TOOLTIPS } from '@/lib/research/educational-data';
 
 // ---------------------------------------------------------------------------

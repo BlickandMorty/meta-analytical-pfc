@@ -1,2 +1,3 @@
-// TODO: Wallpaper components (SunnyWallpaper, SunsetWallpaper, ThematicWallpaper) will be moved here in Phase 2
-export {};
+export { ThematicWallpaper } from './thematic';
+export { SunnyWallpaper } from './sunny';
+export { SunsetWallpaper } from './sunset';

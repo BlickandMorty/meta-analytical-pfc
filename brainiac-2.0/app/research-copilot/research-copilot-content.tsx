@@ -34,7 +34,7 @@ import { useIsDark } from '@/hooks/use-is-dark';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, Section } from '@/components/layout/page-shell';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 import type { InferenceConfig } from '@/lib/engine/llm/config';
 import type { S2Paper } from '@/lib/engine/research/semantic-scholar';
 import { exportData, downloadExport, getMimeType } from '@/lib/research/export';

@@ -22,8 +22,8 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/pixel-book';
-import { EducationalTooltipButton } from '@/components/educational-tooltip';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
+import { EducationalTooltipButton } from '@/components/shared/educational-tooltip';
 import { PIPELINE_TOOLTIPS } from '@/lib/research/educational-data';
 import { useIsDark } from '@/hooks/use-is-dark';
 

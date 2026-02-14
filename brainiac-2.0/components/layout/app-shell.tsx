@@ -7,16 +7,16 @@ import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useIsDark } from '@/hooks/use-is-dark';
 import dynamic from 'next/dynamic';
 import { TopNav } from './top-nav';
-import { StarField } from '../star-field';
+import { StarField } from '../decorative/star-field';
 // Lazy-load heavy canvas wallpapers — avoids compiling 800+ lines of animation
 // code on every dev route change when these themes aren't even active
-const ThematicWallpaper = dynamic(() => import('../thematic-wallpaper').then(m => ({ default: m.ThematicWallpaper })), { ssr: false });
-const SunnyWallpaper = dynamic(() => import('../sunny-wallpaper').then(m => ({ default: m.SunnyWallpaper })), { ssr: false });
+const ThematicWallpaper = dynamic(() => import('../decorative/wallpapers/thematic').then(m => ({ default: m.ThematicWallpaper })), { ssr: false });
+const SunnyWallpaper = dynamic(() => import('../decorative/wallpapers/sunny').then(m => ({ default: m.SunnyWallpaper })), { ssr: false });
 import type { InferenceMode, ApiProvider } from '@/lib/engine/llm/config';
 import type { SuiteTier, ResearchPaper } from '@/lib/research/types';
 import { detectDevice, cacheDeviceProfile } from '@/lib/device-detection';
-import { ToastContainer } from '../toast-container';
-import { MiniChat } from '../mini-chat';
+import { ToastContainer } from '../shared/toast-container';
+import { MiniChat } from '../assistant/mini-chat';
 import { PageTransition } from './page-transition';
 import { hydrateStore } from '@/lib/store/hydrate';
 

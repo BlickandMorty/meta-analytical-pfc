@@ -37,7 +37,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { cn } from '@/lib/utils';
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { useIsDark } from '@/hooks/use-is-dark';
 

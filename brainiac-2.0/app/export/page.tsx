@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { usePFCStore } from '@/lib/store/use-pfc-store';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { Badge } from '@/components/ui/badge';
 import {

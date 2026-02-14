@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { GlassBubbleButton } from '@/components/chat/glass-bubble-button';
 import { PageShell, GlassSection } from '@/components/layout/page-shell';
 import { useSetupGuard } from '@/hooks/use-setup-guard';
-import { PixelBook } from '@/components/pixel-book';
+import { PixelBook } from '@/components/decorative/pixel-mascots';
 import { useIsDark } from '@/hooks/use-is-dark';
 import {
   CompassIcon,
