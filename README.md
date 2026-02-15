@@ -154,5 +154,12 @@ pfc-app/
 
 ---
 
-*Built by Jojo.*
 *Mathematical foundations: [`paper.md`](paper.md) | Standalone implementations: [`meta-analytical-pipeline`](../meta-analytical-pipeline)*
+
+# Design Philosophy of Front-End
+
+I design interfaces around the belief that presentation is everything — the first visual impression determines whether a user stays, explores, and comes back. People choose Craft over Notion and Notion over Obsidian because of vibe and attention to detail. My approach fuses anchors from multiple design languages — Google Material Expressive, Notion/Obsidian, having an oled theme (like grok) and a pitch white (IA Writer, Anytype, Notion) theme was and then being able to cycle through regular dark and light modes. I use subtle arcade-style pixelated accents, natural soft palettes (brown, tan, ashy reds, light blue), and slightly bolded typography to create visual novelty without clutter. Landing pages are deliberately minimal and inviting: clean animation, cohesive color, and just enough.
+
+<img width="909" height="962" alt="Screenshot 2026-02-14 at 11 52 09 PM" src="https://github.com/user-attachments/assets/c4c9a46d-8bcb-481b-a2a0-b5f623eb8d59" />
+
+<img width="909" height="962" alt="Screenshot 2026-02-14 at 11 54 56 PM" src="https://github.com/user-attachments/assets/6994359c-8463-4428-9f7f-c4b292c0878c" />
