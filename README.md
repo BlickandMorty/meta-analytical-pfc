@@ -160,6 +160,6 @@ pfc-app/
 
 I design interfaces around the belief that presentation is everything — the first visual impression determines whether a user stays, explores, and comes back. People choose Craft over Notion and Notion over Obsidian because of vibe and attention to detail. My approach fuses anchors from multiple design languages — Google Material Expressive, Notion/Obsidian, having an oled theme (like grok) and a pitch white (IA Writer, Anytype, Notion) theme was and then being able to cycle through regular dark and light modes. I use subtle arcade-style pixelated accents, natural soft palettes (brown, tan, ashy reds, light blue), and slightly bolded typography to create visual novelty without clutter. Landing pages are deliberately minimal and inviting: clean animation, cohesive color, and just enough.
 
-Uploading Screen Recording 2026-02-14 at 11.51.17 PM.mov…
 ![pure white](https://github.com/user-attachments/assets/8ed22610-3217-430b-920c-30898c10fb02)
+
 ![oled](https://github.com/user-attachments/assets/5cf4188b-b4b0-4452-9778-caddc076ccc8)
